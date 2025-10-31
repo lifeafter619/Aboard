@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Aboard - 简约白板</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Undo/Redo buttons in top right corner -->
+    <div id="history-controls">
+        <button id="undo-btn" class="history-btn" title="撤销 (Ctrl+Z)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 7v6h6"></path>
+                <path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"></path>
+            </svg>
+        </button>
+        <button id="redo-btn" class="history-btn" title="重做 (Ctrl+Y)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 7v6h-6"></path>
+                <path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Main drawing canvas -->
+    <canvas id="canvas"></canvas>
+
+    <!-- Dynamic configuration area (appears above toolbar) -->
+    <div id="config-area">
+        <!-- Pen configuration -->
+        <div id="pen-config" class="config-panel active">
+            <div class="config-group">
+                <label>颜色</label>
+                <div class="color-picker">
+                    <button class="color-btn active" data-color="#000000" style="background-color: #000000;" title="黑色"></button>
+                    <button class="color-btn" data-color="#FF0000" style="background-color: #FF0000;" title="红色"></button>
+                    <button class="color-btn" data-color="#0000FF" style="background-color: #0000FF;" title="蓝色"></button>
+                    <button class="color-btn" data-color="#00FF00" style="background-color: #00FF00;" title="绿色"></button>
+                </div>
+            </div>
+            <div class="config-group">
+                <label>粗细 <span id="pen-size-value">5</span>px</label>
+                <input type="range" id="pen-size-slider" min="3" max="15" value="5" class="slider">
+            </div>
+        </div>
+
+        <!-- Eraser configuration -->
+        <div id="eraser-config" class="config-panel">
+            <div class="config-group">
+                <label>橡皮擦大小 <span id="eraser-size-value">20</span>px</label>
+                <input type="range" id="eraser-size-slider" min="10" max="30" value="20" class="slider">
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom toolbar -->
+    <div id="toolbar">
+        <button id="pen-btn" class="tool-btn active" data-tool="pen" title="笔">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                <path d="M2 2l7.586 7.586"></path>
+                <circle cx="11" cy="11" r="2"></circle>
+            </svg>
+            <span>笔</span>
+        </button>
+        <button id="eraser-btn" class="tool-btn" data-tool="eraser" title="橡皮擦">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 20H7L3 16 12 7 17 12"></path>
+                <path d="M7 20l5-5"></path>
+            </svg>
+            <span>橡皮</span>
+        </button>
+        <button id="clear-btn" class="tool-btn" data-tool="clear" title="清空画布">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+            </svg>
+            <span>清空</span>
+        </button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
