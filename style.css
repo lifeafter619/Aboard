@@ -1,0 +1,291 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    background-color: #f5f5f5;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Canvas */
+#canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #ffffff;
+    cursor: crosshair;
+}
+
+/* History controls (Undo/Redo) */
+#history-controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+}
+
+.history-btn {
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 12px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    color: #333;
+}
+
+.history-btn:hover {
+    background-color: #f0f0f0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.history-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.history-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.history-btn:disabled:hover {
+    background-color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Configuration area */
+#config-area {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
+    padding: 16px 24px;
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    min-width: 320px;
+}
+
+.config-panel {
+    display: none;
+}
+
+.config-panel.active {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+}
+
+.config-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.config-group label {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+}
+
+/* Color picker */
+.color-picker {
+    display: flex;
+    gap: 8px;
+}
+
+.color-btn {
+    width: 36px;
+    height: 36px;
+    border: 3px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.color-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+.color-btn.active {
+    border-color: #007AFF;
+    transform: scale(1.15);
+}
+
+/* Sliders */
+.slider {
+    width: 200px;
+    height: 6px;
+    border-radius: 3px;
+    outline: none;
+    -webkit-appearance: none;
+    background: #ddd;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #007AFF;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #007AFF;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+.slider::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Toolbar */
+#toolbar {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    gap: 12px;
+    padding: 12px 20px;
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 16px;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    background-color: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #666;
+    min-width: 70px;
+}
+
+.tool-btn svg {
+    transition: all 0.2s ease;
+}
+
+.tool-btn span {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.tool-btn:hover {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.tool-btn.active {
+    background-color: #007AFF;
+    color: #ffffff;
+    border-color: #007AFF;
+}
+
+.tool-btn.active svg {
+    stroke: #ffffff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #config-area {
+        min-width: 280px;
+        padding: 12px 16px;
+        bottom: 80px;
+    }
+
+    .config-panel.active {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+    }
+
+    .slider {
+        width: 100%;
+    }
+
+    #toolbar {
+        gap: 8px;
+        padding: 10px 16px;
+    }
+
+    .tool-btn {
+        padding: 10px 12px;
+        min-width: 60px;
+    }
+
+    .tool-btn span {
+        font-size: 11px;
+    }
+
+    #history-controls {
+        top: 10px;
+        right: 10px;
+        gap: 8px;
+    }
+
+    .history-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .history-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+/* Performance optimizations */
+#canvas {
+    will-change: contents;
+}
+
+.tool-btn,
+.history-btn,
+.color-btn {
+    -webkit-tap-highlight-color: transparent;
+}
