@@ -212,7 +212,7 @@ class DrawingBoard {
         // Custom color picker
         const customColorPicker = document.getElementById('custom-color-picker');
         customColorPicker.addEventListener('input', (e) => {
-            this.currentColor = e.target.value;
+            this.currentColor = e.target.value.toUpperCase();
             // Remove active class from all preset color buttons
             document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
             localStorage.setItem('penColor', this.currentColor);
@@ -886,7 +886,7 @@ class DrawingBoard {
         // Set active color button if it matches a preset color
         document.querySelectorAll('.color-btn[data-color]').forEach(btn => {
             btn.classList.remove('active');
-            if (btn.dataset.color === this.currentColor) {
+            if (btn.dataset.color.toLowerCase() === this.currentColor.toLowerCase()) {
                 btn.classList.add('active');
             }
         });
@@ -933,7 +933,7 @@ class DrawingBoard {
             // Restore active color button
             document.querySelectorAll('.color-btn[data-color]').forEach(btn => {
                 btn.classList.remove('active');
-                if (btn.dataset.color === this.currentColor) {
+                if (btn.dataset.color.toLowerCase() === this.currentColor.toLowerCase()) {
                     btn.classList.add('active');
                 }
             });
