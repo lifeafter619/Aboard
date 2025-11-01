@@ -942,6 +942,46 @@ body {
     .modal-content {
         min-width: 280px;
     }
+    
+    /* Settings modal responsive layout */
+    .settings-modal-content {
+        min-width: 95%;
+        max-width: 95%;
+    }
+    
+    .settings-layout {
+        flex-direction: column;
+        min-height: auto;
+    }
+    
+    .settings-menu {
+        flex: 0 0 auto;
+        flex-direction: row;
+        padding-right: 0;
+        padding-bottom: 16px;
+        border-right: none;
+        border-bottom: 1px solid #e0e0e0;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    
+    .settings-menu-item {
+        flex-direction: column;
+        padding: 8px 12px;
+        gap: 6px;
+        font-size: 11px;
+    }
+    
+    .settings-menu-item svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .settings-content {
+        padding-left: 0;
+        padding-top: 16px;
+        max-height: 60vh;
+    }
 }
 
 /* Performance optimizations */
