@@ -10,21 +10,44 @@
 - ✅ 同时支持鼠标和触控输入 (Mouse and touch input support)
 - ✅ 性能优化，目标60fps (Performance optimized for 60fps)
 
+### 无限画布 Infinite Canvas
+- ✅ 无限缩放和平移 (Infinite zoom and pan)
+- ✅ 智能画布调整大小 (Smart canvas resizing)
+- ✅ 缩小时画布自动扩展以覆盖整个屏幕 (Canvas expands to cover screen when zoomed out)
+- ✅ Shift+左键或中键拖拽平移画布 (Shift+Left click or middle mouse to pan)
+
 ### 工具栏 Toolbar
 - **笔工具** (Pen Tool) - 默认选中，支持多种颜色和粗细
+  - 5种笔触类型：普通笔、铅笔、圆珠笔、钢笔、毛笔
 - **橡皮擦** (Eraser Tool) - 可调节大小的橡皮擦
+- **背景** (Background) - 自定义背景颜色和图案
 - **清空画布** (Clear Canvas) - 一键清空（有确认提示）
-- **设置** (Settings) - 自定义工具栏按钮大小
+- **设置** (Settings) - 分层级的设置界面
 
 ### 动态配置区 Dynamic Configuration
-- **笔模式**: 颜色选择器（黑/红/蓝/绿）+ 粗细滑块（3-15px）
+- **笔模式**: 颜色选择器（8种预设+自定义）+ 粗细滑块（3-15px）
 - **橡皮模式**: 橡皮擦大小滑块（10-30px）
+- **背景模式**: 8种预设颜色 + 7种图案（空白、点阵、方格、田字格、英语四线、五线谱、坐标系）
+- **边缘吸附**: 配置面板可吸附至屏幕边缘，输入时不会隐藏
 - **关闭按钮**: 点击配置面板右上角的 X 按钮关闭面板
+
+### 设置界面 Settings Interface
+- **分层级设计**: 左侧菜单 + 右侧内容区域
+  - 调整大小：工具栏按钮大小、属性栏缩放
+  - 显示设置：背景透明度、图案深浅
+  - 布局选项：控制按钮位置、边缘吸附开关
+  - 画布模式：无限画布/分页系统切换
 
 ### 历史管理 History Management
 - ↶ 撤销 (Undo) - 快捷键 Ctrl+Z
-- ↷ 重做 (Redo) - 快捷键 Ctrl+Y
+- ↷ 重做 (Redo) - 快捷键 Ctrl+Y / Ctrl+Shift+Z
 - 支持最多50步历史记录
+
+### 缩放控制 Zoom Controls
+- 🔍 放大/缩小按钮 (Zoom in/out buttons)
+- 快捷键：+ 放大，- 缩小，0 重置为100%
+- Ctrl+滚轮缩放 (Ctrl+Scroll wheel zoom)
+- 支持50%-300%缩放范围
 
 ## 使用方法 Usage
 
