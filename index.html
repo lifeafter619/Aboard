@@ -62,11 +62,11 @@
             <div class="config-group">
                 <label>笔触类型</label>
                 <div class="button-size-options pen-type-grid">
-                    <button class="pen-type-btn active" data-pen-type="normal">普通笔</button>
-                    <button class="pen-type-btn" data-pen-type="pencil">铅笔</button>
-                    <button class="pen-type-btn" data-pen-type="ballpoint">圆珠笔</button>
-                    <button class="pen-type-btn" data-pen-type="fountain">钢笔</button>
-                    <button class="pen-type-btn" data-pen-type="brush">毛笔</button>
+                    <button class="pen-type-btn active" data-pen-type="normal" title="普通笔：流畅均匀的笔触，适合日常书写">普通笔</button>
+                    <button class="pen-type-btn" data-pen-type="pencil" title="铅笔：略微透明的笔触，模拟铅笔效果">铅笔</button>
+                    <button class="pen-type-btn" data-pen-type="ballpoint" title="圆珠笔：光滑连续的笔触，适合绘图">圆珠笔</button>
+                    <button class="pen-type-btn" data-pen-type="fountain" title="钢笔：精细的笔触，适合书法练习">钢笔</button>
+                    <button class="pen-type-btn" data-pen-type="brush" title="毛笔：柔软宽厚的笔触，适合艺术创作">毛笔</button>
                 </div>
             </div>
             <div class="config-group">
@@ -248,10 +248,10 @@
                         <div class="settings-group">
                             <label>控制按钮位置</label>
                             <div class="button-size-options button-size-options-4">
-                                <button class="position-option-btn active" data-position="top-right">右上角</button>
                                 <button class="position-option-btn" data-position="top-left">左上角</button>
-                                <button class="position-option-btn" data-position="bottom-right">右下角</button>
+                                <button class="position-option-btn active" data-position="top-right">右上角</button>
                                 <button class="position-option-btn" data-position="bottom-left">左下角</button>
+                                <button class="position-option-btn" data-position="bottom-right">右下角</button>
                             </div>
                         </div>
                         <div class="settings-group">
@@ -312,6 +312,14 @@
                 <path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"></path>
             </svg>
             <span>重做</span>
+        </button>
+        <button id="pan-btn" class="tool-btn" data-tool="pan" title="移动画布 (Space)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 11V6C9 4.34315 10.3431 3 12 3C13.6569 3 15 4.34315 15 6V11"></path>
+                <path d="M9 11C9 11 9 10 7 10C5.34315 10 4 11.3431 4 13C4 14.6569 5.34315 16 7 16H17C18.6569 16 20 14.6569 20 13C20 11.3431 18.6569 10 17 10C15 10 15 11 15 11"></path>
+                <path d="M12 16V21"></path>
+            </svg>
+            <span>移动</span>
         </button>
         <button id="pen-btn" class="tool-btn active" data-tool="pen" title="笔">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

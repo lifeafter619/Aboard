@@ -20,10 +20,10 @@ class DrawingBoard {
         // State management
         this.isDrawing = false;
         this.currentTool = 'pen';
-        this.currentColor = '#000000';
-        this.penSize = 5;
+        this.currentColor = localStorage.getItem('penColor') || '#000000';
+        this.penSize = parseInt(localStorage.getItem('penSize')) || 5;
         this.penType = localStorage.getItem('penType') || 'normal';
-        this.eraserSize = 20;
+        this.eraserSize = parseInt(localStorage.getItem('eraserSize')) || 20;
         
         // Background settings
         this.backgroundColor = localStorage.getItem('backgroundColor') || '#ffffff';
@@ -52,6 +52,10 @@ class DrawingBoard {
         };
         this.isPanning = false;
         this.lastPanPoint = null;
+        
+        // Two-finger touch pan state
+        this.isTwoFingerPanning = false;
+        this.lastTwoFingerMidpoint = null;
         
         // Dragging state
         this.isDraggingPanel = false;
@@ -115,8 +119,8 @@ class DrawingBoard {
         // Canvas drawing events
         // Mouse events
         this.canvas.addEventListener('mousedown', (e) => {
-            if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
-                // Middle mouse button or Shift+Left click for panning
+            if (e.button === 1 || (e.button === 0 && e.shiftKey) || this.currentTool === 'pan') {
+                // Middle mouse button, Shift+Left click, or pan tool for panning
                 this.startPanning(e);
             } else {
                 this.startDrawing(e);
@@ -148,21 +152,35 @@ class DrawingBoard {
         // Touch events
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            this.startDrawing(e.touches[0]);
+            if (e.touches.length === 2) {
+                // Two-finger touch for panning
+                this.startTwoFingerPan(e);
+            } else if (e.touches.length === 1) {
+                this.startDrawing(e.touches[0]);
+            }
         }, { passive: false });
         
         this.canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
-            this.draw(e.touches[0]);
+            if (e.touches.length === 2) {
+                // Two-finger pan
+                this.twoFingerPan(e);
+            } else if (e.touches.length === 1 && !this.isTwoFingerPanning) {
+                this.draw(e.touches[0]);
+            }
         }, { passive: false });
         
         this.canvas.addEventListener('touchend', (e) => {
             e.preventDefault();
-            this.stopDrawing();
+            if (e.touches.length === 0) {
+                this.stopDrawing();
+                this.stopTwoFingerPan();
+            }
         }, { passive: false });
         
         // Toolbar buttons
         document.getElementById('pen-btn').addEventListener('click', () => this.setTool('pen'));
+        document.getElementById('pan-btn').addEventListener('click', () => this.setTool('pan'));
         document.getElementById('eraser-btn').addEventListener('click', () => this.setTool('eraser'));
         document.getElementById('background-btn').addEventListener('click', () => this.setTool('background'));
         document.getElementById('clear-btn').addEventListener('click', () => this.confirmClear());
@@ -187,15 +205,17 @@ class DrawingBoard {
                 this.currentColor = e.target.dataset.color;
                 document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
+                localStorage.setItem('penColor', this.currentColor);
             });
         });
         
         // Custom color picker
         const customColorPicker = document.getElementById('custom-color-picker');
         customColorPicker.addEventListener('input', (e) => {
-            this.currentColor = e.target.value;
+            this.currentColor = e.target.value.toUpperCase();
             // Remove active class from all preset color buttons
             document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
+            localStorage.setItem('penColor', this.currentColor);
         });
         
         // Custom background color picker
@@ -253,6 +273,7 @@ class DrawingBoard {
             this.penSize = parseInt(e.target.value);
             penSizeValue.textContent = this.penSize;
             penSizeInput.value = this.penSize;
+            localStorage.setItem('penSize', this.penSize);
         });
         
         // Pen size input box
@@ -263,6 +284,7 @@ class DrawingBoard {
                 this.penSize = value;
                 penSizeValue.textContent = this.penSize;
                 penSizeSlider.value = this.penSize;
+                localStorage.setItem('penSize', this.penSize);
             }
             // Don't block the input, allow typing any number
         });
@@ -276,6 +298,7 @@ class DrawingBoard {
             penSizeValue.textContent = this.penSize;
             penSizeSlider.value = this.penSize;
             penSizeInput.value = this.penSize;
+            localStorage.setItem('penSize', this.penSize);
         });
         
         // Eraser size slider
@@ -286,6 +309,7 @@ class DrawingBoard {
             this.eraserSize = parseInt(e.target.value);
             eraserSizeValue.textContent = this.eraserSize;
             eraserSizeInput.value = this.eraserSize;
+            localStorage.setItem('eraserSize', this.eraserSize);
             // Update eraser cursor size in real-time
             if (this.currentTool === 'eraser') {
                 this.eraserCursor.style.width = this.eraserSize + 'px';
@@ -319,6 +343,7 @@ class DrawingBoard {
             eraserSizeValue.textContent = this.eraserSize;
             eraserSizeSlider.value = this.eraserSize;
             eraserSizeInput.value = this.eraserSize;
+            localStorage.setItem('eraserSize', this.eraserSize);
             // Update eraser cursor size in real-time
             if (this.currentTool === 'eraser') {
                 this.eraserCursor.style.width = this.eraserSize + 'px';
@@ -549,11 +574,58 @@ class DrawingBoard {
         }
     }
     
+    startTwoFingerPan(e) {
+        if (!this.infiniteCanvas) return;
+        this.isTwoFingerPanning = true;
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        this.lastTwoFingerMidpoint = {
+            x: (touch1.clientX + touch2.clientX) / 2,
+            y: (touch1.clientY + touch2.clientY) / 2
+        };
+        e.preventDefault();
+    }
+    
+    twoFingerPan(e) {
+        if (!this.isTwoFingerPanning || !this.lastTwoFingerMidpoint) return;
+        
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const midpoint = {
+            x: (touch1.clientX + touch2.clientX) / 2,
+            y: (touch1.clientY + touch2.clientY) / 2
+        };
+        
+        const dx = (midpoint.x - this.lastTwoFingerMidpoint.x) / this.canvasScale;
+        const dy = (midpoint.y - this.lastTwoFingerMidpoint.y) / this.canvasScale;
+        
+        this.panOffset.x += dx;
+        this.panOffset.y += dy;
+        
+        this.lastTwoFingerMidpoint = midpoint;
+        
+        // Redraw canvas with new pan offset
+        this.redrawCanvas();
+        
+        // Save pan offset
+        localStorage.setItem('panOffsetX', this.panOffset.x);
+        localStorage.setItem('panOffsetY', this.panOffset.y);
+    }
+    
+    stopTwoFingerPan() {
+        if (this.isTwoFingerPanning) {
+            this.isTwoFingerPanning = false;
+            this.lastTwoFingerMidpoint = null;
+        }
+    }
+    
     updateCursor() {
         if (this.currentTool === 'pen') {
             this.canvas.style.cursor = 'crosshair';
         } else if (this.currentTool === 'eraser') {
             this.canvas.style.cursor = 'pointer';
+        } else if (this.currentTool === 'pan') {
+            this.canvas.style.cursor = 'grab';
         } else {
             this.canvas.style.cursor = 'default';
         }
@@ -729,6 +801,14 @@ class DrawingBoard {
         // Re-enable auto-open when user clicks a toolbar button
         this.configAutoOpenDisabled = false;
         
+        // Reset config panel position to default (centered above toolbar)
+        const configArea = document.getElementById('config-area');
+        configArea.style.bottom = '100px';
+        configArea.style.top = 'auto';
+        configArea.style.left = '50%';
+        configArea.style.right = 'auto';
+        configArea.style.transform = 'translateX(-50%)';
+        
         if (tool === 'eraser') {
             this.showEraserCursor();
         } else {
@@ -797,6 +877,25 @@ class DrawingBoard {
             }
         });
         
+        // Load pen settings (color, size)
+        document.getElementById('pen-size-slider').value = this.penSize;
+        document.getElementById('pen-size-value').textContent = this.penSize;
+        document.getElementById('pen-size-input').value = this.penSize;
+        document.getElementById('custom-color-picker').value = this.currentColor;
+        
+        // Set active color button if it matches a preset color
+        document.querySelectorAll('.color-btn[data-color]').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.color.toLowerCase() === this.currentColor.toLowerCase()) {
+                btn.classList.add('active');
+            }
+        });
+        
+        // Load eraser settings
+        document.getElementById('eraser-size-slider').value = this.eraserSize;
+        document.getElementById('eraser-size-value').textContent = this.eraserSize;
+        document.getElementById('eraser-size-input').value = this.eraserSize;
+        
         // Load background settings
         document.getElementById('bg-opacity-slider').value = Math.round(this.bgOpacity * 100);
         document.getElementById('bg-opacity-value').textContent = Math.round(this.bgOpacity * 100);
@@ -831,7 +930,19 @@ class DrawingBoard {
             if (!this.configAutoOpenDisabled) {
                 configArea.classList.add('show');
             }
+            // Restore active color button
+            document.querySelectorAll('.color-btn[data-color]').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.color.toLowerCase() === this.currentColor.toLowerCase()) {
+                    btn.classList.add('active');
+                }
+            });
             this.canvas.style.cursor = 'crosshair';
+        } else if (this.currentTool === 'pan') {
+            document.getElementById('pan-btn').classList.add('active');
+            // Pan tool has no config panel
+            configArea.classList.remove('show');
+            this.canvas.style.cursor = 'grab';
         } else if (this.currentTool === 'eraser') {
             document.getElementById('eraser-btn').classList.add('active');
             document.getElementById('eraser-config').classList.add('active');
