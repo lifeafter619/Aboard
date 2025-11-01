@@ -371,6 +371,14 @@ class DrawingBoard {
         // Settings modal
         document.getElementById('settings-close-btn').addEventListener('click', () => this.closeSettings());
         
+        // Settings menu navigation
+        document.querySelectorAll('.settings-menu-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const category = e.currentTarget.dataset.category;
+                this.switchSettingsCategory(category);
+            });
+        });
+        
         // Confirm modal
         document.getElementById('confirm-cancel-btn').addEventListener('click', () => {
             document.getElementById('confirm-modal').classList.remove('show');
@@ -731,6 +739,26 @@ class DrawingBoard {
     
     closeConfigPanel() {
         document.getElementById('config-area').classList.remove('show');
+    }
+    
+    switchSettingsCategory(category) {
+        // Update menu items
+        document.querySelectorAll('.settings-menu-item').forEach(item => {
+            if (item.dataset.category === category) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+        
+        // Update content areas
+        document.querySelectorAll('.settings-category').forEach(cat => {
+            if (cat.dataset.category === category) {
+                cat.classList.add('active');
+            } else {
+                cat.classList.remove('active');
+            }
+        });
     }
     
     openSettings() {

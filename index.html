@@ -168,7 +168,7 @@
 
     <!-- Settings modal -->
     <div id="settings-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content settings-modal-content">
             <div class="modal-header">
                 <h2>设置</h2>
                 <button id="settings-close-btn" class="modal-close-btn" title="关闭">
@@ -178,44 +178,104 @@
                     </svg>
                 </button>
             </div>
-            <div class="modal-body">
-                <div class="settings-group">
-                    <label>工具栏按钮大小 <span id="toolbar-size-value">50</span>px</label>
-                    <input type="range" id="toolbar-size-slider" min="40" max="80" value="50" class="slider" step="5">
+            <div class="modal-body settings-layout">
+                <!-- Left sidebar menu -->
+                <div class="settings-menu">
+                    <button class="settings-menu-item active" data-category="interface">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                        </svg>
+                        <span>调整大小</span>
+                    </button>
+                    <button class="settings-menu-item" data-category="display">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                        <span>显示设置</span>
+                    </button>
+                    <button class="settings-menu-item" data-category="layout">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"></path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                        <span>布局选项</span>
+                    </button>
+                    <button class="settings-menu-item" data-category="canvas">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                        </svg>
+                        <span>画布模式</span>
+                    </button>
                 </div>
-                <div class="settings-group">
-                    <label>属性栏缩放 <span id="config-scale-value">100</span>%</label>
-                    <input type="range" id="config-scale-slider" min="80" max="120" value="100" class="slider" step="10">
-                </div>
-                <div class="settings-group">
-                    <label>背景透明度 <span id="bg-opacity-value">100</span>%</label>
-                    <input type="range" id="bg-opacity-slider" min="0" max="100" value="100" class="slider">
-                </div>
-                <div class="settings-group">
-                    <label>图案深浅 <span id="pattern-intensity-value">50</span>%</label>
-                    <input type="range" id="pattern-intensity-slider" min="10" max="100" value="50" class="slider">
-                </div>
-                <div class="settings-group">
-                    <label>控制按钮位置</label>
-                    <div class="button-size-options button-size-options-4">
-                        <button class="position-option-btn active" data-position="top-right">右上角</button>
-                        <button class="position-option-btn" data-position="top-left">左上角</button>
-                        <button class="position-option-btn" data-position="bottom-right">右下角</button>
-                        <button class="position-option-btn" data-position="bottom-left">左下角</button>
+                
+                <!-- Right content area -->
+                <div class="settings-content">
+                    <!-- Interface/Size settings -->
+                    <div class="settings-category active" data-category="interface">
+                        <h3 class="settings-category-title">调整大小</h3>
+                        <div class="settings-group">
+                            <label>工具栏按钮大小 <span id="toolbar-size-value">50</span>px</label>
+                            <input type="range" id="toolbar-size-slider" min="40" max="80" value="50" class="slider" step="5">
+                        </div>
+                        <div class="settings-group">
+                            <label>属性栏缩放 <span id="config-scale-value">100</span>%</label>
+                            <input type="range" id="config-scale-slider" min="80" max="120" value="100" class="slider" step="10">
+                        </div>
                     </div>
-                </div>
-                <div class="settings-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="edge-snap-checkbox" checked>
-                        <span>启用边缘吸附</span>
-                    </label>
-                </div>
-                <div class="settings-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="infinite-canvas-checkbox" checked>
-                        <span>无限画布模式</span>
-                    </label>
-                    <p class="settings-hint">关闭后启用分页系统</p>
+                    
+                    <!-- Display settings -->
+                    <div class="settings-category" data-category="display">
+                        <h3 class="settings-category-title">显示设置</h3>
+                        <div class="settings-group">
+                            <label>背景透明度 <span id="bg-opacity-value">100</span>%</label>
+                            <input type="range" id="bg-opacity-slider" min="0" max="100" value="100" class="slider">
+                        </div>
+                        <div class="settings-group">
+                            <label>图案深浅 <span id="pattern-intensity-value">50</span>%</label>
+                            <input type="range" id="pattern-intensity-slider" min="10" max="100" value="50" class="slider">
+                        </div>
+                    </div>
+                    
+                    <!-- Layout settings -->
+                    <div class="settings-category" data-category="layout">
+                        <h3 class="settings-category-title">布局选项</h3>
+                        <div class="settings-group">
+                            <label>控制按钮位置</label>
+                            <div class="button-size-options button-size-options-4">
+                                <button class="position-option-btn active" data-position="top-right">右上角</button>
+                                <button class="position-option-btn" data-position="top-left">左上角</button>
+                                <button class="position-option-btn" data-position="bottom-right">右下角</button>
+                                <button class="position-option-btn" data-position="bottom-left">左下角</button>
+                            </div>
+                        </div>
+                        <div class="settings-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="edge-snap-checkbox" checked>
+                                <span>启用边缘吸附</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Canvas mode settings -->
+                    <div class="settings-category" data-category="canvas">
+                        <h3 class="settings-category-title">画布模式</h3>
+                        <div class="settings-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="infinite-canvas-checkbox" checked>
+                                <span>无限画布模式</span>
+                            </label>
+                            <p class="settings-hint">开启后可无限缩放和平移画布</p>
+                        </div>
+                        <div class="settings-group">
+                            <p class="settings-hint">关闭无限画布后将启用分页系统，适合制作演示文稿</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
