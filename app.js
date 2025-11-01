@@ -893,7 +893,8 @@ class DrawingBoard {
         configArea.style.top = 'auto';
         configArea.style.left = '50%';
         configArea.style.right = 'auto';
-        configArea.style.transform = 'translateX(-50%)';
+        // Apply transform with scale preserved
+        configArea.style.transform = `translateX(-50%) scale(${this.configScale})`;
         
         // Update collapsed icon to match current tool
         this.updateCollapsedIcon();
@@ -1251,7 +1252,17 @@ class DrawingBoard {
     // Config scale update
     updateConfigScale() {
         const configArea = document.getElementById('config-area');
-        configArea.style.transform = `translateX(-50%) scale(${this.configScale})`;
+        // Only update the scale part via CSS variable or separate property
+        // Don't override transform which may include translateX for centering
+        configArea.style.setProperty('--config-scale', this.configScale);
+        // Apply scale via transform-origin and scale, preserving other transforms
+        const currentTransform = configArea.style.transform;
+        if (currentTransform.includes('translateX')) {
+            // Preserve translateX for centering
+            configArea.style.transform = currentTransform.replace(/scale\([^)]*\)/, '').trim() + ` scale(${this.configScale})`;
+        } else {
+            configArea.style.transform = `scale(${this.configScale})`;
+        }
         localStorage.setItem('configScale', this.configScale);
     }
     
@@ -1367,7 +1378,12 @@ class DrawingBoard {
             
             this.draggedElement.style.left = `${x}px`;
             this.draggedElement.style.top = `${y}px`;
-            this.draggedElement.style.transform = 'none';
+            // Preserve scale for config area when dragging
+            if (this.draggedElement === configArea) {
+                this.draggedElement.style.transform = `scale(${this.configScale})`;
+            } else {
+                this.draggedElement.style.transform = 'none';
+            }
             this.draggedElement.style.right = 'auto';
             this.draggedElement.style.bottom = 'auto';
         });
