@@ -39,6 +39,16 @@
 
     <!-- Dynamic configuration area (appears above toolbar) -->
     <div id="config-area">
+        <!-- Collapsed icon (shown when panel is collapsed) -->
+        <div class="collapsed-icon" id="collapsed-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                <path d="M2 2l7.586 7.586"></path>
+                <circle cx="11" cy="11" r="2"></circle>
+            </svg>
+        </div>
+        
         <!-- Close button for config panel -->
         <button id="config-close-btn" class="config-close-btn" title="关闭">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -83,7 +93,10 @@
             </div>
             <div class="config-group">
                 <label>粗细 <span id="pen-size-value">5</span>px</label>
-                <input type="range" id="pen-size-slider" min="3" max="15" value="5" class="slider">
+                <div class="size-control-group">
+                    <input type="range" id="pen-size-slider" min="3" max="15" value="5" class="slider">
+                    <input type="number" id="pen-size-input" min="3" max="15" value="5" class="size-input">
+                </div>
             </div>
         </div>
 
@@ -91,7 +104,10 @@
         <div id="eraser-config" class="config-panel">
             <div class="config-group">
                 <label>橡皮擦大小 <span id="eraser-size-value">20</span>px</label>
-                <input type="range" id="eraser-size-slider" min="10" max="30" value="20" class="slider">
+                <div class="size-control-group">
+                    <input type="range" id="eraser-size-slider" min="10" max="30" value="20" class="slider">
+                    <input type="number" id="eraser-size-input" min="10" max="30" value="20" class="size-input">
+                </div>
             </div>
         </div>
 
@@ -120,10 +136,6 @@
                 </div>
             </div>
             <div class="config-group">
-                <label>背景透明度 <span id="bg-opacity-value">100</span>%</label>
-                <input type="range" id="bg-opacity-slider" min="0" max="100" value="100" class="slider">
-            </div>
-            <div class="config-group">
                 <label>背景图案</label>
                 <div class="button-size-options pattern-grid">
                     <button class="pattern-option-btn active" data-pattern="blank">空白</button>
@@ -134,10 +146,6 @@
                     <button class="pattern-option-btn" data-pattern="music-staff">五线谱</button>
                     <button class="pattern-option-btn" data-pattern="coordinate">坐标系</button>
                 </div>
-            </div>
-            <div class="config-group">
-                <label>图案深浅 <span id="pattern-intensity-value">50</span>%</label>
-                <input type="range" id="pattern-intensity-slider" min="10" max="100" value="50" class="slider">
             </div>
         </div>
     </div>
@@ -178,6 +186,14 @@
                 <div class="settings-group">
                     <label>属性栏缩放 <span id="config-scale-value">100</span>%</label>
                     <input type="range" id="config-scale-slider" min="80" max="120" value="100" class="slider" step="10">
+                </div>
+                <div class="settings-group">
+                    <label>背景透明度 <span id="bg-opacity-value">100</span>%</label>
+                    <input type="range" id="bg-opacity-slider" min="0" max="100" value="100" class="slider">
+                </div>
+                <div class="settings-group">
+                    <label>图案深浅 <span id="pattern-intensity-value">50</span>%</label>
+                    <input type="range" id="pattern-intensity-slider" min="10" max="100" value="50" class="slider">
                 </div>
                 <div class="settings-group">
                     <label>控制按钮位置</label>

@@ -156,6 +156,7 @@ body {
     min-width: 320px;
     display: none;
     cursor: move;
+    transition: all 0.3s ease;
 }
 
 #config-area.show {
@@ -164,6 +165,33 @@ body {
 
 #config-area.dragging {
     cursor: grabbing;
+}
+
+/* Collapsed state for config area */
+#config-area.collapsed {
+    min-width: 60px;
+    padding: 8px;
+    border-radius: 12px;
+}
+
+#config-area.collapsed .config-panel {
+    display: none !important;
+}
+
+#config-area.collapsed .config-close-btn {
+    display: none;
+}
+
+#config-area.collapsed-icon {
+    display: none;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+}
+
+#config-area.collapsed .collapsed-icon {
+    display: flex;
 }
 
 .config-close-btn {
@@ -284,6 +312,28 @@ body {
     outline: none;
     -webkit-appearance: none;
     background: #ddd;
+}
+
+/* Size control group with slider and input */
+.size-control-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.size-input {
+    width: 60px;
+    height: 32px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 14px;
+    text-align: center;
+    outline: none;
+}
+
+.size-input:focus {
+    border-color: #007AFF;
 }
 
 .slider::-webkit-slider-thumb {

@@ -43,6 +43,7 @@ class DrawingBoard {
         this.edgeSnapEnabled = localStorage.getItem('edgeSnapEnabled') !== 'false';
         this.canvasScale = parseFloat(localStorage.getItem('canvasScale')) || 1.0;
         this.edgeSnapDistance = 20; // Distance in pixels for edge snapping
+        this.configAutoOpenDisabled = false; // Track if auto-open is disabled after drawing
         
         // Infinite canvas pan state
         this.panOffset = { 
@@ -247,17 +248,73 @@ class DrawingBoard {
         // Pen size slider
         const penSizeSlider = document.getElementById('pen-size-slider');
         const penSizeValue = document.getElementById('pen-size-value');
+        const penSizeInput = document.getElementById('pen-size-input');
         penSizeSlider.addEventListener('input', (e) => {
             this.penSize = parseInt(e.target.value);
             penSizeValue.textContent = this.penSize;
+            penSizeInput.value = this.penSize;
+        });
+        
+        // Pen size input box
+        penSizeInput.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            if (!isNaN(value) && value >= 3 && value <= 15) {
+                this.penSize = value;
+                penSizeValue.textContent = this.penSize;
+                penSizeSlider.value = this.penSize;
+            }
+        });
+        
+        penSizeInput.addEventListener('change', (e) => {
+            // Ensure value is within bounds
+            let value = parseInt(e.target.value);
+            if (isNaN(value) || value < 3) value = 3;
+            if (value > 15) value = 15;
+            this.penSize = value;
+            penSizeValue.textContent = this.penSize;
+            penSizeSlider.value = this.penSize;
+            penSizeInput.value = this.penSize;
         });
         
         // Eraser size slider
         const eraserSizeSlider = document.getElementById('eraser-size-slider');
         const eraserSizeValue = document.getElementById('eraser-size-value');
+        const eraserSizeInput = document.getElementById('eraser-size-input');
         eraserSizeSlider.addEventListener('input', (e) => {
             this.eraserSize = parseInt(e.target.value);
             eraserSizeValue.textContent = this.eraserSize;
+            eraserSizeInput.value = this.eraserSize;
+            // Update eraser cursor size in real-time
+            if (this.currentTool === 'eraser') {
+                this.eraserCursor.style.width = this.eraserSize + 'px';
+                this.eraserCursor.style.height = this.eraserSize + 'px';
+            }
+        });
+        
+        // Eraser size input box
+        eraserSizeInput.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            if (!isNaN(value) && value >= 10 && value <= 30) {
+                this.eraserSize = value;
+                eraserSizeValue.textContent = this.eraserSize;
+                eraserSizeSlider.value = this.eraserSize;
+                // Update eraser cursor size in real-time
+                if (this.currentTool === 'eraser') {
+                    this.eraserCursor.style.width = this.eraserSize + 'px';
+                    this.eraserCursor.style.height = this.eraserSize + 'px';
+                }
+            }
+        });
+        
+        eraserSizeInput.addEventListener('change', (e) => {
+            // Ensure value is within bounds
+            let value = parseInt(e.target.value);
+            if (isNaN(value) || value < 10) value = 10;
+            if (value > 30) value = 30;
+            this.eraserSize = value;
+            eraserSizeValue.textContent = this.eraserSize;
+            eraserSizeSlider.value = this.eraserSize;
+            eraserSizeInput.value = this.eraserSize;
             // Update eraser cursor size in real-time
             if (this.currentTool === 'eraser') {
                 this.eraserCursor.style.width = this.eraserSize + 'px';
@@ -274,9 +331,16 @@ class DrawingBoard {
         // Zoom input
         const zoomInput = document.getElementById('zoom-input');
         zoomInput.addEventListener('input', (e) => {
-            // Remove any non-digit characters except decimal point while typing
+            // Allow digits and decimal point while typing
             let value = e.target.value.replace(/[^0-9.]/g, '');
+            // Store the cursor position
+            const cursorPosition = e.target.selectionStart;
+            const oldLength = e.target.value.length;
             e.target.value = value;
+            // Restore cursor position
+            const newLength = e.target.value.length;
+            const newPosition = cursorPosition + (newLength - oldLength);
+            e.target.setSelectionRange(newPosition, newPosition);
         });
         zoomInput.addEventListener('change', (e) => {
             const value = e.target.value.replace(/[^0-9.]/g, '');
@@ -508,6 +572,13 @@ class DrawingBoard {
         this.points = [pos];
         this.lastPoint = pos;
         
+        // Auto-close config panel when drawing starts and disable auto-open
+        const configArea = document.getElementById('config-area');
+        if (configArea.classList.contains('show')) {
+            configArea.classList.remove('show');
+            this.configAutoOpenDisabled = true;
+        }
+        
         // Setup drawing context
         this.setupDrawingContext();
         
@@ -519,6 +590,9 @@ class DrawingBoard {
     }
     
     setupDrawingContext() {
+        // Save context state before modifying
+        this.ctx.save();
+        
         // Always set line properties
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
@@ -629,6 +703,9 @@ class DrawingBoard {
     
     setTool(tool) {
         this.currentTool = tool;
+        // Re-enable auto-open when user clicks a toolbar button
+        this.configAutoOpenDisabled = false;
+        
         if (tool === 'eraser') {
             this.showEraserCursor();
         } else {
@@ -707,17 +784,26 @@ class DrawingBoard {
         if (this.currentTool === 'pen') {
             document.getElementById('pen-btn').classList.add('active');
             document.getElementById('pen-config').classList.add('active');
-            configArea.classList.add('show');
+            // Only show if auto-open is not disabled
+            if (!this.configAutoOpenDisabled) {
+                configArea.classList.add('show');
+            }
             this.canvas.style.cursor = 'crosshair';
         } else if (this.currentTool === 'eraser') {
             document.getElementById('eraser-btn').classList.add('active');
             document.getElementById('eraser-config').classList.add('active');
-            configArea.classList.add('show');
+            // Only show if auto-open is not disabled
+            if (!this.configAutoOpenDisabled) {
+                configArea.classList.add('show');
+            }
             this.canvas.style.cursor = 'pointer';
         } else if (this.currentTool === 'background') {
             document.getElementById('background-btn').classList.add('active');
             document.getElementById('background-config').classList.add('active');
-            configArea.classList.add('show');
+            // Only show if auto-open is not disabled
+            if (!this.configAutoOpenDisabled) {
+                configArea.classList.add('show');
+            }
             this.canvas.style.cursor = 'default';
         } else {
             // For other tools, hide config area
@@ -808,6 +894,48 @@ class DrawingBoard {
     }
     
     applyZoom() {
+        // For infinite canvas mode, adjust canvas size when zoomed out
+        if (this.infiniteCanvas && this.canvasScale < 1.0) {
+            // Calculate the scale factor needed to fill the screen
+            const scaleFactor = 1 / this.canvasScale;
+            
+            // Resize canvas to be larger when zoomed out
+            const rect = this.canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            
+            // Save current canvas state before resize
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = this.canvas.width;
+            tempCanvas.height = this.canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(this.canvas, 0, 0);
+            
+            // Calculate new canvas size
+            const newWidth = rect.width * scaleFactor;
+            const newHeight = rect.height * scaleFactor;
+            
+            // Set new canvas dimensions
+            this.canvas.width = newWidth * dpr;
+            this.canvas.height = newHeight * dpr;
+            this.canvas.style.width = newWidth + 'px';
+            this.canvas.style.height = newHeight + 'px';
+            
+            this.bgCanvas.width = newWidth * dpr;
+            this.bgCanvas.height = newHeight * dpr;
+            this.bgCanvas.style.width = newWidth + 'px';
+            this.bgCanvas.style.height = newHeight + 'px';
+            
+            // Scale context for high DPI displays
+            this.ctx.scale(dpr, dpr);
+            this.bgCtx.scale(dpr, dpr);
+            
+            // Restore canvas content
+            this.ctx.drawImage(tempCanvas, 0, 0);
+            
+            // Redraw background with new size
+            this.drawBackground();
+        }
+        
         // Apply zoom to both canvas layers
         this.canvas.style.transform = `scale(${this.canvasScale})`;
         this.canvas.style.transformOrigin = 'center center';
@@ -891,6 +1019,20 @@ class DrawingBoard {
     setupDraggablePanels() {
         const historyControls = document.getElementById('history-controls');
         const configArea = document.getElementById('config-area');
+        const collapsedIcon = document.getElementById('collapsed-icon');
+        
+        // Expand config area on hover or click when collapsed
+        configArea.addEventListener('mouseenter', () => {
+            if (configArea.classList.contains('collapsed')) {
+                configArea.classList.remove('collapsed');
+            }
+        });
+        
+        // Click on collapsed icon to expand
+        collapsedIcon.addEventListener('click', (e) => {
+            e.stopPropagation();
+            configArea.classList.remove('collapsed');
+        });
         
         [historyControls, configArea].forEach(element => {
             element.addEventListener('mousedown', (e) => {
@@ -921,22 +1063,39 @@ class DrawingBoard {
             let x = e.clientX - this.dragOffset.x;
             let y = e.clientY - this.dragOffset.y;
             
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            
             // Apply edge snapping if enabled
             if (this.edgeSnapEnabled) {
-                const windowWidth = window.innerWidth;
-                const windowHeight = window.innerHeight;
+                let snapped = false;
                 
                 // Snap to left
-                if (x < this.edgeSnapDistance) x = 0;
+                if (x < this.edgeSnapDistance) {
+                    x = 0;
+                    snapped = true;
+                }
                 // Snap to right
                 if (x + this.draggedElementWidth > windowWidth - this.edgeSnapDistance) {
                     x = windowWidth - this.draggedElementWidth;
+                    snapped = true;
                 }
                 // Snap to top
-                if (y < this.edgeSnapDistance) y = 0;
+                if (y < this.edgeSnapDistance) {
+                    y = 0;
+                    snapped = true;
+                }
                 // Snap to bottom
                 if (y + this.draggedElementHeight > windowHeight - this.edgeSnapDistance) {
                     y = windowHeight - this.draggedElementHeight;
+                    snapped = true;
+                }
+                
+                // Collapse config area when snapped to edge
+                if (snapped && this.draggedElement === configArea) {
+                    configArea.classList.add('collapsed');
+                    // Update collapsed icon based on current tool
+                    this.updateCollapsedIcon();
                 }
             }
             
@@ -955,6 +1114,40 @@ class DrawingBoard {
                 this.draggedElement = null;
             }
         });
+    }
+    
+    // Update collapsed icon based on current tool
+    updateCollapsedIcon() {
+        const collapsedIcon = document.getElementById('collapsed-icon');
+        let iconSvg = '';
+        
+        if (this.currentTool === 'pen') {
+            iconSvg = `
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                    <path d="M2 2l7.586 7.586"></path>
+                    <circle cx="11" cy="11" r="2"></circle>
+                </svg>
+            `;
+        } else if (this.currentTool === 'eraser') {
+            iconSvg = `
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 20H7L3 16 12 7 17 12"></path>
+                    <path d="M7 20l5-5"></path>
+                </svg>
+            `;
+        } else if (this.currentTool === 'background') {
+            iconSvg = `
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+            `;
+        }
+        
+        collapsedIcon.innerHTML = iconSvg;
     }
     
     // Background functions
@@ -1198,9 +1391,10 @@ class DrawingBoard {
         const b = parseInt(this.backgroundColor.slice(5, 7), 16);
         const brightness = (r * 299 + g * 587 + b * 114) / 1000;
         
-        // Scale opacity based on pattern intensity (0.1 to 1.0 range)
+        // Scale opacity based on pattern intensity (0.2 to 1.0 range for darker patterns)
         const baseOpacity = this.patternIntensity;
-        return brightness > 128 ? `rgba(0, 0, 0, ${baseOpacity * 0.2})` : `rgba(255, 255, 255, ${baseOpacity * 0.2})`;
+        // Increase the multiplier from 0.2 to 0.5 for darker patterns
+        return brightness > 128 ? `rgba(0, 0, 0, ${baseOpacity * 0.5})` : `rgba(255, 255, 255, ${baseOpacity * 0.5})`;
     }
     
     // Canvas mode functions
