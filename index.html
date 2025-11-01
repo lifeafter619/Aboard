@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Aboard - 简约白板</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Zoom controls in top right corner -->
+    <div id="history-controls">
+        <button id="zoom-out-btn" class="history-btn" title="缩小 (-)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="M21 21l-4.35-4.35"></path>
+                <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+        </button>
+        <input type="text" id="zoom-input" class="zoom-input" value="100%" title="缩放比例 (输入百分比)">
+        <button id="zoom-in-btn" class="history-btn" title="放大 (+)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="M21 21l-4.35-4.35"></path>
+                <line x1="11" y1="8" x2="11" y2="14"></line>
+                <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Background canvas layer -->
+    <canvas id="background-canvas"></canvas>
+    
+    <!-- Main drawing canvas -->
+    <canvas id="canvas"></canvas>
+    
+    <!-- Eraser cursor overlay -->
+    <div id="eraser-cursor" style="display: none;"></div>
+
+    <!-- Dynamic configuration area (appears above toolbar) -->
+    <div id="config-area">
+        <!-- Close button for config panel -->
+        <button id="config-close-btn" class="config-close-btn" title="关闭">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+        
+        <!-- Pen configuration -->
+        <div id="pen-config" class="config-panel active">
+            <div class="config-group">
+                <label>笔触类型</label>
+                <div class="button-size-options pen-type-grid">
+                    <button class="pen-type-btn active" data-pen-type="normal">普通笔</button>
+                    <button class="pen-type-btn" data-pen-type="pencil">铅笔</button>
+                    <button class="pen-type-btn" data-pen-type="ballpoint">圆珠笔</button>
+                    <button class="pen-type-btn" data-pen-type="fountain">钢笔</button>
+                    <button class="pen-type-btn" data-pen-type="brush">毛笔</button>
+                </div>
+            </div>
+            <div class="config-group">
+                <label>颜色</label>
+                <div class="color-picker">
+                    <button class="color-btn active" data-color="#000000" style="background-color: #000000;" title="黑色"></button>
+                    <button class="color-btn" data-color="#FF0000" style="background-color: #FF0000;" title="红色"></button>
+                    <button class="color-btn" data-color="#0000FF" style="background-color: #0000FF;" title="蓝色"></button>
+                    <button class="color-btn" data-color="#00FF00" style="background-color: #00FF00;" title="绿色"></button>
+                    <button class="color-btn" data-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="黄色"></button>
+                    <button class="color-btn" data-color="#FF8800" style="background-color: #FF8800;" title="橙色"></button>
+                    <button class="color-btn" data-color="#8800FF" style="background-color: #8800FF;" title="紫色"></button>
+                    <button class="color-btn" data-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="白色"></button>
+                </div>
+                <div class="color-picker-custom">
+                    <label class="color-picker-icon-btn" for="custom-color-picker" title="取色器">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
+                            <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
+                        </svg>
+                        <input type="color" id="custom-color-picker" class="custom-color-picker-input" value="#000000">
+                    </label>
+                </div>
+            </div>
+            <div class="config-group">
+                <label>粗细 <span id="pen-size-value">5</span>px</label>
+                <input type="range" id="pen-size-slider" min="3" max="15" value="5" class="slider">
+            </div>
+        </div>
+
+        <!-- Eraser configuration -->
+        <div id="eraser-config" class="config-panel">
+            <div class="config-group">
+                <label>橡皮擦大小 <span id="eraser-size-value">20</span>px</label>
+                <input type="range" id="eraser-size-slider" min="10" max="30" value="20" class="slider">
+            </div>
+        </div>
+
+        <!-- Background configuration -->
+        <div id="background-config" class="config-panel">
+            <div class="config-group">
+                <label>背景颜色</label>
+                <div class="color-picker">
+                    <button class="color-btn active" data-bg-color="#ffffff" style="background-color: #ffffff; border: 1px solid #ccc;" title="白色"></button>
+                    <button class="color-btn" data-bg-color="#f5f5f5" style="background-color: #f5f5f5; border: 1px solid #ccc;" title="浅灰"></button>
+                    <button class="color-btn" data-bg-color="#fffef0" style="background-color: #fffef0; border: 1px solid #ccc;" title="米黄"></button>
+                    <button class="color-btn" data-bg-color="#000000" style="background-color: #000000;" title="黑色"></button>
+                    <button class="color-btn" data-bg-color="#2d5016" style="background-color: #2d5016;" title="黑板绿"></button>
+                    <button class="color-btn" data-bg-color="#4a7c59" style="background-color: #4a7c59;" title="青绿色"></button>
+                    <button class="color-btn" data-bg-color="#654321" style="background-color: #654321;" title="棕色"></button>
+                    <button class="color-btn" data-bg-color="#8B4513" style="background-color: #8B4513;" title="深棕色"></button>
+                </div>
+                <div class="color-picker-custom">
+                    <label class="color-picker-icon-btn" for="custom-bg-color-picker" title="取色器">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
+                            <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
+                        </svg>
+                        <input type="color" id="custom-bg-color-picker" class="custom-color-picker-input" value="#ffffff">
+                    </label>
+                </div>
+            </div>
+            <div class="config-group">
+                <label>背景透明度 <span id="bg-opacity-value">100</span>%</label>
+                <input type="range" id="bg-opacity-slider" min="0" max="100" value="100" class="slider">
+            </div>
+            <div class="config-group">
+                <label>背景图案</label>
+                <div class="button-size-options pattern-grid">
+                    <button class="pattern-option-btn active" data-pattern="blank">空白</button>
+                    <button class="pattern-option-btn" data-pattern="dots">点阵</button>
+                    <button class="pattern-option-btn" data-pattern="grid">方格</button>
+                    <button class="pattern-option-btn" data-pattern="tianzige">田字格</button>
+                    <button class="pattern-option-btn" data-pattern="english-lines">英语四线</button>
+                    <button class="pattern-option-btn" data-pattern="music-staff">五线谱</button>
+                    <button class="pattern-option-btn" data-pattern="coordinate">坐标系</button>
+                </div>
+            </div>
+            <div class="config-group">
+                <label>图案深浅 <span id="pattern-intensity-value">50</span>%</label>
+                <input type="range" id="pattern-intensity-slider" min="10" max="100" value="50" class="slider">
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination controls (below zoom, only visible when not in infinite canvas mode) -->
+    <div id="pagination-controls">
+        <button id="prev-page-btn" class="page-nav-btn" title="上一页">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+        </button>
+        <input type="number" id="page-input" class="page-input" value="1" min="1" title="输入页码跳转">
+        <span id="page-total">/ 1</span>
+        <button id="next-page-btn" class="page-nav-btn" title="下一页">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Settings modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>设置</h2>
+                <button id="settings-close-btn" class="modal-close-btn" title="关闭">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-group">
+                    <label>工具栏按钮大小 <span id="toolbar-size-value">50</span>px</label>
+                    <input type="range" id="toolbar-size-slider" min="40" max="80" value="50" class="slider" step="5">
+                </div>
+                <div class="settings-group">
+                    <label>属性栏缩放 <span id="config-scale-value">100</span>%</label>
+                    <input type="range" id="config-scale-slider" min="80" max="120" value="100" class="slider" step="10">
+                </div>
+                <div class="settings-group">
+                    <label>控制按钮位置</label>
+                    <div class="button-size-options button-size-options-4">
+                        <button class="position-option-btn active" data-position="top-right">右上角</button>
+                        <button class="position-option-btn" data-position="top-left">左上角</button>
+                        <button class="position-option-btn" data-position="bottom-right">右下角</button>
+                        <button class="position-option-btn" data-position="bottom-left">左下角</button>
+                    </div>
+                </div>
+                <div class="settings-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="edge-snap-checkbox" checked>
+                        <span>启用边缘吸附</span>
+                    </label>
+                </div>
+                <div class="settings-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="infinite-canvas-checkbox" checked>
+                        <span>无限画布模式</span>
+                    </label>
+                    <p class="settings-hint">关闭后启用分页系统</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm modal for clear action -->
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content confirm-modal-content">
+            <div class="modal-header">
+                <h2>确认清空</h2>
+            </div>
+            <div class="modal-body">
+                <p class="confirm-message">确定要清空画布吗？此操作无法撤销。</p>
+                <div class="confirm-buttons">
+                    <button id="confirm-cancel-btn" class="confirm-btn cancel-btn">取消</button>
+                    <button id="confirm-ok-btn" class="confirm-btn ok-btn">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom toolbar -->
+    <div id="toolbar">
+        <button id="undo-btn" class="tool-btn" data-tool="undo" title="撤销 (Ctrl+Z)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 7v6h6"></path>
+                <path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"></path>
+            </svg>
+            <span>撤销</span>
+        </button>
+        <button id="redo-btn" class="tool-btn" data-tool="redo" title="重做 (Ctrl+Y)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 7v6h-6"></path>
+                <path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"></path>
+            </svg>
+            <span>重做</span>
+        </button>
+        <button id="pen-btn" class="tool-btn active" data-tool="pen" title="笔">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                <path d="M2 2l7.586 7.586"></path>
+                <circle cx="11" cy="11" r="2"></circle>
+            </svg>
+            <span>笔</span>
+        </button>
+        <button id="eraser-btn" class="tool-btn" data-tool="eraser" title="橡皮擦">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 20H7L3 16 12 7 17 12"></path>
+                <path d="M7 20l5-5"></path>
+            </svg>
+            <span>橡皮</span>
+        </button>
+        <button id="background-btn" class="tool-btn" data-tool="background" title="背景">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+            <span>背景</span>
+        </button>
+        <button id="clear-btn" class="tool-btn" data-tool="clear" title="清空画布">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+            </svg>
+            <span>清空</span>
+        </button>
+        <button id="settings-btn" class="tool-btn" data-tool="settings" title="设置">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"></path>
+            </svg>
+            <span>设置</span>
+        </button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
