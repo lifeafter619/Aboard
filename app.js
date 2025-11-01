@@ -17,6 +17,11 @@ class DrawingBoard {
         // Eraser cursor element
         this.eraserCursor = document.getElementById('eraser-cursor');
         
+        // Maximum canvas dimensions to prevent memory issues
+        // Maximum total pixels should not exceed ~268 million pixels (16384 x 16384)
+        this.MAX_CANVAS_DIMENSION = 16384;
+        this.MAX_CANVAS_PIXELS = 268435456; // 16384 * 16384
+        
         // State management
         this.isDrawing = false;
         this.currentTool = 'pen';
@@ -81,6 +86,37 @@ class DrawingBoard {
         this.saveState();
     }
     
+    // Helper method to check if canvas dimensions are safe for getImageData
+    isSafeCanvasDimensions(width, height) {
+        if (width <= 0 || height <= 0) {
+            return false;
+        }
+        if (width > this.MAX_CANVAS_DIMENSION || height > this.MAX_CANVAS_DIMENSION) {
+            console.warn(`Canvas dimension exceeds maximum: ${width}x${height}`);
+            return false;
+        }
+        const totalPixels = width * height;
+        if (totalPixels > this.MAX_CANVAS_PIXELS) {
+            console.warn(`Canvas pixel count exceeds maximum: ${totalPixels} pixels`);
+            return false;
+        }
+        return true;
+    }
+    
+    // Safe wrapper for getImageData that handles errors gracefully
+    safeGetImageData(ctx, x, y, width, height) {
+        try {
+            if (!this.isSafeCanvasDimensions(width, height)) {
+                console.warn('Canvas dimensions too large for getImageData, skipping');
+                return null;
+            }
+            return ctx.getImageData(x, y, width, height);
+        } catch (error) {
+            console.error('Error calling getImageData:', error);
+            return null;
+        }
+    }
+    
     resizeCanvas() {
         const rect = this.canvas.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
@@ -89,7 +125,7 @@ class DrawingBoard {
         const oldWidth = this.canvas.width;
         const oldHeight = this.canvas.height;
         const imageData = this.historyStep >= 0 ? 
-            this.ctx.getImageData(0, 0, oldWidth, oldHeight) : null;
+            this.safeGetImageData(this.ctx, 0, 0, oldWidth, oldHeight) : null;
         
         // Set canvas size for both layers
         this.canvas.width = rect.width * dpr;
@@ -666,8 +702,21 @@ class DrawingBoard {
         const oldLogicalHeight = this.canvas.height / dpr;
         
         // Calculate new dimensions
-        const newLogicalWidth = oldLogicalWidth + expandLeft + expandRight;
-        const newLogicalHeight = oldLogicalHeight + expandTop + expandBottom;
+        let newLogicalWidth = oldLogicalWidth + expandLeft + expandRight;
+        let newLogicalHeight = oldLogicalHeight + expandTop + expandBottom;
+        
+        // Check if new dimensions would exceed maximum limits
+        const newPhysicalWidth = newLogicalWidth * dpr;
+        const newPhysicalHeight = newLogicalHeight * dpr;
+        
+        if (newPhysicalWidth > this.MAX_CANVAS_DIMENSION || 
+            newPhysicalHeight > this.MAX_CANVAS_DIMENSION ||
+            newPhysicalWidth * newPhysicalHeight > this.MAX_CANVAS_PIXELS) {
+            console.warn('Canvas expansion would exceed maximum dimensions, limiting expansion');
+            // Limit to maximum safe dimensions
+            newLogicalWidth = Math.min(newLogicalWidth, this.MAX_CANVAS_DIMENSION / dpr);
+            newLogicalHeight = Math.min(newLogicalHeight, this.MAX_CANVAS_DIMENSION / dpr);
+        }
         
         // Save current canvas content
         const tempCanvas = document.createElement('canvas');
@@ -1090,15 +1139,19 @@ class DrawingBoard {
         // Remove any states after current step
         this.history = this.history.slice(0, this.historyStep + 1);
         
-        // Save current canvas state
-        const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        this.history.push(imageData);
-        this.historyStep++;
-        
-        // Limit history size
-        if (this.history.length > this.maxHistory) {
-            this.history.shift();
-            this.historyStep--;
+        // Save current canvas state (with safety check)
+        const imageData = this.safeGetImageData(this.ctx, 0, 0, this.canvas.width, this.canvas.height);
+        if (imageData) {
+            this.history.push(imageData);
+            this.historyStep++;
+            
+            // Limit history size
+            if (this.history.length > this.maxHistory) {
+                this.history.shift();
+                this.historyStep--;
+            }
+        } else {
+            console.warn('Canvas too large to save state, history not updated');
         }
         
         this.updateUI();
@@ -1154,8 +1207,21 @@ class DrawingBoard {
             // Calculate canvas size needed to cover viewport when scaled
             // When scale is 0.5, canvas needs to be 2x the viewport size to cover it after scaling
             const scaleFactor = 1 / this.canvasScale;
-            const requiredWidth = viewportWidth * scaleFactor;
-            const requiredHeight = viewportHeight * scaleFactor;
+            let requiredWidth = viewportWidth * scaleFactor;
+            let requiredHeight = viewportHeight * scaleFactor;
+            
+            // Limit required dimensions to prevent memory issues
+            const maxLogicalDimension = this.MAX_CANVAS_DIMENSION / dpr;
+            requiredWidth = Math.min(requiredWidth, maxLogicalDimension);
+            requiredHeight = Math.min(requiredHeight, maxLogicalDimension);
+            
+            // Also check total pixel count
+            if (requiredWidth * requiredHeight * dpr * dpr > this.MAX_CANVAS_PIXELS) {
+                console.warn('Zoom would create canvas that exceeds pixel limit, limiting size');
+                const scale = Math.sqrt(this.MAX_CANVAS_PIXELS / (requiredWidth * requiredHeight * dpr * dpr));
+                requiredWidth *= scale;
+                requiredHeight *= scale;
+            }
             
             // Only resize if canvas is significantly smaller than required
             const currentLogicalWidth = this.canvas.width / dpr;
@@ -1697,9 +1763,19 @@ class DrawingBoard {
     initializePagination() {
         // Initialize pagination system if not already done
         if (this.pages.length === 0) {
-            // Save current canvas as first page
-            const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-            this.pages.push(imageData);
+            // Save current canvas as first page (with safety check)
+            const imageData = this.safeGetImageData(this.ctx, 0, 0, this.canvas.width, this.canvas.height);
+            if (imageData) {
+                this.pages.push(imageData);
+            } else {
+                // If canvas is too large, create a blank page
+                console.warn('Canvas too large for pagination, creating blank page');
+                const blankCanvas = document.createElement('canvas');
+                blankCanvas.width = Math.min(this.canvas.width, this.MAX_CANVAS_DIMENSION);
+                blankCanvas.height = Math.min(this.canvas.height, this.MAX_CANVAS_DIMENSION);
+                const blankCtx = blankCanvas.getContext('2d');
+                this.pages.push(blankCtx.getImageData(0, 0, blankCanvas.width, blankCanvas.height));
+            }
             this.currentPage = 1;
         }
         this.updatePaginationUI();
@@ -1732,32 +1808,54 @@ class DrawingBoard {
     
     prevPage() {
         if (this.currentPage > 1) {
-            // Save current page
-            const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-            this.pages[this.currentPage - 1] = imageData;
+            // Save current page (with safety check)
+            const imageData = this.safeGetImageData(this.ctx, 0, 0, this.canvas.width, this.canvas.height);
+            if (imageData) {
+                this.pages[this.currentPage - 1] = imageData;
+            }
             
             // Load previous page
             this.currentPage--;
-            this.ctx.putImageData(this.pages[this.currentPage - 1], 0, 0);
+            try {
+                this.ctx.putImageData(this.pages[this.currentPage - 1], 0, 0);
+            } catch (error) {
+                console.error('Error loading previous page:', error);
+            }
             this.updatePaginationUI();
         }
     }
     
     nextPage() {
-        // Save current page
-        const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        this.pages[this.currentPage - 1] = imageData;
+        // Save current page (with safety check)
+        const imageData = this.safeGetImageData(this.ctx, 0, 0, this.canvas.width, this.canvas.height);
+        if (imageData) {
+            this.pages[this.currentPage - 1] = imageData;
+        }
         
         // Move to next page
         this.currentPage++;
         
         if (this.currentPage > this.pages.length) {
-            // Create new blank page
+            // Create new blank page (with safety check)
             this.clearCanvas(false);
-            this.pages.push(this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height));
+            const newPageData = this.safeGetImageData(this.ctx, 0, 0, this.canvas.width, this.canvas.height);
+            if (newPageData) {
+                this.pages.push(newPageData);
+            } else {
+                console.warn('Canvas too large for new page, using minimal blank page');
+                const blankCanvas = document.createElement('canvas');
+                blankCanvas.width = Math.min(this.canvas.width, this.MAX_CANVAS_DIMENSION);
+                blankCanvas.height = Math.min(this.canvas.height, this.MAX_CANVAS_DIMENSION);
+                const blankCtx = blankCanvas.getContext('2d');
+                this.pages.push(blankCtx.getImageData(0, 0, blankCanvas.width, blankCanvas.height));
+            }
         } else {
             // Load existing page
-            this.ctx.putImageData(this.pages[this.currentPage - 1], 0, 0);
+            try {
+                this.ctx.putImageData(this.pages[this.currentPage - 1], 0, 0);
+            } catch (error) {
+                console.error('Error loading next page:', error);
+            }
         }
         
         this.updatePaginationUI();
@@ -1766,25 +1864,36 @@ class DrawingBoard {
     goToPage(pageNum) {
         if (pageNum < 1) return;
         
-        // Save current page
-        const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        this.pages[this.currentPage - 1] = imageData;
+        // Save current page (with safety check)
+        const imageData = this.safeGetImageData(this.ctx, 0, 0, this.canvas.width, this.canvas.height);
+        if (imageData) {
+            this.pages[this.currentPage - 1] = imageData;
+        }
         
         // Create pages if necessary
         while (this.pages.length < pageNum) {
-            // Save current state, create a blank page
+            // Save current state, create a blank page (with dimension limits)
             const blankCanvas = document.createElement('canvas');
-            blankCanvas.width = this.canvas.width;
-            blankCanvas.height = this.canvas.height;
+            blankCanvas.width = Math.min(this.canvas.width, this.MAX_CANVAS_DIMENSION);
+            blankCanvas.height = Math.min(this.canvas.height, this.MAX_CANVAS_DIMENSION);
             const blankCtx = blankCanvas.getContext('2d');
             blankCtx.fillStyle = this.backgroundColor;
             blankCtx.fillRect(0, 0, blankCanvas.width, blankCanvas.height);
-            this.pages.push(blankCtx.getImageData(0, 0, blankCanvas.width, blankCanvas.height));
+            try {
+                this.pages.push(blankCtx.getImageData(0, 0, blankCanvas.width, blankCanvas.height));
+            } catch (error) {
+                console.error('Error creating blank page:', error);
+                break;
+            }
         }
         
         // Load the target page
         this.currentPage = pageNum;
-        this.ctx.putImageData(this.pages[this.currentPage - 1], 0, 0);
+        try {
+            this.ctx.putImageData(this.pages[this.currentPage - 1], 0, 0);
+        } catch (error) {
+            console.error('Error loading target page:', error);
+        }
         this.updatePaginationUI();
     }
     
