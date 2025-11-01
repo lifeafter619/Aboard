@@ -532,11 +532,11 @@ class DrawingBoard {
     
     getPosition(e) {
         const rect = this.canvas.getBoundingClientRect();
-        // Account for canvas scaling and pan offset
-        return {
-            x: (e.clientX - rect.left) / this.canvasScale - this.panOffset.x,
-            y: (e.clientY - rect.top) / this.canvasScale - this.panOffset.y
-        };
+        // Convert screen coordinates to canvas coordinates
+        // Account for both canvas scale (zoom) and pan offset
+        const x = (e.clientX - rect.left) / this.canvasScale;
+        const y = (e.clientY - rect.top) / this.canvasScale;
+        return { x, y };
     }
     
     startPanning(e) {
@@ -558,8 +558,8 @@ class DrawingBoard {
         
         this.lastPanPoint = { x: e.clientX, y: e.clientY };
         
-        // Redraw canvas with new pan offset
-        this.redrawCanvas();
+        // Apply pan offset via CSS transform (combined with scale)
+        this.applyCanvasTransform();
         
         // Save pan offset
         localStorage.setItem('panOffsetX', this.panOffset.x);
@@ -604,8 +604,8 @@ class DrawingBoard {
         
         this.lastTwoFingerMidpoint = midpoint;
         
-        // Redraw canvas with new pan offset
-        this.redrawCanvas();
+        // Apply pan offset via CSS transform (combined with scale)
+        this.applyCanvasTransform();
         
         // Save pan offset
         localStorage.setItem('panOffsetX', this.panOffset.x);
@@ -617,6 +617,102 @@ class DrawingBoard {
             this.isTwoFingerPanning = false;
             this.lastTwoFingerMidpoint = null;
         }
+    }
+    
+    checkAndExpandCanvas(pos) {
+        // Define the edge threshold - expand when drawing within this distance from edge
+        const edgeThreshold = 100; // pixels from edge
+        const expandAmount = 500; // pixels to expand by
+        
+        const dpr = window.devicePixelRatio || 1;
+        const logicalWidth = this.canvas.width / dpr;
+        const logicalHeight = this.canvas.height / dpr;
+        
+        let needsExpansion = false;
+        let expandLeft = 0, expandRight = 0, expandTop = 0, expandBottom = 0;
+        
+        // Check if near left edge
+        if (pos.x < edgeThreshold) {
+            expandLeft = expandAmount;
+            needsExpansion = true;
+        }
+        
+        // Check if near right edge
+        if (pos.x > logicalWidth - edgeThreshold) {
+            expandRight = expandAmount;
+            needsExpansion = true;
+        }
+        
+        // Check if near top edge
+        if (pos.y < edgeThreshold) {
+            expandTop = expandAmount;
+            needsExpansion = true;
+        }
+        
+        // Check if near bottom edge
+        if (pos.y > logicalHeight - edgeThreshold) {
+            expandBottom = expandAmount;
+            needsExpansion = true;
+        }
+        
+        if (needsExpansion) {
+            this.expandCanvas(expandLeft, expandRight, expandTop, expandBottom);
+        }
+    }
+    
+    expandCanvas(expandLeft, expandRight, expandTop, expandBottom) {
+        const dpr = window.devicePixelRatio || 1;
+        const oldLogicalWidth = this.canvas.width / dpr;
+        const oldLogicalHeight = this.canvas.height / dpr;
+        
+        // Calculate new dimensions
+        const newLogicalWidth = oldLogicalWidth + expandLeft + expandRight;
+        const newLogicalHeight = oldLogicalHeight + expandTop + expandBottom;
+        
+        // Save current canvas content
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = this.canvas.width;
+        tempCanvas.height = this.canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(this.canvas, 0, 0);
+        
+        // Resize main canvas
+        this.canvas.width = newLogicalWidth * dpr;
+        this.canvas.height = newLogicalHeight * dpr;
+        this.canvas.style.width = newLogicalWidth + 'px';
+        this.canvas.style.height = newLogicalHeight + 'px';
+        
+        // Resize background canvas
+        this.bgCanvas.width = newLogicalWidth * dpr;
+        this.bgCanvas.height = newLogicalHeight * dpr;
+        this.bgCanvas.style.width = newLogicalWidth + 'px';
+        this.bgCanvas.style.height = newLogicalHeight + 'px';
+        
+        // Re-apply DPR scaling
+        this.ctx.scale(dpr, dpr);
+        this.bgCtx.scale(dpr, dpr);
+        
+        // Restore content at offset position (if we expanded left or top, content shifts)
+        this.ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height,
+            expandLeft * dpr, expandTop * dpr, tempCanvas.width, tempCanvas.height);
+        
+        // Redraw background
+        this.drawBackground();
+        
+        // Adjust pan offset if we expanded left or top (to keep content in same visual position)
+        if (expandLeft > 0) {
+            this.panOffset.x += expandLeft;
+        }
+        if (expandTop > 0) {
+            this.panOffset.y += expandTop;
+        }
+        
+        // Re-apply canvas transform with updated pan offset
+        this.applyCanvasTransform();
+        
+        // Save updated pan offset
+        localStorage.setItem('panOffsetX', this.panOffset.x);
+        localStorage.setItem('panOffsetY', this.panOffset.y);
     }
     
     updateCursor() {
@@ -632,24 +728,9 @@ class DrawingBoard {
     }
     
     redrawCanvas() {
-        // Temporarily store the current canvas state
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = this.canvas.width;
-        tempCanvas.height = this.canvas.height;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.drawImage(this.canvas, 0, 0);
-        
-        // Clear and redraw with pan offset
-        this.ctx.save();
-        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Apply pan transformation
-        this.ctx.translate(this.panOffset.x, this.panOffset.y);
-        
-        // Redraw the content
-        this.ctx.drawImage(tempCanvas, -this.panOffset.x, -this.panOffset.y);
-        this.ctx.restore();
+        // For infinite canvas mode, panning is handled by CSS transform on the canvas element itself
+        // We don't need to redraw the canvas content when panning
+        // This function is kept for compatibility but doesn't need to do anything for pan
     }
     
     startDrawing(e) {
@@ -746,6 +827,11 @@ class DrawingBoard {
         
         this.points.push(pos);
         
+        // Check if we need to expand canvas when drawing near edges (infinite canvas mode only)
+        if (this.infiniteCanvas) {
+            this.checkAndExpandCanvas(pos);
+        }
+        
         // Draw immediately for responsiveness using optimized path
         if (this.points.length >= 2) {
             const lastIndex = this.points.length - 1;
@@ -807,7 +893,11 @@ class DrawingBoard {
         configArea.style.top = 'auto';
         configArea.style.left = '50%';
         configArea.style.right = 'auto';
-        configArea.style.transform = 'translateX(-50%)';
+        // Apply transform with scale preserved
+        configArea.style.transform = `translateX(-50%) scale(${this.configScale})`;
+        
+        // Update collapsed icon to match current tool
+        this.updateCollapsedIcon();
         
         if (tool === 'eraser') {
             this.showEraserCursor();
@@ -1107,13 +1197,19 @@ class DrawingBoard {
             }
         }
         
-        // Apply zoom to both canvas layers
-        this.canvas.style.transform = `scale(${this.canvasScale})`;
-        this.canvas.style.transformOrigin = 'center center';
-        this.bgCanvas.style.transform = `scale(${this.canvasScale})`;
-        this.bgCanvas.style.transformOrigin = 'center center';
+        // Apply zoom and pan transform to both canvas layers
+        this.applyCanvasTransform();
         localStorage.setItem('canvasScale', this.canvasScale);
         this.updateZoomDisplay();
+    }
+    
+    applyCanvasTransform() {
+        // Apply both zoom (scale) and pan (translate) via CSS transform
+        const transform = `translate(${this.panOffset.x}px, ${this.panOffset.y}px) scale(${this.canvasScale})`;
+        this.canvas.style.transform = transform;
+        this.canvas.style.transformOrigin = 'center center';
+        this.bgCanvas.style.transform = transform;
+        this.bgCanvas.style.transformOrigin = 'center center';
     }
     
     updateZoomDisplay() {
@@ -1156,7 +1252,17 @@ class DrawingBoard {
     // Config scale update
     updateConfigScale() {
         const configArea = document.getElementById('config-area');
-        configArea.style.transform = `translateX(-50%) scale(${this.configScale})`;
+        // Only update the scale part via CSS variable or separate property
+        // Don't override transform which may include translateX for centering
+        configArea.style.setProperty('--config-scale', this.configScale);
+        // Apply scale via transform-origin and scale, preserving other transforms
+        const currentTransform = configArea.style.transform;
+        if (currentTransform.includes('translateX')) {
+            // Preserve translateX for centering
+            configArea.style.transform = currentTransform.replace(/scale\([^)]*\)/, '').trim() + ` scale(${this.configScale})`;
+        } else {
+            configArea.style.transform = `scale(${this.configScale})`;
+        }
         localStorage.setItem('configScale', this.configScale);
     }
     
@@ -1272,7 +1378,12 @@ class DrawingBoard {
             
             this.draggedElement.style.left = `${x}px`;
             this.draggedElement.style.top = `${y}px`;
-            this.draggedElement.style.transform = 'none';
+            // Preserve scale for config area when dragging
+            if (this.draggedElement === configArea) {
+                this.draggedElement.style.transform = `scale(${this.configScale})`;
+            } else {
+                this.draggedElement.style.transform = 'none';
+            }
             this.draggedElement.style.right = 'auto';
             this.draggedElement.style.bottom = 'auto';
         });
