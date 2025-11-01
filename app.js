@@ -257,12 +257,14 @@ class DrawingBoard {
         
         // Pen size input box
         penSizeInput.addEventListener('input', (e) => {
+            // Allow any input during typing, validate on change event
             const value = parseInt(e.target.value);
             if (!isNaN(value) && value >= 3 && value <= 15) {
                 this.penSize = value;
                 penSizeValue.textContent = this.penSize;
                 penSizeSlider.value = this.penSize;
             }
+            // Don't block the input, allow typing any number
         });
         
         penSizeInput.addEventListener('change', (e) => {
@@ -293,6 +295,7 @@ class DrawingBoard {
         
         // Eraser size input box
         eraserSizeInput.addEventListener('input', (e) => {
+            // Allow any input during typing, validate on change event
             const value = parseInt(e.target.value);
             if (!isNaN(value) && value >= 10 && value <= 30) {
                 this.eraserSize = value;
@@ -304,6 +307,7 @@ class DrawingBoard {
                     this.eraserCursor.style.height = this.eraserSize + 'px';
                 }
             }
+            // Don't block the input, allow typing any number
         });
         
         eraserSizeInput.addEventListener('change', (e) => {
@@ -575,8 +579,14 @@ class DrawingBoard {
         this.lastPoint = pos;
         
         // Auto-close config panel when drawing starts and disable auto-open
+        // BUT: Don't close if user is currently typing in an input field
         const configArea = document.getElementById('config-area');
-        if (configArea.classList.contains('show')) {
+        const activeElement = document.activeElement;
+        const isTypingInInput = activeElement && 
+            (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA') &&
+            configArea.contains(activeElement);
+        
+        if (configArea.classList.contains('show') && !isTypingInInput) {
             configArea.classList.remove('show');
             this.configAutoOpenDisabled = true;
         }
@@ -898,19 +908,32 @@ class DrawingBoard {
         this.applyZoom();
     }
     
+    zoomReset() {
+        this.canvasScale = 1.0;
+        this.applyZoom();
+    }
+    
     applyZoom() {
         // For infinite canvas mode, adjust canvas size when zoomed out
-        // Only resize canvas if zooming out (scale < 1.0) and significant change
-        if (this.infiniteCanvas && this.canvasScale < 1.0) {
-            const previousScale = parseFloat(localStorage.getItem('canvasScale')) || 1.0;
-            // Only resize if scale changed significantly (more than 5% difference)
-            if (Math.abs(previousScale - this.canvasScale) > 0.05) {
-                // Calculate the scale factor needed to fill the screen
-                const scaleFactor = 1 / this.canvasScale;
-                
-                // Resize canvas to be larger when zoomed out
-                const rect = this.canvas.getBoundingClientRect();
-                const dpr = window.devicePixelRatio || 1;
+        // to ensure the entire viewport is covered
+        if (this.infiniteCanvas) {
+            // Get viewport dimensions
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            const dpr = window.devicePixelRatio || 1;
+            
+            // Calculate canvas size needed to cover viewport when scaled
+            // When scale is 0.5, canvas needs to be 2x the viewport size to cover it after scaling
+            const scaleFactor = 1 / this.canvasScale;
+            const requiredWidth = viewportWidth * scaleFactor;
+            const requiredHeight = viewportHeight * scaleFactor;
+            
+            // Only resize if canvas is significantly smaller than required
+            const currentLogicalWidth = this.canvas.width / dpr;
+            const currentLogicalHeight = this.canvas.height / dpr;
+            
+            if (Math.abs(currentLogicalWidth - requiredWidth) > 10 || 
+                Math.abs(currentLogicalHeight - requiredHeight) > 10) {
                 
                 // Save current canvas state before resize
                 const tempCanvas = document.createElement('canvas');
@@ -919,27 +942,26 @@ class DrawingBoard {
                 const tempCtx = tempCanvas.getContext('2d');
                 tempCtx.drawImage(this.canvas, 0, 0);
                 
-                // Calculate new canvas size
-                const newWidth = rect.width * scaleFactor;
-                const newHeight = rect.height * scaleFactor;
-                
                 // Set new canvas dimensions
-                this.canvas.width = newWidth * dpr;
-                this.canvas.height = newHeight * dpr;
-                this.canvas.style.width = newWidth + 'px';
-                this.canvas.style.height = newHeight + 'px';
+                this.canvas.width = requiredWidth * dpr;
+                this.canvas.height = requiredHeight * dpr;
+                this.canvas.style.width = requiredWidth + 'px';
+                this.canvas.style.height = requiredHeight + 'px';
                 
-                this.bgCanvas.width = newWidth * dpr;
-                this.bgCanvas.height = newHeight * dpr;
-                this.bgCanvas.style.width = newWidth + 'px';
-                this.bgCanvas.style.height = newHeight + 'px';
+                this.bgCanvas.width = requiredWidth * dpr;
+                this.bgCanvas.height = requiredHeight * dpr;
+                this.bgCanvas.style.width = requiredWidth + 'px';
+                this.bgCanvas.style.height = requiredHeight + 'px';
                 
                 // Scale context for high DPI displays
                 this.ctx.scale(dpr, dpr);
                 this.bgCtx.scale(dpr, dpr);
                 
-                // Restore canvas content
-                this.ctx.drawImage(tempCanvas, 0, 0);
+                // Restore canvas content at center
+                const offsetX = (requiredWidth - currentLogicalWidth) / 2;
+                const offsetY = (requiredHeight - currentLogicalHeight) / 2;
+                this.ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height,
+                    offsetX * dpr, offsetY * dpr, tempCanvas.width, tempCanvas.height);
                 
                 // Redraw background with new size
                 this.drawBackground();
