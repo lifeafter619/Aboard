@@ -619,6 +619,102 @@ class DrawingBoard {
         }
     }
     
+    checkAndExpandCanvas(pos) {
+        // Define the edge threshold - expand when drawing within this distance from edge
+        const edgeThreshold = 100; // pixels from edge
+        const expandAmount = 500; // pixels to expand by
+        
+        const dpr = window.devicePixelRatio || 1;
+        const logicalWidth = this.canvas.width / dpr;
+        const logicalHeight = this.canvas.height / dpr;
+        
+        let needsExpansion = false;
+        let expandLeft = 0, expandRight = 0, expandTop = 0, expandBottom = 0;
+        
+        // Check if near left edge
+        if (pos.x < edgeThreshold) {
+            expandLeft = expandAmount;
+            needsExpansion = true;
+        }
+        
+        // Check if near right edge
+        if (pos.x > logicalWidth - edgeThreshold) {
+            expandRight = expandAmount;
+            needsExpansion = true;
+        }
+        
+        // Check if near top edge
+        if (pos.y < edgeThreshold) {
+            expandTop = expandAmount;
+            needsExpansion = true;
+        }
+        
+        // Check if near bottom edge
+        if (pos.y > logicalHeight - edgeThreshold) {
+            expandBottom = expandAmount;
+            needsExpansion = true;
+        }
+        
+        if (needsExpansion) {
+            this.expandCanvas(expandLeft, expandRight, expandTop, expandBottom);
+        }
+    }
+    
+    expandCanvas(expandLeft, expandRight, expandTop, expandBottom) {
+        const dpr = window.devicePixelRatio || 1;
+        const oldLogicalWidth = this.canvas.width / dpr;
+        const oldLogicalHeight = this.canvas.height / dpr;
+        
+        // Calculate new dimensions
+        const newLogicalWidth = oldLogicalWidth + expandLeft + expandRight;
+        const newLogicalHeight = oldLogicalHeight + expandTop + expandBottom;
+        
+        // Save current canvas content
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = this.canvas.width;
+        tempCanvas.height = this.canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(this.canvas, 0, 0);
+        
+        // Resize main canvas
+        this.canvas.width = newLogicalWidth * dpr;
+        this.canvas.height = newLogicalHeight * dpr;
+        this.canvas.style.width = newLogicalWidth + 'px';
+        this.canvas.style.height = newLogicalHeight + 'px';
+        
+        // Resize background canvas
+        this.bgCanvas.width = newLogicalWidth * dpr;
+        this.bgCanvas.height = newLogicalHeight * dpr;
+        this.bgCanvas.style.width = newLogicalWidth + 'px';
+        this.bgCanvas.style.height = newLogicalHeight + 'px';
+        
+        // Re-apply DPR scaling
+        this.ctx.scale(dpr, dpr);
+        this.bgCtx.scale(dpr, dpr);
+        
+        // Restore content at offset position (if we expanded left or top, content shifts)
+        this.ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height,
+            expandLeft * dpr, expandTop * dpr, tempCanvas.width, tempCanvas.height);
+        
+        // Redraw background
+        this.drawBackground();
+        
+        // Adjust pan offset if we expanded left or top (to keep content in same visual position)
+        if (expandLeft > 0) {
+            this.panOffset.x += expandLeft;
+        }
+        if (expandTop > 0) {
+            this.panOffset.y += expandTop;
+        }
+        
+        // Re-apply canvas transform with updated pan offset
+        this.applyCanvasTransform();
+        
+        // Save updated pan offset
+        localStorage.setItem('panOffsetX', this.panOffset.x);
+        localStorage.setItem('panOffsetY', this.panOffset.y);
+    }
+    
     updateCursor() {
         if (this.currentTool === 'pen') {
             this.canvas.style.cursor = 'crosshair';
@@ -730,6 +826,11 @@ class DrawingBoard {
         }
         
         this.points.push(pos);
+        
+        // Check if we need to expand canvas when drawing near edges (infinite canvas mode only)
+        if (this.infiniteCanvas) {
+            this.checkAndExpandCanvas(pos);
+        }
         
         // Draw immediately for responsiveness using optimized path
         if (this.points.length >= 2) {
