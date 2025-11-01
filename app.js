@@ -1218,6 +1218,8 @@ class DrawingBoard {
             // Also check total pixel count
             if (requiredWidth * requiredHeight * dpr * dpr > this.MAX_CANVAS_PIXELS) {
                 console.warn('Zoom would create canvas that exceeds pixel limit, limiting size');
+                // Calculate the scale factor needed to fit within MAX_CANVAS_PIXELS
+                // while maintaining aspect ratio: scale = sqrt(maxPixels / currentPixels)
                 const scale = Math.sqrt(this.MAX_CANVAS_PIXELS / (requiredWidth * requiredHeight * dpr * dpr));
                 requiredWidth *= scale;
                 requiredHeight *= scale;
@@ -1768,13 +1770,16 @@ class DrawingBoard {
             if (imageData) {
                 this.pages.push(imageData);
             } else {
-                // If canvas is too large, create a blank page
-                console.warn('Canvas too large for pagination, creating blank page');
+                // If canvas is too large, create a safe-sized blank page
+                console.warn('Canvas too large for pagination, creating safe-sized blank page');
                 const blankCanvas = document.createElement('canvas');
                 blankCanvas.width = Math.min(this.canvas.width, this.MAX_CANVAS_DIMENSION);
                 blankCanvas.height = Math.min(this.canvas.height, this.MAX_CANVAS_DIMENSION);
                 const blankCtx = blankCanvas.getContext('2d');
-                this.pages.push(blankCtx.getImageData(0, 0, blankCanvas.width, blankCanvas.height));
+                const blankImageData = this.safeGetImageData(blankCtx, 0, 0, blankCanvas.width, blankCanvas.height);
+                if (blankImageData) {
+                    this.pages.push(blankImageData);
+                }
             }
             this.currentPage = 1;
         }
@@ -1842,12 +1847,15 @@ class DrawingBoard {
             if (newPageData) {
                 this.pages.push(newPageData);
             } else {
-                console.warn('Canvas too large for new page, using minimal blank page');
+                console.warn('Canvas too large for new page, using safe-sized blank page');
                 const blankCanvas = document.createElement('canvas');
                 blankCanvas.width = Math.min(this.canvas.width, this.MAX_CANVAS_DIMENSION);
                 blankCanvas.height = Math.min(this.canvas.height, this.MAX_CANVAS_DIMENSION);
                 const blankCtx = blankCanvas.getContext('2d');
-                this.pages.push(blankCtx.getImageData(0, 0, blankCanvas.width, blankCanvas.height));
+                const blankImageData = this.safeGetImageData(blankCtx, 0, 0, blankCanvas.width, blankCanvas.height);
+                if (blankImageData) {
+                    this.pages.push(blankImageData);
+                }
             }
         } else {
             // Load existing page
