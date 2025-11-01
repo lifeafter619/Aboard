@@ -427,6 +427,11 @@ body {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
+.settings-modal-content {
+    min-width: 480px;
+    max-width: 600px;
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -457,6 +462,47 @@ body {
 .modal-close-btn:hover {
     background-color: #e0e0e0;
     color: #333;
+}
+
+/* Settings tabs */
+.settings-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.settings-tab {
+    padding: 12px 20px;
+    border: none;
+    background-color: transparent;
+    color: #666;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+}
+
+.settings-tab:hover {
+    color: #333;
+    background-color: #f8f8f8;
+}
+
+.settings-tab.active {
+    color: #007AFF;
+    border-bottom-color: #007AFF;
+}
+
+.settings-tab-content {
+    display: none;
+}
+
+.settings-tab-content.active {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 .modal-body {

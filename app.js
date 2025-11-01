@@ -301,6 +301,14 @@ class DrawingBoard {
         // Settings modal
         document.getElementById('settings-close-btn').addEventListener('click', () => this.closeSettings());
         
+        // Settings tabs
+        document.querySelectorAll('.settings-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                const targetTab = e.target.dataset.tab;
+                this.switchSettingsTab(targetTab);
+            });
+        });
+        
         // Confirm modal
         document.getElementById('confirm-cancel-btn').addEventListener('click', () => {
             document.getElementById('confirm-modal').classList.remove('show');
@@ -655,6 +663,22 @@ class DrawingBoard {
     
     closeSettings() {
         document.getElementById('settings-modal').classList.remove('show');
+    }
+    
+    switchSettingsTab(tabName) {
+        // Remove active class from all tabs
+        document.querySelectorAll('.settings-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        
+        // Remove active class from all tab contents
+        document.querySelectorAll('.settings-tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        
+        // Add active class to selected tab and content
+        document.querySelector(`.settings-tab[data-tab="${tabName}"]`).classList.add('active');
+        document.getElementById(`${tabName}-settings`).classList.add('active');
     }
     
     loadSettings() {

@@ -160,7 +160,7 @@
 
     <!-- Settings modal -->
     <div id="settings-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content settings-modal-content">
             <div class="modal-header">
                 <h2>设置</h2>
                 <button id="settings-close-btn" class="modal-close-btn" title="关闭">
@@ -170,36 +170,56 @@
                     </svg>
                 </button>
             </div>
+            
+            <!-- Settings tabs -->
+            <div class="settings-tabs">
+                <button class="settings-tab active" data-tab="general">通用</button>
+                <button class="settings-tab" data-tab="display">显示</button>
+                <button class="settings-tab" data-tab="canvas">画布</button>
+            </div>
+            
             <div class="modal-body">
-                <div class="settings-group">
-                    <label>工具栏按钮大小 <span id="toolbar-size-value">50</span>px</label>
-                    <input type="range" id="toolbar-size-slider" min="40" max="80" value="50" class="slider" step="5">
-                </div>
-                <div class="settings-group">
-                    <label>属性栏缩放 <span id="config-scale-value">100</span>%</label>
-                    <input type="range" id="config-scale-slider" min="80" max="120" value="100" class="slider" step="10">
-                </div>
-                <div class="settings-group">
-                    <label>控制按钮位置</label>
-                    <div class="button-size-options button-size-options-4">
-                        <button class="position-option-btn active" data-position="top-right">右上角</button>
-                        <button class="position-option-btn" data-position="top-left">左上角</button>
-                        <button class="position-option-btn" data-position="bottom-right">右下角</button>
-                        <button class="position-option-btn" data-position="bottom-left">左下角</button>
+                <!-- General settings -->
+                <div id="general-settings" class="settings-tab-content active">
+                    <div class="settings-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="edge-snap-checkbox" checked>
+                            <span>启用边缘吸附</span>
+                        </label>
+                        <p class="settings-hint">拖动控制面板时自动吸附到屏幕边缘</p>
+                    </div>
+                    <div class="settings-group">
+                        <label>控制按钮位置</label>
+                        <div class="button-size-options button-size-options-4">
+                            <button class="position-option-btn active" data-position="top-right">右上角</button>
+                            <button class="position-option-btn" data-position="top-left">左上角</button>
+                            <button class="position-option-btn" data-position="bottom-right">右下角</button>
+                            <button class="position-option-btn" data-position="bottom-left">左下角</button>
+                        </div>
                     </div>
                 </div>
-                <div class="settings-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="edge-snap-checkbox" checked>
-                        <span>启用边缘吸附</span>
-                    </label>
+                
+                <!-- Display settings -->
+                <div id="display-settings" class="settings-tab-content">
+                    <div class="settings-group">
+                        <label>工具栏按钮大小 <span id="toolbar-size-value">50</span>px</label>
+                        <input type="range" id="toolbar-size-slider" min="40" max="80" value="50" class="slider" step="5">
+                    </div>
+                    <div class="settings-group">
+                        <label>属性栏缩放 <span id="config-scale-value">100</span>%</label>
+                        <input type="range" id="config-scale-slider" min="80" max="120" value="100" class="slider" step="10">
+                    </div>
                 </div>
-                <div class="settings-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="infinite-canvas-checkbox" checked>
-                        <span>无限画布模式</span>
-                    </label>
-                    <p class="settings-hint">关闭后启用分页系统</p>
+                
+                <!-- Canvas settings -->
+                <div id="canvas-settings" class="settings-tab-content">
+                    <div class="settings-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="infinite-canvas-checkbox" checked>
+                            <span>无限画布模式</span>
+                        </label>
+                        <p class="settings-hint">关闭后启用分页系统</p>
+                    </div>
                 </div>
             </div>
         </div>
