@@ -570,15 +570,30 @@ class DrawingBoard {
         if (!this.isDrawing) return;
         
         const pos = this.getPosition(e);
+        
+        // Skip if the position hasn't changed significantly (reduce redundant points)
+        if (this.lastPoint && 
+            Math.abs(pos.x - this.lastPoint.x) < 0.5 && 
+            Math.abs(pos.y - this.lastPoint.y) < 0.5) {
+            return;
+        }
+        
         this.points.push(pos);
         
-        // Draw immediately for responsiveness
+        // Draw immediately for responsiveness using optimized path
         if (this.points.length >= 2) {
             const lastIndex = this.points.length - 1;
+            const prevPoint = this.points[lastIndex - 1];
+            const currPoint = this.points[lastIndex];
+            
             this.ctx.beginPath();
-            this.ctx.moveTo(this.points[lastIndex - 1].x, this.points[lastIndex - 1].y);
-            this.ctx.lineTo(this.points[lastIndex].x, this.points[lastIndex].y);
+            this.ctx.moveTo(prevPoint.x, prevPoint.y);
+            this.ctx.lineTo(currPoint.x, currPoint.y);
             this.ctx.stroke();
+            
+            this.lastPoint = currPoint;
+        } else {
+            this.lastPoint = pos;
         }
     }
     
@@ -793,8 +808,11 @@ class DrawingBoard {
     }
     
     applyZoom() {
+        // Apply zoom to both canvas layers
         this.canvas.style.transform = `scale(${this.canvasScale})`;
         this.canvas.style.transformOrigin = 'center center';
+        this.bgCanvas.style.transform = `scale(${this.canvasScale})`;
+        this.bgCanvas.style.transformOrigin = 'center center';
         localStorage.setItem('canvasScale', this.canvasScale);
         this.updateZoomDisplay();
     }
