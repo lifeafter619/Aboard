@@ -496,11 +496,6 @@ class DrawingBoard {
         this.applyZoom();
     }
     
-    zoomReset() {
-        this.canvasScale = 1.0;
-        this.applyZoom();
-    }
-    
     applyZoom() {
         this.canvas.style.transform = `scale(${this.canvasScale})`;
         this.canvas.style.transformOrigin = 'center center';
@@ -659,39 +654,38 @@ class DrawingBoard {
         this.ctx.globalCompositeOperation = 'source-over';
         
         const dpr = window.devicePixelRatio || 1;
-        const rect = this.canvas.getBoundingClientRect();
         
         if (this.backgroundPattern === 'dots') {
             // Draw dot grid pattern
-            const spacing = 20;
+            const spacing = 20 * dpr;
             this.ctx.fillStyle = this.getPatternColor();
             
-            for (let x = spacing; x < rect.width; x += spacing) {
-                for (let y = spacing; y < rect.height; y += spacing) {
+            for (let x = spacing; x < this.canvas.width; x += spacing) {
+                for (let y = spacing; y < this.canvas.height; y += spacing) {
                     this.ctx.beginPath();
-                    this.ctx.arc(x, y, 1, 0, Math.PI * 2);
+                    this.ctx.arc(x, y, 1 * dpr, 0, Math.PI * 2);
                     this.ctx.fill();
                 }
             }
         } else if (this.backgroundPattern === 'grid') {
             // Draw line grid pattern
-            const spacing = 20;
+            const spacing = 20 * dpr;
             this.ctx.strokeStyle = this.getPatternColor();
-            this.ctx.lineWidth = 0.5;
+            this.ctx.lineWidth = 0.5 * dpr;
             
             // Vertical lines
-            for (let x = spacing; x < rect.width; x += spacing) {
+            for (let x = spacing; x < this.canvas.width; x += spacing) {
                 this.ctx.beginPath();
                 this.ctx.moveTo(x, 0);
-                this.ctx.lineTo(x, rect.height);
+                this.ctx.lineTo(x, this.canvas.height);
                 this.ctx.stroke();
             }
             
             // Horizontal lines
-            for (let y = spacing; y < rect.height; y += spacing) {
+            for (let y = spacing; y < this.canvas.height; y += spacing) {
                 this.ctx.beginPath();
                 this.ctx.moveTo(0, y);
-                this.ctx.lineTo(rect.width, y);
+                this.ctx.lineTo(this.canvas.width, y);
                 this.ctx.stroke();
             }
         }
