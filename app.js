@@ -332,15 +332,17 @@ class DrawingBoard {
         const zoomInput = document.getElementById('zoom-input');
         zoomInput.addEventListener('input', (e) => {
             // Allow digits and decimal point while typing
-            let value = e.target.value.replace(/[^0-9.]/g, '');
-            // Store the cursor position
-            const cursorPosition = e.target.selectionStart;
-            const oldLength = e.target.value.length;
-            e.target.value = value;
-            // Restore cursor position
-            const newLength = e.target.value.length;
-            const newPosition = cursorPosition + (newLength - oldLength);
-            e.target.setSelectionRange(newPosition, newPosition);
+            const beforeCursor = e.target.selectionStart;
+            const beforeValue = e.target.value;
+            const afterValue = beforeValue.replace(/[^0-9.]/g, '');
+            
+            if (beforeValue !== afterValue) {
+                e.target.value = afterValue;
+                // Adjust cursor position based on characters removed
+                const removedChars = beforeValue.length - afterValue.length;
+                const newPosition = Math.max(0, beforeCursor - removedChars);
+                e.target.setSelectionRange(newPosition, newPosition);
+            }
         });
         zoomInput.addEventListener('change', (e) => {
             const value = e.target.value.replace(/[^0-9.]/g, '');
@@ -677,6 +679,9 @@ class DrawingBoard {
             this.points = [];
             this.lastPoint = null;
             
+            // Restore context state that was saved in setupDrawingContext
+            this.ctx.restore();
+            
             // Save state after drawing
             this.saveState();
         }
@@ -895,45 +900,50 @@ class DrawingBoard {
     
     applyZoom() {
         // For infinite canvas mode, adjust canvas size when zoomed out
+        // Only resize canvas if zooming out (scale < 1.0) and significant change
         if (this.infiniteCanvas && this.canvasScale < 1.0) {
-            // Calculate the scale factor needed to fill the screen
-            const scaleFactor = 1 / this.canvasScale;
-            
-            // Resize canvas to be larger when zoomed out
-            const rect = this.canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            
-            // Save current canvas state before resize
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = this.canvas.width;
-            tempCanvas.height = this.canvas.height;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.drawImage(this.canvas, 0, 0);
-            
-            // Calculate new canvas size
-            const newWidth = rect.width * scaleFactor;
-            const newHeight = rect.height * scaleFactor;
-            
-            // Set new canvas dimensions
-            this.canvas.width = newWidth * dpr;
-            this.canvas.height = newHeight * dpr;
-            this.canvas.style.width = newWidth + 'px';
-            this.canvas.style.height = newHeight + 'px';
-            
-            this.bgCanvas.width = newWidth * dpr;
-            this.bgCanvas.height = newHeight * dpr;
-            this.bgCanvas.style.width = newWidth + 'px';
-            this.bgCanvas.style.height = newHeight + 'px';
-            
-            // Scale context for high DPI displays
-            this.ctx.scale(dpr, dpr);
-            this.bgCtx.scale(dpr, dpr);
-            
-            // Restore canvas content
-            this.ctx.drawImage(tempCanvas, 0, 0);
-            
-            // Redraw background with new size
-            this.drawBackground();
+            const previousScale = parseFloat(localStorage.getItem('canvasScale')) || 1.0;
+            // Only resize if scale changed significantly (more than 5% difference)
+            if (Math.abs(previousScale - this.canvasScale) > 0.05) {
+                // Calculate the scale factor needed to fill the screen
+                const scaleFactor = 1 / this.canvasScale;
+                
+                // Resize canvas to be larger when zoomed out
+                const rect = this.canvas.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+                
+                // Save current canvas state before resize
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = this.canvas.width;
+                tempCanvas.height = this.canvas.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(this.canvas, 0, 0);
+                
+                // Calculate new canvas size
+                const newWidth = rect.width * scaleFactor;
+                const newHeight = rect.height * scaleFactor;
+                
+                // Set new canvas dimensions
+                this.canvas.width = newWidth * dpr;
+                this.canvas.height = newHeight * dpr;
+                this.canvas.style.width = newWidth + 'px';
+                this.canvas.style.height = newHeight + 'px';
+                
+                this.bgCanvas.width = newWidth * dpr;
+                this.bgCanvas.height = newHeight * dpr;
+                this.bgCanvas.style.width = newWidth + 'px';
+                this.bgCanvas.style.height = newHeight + 'px';
+                
+                // Scale context for high DPI displays
+                this.ctx.scale(dpr, dpr);
+                this.bgCtx.scale(dpr, dpr);
+                
+                // Restore canvas content
+                this.ctx.drawImage(tempCanvas, 0, 0);
+                
+                // Redraw background with new size
+                this.drawBackground();
+            }
         }
         
         // Apply zoom to both canvas layers
