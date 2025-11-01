@@ -532,11 +532,11 @@ class DrawingBoard {
     
     getPosition(e) {
         const rect = this.canvas.getBoundingClientRect();
-        // Account for canvas scaling and pan offset
-        return {
-            x: (e.clientX - rect.left) / this.canvasScale - this.panOffset.x,
-            y: (e.clientY - rect.top) / this.canvasScale - this.panOffset.y
-        };
+        // Convert screen coordinates to canvas coordinates
+        // Account for both canvas scale (zoom) and pan offset
+        const x = (e.clientX - rect.left) / this.canvasScale;
+        const y = (e.clientY - rect.top) / this.canvasScale;
+        return { x, y };
     }
     
     startPanning(e) {
@@ -558,8 +558,8 @@ class DrawingBoard {
         
         this.lastPanPoint = { x: e.clientX, y: e.clientY };
         
-        // Redraw canvas with new pan offset
-        this.redrawCanvas();
+        // Apply pan offset via CSS transform (combined with scale)
+        this.applyCanvasTransform();
         
         // Save pan offset
         localStorage.setItem('panOffsetX', this.panOffset.x);
@@ -604,8 +604,8 @@ class DrawingBoard {
         
         this.lastTwoFingerMidpoint = midpoint;
         
-        // Redraw canvas with new pan offset
-        this.redrawCanvas();
+        // Apply pan offset via CSS transform (combined with scale)
+        this.applyCanvasTransform();
         
         // Save pan offset
         localStorage.setItem('panOffsetX', this.panOffset.x);
@@ -632,24 +632,9 @@ class DrawingBoard {
     }
     
     redrawCanvas() {
-        // Temporarily store the current canvas state
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = this.canvas.width;
-        tempCanvas.height = this.canvas.height;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.drawImage(this.canvas, 0, 0);
-        
-        // Clear and redraw with pan offset
-        this.ctx.save();
-        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Apply pan transformation
-        this.ctx.translate(this.panOffset.x, this.panOffset.y);
-        
-        // Redraw the content
-        this.ctx.drawImage(tempCanvas, -this.panOffset.x, -this.panOffset.y);
-        this.ctx.restore();
+        // For infinite canvas mode, panning is handled by CSS transform on the canvas element itself
+        // We don't need to redraw the canvas content when panning
+        // This function is kept for compatibility but doesn't need to do anything for pan
     }
     
     startDrawing(e) {
@@ -808,6 +793,9 @@ class DrawingBoard {
         configArea.style.left = '50%';
         configArea.style.right = 'auto';
         configArea.style.transform = 'translateX(-50%)';
+        
+        // Update collapsed icon to match current tool
+        this.updateCollapsedIcon();
         
         if (tool === 'eraser') {
             this.showEraserCursor();
@@ -1107,13 +1095,19 @@ class DrawingBoard {
             }
         }
         
-        // Apply zoom to both canvas layers
-        this.canvas.style.transform = `scale(${this.canvasScale})`;
-        this.canvas.style.transformOrigin = 'center center';
-        this.bgCanvas.style.transform = `scale(${this.canvasScale})`;
-        this.bgCanvas.style.transformOrigin = 'center center';
+        // Apply zoom and pan transform to both canvas layers
+        this.applyCanvasTransform();
         localStorage.setItem('canvasScale', this.canvasScale);
         this.updateZoomDisplay();
+    }
+    
+    applyCanvasTransform() {
+        // Apply both zoom (scale) and pan (translate) via CSS transform
+        const transform = `translate(${this.panOffset.x}px, ${this.panOffset.y}px) scale(${this.canvasScale})`;
+        this.canvas.style.transform = transform;
+        this.canvas.style.transformOrigin = 'center center';
+        this.bgCanvas.style.transform = transform;
+        this.bgCanvas.style.transformOrigin = 'center center';
     }
     
     updateZoomDisplay() {
