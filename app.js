@@ -28,6 +28,8 @@ class DrawingBoard {
         this.isDraggingPanel = false;
         this.draggedElement = null;
         this.dragOffset = { x: 0, y: 0 };
+        this.draggedElementWidth = 0;
+        this.draggedElementHeight = 0;
         
         // History management for undo/redo
         this.history = [];
