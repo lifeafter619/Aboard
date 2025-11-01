@@ -39,6 +39,7 @@ class DrawingBoard {
         this.backgroundManager.drawBackground();
         this.updateUI();
         this.historyManager.saveState();
+        this.updateZoomUI();
     }
     
     resizeCanvas() {
@@ -142,6 +143,26 @@ class DrawingBoard {
         document.getElementById('redo-btn').addEventListener('click', () => {
             if (this.historyManager.redo()) {
                 this.updateUI();
+            }
+        });
+        
+        // Zoom controls
+        document.getElementById('zoom-in-btn').addEventListener('click', () => this.zoomIn());
+        document.getElementById('zoom-out-btn').addEventListener('click', () => this.zoomOut());
+        document.getElementById('zoom-input').addEventListener('change', (e) => this.setZoom(e.target.value));
+        document.getElementById('zoom-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                this.setZoom(e.target.value);
+            }
+        });
+        
+        // Pagination controls
+        document.getElementById('prev-page-btn').addEventListener('click', () => this.prevPage());
+        document.getElementById('next-page-btn').addEventListener('click', () => this.nextPage());
+        document.getElementById('page-input').addEventListener('change', (e) => this.goToPage(parseInt(e.target.value)));
+        document.getElementById('page-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                this.goToPage(parseInt(e.target.value));
             }
         });
         
@@ -318,6 +339,15 @@ class DrawingBoard {
                 }
             }
             
+            // Zoom shortcuts
+            if (e.key === '+' || e.key === '=') {
+                e.preventDefault();
+                this.zoomIn();
+            } else if (e.key === '-' || e.key === '_') {
+                e.preventDefault();
+                this.zoomOut();
+            }
+            
             if (e.key === 'Escape') {
                 this.closeSettings();
                 this.closeConfigPanel();
@@ -469,6 +499,124 @@ class DrawingBoard {
     
     updateCanvasMode() {
         this.updateUI();
+        // Initialize pages array if needed
+        if (!this.settingsManager.infiniteCanvas && this.pages.length === 0) {
+            this.pages.push(this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height));
+            this.currentPage = 1;
+            this.updatePaginationUI();
+        }
+    }
+    
+    // Zoom methods
+    zoomIn() {
+        const currentScale = this.drawingEngine.canvasScale;
+        const newScale = Math.min(currentScale + 0.1, 3.0);
+        this.drawingEngine.canvasScale = newScale;
+        this.updateZoomUI();
+        this.redrawCanvas();
+        localStorage.setItem('canvasScale', newScale);
+    }
+    
+    zoomOut() {
+        const currentScale = this.drawingEngine.canvasScale;
+        const newScale = Math.max(currentScale - 0.1, 0.5);
+        this.drawingEngine.canvasScale = newScale;
+        this.updateZoomUI();
+        this.redrawCanvas();
+        localStorage.setItem('canvasScale', newScale);
+    }
+    
+    setZoom(value) {
+        let percent = parseInt(value);
+        if (isNaN(percent)) {
+            this.updateZoomUI();
+            return;
+        }
+        percent = Math.max(50, Math.min(300, percent));
+        const newScale = percent / 100;
+        this.drawingEngine.canvasScale = newScale;
+        this.updateZoomUI();
+        this.redrawCanvas();
+        localStorage.setItem('canvasScale', newScale);
+    }
+    
+    updateZoomUI() {
+        const percent = Math.round(this.drawingEngine.canvasScale * 100);
+        document.getElementById('zoom-input').value = percent + '%';
+    }
+    
+    // Pagination methods
+    prevPage() {
+        if (this.settingsManager.infiniteCanvas || this.currentPage <= 1) return;
+        
+        // Save current page
+        this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Go to previous page
+        this.currentPage--;
+        this.loadPage(this.currentPage);
+        this.updatePaginationUI();
+    }
+    
+    nextPage() {
+        if (this.settingsManager.infiniteCanvas) return;
+        
+        // Save current page
+        this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Go to next page (create new if needed)
+        this.currentPage++;
+        if (this.currentPage > this.pages.length) {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.pages.push(this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height));
+            this.historyManager.saveState();
+        } else {
+            this.loadPage(this.currentPage);
+        }
+        this.updatePaginationUI();
+    }
+    
+    goToPage(pageNumber) {
+        if (this.settingsManager.infiniteCanvas || pageNumber < 1 || pageNumber === this.currentPage) {
+            this.updatePaginationUI();
+            return;
+        }
+        
+        // Save current page
+        this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Create new pages if needed
+        while (pageNumber > this.pages.length) {
+            this.pages.push(null);
+        }
+        
+        this.currentPage = pageNumber;
+        this.loadPage(this.currentPage);
+        this.updatePaginationUI();
+    }
+    
+    loadPage(pageNumber) {
+        if (pageNumber > 0 && pageNumber <= this.pages.length && this.pages[pageNumber - 1]) {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.putImageData(this.pages[pageNumber - 1], 0, 0);
+        } else {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            if (!this.pages[pageNumber - 1]) {
+                this.pages[pageNumber - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+            }
+        }
+        this.historyManager.saveState();
+    }
+    
+    updatePaginationUI() {
+        document.getElementById('page-input').value = this.currentPage;
+        document.getElementById('page-total').textContent = `/ ${this.pages.length}`;
+        
+        const prevBtn = document.getElementById('prev-page-btn');
+        const nextBtn = document.getElementById('next-page-btn');
+        
+        prevBtn.disabled = this.currentPage <= 1;
+        nextBtn.disabled = false;
     }
     
     updateEraserCursor(e) {
@@ -498,11 +646,14 @@ class DrawingBoard {
         tempCtx.drawImage(this.canvas, 0, 0);
         
         this.ctx.save();
+        const dpr = window.devicePixelRatio || 1;
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
+        // Apply zoom and pan
+        this.ctx.scale(dpr * this.drawingEngine.canvasScale, dpr * this.drawingEngine.canvasScale);
         this.ctx.translate(this.drawingEngine.panOffset.x, this.drawingEngine.panOffset.y);
-        this.ctx.drawImage(tempCanvas, -this.drawingEngine.panOffset.x, -this.drawingEngine.panOffset.y);
+        this.ctx.drawImage(tempCanvas, 0, 0, this.canvas.width / dpr, this.canvas.height / dpr);
         this.ctx.restore();
     }
 }
