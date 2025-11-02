@@ -13,6 +13,20 @@ class BackgroundManager {
         this.backgroundImage = null;
         this.backgroundImageData = localStorage.getItem('backgroundImageData') || null;
         this.imageSize = parseFloat(localStorage.getItem('imageSize')) || 1.0;
+        this.imageTransform = {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            rotation: 0,
+            scale: 1.0
+        };
+        
+        // Load saved transform if exists
+        const savedTransform = localStorage.getItem('imageTransform');
+        if (savedTransform) {
+            this.imageTransform = JSON.parse(savedTransform);
+        }
         
         // Load saved image if exists
         if (this.backgroundImageData) {
@@ -91,15 +105,33 @@ class BackgroundManager {
         const canvasWidth = this.bgCanvas.width / dpr;
         const canvasHeight = this.bgCanvas.height / dpr;
         
-        // Calculate scaled dimensions
-        const scaledWidth = this.backgroundImage.width * this.imageSize;
-        const scaledHeight = this.backgroundImage.height * this.imageSize;
-        
-        // Center the image
-        const x = (canvasWidth - scaledWidth) / 2;
-        const y = (canvasHeight - scaledHeight) / 2;
-        
-        this.bgCtx.drawImage(this.backgroundImage, x, y, scaledWidth, scaledHeight);
+        // Use transform if available, otherwise fall back to simple centering
+        if (this.imageTransform.width > 0 && this.imageTransform.height > 0) {
+            // Apply transformations
+            const centerX = this.imageTransform.x + this.imageTransform.width / 2;
+            const centerY = this.imageTransform.y + this.imageTransform.height / 2;
+            
+            this.bgCtx.translate(centerX, centerY);
+            this.bgCtx.rotate(this.imageTransform.rotation * Math.PI / 180);
+            this.bgCtx.scale(this.imageTransform.scale, this.imageTransform.scale);
+            this.bgCtx.translate(-centerX, -centerY);
+            
+            this.bgCtx.drawImage(
+                this.backgroundImage,
+                this.imageTransform.x,
+                this.imageTransform.y,
+                this.imageTransform.width,
+                this.imageTransform.height
+            );
+        } else {
+            // Fall back to simple centered image
+            const scaledWidth = this.backgroundImage.width * this.imageSize;
+            const scaledHeight = this.backgroundImage.height * this.imageSize;
+            const x = (canvasWidth - scaledWidth) / 2;
+            const y = (canvasHeight - scaledHeight) / 2;
+            
+            this.bgCtx.drawImage(this.backgroundImage, x, y, scaledWidth, scaledHeight);
+        }
         
         this.bgCtx.restore();
     }
@@ -328,5 +360,22 @@ class BackgroundManager {
         if (this.backgroundPattern === 'image') {
             this.drawBackground();
         }
+    }
+    
+    updateImageTransform(transform) {
+        this.imageTransform = transform;
+        localStorage.setItem('imageTransform', JSON.stringify(transform));
+        if (this.backgroundPattern === 'image') {
+            this.drawBackground();
+        }
+    }
+    
+    getImageData() {
+        if (!this.backgroundImage) return null;
+        return {
+            width: this.backgroundImage.width,
+            height: this.backgroundImage.height,
+            src: this.backgroundImageData
+        };
     }
 }

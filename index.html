@@ -226,6 +226,7 @@
                         </div>
                         <div class="settings-group">
                             <label>控制按钮位置</label>
+                            <p class="settings-hint">选择缩放和分页控件在屏幕上的显示位置</p>
                             <div class="button-size-options button-size-options-4">
                                 <button class="position-option-btn active" data-position="top-right">右上角</button>
                                 <button class="position-option-btn" data-position="top-left">左上角</button>
@@ -247,10 +248,12 @@
                         </div>
                         <div class="settings-group">
                             <label>工具栏按钮大小 <span id="toolbar-size-value">40</span>px</label>
+                            <p class="settings-hint">调整底部工具栏按钮的尺寸大小</p>
                             <input type="range" id="toolbar-size-slider" min="40" max="80" value="40" class="slider" step="5">
                         </div>
                         <div class="settings-group">
                             <label>属性栏缩放 <span id="config-scale-value">100</span>%</label>
+                            <p class="settings-hint">调整弹出属性面板的整体缩放比例</p>
                             <input type="range" id="config-scale-slider" min="80" max="120" value="100" class="slider" step="10">
                         </div>
                     </div>
@@ -272,10 +275,12 @@
                         <h3>背景设置</h3>
                         <div class="settings-group">
                             <label>背景透明度 <span id="bg-opacity-value">100</span>%</label>
+                            <p class="settings-hint">调整背景的透明度，100%为完全不透明</p>
                             <input type="range" id="bg-opacity-slider" min="0" max="100" value="100" class="slider">
                         </div>
                         <div class="settings-group">
                             <label>图案深浅 <span id="pattern-intensity-value">50</span>%</label>
+                            <p class="settings-hint">调整背景图案线条的明暗程度</p>
                             <input type="range" id="pattern-intensity-slider" min="10" max="200" value="50" class="slider">
                         </div>
                         <div class="settings-group">
@@ -397,6 +402,7 @@
     <script src="js/drawing.js"></script>
     <script src="js/history.js"></script>
     <script src="js/background.js"></script>
+    <script src="js/image-controls.js"></script>
     <script src="js/settings.js"></script>
     <script src="js/main.js"></script>
 </body>

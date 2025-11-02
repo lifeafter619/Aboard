@@ -19,15 +19,18 @@ class DrawingBoard {
         this.drawingEngine = new DrawingEngine(this.canvas, this.ctx);
         this.historyManager = new HistoryManager(this.canvas, this.ctx);
         this.backgroundManager = new BackgroundManager(this.bgCanvas, this.bgCtx);
+        this.imageControls = new ImageControls(this.backgroundManager);
         this.settingsManager = new SettingsManager();
         
         // Pagination
         this.currentPage = 1;
         this.pages = [];
         
-        // Pinch zoom state
+        // Pinch zoom and pan state
         this.isPinching = false;
         this.lastPinchDistance = 0;
+        this.lastPinchCenter = null;
+        this.hasTwoFingers = false;
         
         // Dragging state
         this.isDraggingPanel = false;
@@ -131,9 +134,14 @@ class DrawingBoard {
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (e.touches.length === 2) {
-                // Two-finger pinch to zoom
+                // Two-finger gesture - prevent drawing
+                this.hasTwoFingers = true;
+                if (this.drawingEngine.isDrawing) {
+                    // Stop any ongoing drawing
+                    this.drawingEngine.stopDrawing();
+                }
                 this.handlePinchStart(e);
-            } else if (e.touches.length === 1) {
+            } else if (e.touches.length === 1 && !this.hasTwoFingers) {
                 this.drawingEngine.startDrawing(e.touches[0]);
             }
         }, { passive: false });
@@ -141,9 +149,9 @@ class DrawingBoard {
         this.canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
             if (e.touches.length === 2) {
-                // Two-finger pinch to zoom
+                // Two-finger pinch to zoom and pan
                 this.handlePinchMove(e);
-            } else if (e.touches.length === 1) {
+            } else if (e.touches.length === 1 && !this.hasTwoFingers) {
                 this.drawingEngine.draw(e.touches[0]);
             }
         }, { passive: false });
@@ -154,7 +162,11 @@ class DrawingBoard {
                 this.handlePinchEnd();
             }
             if (e.touches.length === 0) {
-                this.handleDrawingComplete();
+                this.hasTwoFingers = false;
+                // Only save drawing if we weren't doing two-finger gesture
+                if (this.drawingEngine.isDrawing) {
+                    this.handleDrawingComplete();
+                }
             }
         }, { passive: false });
         
@@ -277,6 +289,12 @@ class DrawingBoard {
                     document.querySelectorAll('.pattern-option-btn').forEach(b => b.classList.remove('active'));
                     document.querySelector('.pattern-option-btn[data-pattern="image"]').classList.add('active');
                     document.getElementById('image-size-group').style.display = 'block';
+                    
+                    // Show image controls for manipulation
+                    const imageData = this.backgroundManager.getImageData();
+                    if (imageData) {
+                        this.imageControls.showControls(imageData);
+                    }
                 };
                 reader.readAsDataURL(file);
             }
@@ -832,7 +850,7 @@ class DrawingBoard {
         this.eraserCursor.style.display = 'none';
     }
     
-    // Pinch zoom gesture handlers
+    // Pinch zoom and pan gesture handlers
     handlePinchStart(e) {
         if (e.touches.length !== 2) return;
         
@@ -840,6 +858,7 @@ class DrawingBoard {
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
         this.lastPinchDistance = this.getPinchDistance(touch1, touch2);
+        this.lastPinchCenter = this.getPinchCenter(touch1, touch2);
     }
     
     handlePinchMove(e) {
@@ -848,8 +867,10 @@ class DrawingBoard {
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
         const currentDistance = this.getPinchDistance(touch1, touch2);
+        const currentCenter = this.getPinchCenter(touch1, touch2);
         
-        if (this.lastPinchDistance > 0) {
+        if (this.lastPinchDistance > 0 && this.lastPinchCenter) {
+            // Calculate zoom based on pinch distance
             const scale = currentDistance / this.lastPinchDistance;
             const newScale = Math.max(0.5, Math.min(3.0, this.drawingEngine.canvasScale * scale));
             
@@ -857,20 +878,43 @@ class DrawingBoard {
             this.applyZoom();
             this.updateZoomUI();
             localStorage.setItem('canvasScale', newScale);
+            
+            // Calculate pan based on center movement
+            const deltaX = currentCenter.x - this.lastPinchCenter.x;
+            const deltaY = currentCenter.y - this.lastPinchCenter.y;
+            
+            // Apply panning to canvas offset
+            this.drawingEngine.panOffset.x += deltaX;
+            this.drawingEngine.panOffset.y += deltaY;
+            localStorage.setItem('panOffsetX', this.drawingEngine.panOffset.x);
+            localStorage.setItem('panOffsetY', this.drawingEngine.panOffset.y);
+            
+            // Apply visual pan effect
+            this.canvas.style.transform = `scale(${this.drawingEngine.canvasScale}) translate(${this.drawingEngine.panOffset.x}px, ${this.drawingEngine.panOffset.y}px)`;
+            this.bgCanvas.style.transform = `scale(${this.drawingEngine.canvasScale}) translate(${this.drawingEngine.panOffset.x}px, ${this.drawingEngine.panOffset.y}px)`;
         }
         
         this.lastPinchDistance = currentDistance;
+        this.lastPinchCenter = currentCenter;
     }
     
     handlePinchEnd() {
         this.isPinching = false;
         this.lastPinchDistance = 0;
+        this.lastPinchCenter = null;
     }
     
     getPinchDistance(touch1, touch2) {
         const dx = touch2.clientX - touch1.clientX;
         const dy = touch2.clientY - touch1.clientY;
         return Math.sqrt(dx * dx + dy * dy);
+    }
+    
+    getPinchCenter(touch1, touch2) {
+        return {
+            x: (touch1.clientX + touch2.clientX) / 2,
+            y: (touch1.clientY + touch2.clientY) / 2
+        };
     }
     
     redrawCanvas() {
