@@ -171,10 +171,13 @@ class CanvasImageManager {
     
     getImageAtPoint(x, y) {
         // Adjust coordinates for canvas scale (same as drawing engine)
+        // This accounts for CSS transform scaling applied to the canvas
         const rect = this.canvas.getBoundingClientRect();
         const scaleX = this.canvas.offsetWidth / rect.width;
         const scaleY = this.canvas.offsetHeight / rect.height;
         
+        // Note: scaleX and scaleY should be equal for uniform scaling
+        // If they differ, the canvas is being distorted
         const adjustedX = x * scaleX;
         const adjustedY = y * scaleY;
         

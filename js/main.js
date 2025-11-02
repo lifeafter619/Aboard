@@ -1184,6 +1184,8 @@ class DrawingBoard {
                 const offsetY = mouseCanvasY - canvasCenterY;
                 
                 // Adjust pan offset so that the point under the mouse stays in place
+                // When zooming in (scaleRatio > 1), we need to pan towards the mouse
+                // When zooming out (scaleRatio < 1), we need to pan away from the mouse
                 // Formula: new_pan = old_pan + offset * (1 - scaleRatio)
                 this.drawingEngine.panOffset.x = oldPanX + offsetX * (1 - scaleRatio);
                 this.drawingEngine.panOffset.y = oldPanY + offsetY * (1 - scaleRatio);
