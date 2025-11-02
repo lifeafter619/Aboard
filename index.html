@@ -96,6 +96,30 @@
             </div>
         </div>
 
+        <!-- Selection configuration -->
+        <div id="select-config" class="config-panel">
+            <div class="config-group">
+                <label>选择操作</label>
+                <p class="settings-hint">点击画布上的笔迹或图片进行选择</p>
+                <div class="button-size-options" style="grid-template-columns: 1fr 1fr;">
+                    <button id="select-copy-btn" class="button-secondary" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 5px;">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        复制
+                    </button>
+                    <button id="select-delete-btn" class="button-secondary" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 5px;">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                        </svg>
+                        删除
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Eraser configuration -->
         <div id="eraser-config" class="config-panel">
             <div class="config-group">
@@ -108,6 +132,23 @@
             <div class="config-group">
                 <label>橡皮擦大小 <span id="eraser-size-value">20</span>px</label>
                 <input type="range" id="eraser-size-slider" min="10" max="50" value="20" class="slider">
+            </div>
+        </div>
+
+        <!-- Insert image configuration -->
+        <div id="insert-config" class="config-panel">
+            <div class="config-group">
+                <label>插入图片到画布</label>
+                <button id="insert-image-btn" class="button-primary" style="width: 100%; margin-top: 10px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 5px;">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    选择图片文件
+                </button>
+                <input type="file" id="insert-image-upload" accept="image/*" style="display: none;">
+                <p class="settings-hint" style="margin-top: 10px;">插入后可以拖动、缩放和旋转图片</p>
             </div>
         </div>
 
@@ -500,6 +541,13 @@
             </svg>
             <span>笔</span>
         </button>
+        <button id="select-btn" class="tool-btn" data-tool="select" title="选择 (可选择笔迹和图片)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path>
+                <path d="M13 13l6 6"></path>
+            </svg>
+            <span>选择</span>
+        </button>
         <button id="pan-btn" class="tool-btn" data-tool="pan" title="移动画布 (Shift+拖动)">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
@@ -515,6 +563,14 @@
                 <path d="M7 20l5-5"></path>
             </svg>
             <span>橡皮</span>
+        </button>
+        <button id="insert-btn" class="tool-btn" data-tool="insert" title="插入图片">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+            <span>插入</span>
         </button>
         <button id="background-btn" class="tool-btn" data-tool="background" title="背景">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -544,6 +600,8 @@
     <script src="js/history.js"></script>
     <script src="js/background.js"></script>
     <script src="js/image-controls.js"></script>
+    <script src="js/canvas-images.js"></script>
+    <script src="js/selection.js"></script>
     <script src="js/settings.js"></script>
     <script src="js/main.js"></script>
 </body>

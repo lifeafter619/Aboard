@@ -149,9 +149,15 @@ class ImageControls {
         const canvas = this.backgroundManager.bgCanvas;
         const rect = canvas.getBoundingClientRect();
         
+        // Store original dimensions
+        const originalWidth = imageData.width || rect.width * 0.6;
+        const originalHeight = imageData.height || rect.height * 0.6;
+        
         // Center the image initially
-        this.imageSize.width = imageData.width || rect.width * 0.6;
-        this.imageSize.height = imageData.height || rect.height * 0.6;
+        this.imageSize.width = originalWidth;
+        this.imageSize.height = originalHeight;
+        this.originalWidth = originalWidth;
+        this.originalHeight = originalHeight;
         this.imagePosition.x = (rect.width - this.imageSize.width) / 2;
         this.imagePosition.y = (rect.height - this.imageSize.height) / 2;
         this.imageRotation = 0;
@@ -169,11 +175,22 @@ class ImageControls {
         const canvas = this.backgroundManager.bgCanvas;
         const rect = canvas.getBoundingClientRect();
         
-        // Apply transformations to control box
-        this.controlBox.style.left = `${rect.left + this.imagePosition.x}px`;
-        this.controlBox.style.top = `${rect.top + this.imagePosition.y}px`;
-        this.controlBox.style.width = `${this.imageSize.width}px`;
-        this.controlBox.style.height = `${this.imageSize.height}px`;
+        // Get the canvas scale from computed transform
+        const computedStyle = window.getComputedStyle(canvas);
+        const matrix = new DOMMatrix(computedStyle.transform);
+        const canvasScale = matrix.a; // Scale factor from transform matrix
+        
+        // Calculate actual position and size accounting for canvas transform
+        const actualX = rect.left + (this.imagePosition.x * canvasScale);
+        const actualY = rect.top + (this.imagePosition.y * canvasScale);
+        const actualWidth = this.imageSize.width * canvasScale;
+        const actualHeight = this.imageSize.height * canvasScale;
+        
+        // Apply transformations to control box to match image exactly
+        this.controlBox.style.left = `${actualX}px`;
+        this.controlBox.style.top = `${actualY}px`;
+        this.controlBox.style.width = `${actualWidth}px`;
+        this.controlBox.style.height = `${actualHeight}px`;
         this.controlBox.style.transform = `rotate(${this.imageRotation}deg) scale(${this.imageScale})`;
         
         // Update background image with current transformations
@@ -311,12 +328,20 @@ class ImageControls {
     }
     
     resetImage() {
+        // Reset to original size and angle
         this.imageRotation = 0;
         this.imageScale = 1.0;
+        
+        // Reset to original dimensions (stored when image was first shown)
+        this.imageSize.width = this.originalWidth || this.imageSize.width;
+        this.imageSize.height = this.originalHeight || this.imageSize.height;
+        
+        // Center the image
         const canvas = this.backgroundManager.bgCanvas;
         const rect = canvas.getBoundingClientRect();
         this.imagePosition.x = (rect.width - this.imageSize.width) / 2;
         this.imagePosition.y = (rect.height - this.imageSize.height) / 2;
+        
         this.updateControlBox();
     }
     
@@ -324,23 +349,31 @@ class ImageControls {
         const canvas = this.backgroundManager.bgCanvas;
         const rect = canvas.getBoundingClientRect();
         
-        // Fit image to canvas while maintaining aspect ratio
+        // Get the actual visible canvas size (accounting for zoom and transforms)
+        const computedStyle = window.getComputedStyle(canvas);
+        const transform = computedStyle.transform;
+        
+        // Use bounding rect which accounts for all transforms
+        const actualWidth = rect.width;
+        const actualHeight = rect.height;
+        
+        // Get current image aspect ratio
         const imageAspect = this.imageSize.width / this.imageSize.height;
-        const canvasAspect = rect.width / rect.height;
+        const canvasAspect = actualWidth / actualHeight;
         
         if (imageAspect > canvasAspect) {
-            // Image is wider
-            this.imageSize.width = rect.width * 0.9;
+            // Image is wider - fit to width
+            this.imageSize.width = actualWidth * 0.9;
             this.imageSize.height = this.imageSize.width / imageAspect;
         } else {
-            // Image is taller
-            this.imageSize.height = rect.height * 0.9;
+            // Image is taller - fit to height
+            this.imageSize.height = actualHeight * 0.9;
             this.imageSize.width = this.imageSize.height * imageAspect;
         }
         
-        // Center the image
-        this.imagePosition.x = (rect.width - this.imageSize.width) / 2;
-        this.imagePosition.y = (rect.height - this.imageSize.height) / 2;
+        // Center the image in the visible canvas area
+        this.imagePosition.x = (actualWidth - this.imageSize.width) / 2;
+        this.imagePosition.y = (actualHeight - this.imageSize.height) / 2;
         this.imageRotation = 0;
         this.imageScale = 1.0;
         
