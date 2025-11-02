@@ -153,6 +153,22 @@ class DrawingBoard {
                 return;
             }
             
+            // Handle insert tool - allow selecting images
+            if (this.drawingEngine.currentTool === 'insert') {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const imageId = this.canvasImageManager.getImageAtPoint(x, y);
+                if (imageId) {
+                    this.canvasImageManager.selectImage(imageId);
+                    this.updateUI();
+                } else {
+                    this.canvasImageManager.deselectImage();
+                    this.updateUI();
+                }
+                return;
+            }
+            
             if (e.button === 1 || (e.button === 0 && e.shiftKey) || this.drawingEngine.currentTool === 'pan') {
                 this.drawingEngine.startPanning(e);
             } else if (this.drawingEngine.currentTool === 'pen' || this.drawingEngine.currentTool === 'eraser') {
@@ -456,11 +472,21 @@ class DrawingBoard {
                     const centerY = rect.height / 2 - 100;
                     this.canvasImageManager.addImage(imageData, centerX, centerY);
                     this.historyManager.saveState();
+                    this.updateUI();
                 };
                 reader.readAsDataURL(file);
             }
             // Reset file input
             e.target.value = '';
+        });
+        
+        // Delete selected image button
+        document.getElementById('delete-selected-image-btn').addEventListener('click', () => {
+            if (this.canvasImageManager.selectedImageId) {
+                this.canvasImageManager.deleteSelectedImage();
+                this.historyManager.saveState();
+                this.updateUI();
+            }
         });
         
         // Selection tool buttons
@@ -813,6 +839,10 @@ class DrawingBoard {
     
     handleDrawingComplete() {
         if (this.drawingEngine.stopDrawing()) {
+            // Redraw images after erasing to prevent them from being erased
+            if (this.drawingEngine.currentTool === 'eraser') {
+                this.canvasImageManager.drawImages();
+            }
             this.historyManager.saveState();
             this.closeConfigPanel();
         }
@@ -874,6 +904,9 @@ class DrawingBoard {
             document.getElementById('insert-btn').classList.add('active');
             document.getElementById('insert-config').classList.add('active');
             this.canvas.style.cursor = 'default';
+            // Update delete button state based on whether an image is selected
+            const hasSelectedImage = this.canvasImageManager.selectedImageId !== null;
+            document.getElementById('delete-selected-image-btn').disabled = !hasSelectedImage;
         } else if (tool === 'background') {
             document.getElementById('background-btn').classList.add('active');
             document.getElementById('background-config').classList.add('active');
@@ -1118,13 +1151,17 @@ class DrawingBoard {
                 const mouseX = e.clientX;
                 const mouseY = e.clientY;
                 
-                // Get canvas position
+                // Get canvas position and dimensions
                 const rect = this.canvas.getBoundingClientRect();
-                const canvasCenterX = rect.left + rect.width / 2;
-                const canvasCenterY = rect.top + rect.height / 2;
                 
-                // Get current scale
+                // Calculate mouse position relative to canvas (in screen space)
+                const mouseCanvasX = mouseX - rect.left;
+                const mouseCanvasY = mouseY - rect.top;
+                
+                // Get current scale and pan
                 const oldScale = this.drawingEngine.canvasScale;
+                const oldPanX = this.drawingEngine.panOffset.x;
+                const oldPanY = this.drawingEngine.panOffset.y;
                 
                 // Calculate new scale
                 const delta = e.deltaY;
@@ -1135,17 +1172,23 @@ class DrawingBoard {
                     newScale = Math.max(oldScale - 0.1, 0.5);
                 }
                 
-                // Calculate the scale factor
-                const scaleFactor = newScale / oldScale;
+                // Calculate scale ratio
+                const scaleRatio = newScale / oldScale;
                 
-                // Calculate offset from canvas center to mouse
-                const offsetX = mouseX - canvasCenterX;
-                const offsetY = mouseY - canvasCenterY;
+                // Get canvas center in screen space
+                const canvasCenterX = rect.width / 2;
+                const canvasCenterY = rect.height / 2;
                 
-                // Adjust pan offset to zoom towards mouse pointer
-                // The formula: new_pan = old_pan - offset * (1 - scaleFactor)
-                this.drawingEngine.panOffset.x -= offsetX * (1 - scaleFactor);
-                this.drawingEngine.panOffset.y -= offsetY * (1 - scaleFactor);
+                // Calculate offset from canvas center to mouse (in screen space)
+                const offsetX = mouseCanvasX - canvasCenterX;
+                const offsetY = mouseCanvasY - canvasCenterY;
+                
+                // Adjust pan offset so that the point under the mouse stays in place
+                // When zooming in (scaleRatio > 1), we need to pan towards the mouse
+                // When zooming out (scaleRatio < 1), we need to pan away from the mouse
+                // Formula: new_pan = old_pan + offset * (1 - scaleRatio)
+                this.drawingEngine.panOffset.x = oldPanX + offsetX * (1 - scaleRatio);
+                this.drawingEngine.panOffset.y = oldPanY + offsetY * (1 - scaleRatio);
                 
                 // Update scale
                 this.drawingEngine.canvasScale = newScale;

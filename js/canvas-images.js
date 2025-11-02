@@ -170,13 +170,24 @@ class CanvasImageManager {
     }
     
     getImageAtPoint(x, y) {
+        // Adjust coordinates for canvas scale (same as drawing engine)
+        // This accounts for CSS transform scaling applied to the canvas
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.offsetWidth / rect.width;
+        const scaleY = this.canvas.offsetHeight / rect.height;
+        
+        // Note: scaleX and scaleY should be equal for uniform scaling
+        // If they differ, the canvas is being distorted
+        const adjustedX = x * scaleX;
+        const adjustedY = y * scaleY;
+        
         // Check images in reverse order (top to bottom)
         for (let i = this.images.length - 1; i >= 0; i--) {
             const img = this.images[i];
             
             // Simple bounding box check (ignoring rotation for now)
-            if (x >= img.x && x <= img.x + img.width &&
-                y >= img.y && y <= img.y + img.height) {
+            if (adjustedX >= img.x && adjustedX <= img.x + img.width &&
+                adjustedY >= img.y && adjustedY <= img.y + img.height) {
                 return img.id;
             }
         }
@@ -267,6 +278,20 @@ class CanvasImageManager {
                 image.height = Math.max(50, this.resizeStartSize.height - deltaY);
                 image.x = this.dragStartImagePos.x + deltaX;
                 image.y = this.dragStartImagePos.y + deltaY;
+                break;
+            case 'top':
+                image.height = Math.max(50, this.resizeStartSize.height - deltaY);
+                image.y = this.dragStartImagePos.y + deltaY;
+                break;
+            case 'bottom':
+                image.height = Math.max(50, this.resizeStartSize.height + deltaY);
+                break;
+            case 'left':
+                image.width = Math.max(50, this.resizeStartSize.width - deltaX);
+                image.x = this.dragStartImagePos.x + deltaX;
+                break;
+            case 'right':
+                image.width = Math.max(50, this.resizeStartSize.width + deltaX);
                 break;
         }
         
