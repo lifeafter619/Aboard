@@ -60,6 +60,7 @@ class DrawingBoard {
         this.backgroundManager.drawBackground();
         this.updateUI();
         this.historyManager.saveState();
+        this.initializeCanvasView(); // Initialize canvas view (70% scale, centered)
         this.updateZoomUI();
         this.applyZoom();
         this.updateZoomControlsVisibility();
@@ -69,6 +70,27 @@ class DrawingBoard {
         
         // Listen for fullscreen changes
         document.addEventListener('fullscreenchange', () => this.handleFullscreenChange());
+    }
+    
+    
+    initializeCanvasView() {
+        // On startup or refresh, set canvas to 70% of fullscreen size and center it
+        // Only apply if no saved scale exists
+        const savedScale = localStorage.getItem('canvasScale');
+        if (!savedScale) {
+            this.drawingEngine.canvasScale = 0.7;
+            localStorage.setItem('canvasScale', 0.7);
+        }
+        
+        // Reset pan offset on startup
+        const savedPanX = localStorage.getItem('panOffsetX');
+        const savedPanY = localStorage.getItem('panOffsetY');
+        if (!savedPanX && !savedPanY) {
+            this.drawingEngine.panOffset.x = 0;
+            this.drawingEngine.panOffset.y = 0;
+            localStorage.setItem('panOffsetX', 0);
+            localStorage.setItem('panOffsetY', 0);
+        }
     }
     
     resizeCanvas() {
@@ -127,7 +149,7 @@ class DrawingBoard {
         document.addEventListener('mousemove', (e) => {
             if (this.drawingEngine.isPanning) {
                 this.drawingEngine.pan(e);
-                this.redrawCanvas();
+                this.applyPanTransform();
             } else if (this.drawingEngine.isDrawing) {
                 this.drawingEngine.draw(e);
                 this.updateEraserCursor(e);
@@ -909,14 +931,18 @@ class DrawingBoard {
     
     applyZoom() {
         // Apply zoom using CSS transform for better performance
+        const panX = this.drawingEngine.panOffset.x;
+        const panY = this.drawingEngine.panOffset.y;
+        const scale = this.drawingEngine.canvasScale;
+        
         if (!this.settingsManager.infiniteCanvas) {
-            // In paginated mode, keep centering
-            const transform = `translate(-50%, -50%) scale(${this.drawingEngine.canvasScale})`;
+            // In paginated mode, keep centering and add pan
+            const transform = `translate(-50%, -50%) translate(${panX}px, ${panY}px) scale(${scale})`;
             this.canvas.style.transform = transform;
             this.bgCanvas.style.transform = transform;
         } else {
-            // In infinite mode, simple scale
-            const transform = `scale(${this.drawingEngine.canvasScale})`;
+            // In infinite mode, simple scale with pan
+            const transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
             this.canvas.style.transform = transform;
             this.bgCanvas.style.transform = transform;
         }
@@ -1017,10 +1043,14 @@ class DrawingBoard {
             if (e.ctrlKey || e.metaKey) {
                 e.preventDefault();
                 
-                // Get mouse position relative to canvas
+                // Get mouse position relative to viewport
+                const mouseX = e.clientX;
+                const mouseY = e.clientY;
+                
+                // Get canvas position
                 const rect = this.canvas.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
+                const canvasCenterX = rect.left + rect.width / 2;
+                const canvasCenterY = rect.top + rect.height / 2;
                 
                 // Get current scale
                 const oldScale = this.drawingEngine.canvasScale;
@@ -1034,30 +1064,27 @@ class DrawingBoard {
                     newScale = Math.max(oldScale - 0.1, 0.5);
                 }
                 
-                // Calculate the zoom factor
+                // Calculate the scale factor
                 const scaleFactor = newScale / oldScale;
                 
-                // Calculate the position of the mouse relative to the center of the canvas
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
-                const offsetX = mouseX - centerX;
-                const offsetY = mouseY - centerY;
+                // Calculate offset from canvas center to mouse
+                const offsetX = mouseX - canvasCenterX;
+                const offsetY = mouseY - canvasCenterY;
                 
-                // Adjust transform origin to mouse position for smooth zoom
-                this.canvas.style.transformOrigin = `${mouseX}px ${mouseY}px`;
-                this.bgCanvas.style.transformOrigin = `${mouseX}px ${mouseY}px`;
+                // Adjust pan offset to zoom towards mouse pointer
+                // The formula: new_pan = old_pan - offset * (1 - scaleFactor)
+                this.drawingEngine.panOffset.x -= offsetX * (1 - scaleFactor);
+                this.drawingEngine.panOffset.y -= offsetY * (1 - scaleFactor);
                 
                 // Update scale
                 this.drawingEngine.canvasScale = newScale;
                 this.updateZoomUI();
                 this.applyZoom();
-                localStorage.setItem('canvasScale', newScale);
                 
-                // Reset transform origin after a short delay to allow for smooth zooming
-                setTimeout(() => {
-                    this.canvas.style.transformOrigin = 'center center';
-                    this.bgCanvas.style.transformOrigin = 'center center';
-                }, 100);
+                // Save to localStorage
+                localStorage.setItem('canvasScale', newScale);
+                localStorage.setItem('panOffsetX', this.drawingEngine.panOffset.x);
+                localStorage.setItem('panOffsetY', this.drawingEngine.panOffset.y);
             }
         }, { passive: false });
     }
@@ -1379,39 +1406,23 @@ class DrawingBoard {
         };
     }
     
-    redrawCanvas() {
-        // Save current canvas content
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = this.canvas.width;
-        tempCanvas.height = this.canvas.height;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.drawImage(this.canvas, 0, 0);
+    applyPanTransform() {
+        // Apply pan offset using CSS transform for better performance
+        const panX = this.drawingEngine.panOffset.x;
+        const panY = this.drawingEngine.panOffset.y;
+        const scale = this.drawingEngine.canvasScale;
         
-        // Save current background content
-        const tempBgCanvas = document.createElement('canvas');
-        tempBgCanvas.width = this.bgCanvas.width;
-        tempBgCanvas.height = this.bgCanvas.height;
-        const tempBgCtx = tempBgCanvas.getContext('2d');
-        tempBgCtx.drawImage(this.bgCanvas, 0, 0);
-        
-        // Clear and restore with pan transformations for drawing canvas
-        const dpr = window.devicePixelRatio || 1;
-        this.ctx.save();
-        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.ctx.scale(dpr, dpr);
-        this.ctx.translate(this.drawingEngine.panOffset.x, this.drawingEngine.panOffset.y);
-        this.ctx.drawImage(tempCanvas, 0, 0, this.canvas.width / dpr, this.canvas.height / dpr);
-        this.ctx.restore();
-        
-        // Clear and restore with pan transformations for background canvas
-        this.bgCtx.save();
-        this.bgCtx.setTransform(1, 0, 0, 1, 0, 0);
-        this.bgCtx.clearRect(0, 0, this.bgCanvas.width, this.bgCanvas.height);
-        this.bgCtx.scale(dpr, dpr);
-        this.bgCtx.translate(this.drawingEngine.panOffset.x, this.drawingEngine.panOffset.y);
-        this.bgCtx.drawImage(tempBgCanvas, 0, 0, this.bgCanvas.width / dpr, this.bgCanvas.height / dpr);
-        this.bgCtx.restore();
+        if (!this.settingsManager.infiniteCanvas) {
+            // In paginated mode, combine translate and scale
+            const transform = `translate(-50%, -50%) translate(${panX}px, ${panY}px) scale(${scale})`;
+            this.canvas.style.transform = transform;
+            this.bgCanvas.style.transform = transform;
+        } else {
+            // In infinite mode, combine translate and scale
+            const transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+            this.canvas.style.transform = transform;
+            this.bgCanvas.style.transform = transform;
+        }
     }
     
     loadUploadedImages() {
