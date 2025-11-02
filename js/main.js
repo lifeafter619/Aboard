@@ -1224,6 +1224,8 @@ class DrawingBoard {
             try {
                 return JSON.parse(saved);
             } catch (e) {
+                console.warn('Failed to load uploaded images from localStorage:', e);
+                localStorage.removeItem('uploadedImages');
                 return [];
             }
         }
@@ -1231,14 +1233,31 @@ class DrawingBoard {
     }
     
     saveUploadedImage(imageData) {
+        // Check if we're approaching localStorage limit
+        const currentSize = new Blob([localStorage.getItem('uploadedImages') || '[]']).size;
+        const imageSize = new Blob([imageData]).size;
+        
+        // Limit to approximately 4MB total to avoid hitting localStorage limits
+        if (currentSize + imageSize > 4 * 1024 * 1024) {
+            alert('存储空间不足，无法保存更多图片。请清除一些旧图片。');
+            return;
+        }
+        
         const imageId = `img_${Date.now()}`;
         this.uploadedImages.push({
             id: imageId,
             data: imageData,
             name: `图片${this.uploadedImages.length + 1}`
         });
-        localStorage.setItem('uploadedImages', JSON.stringify(this.uploadedImages));
-        this.updateUploadedImagesButtons();
+        
+        try {
+            localStorage.setItem('uploadedImages', JSON.stringify(this.uploadedImages));
+            this.updateUploadedImagesButtons();
+        } catch (e) {
+            console.error('Failed to save image to localStorage:', e);
+            alert('保存图片失败，存储空间可能不足。');
+            this.uploadedImages.pop(); // Remove the image we just added
+        }
     }
     
     updateUploadedImagesButtons() {
