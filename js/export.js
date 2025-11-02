@@ -110,8 +110,9 @@ class ExportManager {
     }
     
     showModal() {
-        // Set default filename with timestamp
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        // Set default filename with timestamp (format: YYYY-MM-DDTHH-MM-SS)
+        const now = new Date();
+        const timestamp = now.toISOString().slice(0, 19).replace(/:/g, '-');
         document.getElementById('export-filename').value = `aboard-${timestamp}`;
         this.exportModal.classList.add('show');
     }

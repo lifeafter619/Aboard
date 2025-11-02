@@ -93,13 +93,15 @@ class CanvasImageManager {
             this.deleteSelectedImage();
         });
         
-        // Drag selection box
+        // Drag selection box - check if clicking on interactive elements
         this.selectionBox.addEventListener('mousedown', (e) => {
-            if (!e.target.classList.contains('resize-handle') && 
-                !e.target.classList.contains('rotate-handle') &&
-                !e.target.closest('.resize-handle') &&
-                !e.target.closest('.rotate-handle') &&
-                !e.target.closest('.selection-action-buttons')) {
+            const isInteractiveElement = e.target.classList.contains('resize-handle') || 
+                e.target.classList.contains('rotate-handle') ||
+                e.target.closest('.resize-handle') ||
+                e.target.closest('.rotate-handle') ||
+                e.target.closest('.selection-action-buttons');
+            
+            if (!isInteractiveElement) {
                 this.startDrag(e);
             }
         });
