@@ -39,7 +39,7 @@ body {
 #eraser-cursor {
     position: fixed;
     pointer-events: none;
-    border: 2px solid #333;
+    border: 2px dashed #bbb;
     border-radius: 50%;
     background-color: rgba(255, 255, 255, 0.3);
     z-index: 9999;

@@ -98,7 +98,7 @@ class DrawingBoard {
                 this.setTool('pen', false); // Don't show config panel
             }
             
-            if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
+            if (e.button === 1 || (e.button === 0 && e.shiftKey) || this.drawingEngine.currentTool === 'pan') {
                 this.drawingEngine.startPanning(e);
             } else if (this.drawingEngine.currentTool === 'pen' || this.drawingEngine.currentTool === 'eraser') {
                 this.drawingEngine.startDrawing(e);
@@ -177,6 +177,7 @@ class DrawingBoard {
         
         // Toolbar buttons
         document.getElementById('pen-btn').addEventListener('click', () => this.setTool('pen'));
+        document.getElementById('pan-btn').addEventListener('click', () => this.setTool('pan'));
         document.getElementById('eraser-btn').addEventListener('click', () => this.setTool('eraser'));
         document.getElementById('background-btn').addEventListener('click', () => this.setTool('background'));
         document.getElementById('clear-btn').addEventListener('click', () => this.confirmClear());
@@ -432,6 +433,7 @@ class DrawingBoard {
                 this.settingsManager.setCanvasPreset(preset);
                 document.querySelectorAll('.canvas-preset-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
+                this.applyCanvasSize();
             });
         });
         
@@ -443,6 +445,7 @@ class DrawingBoard {
             // Set to custom when manually changing size
             document.querySelectorAll('.canvas-preset-btn').forEach(b => b.classList.remove('active'));
             document.querySelector('.canvas-preset-btn[data-preset="custom"]').classList.add('active');
+            this.applyCanvasSize();
         });
         
         document.getElementById('canvas-height-input').addEventListener('change', (e) => {
@@ -452,6 +455,7 @@ class DrawingBoard {
             // Set to custom when manually changing size
             document.querySelectorAll('.canvas-preset-btn').forEach(b => b.classList.remove('active'));
             document.querySelector('.canvas-preset-btn[data-preset="custom"]').classList.add('active');
+            this.applyCanvasSize();
         });
         
         // Canvas ratio selector
@@ -720,6 +724,9 @@ class DrawingBoard {
             document.getElementById('pen-btn').classList.add('active');
             document.getElementById('pen-config').classList.add('active');
             this.canvas.style.cursor = 'crosshair';
+        } else if (tool === 'pan') {
+            document.getElementById('pan-btn').classList.add('active');
+            this.canvas.style.cursor = 'grab';
         } else if (tool === 'eraser') {
             document.getElementById('eraser-btn').classList.add('active');
             document.getElementById('eraser-config').classList.add('active');
@@ -743,11 +750,77 @@ class DrawingBoard {
     
     updateCanvasMode() {
         this.updateUI();
+        this.applyCanvasSize();
         // Initialize pages array if needed
         if (!this.settingsManager.infiniteCanvas && this.pages.length === 0) {
             this.pages.push(this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height));
             this.currentPage = 1;
             this.updatePaginationUI();
+        }
+    }
+    
+    applyCanvasSize() {
+        if (!this.settingsManager.infiniteCanvas) {
+            // In paginated mode, apply custom canvas size
+            const width = this.settingsManager.canvasWidth;
+            const height = this.settingsManager.canvasHeight;
+            const dpr = window.devicePixelRatio || 1;
+            
+            // Save current content
+            const oldWidth = this.canvas.width;
+            const oldHeight = this.canvas.height;
+            const imageData = this.historyManager.historyStep >= 0 ? 
+                this.ctx.getImageData(0, 0, oldWidth, oldHeight) : null;
+            
+            // Set canvas size and CSS size
+            this.canvas.width = width * dpr;
+            this.canvas.height = height * dpr;
+            this.canvas.style.width = width + 'px';
+            this.canvas.style.height = height + 'px';
+            
+            this.bgCanvas.width = width * dpr;
+            this.bgCanvas.height = height * dpr;
+            this.bgCanvas.style.width = width + 'px';
+            this.bgCanvas.style.height = height + 'px';
+            
+            // Center the canvas on the screen
+            this.canvas.style.position = 'absolute';
+            this.canvas.style.left = '50%';
+            this.canvas.style.top = '50%';
+            this.canvas.style.transform = `translate(-50%, -50%) scale(${this.drawingEngine.canvasScale})`;
+            
+            this.bgCanvas.style.position = 'absolute';
+            this.bgCanvas.style.left = '50%';
+            this.bgCanvas.style.top = '50%';
+            this.bgCanvas.style.transform = `translate(-50%, -50%) scale(${this.drawingEngine.canvasScale})`;
+            
+            // Re-apply DPR scaling to context
+            this.ctx.scale(dpr, dpr);
+            this.bgCtx.scale(dpr, dpr);
+            
+            // Restore content
+            if (imageData) {
+                this.ctx.putImageData(imageData, 0, 0);
+            }
+            
+            this.backgroundManager.drawBackground();
+        } else {
+            // In infinite canvas mode, canvas fills the viewport
+            this.canvas.style.position = 'absolute';
+            this.canvas.style.left = '0';
+            this.canvas.style.top = '0';
+            this.canvas.style.width = '100%';
+            this.canvas.style.height = '100%';
+            this.canvas.style.transform = `scale(${this.drawingEngine.canvasScale})`;
+            
+            this.bgCanvas.style.position = 'absolute';
+            this.bgCanvas.style.left = '0';
+            this.bgCanvas.style.top = '0';
+            this.bgCanvas.style.width = '100%';
+            this.bgCanvas.style.height = '100%';
+            this.bgCanvas.style.transform = `scale(${this.drawingEngine.canvasScale})`;
+            
+            this.resizeCanvas();
         }
     }
     
@@ -786,9 +859,17 @@ class DrawingBoard {
     
     applyZoom() {
         // Apply zoom using CSS transform for better performance
-        const transform = `scale(${this.drawingEngine.canvasScale})`;
-        this.canvas.style.transform = transform;
-        this.bgCanvas.style.transform = transform;
+        if (!this.settingsManager.infiniteCanvas) {
+            // In paginated mode, keep centering
+            const transform = `translate(-50%, -50%) scale(${this.drawingEngine.canvasScale})`;
+            this.canvas.style.transform = transform;
+            this.bgCanvas.style.transform = transform;
+        } else {
+            // In infinite mode, simple scale
+            const transform = `scale(${this.drawingEngine.canvasScale})`;
+            this.canvas.style.transform = transform;
+            this.bgCanvas.style.transform = transform;
+        }
         this.canvas.style.transformOrigin = 'center center';
         this.bgCanvas.style.transformOrigin = 'center center';
     }

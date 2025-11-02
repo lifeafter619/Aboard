@@ -146,7 +146,7 @@ class DrawingEngine {
     startPanning(e) {
         this.isPanning = true;
         this.lastPanPoint = { x: e.clientX, y: e.clientY };
-        this.canvas.style.cursor = 'grab';
+        this.canvas.style.cursor = 'grabbing';
     }
     
     pan(e) {
@@ -168,6 +168,10 @@ class DrawingEngine {
         if (this.isPanning) {
             this.isPanning = false;
             this.lastPanPoint = null;
+            // Restore cursor based on current tool
+            if (this.currentTool === 'pan') {
+                this.canvas.style.cursor = 'grab';
+            }
             return true;
         }
         return false;
