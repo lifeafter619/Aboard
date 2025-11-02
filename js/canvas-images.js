@@ -268,6 +268,20 @@ class CanvasImageManager {
                 image.x = this.dragStartImagePos.x + deltaX;
                 image.y = this.dragStartImagePos.y + deltaY;
                 break;
+            case 'top':
+                image.height = Math.max(50, this.resizeStartSize.height - deltaY);
+                image.y = this.dragStartImagePos.y + deltaY;
+                break;
+            case 'bottom':
+                image.height = Math.max(50, this.resizeStartSize.height + deltaY);
+                break;
+            case 'left':
+                image.width = Math.max(50, this.resizeStartSize.width - deltaX);
+                image.x = this.dragStartImagePos.x + deltaX;
+                break;
+            case 'right':
+                image.width = Math.max(50, this.resizeStartSize.width + deltaX);
+                break;
         }
         
         this.updateSelectionBox(image);
