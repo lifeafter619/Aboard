@@ -228,10 +228,10 @@
                             <label>控制按钮位置</label>
                             <p class="settings-hint">选择缩放和分页控件在屏幕上的显示位置</p>
                             <div class="button-size-options button-size-options-4">
-                                <button class="position-option-btn active" data-position="top-right">右上角</button>
                                 <button class="position-option-btn" data-position="top-left">左上角</button>
-                                <button class="position-option-btn" data-position="bottom-right">右下角</button>
+                                <button class="position-option-btn active" data-position="top-right">右上角</button>
                                 <button class="position-option-btn" data-position="bottom-left">左下角</button>
+                                <button class="position-option-btn" data-position="bottom-right">右下角</button>
                             </div>
                         </div>
                     </div>
@@ -242,18 +242,18 @@
                         <div class="settings-group">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="show-zoom-controls-checkbox" checked>
-                                <span>显示缩放控制</span>
+                                <span>显示缩放控件</span>
                             </label>
-                            <p class="settings-hint">在画布上方显示缩放控件</p>
+                            <p class="settings-hint">勾选后，在画布上方显示缩放控件</p>
                         </div>
                         <div class="settings-group">
-                            <label>工具栏按钮大小 <span id="toolbar-size-value">40</span>px</label>
-                            <p class="settings-hint">调整底部工具栏按钮的尺寸大小</p>
+                            <label>工具栏大小 <span id="toolbar-size-value">40</span>px</label>
+                            <p class="settings-hint">调整底部工具栏的大小</p>
                             <input type="range" id="toolbar-size-slider" min="40" max="80" value="40" class="slider" step="5">
                         </div>
                         <div class="settings-group">
-                            <label>属性栏缩放 <span id="config-scale-value">100</span>%</label>
-                            <p class="settings-hint">调整弹出属性面板的整体缩放比例</p>
+                            <label>属性栏大小 <span id="config-scale-value">100</span>%</label>
+                            <p class="settings-hint">调整弹出具体属性面板的大小</p>
                             <input type="range" id="config-scale-slider" min="80" max="120" value="100" class="slider" step="10">
                         </div>
                     </div>
@@ -266,7 +266,7 @@
                                 <input type="checkbox" id="infinite-canvas-checkbox" checked>
                                 <span>无限画布模式</span>
                             </label>
-                            <p class="settings-hint">关闭后启用分页系统</p>
+                            <p class="settings-hint">关闭后,启用分页系统</p>
                         </div>
                     </div>
                     
@@ -275,11 +275,11 @@
                         <h3>背景设置</h3>
                         <div class="settings-group">
                             <label>背景透明度 <span id="bg-opacity-value">100</span>%</label>
-                            <p class="settings-hint">调整背景的透明度，100%为完全不透明</p>
+                            <p class="settings-hint">调整背景的透明度,100%为完全不透明</p>
                             <input type="range" id="bg-opacity-slider" min="0" max="100" value="100" class="slider">
                         </div>
                         <div class="settings-group">
-                            <label>图案深浅 <span id="pattern-intensity-value">50</span>%</label>
+                            <label>图案透明度 <span id="pattern-intensity-value">50</span>%</label>
                             <p class="settings-hint">调整背景图案线条的明暗程度</p>
                             <input type="range" id="pattern-intensity-slider" min="10" max="200" value="50" class="slider">
                         </div>
@@ -305,7 +305,7 @@
                                 </label>
                                 <label class="checkbox-label">
                                     <input type="checkbox" class="pattern-pref-checkbox" data-pattern="english-lines" checked>
-                                    <span>英语四线</span>
+                                    <span>英语四线格</span>
                                 </label>
                                 <label class="checkbox-label">
                                     <input type="checkbox" class="pattern-pref-checkbox" data-pattern="music-staff" checked>
