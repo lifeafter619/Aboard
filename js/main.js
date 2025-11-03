@@ -21,7 +21,7 @@ class DrawingBoard {
         this.backgroundManager = new BackgroundManager(this.bgCanvas, this.bgCtx);
         this.imageControls = new ImageControls(this.backgroundManager);
         this.canvasImageManager = new CanvasImageManager(this.canvas, this.ctx);
-        this.canvasImageControls = new CanvasImageControls(this.canvasImageManager, this.canvas);
+        this.canvasImageControls = new CanvasImageControls(this.canvasImageManager, this.canvas, this.historyManager);
         this.selectionManager = new SelectionManager(this.canvas, this.ctx, this.canvasImageManager);
         this.settingsManager = new SettingsManager();
         this.exportManager = new ExportManager(this.canvas, this.bgCanvas);
@@ -523,13 +523,12 @@ class DrawingBoard {
                     const rect = this.canvas.getBoundingClientRect();
                     const centerX = rect.width / 2 - 100;
                     const centerY = rect.height / 2 - 100;
-                    this.canvasImageManager.addImage(imageData, centerX, centerY);
                     
-                    // Show the new image controls for the newly added image
-                    const addedImage = this.canvasImageManager.images[this.canvasImageManager.images.length - 1];
-                    if (addedImage) {
-                        this.canvasImageControls.showControls(addedImage.id);
-                    }
+                    // Use callback to get the imageId once image is loaded
+                    this.canvasImageManager.addImage(imageData, centerX, centerY, (imageId) => {
+                        // Show the new image controls for the newly added image
+                        this.canvasImageControls.showControls(imageId);
+                    });
                     
                     this.updateUI();
                 };
@@ -1674,8 +1673,8 @@ class DrawingBoard {
 // Initialize the application
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        window.drawingBoard = new DrawingBoard();
+        new DrawingBoard();
     });
 } else {
-    window.drawingBoard = new DrawingBoard();
+    new DrawingBoard();
 }

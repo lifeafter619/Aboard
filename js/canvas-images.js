@@ -206,7 +206,7 @@ class CanvasImageManager {
         this.contextMenu.style.display = 'none';
     }
     
-    addImage(imageData, x, y) {
+    addImage(imageData, x, y, callback) {
         const img = new Image();
         img.onload = () => {
             const imageId = `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -226,6 +226,11 @@ class CanvasImageManager {
             this.images.push(imageObject);
             this.redrawCanvas();
             this.selectImage(imageId);
+            
+            // Call callback with imageId if provided
+            if (callback) {
+                callback(imageId);
+            }
         };
         img.src = imageData;
     }

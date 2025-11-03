@@ -2,9 +2,10 @@
 // Reuses the same image control interface as background images for canvas images
 
 class CanvasImageControls {
-    constructor(canvasImageManager, canvas) {
+    constructor(canvasImageManager, canvas, historyManager) {
         this.canvasImageManager = canvasImageManager;
         this.canvas = canvas;
+        this.historyManager = historyManager;
         this.isActive = false;
         this.isDragging = false;
         this.isResizing = false;
@@ -141,9 +142,9 @@ class CanvasImageControls {
     
     confirmImage() {
         this.hideControls();
-        // Save to history
-        if (window.drawingBoard) {
-            window.drawingBoard.historyManager.saveState();
+        // Save to history using injected historyManager
+        if (this.historyManager) {
+            this.historyManager.saveState();
         }
     }
     
@@ -313,7 +314,19 @@ class CanvasImageControls {
     
     getCanvasScale() {
         const computedStyle = window.getComputedStyle(this.canvas);
-        const matrix = new DOMMatrix(computedStyle.transform);
-        return matrix.a || 1;
+        const transform = computedStyle.transform;
+        
+        // Check if transform is 'none' or invalid
+        if (!transform || transform === 'none') {
+            return 1;
+        }
+        
+        try {
+            const matrix = new DOMMatrix(transform);
+            return matrix.a || 1;
+        } catch (e) {
+            console.warn('Failed to parse transform matrix:', e);
+            return 1;
+        }
     }
 }
