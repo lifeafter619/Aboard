@@ -169,10 +169,7 @@ class ImageControls {
         // Save the confirmed state to localStorage
         localStorage.setItem('backgroundImageConfirmed', 'true');
         
-        // Auto-switch to pen tool after confirming
-        // Find the main app instance and switch tool
-        // We need to emit an event or call a callback
-        // For now, dispatch a custom event
+        // Dispatch event to notify that image has been confirmed
         window.dispatchEvent(new CustomEvent('imageConfirmed'));
     }
     
