@@ -1853,3 +1853,38 @@ body {
 .selection-action-btn svg {
     display: block;
 }
+
+/* Right-click context menu for images */
+.image-context-menu {
+    position: fixed;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 8px;
+    z-index: 10000;
+    min-width: 150px;
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    color: #333;
+    font-size: 14px;
+}
+
+.context-menu-item:hover {
+    background: #f0f0f0;
+}
+
+.context-menu-item svg {
+    flex-shrink: 0;
+}
+
+.context-menu-item span {
+    flex: 1;
+}

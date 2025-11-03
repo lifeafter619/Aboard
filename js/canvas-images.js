@@ -72,11 +72,29 @@ class CanvasImageManager {
                     </div>
                 </div>
             </div>
+            <!-- Right-click context menu -->
+            <div id="image-context-menu" class="image-context-menu" style="display: none;">
+                <div class="context-menu-item" id="context-copy-image">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    <span>复制</span>
+                </div>
+                <div class="context-menu-item" id="context-delete-image">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                    </svg>
+                    <span>删除</span>
+                </div>
+            </div>
         `;
         
         document.body.insertAdjacentHTML('beforeend', overlayHTML);
         this.selectionOverlay = document.getElementById('canvas-image-selection');
         this.selectionBox = this.selectionOverlay.querySelector('.selection-box');
+        this.contextMenu = document.getElementById('image-context-menu');
         
         this.setupSelectionEventListeners();
     }
@@ -91,6 +109,44 @@ class CanvasImageManager {
         document.getElementById('delete-image-btn').addEventListener('click', (e) => {
             e.stopPropagation();
             this.deleteSelectedImage();
+        });
+        
+        // Context menu items
+        document.getElementById('context-copy-image').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.copySelectedImage();
+            this.hideContextMenu();
+        });
+        
+        document.getElementById('context-delete-image').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteSelectedImage();
+            this.hideContextMenu();
+        });
+        
+        // Right-click on selection box to show context menu
+        this.selectionBox.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            this.showContextMenu(e.clientX, e.clientY);
+        });
+        
+        // Right-click on canvas to check for images
+        this.canvas.addEventListener('contextmenu', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const imageId = this.getImageAtPoint(x, y);
+            
+            if (imageId) {
+                e.preventDefault();
+                this.selectImage(imageId);
+                this.showContextMenu(e.clientX, e.clientY);
+            }
+        });
+        
+        // Hide context menu when clicking elsewhere
+        document.addEventListener('click', () => {
+            this.hideContextMenu();
         });
         
         // Drag selection box - check if clicking on interactive elements
@@ -136,9 +192,18 @@ class CanvasImageManager {
                 this.stopDrag();
                 this.stopResize();
                 this.stopRotate();
-                this.redrawCanvas();
             }
         });
+    }
+    
+    showContextMenu(x, y) {
+        this.contextMenu.style.display = 'block';
+        this.contextMenu.style.left = `${x}px`;
+        this.contextMenu.style.top = `${y}px`;
+    }
+    
+    hideContextMenu() {
+        this.contextMenu.style.display = 'none';
     }
     
     addImage(imageData, x, y) {
@@ -233,8 +298,6 @@ class CanvasImageManager {
         if (image) {
             this.dragStartPos = { x: e.clientX, y: e.clientY };
             this.dragStartImagePos = { x: image.x, y: image.y };
-            // Save canvas state before dragging to prevent duplication
-            this.canvasStateBeforeDrag = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         }
     }
     
@@ -256,17 +319,17 @@ class CanvasImageManager {
             
             this.updateSelectionBox(image);
             
-            // Restore canvas state and redraw all images to prevent duplication
-            if (this.canvasStateBeforeDrag) {
-                this.ctx.putImageData(this.canvasStateBeforeDrag, 0, 0);
-                this.drawImages();
-            }
+            // Only update visually, don't redraw to canvas during drag
+            // This prevents duplication issues
         }
     }
     
     stopDrag() {
-        this.isDragging = false;
-        this.canvasStateBeforeDrag = null; // Clear saved state
+        if (this.isDragging) {
+            this.isDragging = false;
+            // Redraw canvas after drag completes to finalize position
+            this.redrawCanvas();
+        }
     }
     
     startResize(e, handle) {
@@ -279,8 +342,6 @@ class CanvasImageManager {
             this.resizeStartPos = { x: e.clientX, y: e.clientY };
             this.resizeStartSize = { width: image.width, height: image.height };
             this.dragStartImagePos = { x: image.x, y: image.y };
-            // Save canvas state before resizing
-            this.canvasStateBeforeDrag = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         }
     }
     
@@ -338,18 +399,15 @@ class CanvasImageManager {
         }
         
         this.updateSelectionBox(image);
-        
-        // Restore canvas state and redraw all images
-        if (this.canvasStateBeforeDrag) {
-            this.ctx.putImageData(this.canvasStateBeforeDrag, 0, 0);
-            this.drawImages();
-        }
     }
     
     stopResize() {
-        this.isResizing = false;
-        this.resizeHandle = null;
-        this.canvasStateBeforeDrag = null; // Clear saved state
+        if (this.isResizing) {
+            this.isResizing = false;
+            this.resizeHandle = null;
+            // Redraw canvas after resize completes
+            this.redrawCanvas();
+        }
     }
     
     startRotate(e) {
@@ -364,8 +422,6 @@ class CanvasImageManager {
             
             this.rotateStartAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
             this.rotateStartRotation = image.rotation;
-            // Save canvas state before rotating
-            this.canvasStateBeforeDrag = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         }
     }
     
@@ -389,17 +445,14 @@ class CanvasImageManager {
         while (image.rotation >= 360) image.rotation -= 360;
         
         this.updateSelectionBox(image);
-        
-        // Restore canvas state and redraw all images
-        if (this.canvasStateBeforeDrag) {
-            this.ctx.putImageData(this.canvasStateBeforeDrag, 0, 0);
-            this.drawImages();
-        }
     }
     
     stopRotate() {
-        this.isRotating = false;
-        this.canvasStateBeforeDrag = null; // Clear saved state
+        if (this.isRotating) {
+            this.isRotating = false;
+            // Redraw canvas after rotation completes
+            this.redrawCanvas();
+        }
     }
     
     copySelectedImage() {

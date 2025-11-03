@@ -10,6 +10,13 @@
 <body>
     <!-- Zoom controls in top right corner -->
     <div id="history-controls">
+        <button id="export-btn-top" class="history-btn" title="导出画布">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+        </button>
         <button id="zoom-out-btn" class="history-btn" title="缩小 (-)">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"></circle>
@@ -216,13 +223,6 @@
 
     <!-- Pagination controls (below zoom, only visible when not in infinite canvas mode) -->
     <div id="pagination-controls">
-        <button id="export-btn" class="page-nav-btn" title="导出画布">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-        </button>
         <button id="prev-page-btn" class="page-nav-btn" title="上一页">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="15 18 9 12 15 6"></polyline>

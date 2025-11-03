@@ -14,6 +14,11 @@ class BackgroundManager {
         this.backgroundImage = null;
         this.backgroundImageData = localStorage.getItem('backgroundImageData') || null;
         this.imageSize = parseFloat(localStorage.getItem('imageSize')) || 1.0;
+        
+        // Coordinate system origin offset
+        this.coordinateOriginX = parseFloat(localStorage.getItem('coordinateOriginX')) || 0;
+        this.coordinateOriginY = parseFloat(localStorage.getItem('coordinateOriginY')) || 0;
+        
         this.imageTransform = {
             x: 0,
             y: 0,
@@ -263,41 +268,47 @@ class BackgroundManager {
     }
     
     drawCoordinatePattern(dpr, patternColor) {
-        const centerX = this.bgCanvas.width / 2;
-        const centerY = this.bgCanvas.height / 2;
+        const dprInverse = 1 / dpr;
+        const centerX = (this.bgCanvas.width / 2) + (this.coordinateOriginX * dpr);
+        const centerY = (this.bgCanvas.height / 2) + (this.coordinateOriginY * dpr);
         const baseGridSize = 20 * dpr;
         const gridSize = baseGridSize / this.patternDensity;
         
         this.bgCtx.strokeStyle = this.isLightBackground() ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
         this.bgCtx.lineWidth = 0.5 * dpr;
         
-        for (let x = 0; x < this.bgCanvas.width; x += gridSize) {
+        // Draw grid lines
+        for (let x = centerX % gridSize; x < this.bgCanvas.width; x += gridSize) {
             this.bgCtx.beginPath();
             this.bgCtx.moveTo(x, 0);
             this.bgCtx.lineTo(x, this.bgCanvas.height);
             this.bgCtx.stroke();
         }
         
-        for (let y = 0; y < this.bgCanvas.height; y += gridSize) {
+        for (let y = centerY % gridSize; y < this.bgCanvas.height; y += gridSize) {
             this.bgCtx.beginPath();
             this.bgCtx.moveTo(0, y);
             this.bgCtx.lineTo(this.bgCanvas.width, y);
             this.bgCtx.stroke();
         }
         
+        // Draw axes
         this.bgCtx.strokeStyle = patternColor;
         this.bgCtx.lineWidth = 2 * dpr;
         
+        // X-axis
         this.bgCtx.beginPath();
         this.bgCtx.moveTo(0, centerY);
         this.bgCtx.lineTo(this.bgCanvas.width, centerY);
         this.bgCtx.stroke();
         
+        // Y-axis
         this.bgCtx.beginPath();
         this.bgCtx.moveTo(centerX, 0);
         this.bgCtx.lineTo(centerX, this.bgCanvas.height);
         this.bgCtx.stroke();
         
+        // Draw arrow on X-axis
         const arrowSize = 10 * dpr;
         
         this.bgCtx.beginPath();
@@ -306,10 +317,20 @@ class BackgroundManager {
         this.bgCtx.lineTo(this.bgCanvas.width - arrowSize, centerY + arrowSize / 2);
         this.bgCtx.stroke();
         
+        // Draw arrow on Y-axis
         this.bgCtx.beginPath();
         this.bgCtx.moveTo(centerX - arrowSize / 2, arrowSize);
         this.bgCtx.lineTo(centerX, 0);
         this.bgCtx.lineTo(centerX + arrowSize / 2, arrowSize);
+        this.bgCtx.stroke();
+        
+        // Draw draggable origin point
+        this.bgCtx.fillStyle = patternColor;
+        this.bgCtx.beginPath();
+        this.bgCtx.arc(centerX, centerY, 5 * dpr, 0, Math.PI * 2);
+        this.bgCtx.fill();
+        this.bgCtx.strokeStyle = this.backgroundColor;
+        this.bgCtx.lineWidth = 2 * dpr;
         this.bgCtx.stroke();
     }
     
@@ -395,5 +416,33 @@ class BackgroundManager {
             height: this.backgroundImage.height,
             src: this.backgroundImageData
         };
+    }
+    
+    setCoordinateOrigin(x, y) {
+        this.coordinateOriginX = x;
+        this.coordinateOriginY = y;
+        localStorage.setItem('coordinateOriginX', x);
+        localStorage.setItem('coordinateOriginY', y);
+        if (this.backgroundPattern === 'coordinate') {
+            this.drawBackground();
+        }
+    }
+    
+    getCoordinateOrigin() {
+        return {
+            x: this.coordinateOriginX,
+            y: this.coordinateOriginY
+        };
+    }
+    
+    isPointNearCoordinateOrigin(canvasX, canvasY, threshold = 15) {
+        if (this.backgroundPattern !== 'coordinate') return false;
+        
+        const dpr = window.devicePixelRatio || 1;
+        const centerX = (this.bgCanvas.width / (2 * dpr)) + this.coordinateOriginX;
+        const centerY = (this.bgCanvas.height / (2 * dpr)) + this.coordinateOriginY;
+        
+        const distance = Math.sqrt(Math.pow(canvasX - centerX, 2) + Math.pow(canvasY - centerY, 2));
+        return distance < threshold;
     }
 }

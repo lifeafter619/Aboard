@@ -53,6 +53,10 @@ class DrawingBoard {
         this.draggedElementWidth = 0;
         this.draggedElementHeight = 0;
         
+        // Coordinate origin dragging state
+        this.isDraggingCoordinateOrigin = false;
+        this.coordinateOriginDragStart = { x: 0, y: 0 };
+        
         // Uploaded images storage
         this.uploadedImages = this.loadUploadedImages();
         
@@ -143,6 +147,20 @@ class DrawingBoard {
                 return;
             }
             
+            // Check if clicking on coordinate origin point (only when in background mode)
+            if (this.drawingEngine.currentTool === 'background' && 
+                this.backgroundManager.backgroundPattern === 'coordinate') {
+                const rect = this.bgCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                if (this.backgroundManager.isPointNearCoordinateOrigin(x, y)) {
+                    this.isDraggingCoordinateOrigin = true;
+                    this.coordinateOriginDragStart = { x: e.clientX, y: e.clientY };
+                    return;
+                }
+            }
+            
             // Auto-switch to pen mode if currently in background mode
             if (this.drawingEngine.currentTool === 'background') {
                 this.setTool('pen', false); // Don't show config panel
@@ -178,7 +196,9 @@ class DrawingBoard {
         });
         
         document.addEventListener('mousemove', (e) => {
-            if (this.drawingEngine.isPanning) {
+            if (this.isDraggingCoordinateOrigin) {
+                this.dragCoordinateOrigin(e);
+            } else if (this.drawingEngine.isPanning) {
                 this.drawingEngine.pan(e);
                 this.applyPanTransform();
             } else if (this.drawingEngine.isDrawing) {
@@ -190,6 +210,7 @@ class DrawingBoard {
         });
         
         document.addEventListener('mouseup', () => {
+            this.stopDraggingCoordinateOrigin();
             this.handleDrawingComplete();
             this.drawingEngine.stopPanning();
         });
@@ -285,8 +306,8 @@ class DrawingBoard {
         // Fullscreen button
         document.getElementById('fullscreen-btn').addEventListener('click', () => this.toggleFullscreen());
         
-        // Export button
-        document.getElementById('export-btn').addEventListener('click', () => this.exportManager.showModal());
+        // Export button (moved to top controls, always visible)
+        document.getElementById('export-btn-top').addEventListener('click', () => this.exportManager.showModal());
         
         // Pagination controls - merged next and add button
         document.getElementById('prev-page-btn').addEventListener('click', () => this.prevPage());
@@ -1597,6 +1618,22 @@ class DrawingBoard {
             const uploadBtn = patternGrid.querySelector('#image-pattern-btn');
             patternGrid.insertBefore(btn, uploadBtn);
         });
+    }
+    
+    dragCoordinateOrigin(e) {
+        if (!this.isDraggingCoordinateOrigin) return;
+        
+        const deltaX = e.clientX - this.coordinateOriginDragStart.x;
+        const deltaY = e.clientY - this.coordinateOriginDragStart.y;
+        
+        const origin = this.backgroundManager.getCoordinateOrigin();
+        this.backgroundManager.setCoordinateOrigin(origin.x + deltaX, origin.y + deltaY);
+        
+        this.coordinateOriginDragStart = { x: e.clientX, y: e.clientY };
+    }
+    
+    stopDraggingCoordinateOrigin() {
+        this.isDraggingCoordinateOrigin = false;
     }
 }
 
