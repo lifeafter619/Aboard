@@ -315,6 +315,8 @@ class CanvasImageManager {
         if (image) {
             this.dragStartPos = { x: e.clientX, y: e.clientY };
             this.dragStartImagePos = { x: image.x, y: image.y };
+            // Save canvas state before dragging (excluding images)
+            this.canvasStateBeforeDrag = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         }
     }
     
@@ -336,16 +338,19 @@ class CanvasImageManager {
             
             this.updateSelectionBox(image);
             
-            // Redraw canvas during drag to keep images visible
-            this.redrawCanvas();
+            // Restore canvas state and redraw all images
+            if (this.canvasStateBeforeDrag) {
+                this.ctx.putImageData(this.canvasStateBeforeDrag, 0, 0);
+            }
+            this.drawImages();
         }
     }
     
     stopDrag() {
         if (this.isDragging) {
             this.isDragging = false;
-            // Redraw canvas after drag completes to finalize position
-            this.redrawCanvas();
+            this.canvasStateBeforeDrag = null;
+            // Images are already drawn, no need to redraw
         }
     }
     
@@ -359,6 +364,8 @@ class CanvasImageManager {
             this.resizeStartPos = { x: e.clientX, y: e.clientY };
             this.resizeStartSize = { width: image.width, height: image.height };
             this.dragStartImagePos = { x: image.x, y: image.y };
+            // Save canvas state before resizing
+            this.canvasStateBeforeDrag = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         }
     }
     
@@ -416,16 +423,19 @@ class CanvasImageManager {
         }
         
         this.updateSelectionBox(image);
-        // Redraw canvas during resize to keep images visible
-        this.redrawCanvas();
+        // Restore canvas state and redraw all images
+        if (this.canvasStateBeforeDrag) {
+            this.ctx.putImageData(this.canvasStateBeforeDrag, 0, 0);
+        }
+        this.drawImages();
     }
     
     stopResize() {
         if (this.isResizing) {
             this.isResizing = false;
             this.resizeHandle = null;
-            // Redraw canvas after resize completes
-            this.redrawCanvas();
+            this.canvasStateBeforeDrag = null;
+            // Images are already drawn, no need to redraw
         }
     }
     
@@ -441,6 +451,8 @@ class CanvasImageManager {
             
             this.rotateStartAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
             this.rotateStartRotation = image.rotation;
+            // Save canvas state before rotating
+            this.canvasStateBeforeDrag = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         }
     }
     
@@ -464,15 +476,18 @@ class CanvasImageManager {
         while (image.rotation >= 360) image.rotation -= 360;
         
         this.updateSelectionBox(image);
-        // Redraw canvas during rotation to keep images visible
-        this.redrawCanvas();
+        // Restore canvas state and redraw all images
+        if (this.canvasStateBeforeDrag) {
+            this.ctx.putImageData(this.canvasStateBeforeDrag, 0, 0);
+        }
+        this.drawImages();
     }
     
     stopRotate() {
         if (this.isRotating) {
             this.isRotating = false;
-            // Redraw canvas after rotation completes
-            this.redrawCanvas();
+            this.canvasStateBeforeDrag = null;
+            // Images are already drawn, no need to redraw
         }
     }
     
