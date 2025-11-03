@@ -414,6 +414,10 @@ class DrawingBoard {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     const imageData = event.target.result;
+                    
+                    // Reset confirmation state for new image
+                    this.imageControls.resetConfirmation();
+                    
                     this.backgroundManager.setBackgroundImage(imageData);
                     document.querySelectorAll('.pattern-option-btn').forEach(b => b.classList.remove('active'));
                     document.querySelector('.pattern-option-btn[data-pattern="image"]').classList.add('active');

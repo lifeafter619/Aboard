@@ -8,6 +8,7 @@ class ImageControls {
         this.isDragging = false;
         this.isResizing = false;
         this.isRotating = false;
+        this.isConfirmed = localStorage.getItem('backgroundImageConfirmed') === 'true'; // Track if image has been confirmed
         
         // Constants
         this.MIN_IMAGE_SIZE = 50;
@@ -59,23 +60,10 @@ class ImageControls {
                         </svg>
                     </div>
                     
-                    <!-- Control toolbar -->
+                    <!-- Control toolbar with only confirm button -->
                     <div class="image-controls-toolbar">
-                        <button id="image-reset-btn" class="image-control-btn" title="重置">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                                <path d="M3 3v5h5"/>
-                            </svg>
-                        </button>
-                        <button id="image-fit-btn" class="image-control-btn" title="适应画布">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                                <line x1="9" y1="9" x2="15" y2="15"></line>
-                                <line x1="15" y1="9" x2="9" y2="15"></line>
-                            </svg>
-                        </button>
-                        <button id="image-done-btn" class="image-control-btn image-done-btn" title="完成">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <button id="image-done-btn" class="image-control-btn image-done-btn" title="确定">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
                         </button>
@@ -135,13 +123,16 @@ class ImageControls {
             this.stopRotate();
         });
         
-        // Toolbar buttons
-        document.getElementById('image-reset-btn').addEventListener('click', () => this.resetImage());
-        document.getElementById('image-fit-btn').addEventListener('click', () => this.fitToCanvas());
-        document.getElementById('image-done-btn').addEventListener('click', () => this.hideControls());
+        // Toolbar button - only confirm button
+        document.getElementById('image-done-btn').addEventListener('click', () => this.confirmImage());
     }
     
     showControls(imageData) {
+        // Don't show controls if image has been confirmed
+        if (this.isConfirmed) {
+            return;
+        }
+        
         this.isActive = true;
         this.overlay.style.display = 'block';
         
@@ -169,6 +160,20 @@ class ImageControls {
     hideControls() {
         this.isActive = false;
         this.overlay.style.display = 'none';
+    }
+    
+    confirmImage() {
+        // Mark image as confirmed and hide controls
+        this.isConfirmed = true;
+        this.hideControls();
+        // Save the confirmed state to localStorage
+        localStorage.setItem('backgroundImageConfirmed', 'true');
+    }
+    
+    resetConfirmation() {
+        // Reset confirmation state (used when uploading new image)
+        this.isConfirmed = false;
+        localStorage.removeItem('backgroundImageConfirmed');
     }
     
     updateControlBox() {

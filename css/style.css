@@ -1264,17 +1264,17 @@ body {
     transform: translateX(-50%);
     display: flex;
     gap: 8px;
-    padding: 8px 12px;
+    padding: 10px;
     background-color: white;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .image-control-btn {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     background-color: #f0f0f0;
     cursor: pointer;
     display: flex;
@@ -1295,12 +1295,14 @@ body {
 }
 
 .image-done-btn {
-    background-color: #007AFF;
+    background-color: #34C759;
     color: white;
 }
 
 .image-done-btn:hover {
-    background-color: #0066CC;
+    background-color: #28A745;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(52, 199, 89, 0.3);
 }
 
 /* Canvas mode buttons */
