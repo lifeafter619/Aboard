@@ -22,7 +22,7 @@ class DrawingBoard {
         this.imageControls = new ImageControls(this.backgroundManager);
         this.canvasImageManager = new CanvasImageManager(this.canvas, this.ctx);
         this.canvasImageControls = new CanvasImageControls(this.canvasImageManager, this.canvas, this.historyManager);
-        this.selectionManager = new SelectionManager(this.canvas, this.ctx, this.canvasImageManager);
+        this.selectionManager = new SelectionManager(this.canvas, this.ctx, this.canvasImageManager, this.drawingEngine);
         this.settingsManager = new SettingsManager();
         this.exportManager = new ExportManager(this.canvas, this.bgCanvas);
         
@@ -170,17 +170,7 @@ class DrawingBoard {
             
             // Handle selection tool
             if (this.drawingEngine.currentTool === 'select') {
-                const rect = this.canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                const imageId = this.canvasImageManager.getImageAtPoint(x, y);
-                if (imageId) {
-                    this.canvasImageManager.selectImage(imageId);
-                    this.selectionManager.selectedImage = imageId;
-                } else {
-                    this.canvasImageManager.deselectImage();
-                    this.selectionManager.selectedImage = null;
-                }
+                this.selectionManager.startSelection(e);
                 this.updateUI();
                 return;
             }
@@ -298,6 +288,8 @@ class DrawingBoard {
             if (this.historyManager.undo()) {
                 // Redraw canvas images after undo
                 this.canvasImageManager.drawImages();
+                // Clear stroke selection as strokes are no longer valid
+                this.drawingEngine.clearStrokes();
                 this.updateUI();
             }
         });
@@ -306,6 +298,8 @@ class DrawingBoard {
             if (this.historyManager.redo()) {
                 // Redraw canvas images after redo
                 this.canvasImageManager.drawImages();
+                // Clear stroke selection as strokes are no longer valid
+                this.drawingEngine.clearStrokes();
                 this.updateUI();
             }
         });

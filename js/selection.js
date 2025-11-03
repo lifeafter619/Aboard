@@ -2,10 +2,11 @@
 // Handles selection of drawn strokes and images
 
 class SelectionManager {
-    constructor(canvas, ctx, canvasImageManager) {
+    constructor(canvas, ctx, canvasImageManager, drawingEngine) {
         this.canvas = canvas;
         this.ctx = ctx;
         this.canvasImageManager = canvasImageManager;
+        this.drawingEngine = drawingEngine;
         
         this.isSelecting = false;
         this.selectionStart = null;
@@ -33,20 +34,36 @@ class SelectionManager {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         
-        // Check if clicked on an image
+        // Adjust coordinates for canvas scale
+        const scaleX = this.canvas.offsetWidth / rect.width;
+        const scaleY = this.canvas.offsetHeight / rect.height;
+        const adjustedX = x * scaleX;
+        const adjustedY = y * scaleY;
+        
+        // Check if clicked on an image first
         const imageId = this.canvasImageManager.getImageAtPoint(x, y);
         if (imageId) {
             this.canvasImageManager.selectImage(imageId);
             this.selectedImage = imageId;
+            this.drawingEngine.deselectStroke();
             return true;
         }
         
-        // If not on image, deselect
-        this.canvasImageManager.deselectImage();
-        this.selectedImage = null;
+        // Check if clicked on a stroke
+        const strokeIndex = this.drawingEngine.findStrokeAtPoint(adjustedX, adjustedY);
+        if (strokeIndex !== null) {
+            this.drawingEngine.selectStroke(strokeIndex);
+            this.canvasImageManager.deselectImage();
+            this.selectedImage = null;
+            // Redraw to show selection
+            this.redrawWithSelection();
+            return true;
+        }
         
-        // For future: stroke selection
-        // this.selectionStart = { x, y };
+        // If not on image or stroke, deselect everything
+        this.canvasImageManager.deselectImage();
+        this.drawingEngine.deselectStroke();
+        this.selectedImage = null;
         
         return false;
     }
@@ -87,7 +104,7 @@ class SelectionManager {
     }
     
     hasSelection() {
-        return this.selectedImage !== null || this.selectedStrokes.length > 0;
+        return this.selectedImage !== null || this.drawingEngine.selectedStrokeIndex !== null;
     }
     
     copySelection() {
@@ -95,7 +112,13 @@ class SelectionManager {
             this.canvasImageManager.copySelectedImage();
             return true;
         }
-        // Future: copy selected strokes
+        if (this.drawingEngine.selectedStrokeIndex !== null) {
+            const result = this.drawingEngine.copySelectedStroke();
+            if (result) {
+                this.redrawWithSelection();
+            }
+            return result;
+        }
         return false;
     }
     
@@ -105,13 +128,46 @@ class SelectionManager {
             this.selectedImage = null;
             return true;
         }
-        // Future: delete selected strokes
+        if (this.drawingEngine.selectedStrokeIndex !== null) {
+            const result = this.drawingEngine.deleteSelectedStroke();
+            if (result) {
+                // Need to redraw the entire canvas without the deleted stroke
+                this.redrawCanvas();
+            }
+            return result;
+        }
         return false;
     }
     
     clearSelection() {
         this.canvasImageManager.deselectImage();
+        this.drawingEngine.deselectStroke();
         this.selectedImage = null;
         this.selectedStrokes = [];
+    }
+    
+    redrawWithSelection() {
+        // Redraw the canvas to show the selection border
+        this.redrawCanvas();
+    }
+    
+    redrawCanvas() {
+        // Get the current canvas content from history
+        // Then redraw all strokes and selection
+        // This is called to refresh the canvas after stroke operations
+        
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Redraw all strokes
+        for (const stroke of this.drawingEngine.strokes) {
+            this.drawingEngine.redrawStroke(stroke);
+        }
+        
+        // Draw selection border if a stroke is selected
+        this.drawingEngine.drawSelectionBorder();
+        
+        // Redraw images on top
+        this.canvasImageManager.drawImages();
     }
 }
