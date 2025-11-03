@@ -152,8 +152,10 @@ class DrawingEngine {
     pan(e) {
         if (!this.isPanning || !this.lastPanPoint) return;
         
-        const dx = (e.clientX - this.lastPanPoint.x) / this.canvasScale;
-        const dy = (e.clientY - this.lastPanPoint.y) / this.canvasScale;
+        // Reduce pan sensitivity with a damping factor
+        const dampingFactor = 0.5; // Lower value = less sensitive
+        const dx = (e.clientX - this.lastPanPoint.x) / this.canvasScale * dampingFactor;
+        const dy = (e.clientY - this.lastPanPoint.y) / this.canvasScale * dampingFactor;
         
         this.panOffset.x += dx;
         this.panOffset.y += dy;

@@ -18,6 +18,7 @@ class CanvasImageManager {
         // Drag state
         this.dragStartPos = { x: 0, y: 0 };
         this.dragStartImagePos = { x: 0, y: 0 };
+        this.canvasStateBeforeDrag = null; // Store canvas state before dragging
         
         // Resize state
         this.resizeHandle = null;
@@ -35,6 +36,22 @@ class CanvasImageManager {
         const overlayHTML = `
             <div id="canvas-image-selection" class="canvas-image-selection" style="display: none;">
                 <div class="selection-box">
+                    <!-- Action buttons above selection -->
+                    <div class="selection-action-buttons">
+                        <button class="selection-action-btn" id="copy-image-btn" title="复制">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+                        <button class="selection-action-btn" id="delete-image-btn" title="删除">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    
                     <!-- Corner resize handles -->
                     <div class="resize-handle top-left" data-handle="top-left"></div>
                     <div class="resize-handle top-right" data-handle="top-right"></div>
@@ -65,12 +82,26 @@ class CanvasImageManager {
     }
     
     setupSelectionEventListeners() {
-        // Drag selection box
+        // Action buttons
+        document.getElementById('copy-image-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.copySelectedImage();
+        });
+        
+        document.getElementById('delete-image-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteSelectedImage();
+        });
+        
+        // Drag selection box - check if clicking on interactive elements
         this.selectionBox.addEventListener('mousedown', (e) => {
-            if (!e.target.classList.contains('resize-handle') && 
-                !e.target.classList.contains('rotate-handle') &&
-                !e.target.closest('.resize-handle') &&
-                !e.target.closest('.rotate-handle')) {
+            const isInteractiveElement = e.target.classList.contains('resize-handle') || 
+                e.target.classList.contains('rotate-handle') ||
+                e.target.closest('.resize-handle') ||
+                e.target.closest('.rotate-handle') ||
+                e.target.closest('.selection-action-buttons');
+            
+            if (!isInteractiveElement) {
                 this.startDrag(e);
             }
         });
@@ -202,6 +233,8 @@ class CanvasImageManager {
         if (image) {
             this.dragStartPos = { x: e.clientX, y: e.clientY };
             this.dragStartImagePos = { x: image.x, y: image.y };
+            // Save canvas state before dragging to prevent duplication
+            this.canvasStateBeforeDrag = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         }
     }
     
@@ -222,11 +255,18 @@ class CanvasImageManager {
             image.y = this.dragStartImagePos.y + deltaY;
             
             this.updateSelectionBox(image);
+            
+            // Restore canvas state and redraw all images to prevent duplication
+            if (this.canvasStateBeforeDrag) {
+                this.ctx.putImageData(this.canvasStateBeforeDrag, 0, 0);
+                this.drawImages();
+            }
         }
     }
     
     stopDrag() {
         this.isDragging = false;
+        this.canvasStateBeforeDrag = null; // Clear saved state
     }
     
     startResize(e, handle) {
@@ -239,6 +279,8 @@ class CanvasImageManager {
             this.resizeStartPos = { x: e.clientX, y: e.clientY };
             this.resizeStartSize = { width: image.width, height: image.height };
             this.dragStartImagePos = { x: image.x, y: image.y };
+            // Save canvas state before resizing
+            this.canvasStateBeforeDrag = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         }
     }
     
@@ -296,11 +338,18 @@ class CanvasImageManager {
         }
         
         this.updateSelectionBox(image);
+        
+        // Restore canvas state and redraw all images
+        if (this.canvasStateBeforeDrag) {
+            this.ctx.putImageData(this.canvasStateBeforeDrag, 0, 0);
+            this.drawImages();
+        }
     }
     
     stopResize() {
         this.isResizing = false;
         this.resizeHandle = null;
+        this.canvasStateBeforeDrag = null; // Clear saved state
     }
     
     startRotate(e) {
@@ -315,6 +364,8 @@ class CanvasImageManager {
             
             this.rotateStartAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
             this.rotateStartRotation = image.rotation;
+            // Save canvas state before rotating
+            this.canvasStateBeforeDrag = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         }
     }
     
@@ -338,10 +389,17 @@ class CanvasImageManager {
         while (image.rotation >= 360) image.rotation -= 360;
         
         this.updateSelectionBox(image);
+        
+        // Restore canvas state and redraw all images
+        if (this.canvasStateBeforeDrag) {
+            this.ctx.putImageData(this.canvasStateBeforeDrag, 0, 0);
+            this.drawImages();
+        }
     }
     
     stopRotate() {
         this.isRotating = false;
+        this.canvasStateBeforeDrag = null; // Clear saved state
     }
     
     copySelectedImage() {

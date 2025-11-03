@@ -1741,3 +1741,115 @@ body {
 .button-secondary:active:not(:disabled) {
     transform: translateY(1px);
 }
+
+/* Export Modal Styles */
+.export-modal-content {
+    max-width: 500px;
+    width: 90%;
+}
+
+.export-options {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.export-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.export-group label {
+    font-weight: 500;
+    font-size: 14px;
+    color: #333;
+}
+
+.export-format-btn {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.export-format-btn:hover {
+    border-color: #0066ff;
+    background: #f0f7ff;
+}
+
+.export-format-btn.active {
+    border-color: #0066ff;
+    background: #0066ff;
+    color: white;
+}
+
+.export-filename-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s ease;
+}
+
+.export-filename-input:focus {
+    outline: none;
+    border-color: #0066ff;
+}
+
+.export-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.export-actions button {
+    flex: 1;
+}
+
+/* Selection Action Buttons */
+.selection-action-buttons {
+    position: absolute;
+    top: -45px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 5px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 5px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+}
+
+.selection-action-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    color: white;
+}
+
+.selection-action-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+}
+
+.selection-action-btn:active {
+    transform: scale(0.95);
+}
+
+.selection-action-btn svg {
+    display: block;
+}

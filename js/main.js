@@ -23,6 +23,7 @@ class DrawingBoard {
         this.canvasImageManager = new CanvasImageManager(this.canvas, this.ctx);
         this.selectionManager = new SelectionManager(this.canvas, this.ctx, this.canvasImageManager);
         this.settingsManager = new SettingsManager();
+        this.exportManager = new ExportManager(this.canvas, this.bgCanvas);
         
         // Pagination
         this.currentPage = 1;
@@ -284,6 +285,9 @@ class DrawingBoard {
         // Fullscreen button
         document.getElementById('fullscreen-btn').addEventListener('click', () => this.toggleFullscreen());
         
+        // Export button
+        document.getElementById('export-btn').addEventListener('click', () => this.exportManager.showModal());
+        
         // Pagination controls - merged next and add button
         document.getElementById('prev-page-btn').addEventListener('click', () => this.prevPage());
         document.getElementById('next-or-add-page-btn').addEventListener('click', () => this.nextOrAddPage());
@@ -478,15 +482,6 @@ class DrawingBoard {
             }
             // Reset file input
             e.target.value = '';
-        });
-        
-        // Delete selected image button
-        document.getElementById('delete-selected-image-btn').addEventListener('click', () => {
-            if (this.canvasImageManager.selectedImageId) {
-                this.canvasImageManager.deleteSelectedImage();
-                this.historyManager.saveState();
-                this.updateUI();
-            }
         });
         
         // Selection tool buttons
@@ -904,9 +899,6 @@ class DrawingBoard {
             document.getElementById('insert-btn').classList.add('active');
             document.getElementById('insert-config').classList.add('active');
             this.canvas.style.cursor = 'default';
-            // Update delete button state based on whether an image is selected
-            const hasSelectedImage = this.canvasImageManager.selectedImageId !== null;
-            document.getElementById('delete-selected-image-btn').disabled = !hasSelectedImage;
         } else if (tool === 'background') {
             document.getElementById('background-btn').classList.add('active');
             document.getElementById('background-config').classList.add('active');

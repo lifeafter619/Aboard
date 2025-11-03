@@ -370,6 +370,11 @@ class BackgroundManager {
     setImageSize(size) {
         this.imageSize = size;
         localStorage.setItem('imageSize', size);
+        // If transform exists, update the scale in transform as well
+        if (this.imageTransform.width > 0 && this.imageTransform.height > 0) {
+            this.imageTransform.scale = size;
+            localStorage.setItem('imageTransform', JSON.stringify(this.imageTransform));
+        }
         if (this.backgroundPattern === 'image') {
             this.drawBackground();
         }

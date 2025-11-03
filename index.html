@@ -148,13 +148,6 @@
                     选择图片文件
                 </button>
                 <input type="file" id="insert-image-upload" accept="image/*" style="display: none;">
-                <button id="delete-selected-image-btn" class="button-secondary" style="width: 100%; margin-top: 10px;" disabled>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 5px;">
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                    </svg>
-                    删除选中的图片
-                </button>
                 <p class="settings-hint" style="margin-top: 10px;">插入后可以拖动、缩放和旋转图片</p>
             </div>
         </div>
@@ -223,6 +216,13 @@
 
     <!-- Pagination controls (below zoom, only visible when not in infinite canvas mode) -->
     <div id="pagination-controls">
+        <button id="export-btn" class="page-nav-btn" title="导出画布">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+        </button>
         <button id="prev-page-btn" class="page-nav-btn" title="上一页">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="15 18 9 12 15 6"></polyline>
@@ -610,6 +610,7 @@
     <script src="js/canvas-images.js"></script>
     <script src="js/selection.js"></script>
     <script src="js/settings.js"></script>
+    <script src="js/export.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
