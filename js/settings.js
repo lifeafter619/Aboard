@@ -7,9 +7,14 @@ class SettingsManager {
         this.configScale = parseFloat(localStorage.getItem('configScale')) || 1.0;
         this.controlPosition = localStorage.getItem('controlPosition') || 'top-right';
         this.edgeSnapEnabled = localStorage.getItem('edgeSnapEnabled') !== 'false';
-        this.infiniteCanvas = localStorage.getItem('infiniteCanvas') !== 'false';
+        this.infiniteCanvas = localStorage.getItem('canvasMode') !== 'paginated';
         this.showZoomControls = localStorage.getItem('showZoomControls') !== 'false';
+        this.showFullscreenBtn = localStorage.getItem('showFullscreenBtn') !== 'false';
         this.patternPreferences = this.loadPatternPreferences();
+        this.canvasWidth = parseInt(localStorage.getItem('canvasWidth')) || 1920;
+        this.canvasHeight = parseInt(localStorage.getItem('canvasHeight')) || 1080;
+        this.canvasPreset = localStorage.getItem('canvasPreset') || 'custom';
+        this.themeColor = localStorage.getItem('themeColor') || '#007AFF';
     }
     
     loadPatternPreferences() {
@@ -128,12 +133,86 @@ class SettingsManager {
         this.setControlPosition(this.controlPosition);
         
         document.getElementById('edge-snap-checkbox').checked = this.edgeSnapEnabled;
-        document.getElementById('infinite-canvas-checkbox').checked = this.infiniteCanvas;
         document.getElementById('show-zoom-controls-checkbox').checked = this.showZoomControls;
+        
+        // Load canvas mode
+        const canvasMode = this.infiniteCanvas ? 'infinite' : 'paginated';
+        document.querySelectorAll('.canvas-mode-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === canvasMode);
+        });
+        this.updateCanvasSizeSettings();
+        
+        // Load canvas size settings
+        document.getElementById('canvas-width-input').value = this.canvasWidth;
+        document.getElementById('canvas-height-input').value = this.canvasHeight;
+        document.querySelectorAll('.canvas-preset-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.preset === this.canvasPreset);
+        });
         
         // Load pattern preferences
         document.querySelectorAll('.pattern-pref-checkbox').forEach(checkbox => {
             checkbox.checked = this.patternPreferences[checkbox.dataset.pattern] !== false;
         });
+        
+        // Load theme color
+        this.applyThemeColor();
+        document.getElementById('custom-theme-color-picker').value = this.themeColor;
+        document.querySelectorAll('.color-btn[data-theme-color]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.themeColor === this.themeColor);
+        });
+    }
+    
+    updateCanvasSizeSettings() {
+        const canvasSizeSettings = document.getElementById('canvas-size-settings');
+        canvasSizeSettings.style.display = this.infiniteCanvas ? 'none' : 'flex';
+    }
+    
+    setCanvasMode(mode) {
+        this.infiniteCanvas = mode === 'infinite';
+        localStorage.setItem('canvasMode', mode);
+        this.updateCanvasSizeSettings();
+    }
+    
+    setCanvasPreset(preset) {
+        this.canvasPreset = preset;
+        localStorage.setItem('canvasPreset', preset);
+        
+        // Update canvas dimensions based on preset
+        const presets = {
+            'A4-portrait': { width: 794, height: 1123 },      // A4: 210 × 297 mm
+            'A4-landscape': { width: 1123, height: 794 },
+            'A3-portrait': { width: 1123, height: 1587 },     // A3: 297 × 420 mm
+            'A3-landscape': { width: 1587, height: 1123 },
+            'B5-portrait': { width: 709, height: 1001 },      // B5: 176 × 250 mm
+            'B5-landscape': { width: 1001, height: 709 },
+            '16:9': { width: 1920, height: 1080 },
+            '4:3': { width: 1600, height: 1200 }
+        };
+        
+        if (presets[preset]) {
+            this.canvasWidth = presets[preset].width;
+            this.canvasHeight = presets[preset].height;
+            document.getElementById('canvas-width-input').value = this.canvasWidth;
+            document.getElementById('canvas-height-input').value = this.canvasHeight;
+            localStorage.setItem('canvasWidth', this.canvasWidth);
+            localStorage.setItem('canvasHeight', this.canvasHeight);
+        }
+    }
+    
+    setCanvasSize(width, height) {
+        this.canvasWidth = width;
+        this.canvasHeight = height;
+        localStorage.setItem('canvasWidth', width);
+        localStorage.setItem('canvasHeight', height);
+    }
+    
+    setThemeColor(color) {
+        this.themeColor = color;
+        localStorage.setItem('themeColor', color);
+        document.documentElement.style.setProperty('--theme-color', color);
+    }
+    
+    applyThemeColor() {
+        document.documentElement.style.setProperty('--theme-color', this.themeColor);
     }
 }

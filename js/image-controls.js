@@ -8,6 +8,7 @@ class ImageControls {
         this.isDragging = false;
         this.isResizing = false;
         this.isRotating = false;
+        this.isConfirmed = localStorage.getItem('backgroundImageConfirmed') === 'true'; // Track if image has been confirmed
         
         // Constants
         this.MIN_IMAGE_SIZE = 50;
@@ -59,23 +60,10 @@ class ImageControls {
                         </svg>
                     </div>
                     
-                    <!-- Control toolbar -->
+                    <!-- Control toolbar with only confirm button -->
                     <div class="image-controls-toolbar">
-                        <button id="image-reset-btn" class="image-control-btn" title="重置">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                                <path d="M3 3v5h5"/>
-                            </svg>
-                        </button>
-                        <button id="image-fit-btn" class="image-control-btn" title="适应画布">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                                <line x1="9" y1="9" x2="15" y2="15"></line>
-                                <line x1="15" y1="9" x2="9" y2="15"></line>
-                            </svg>
-                        </button>
-                        <button id="image-done-btn" class="image-control-btn image-done-btn" title="完成">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <button id="image-done-btn" class="image-control-btn image-done-btn" title="确定">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
                         </button>
@@ -135,27 +123,51 @@ class ImageControls {
             this.stopRotate();
         });
         
-        // Toolbar buttons
-        document.getElementById('image-reset-btn').addEventListener('click', () => this.resetImage());
-        document.getElementById('image-fit-btn').addEventListener('click', () => this.fitToCanvas());
-        document.getElementById('image-done-btn').addEventListener('click', () => this.hideControls());
+        // Toolbar button - only confirm button
+        document.getElementById('image-done-btn').addEventListener('click', () => this.confirmImage());
     }
     
     showControls(imageData) {
+        // Don't show controls if image has been confirmed
+        if (this.isConfirmed) {
+            return;
+        }
+        
         this.isActive = true;
         this.overlay.style.display = 'block';
         
         // Initialize with image data
-        const canvas = this.backgroundManager.canvas;
+        const canvas = this.backgroundManager.bgCanvas;
         const rect = canvas.getBoundingClientRect();
         
-        // Center the image initially
-        this.imageSize.width = imageData.width || rect.width * 0.6;
-        this.imageSize.height = imageData.height || rect.height * 0.6;
-        this.imagePosition.x = (rect.width - this.imageSize.width) / 2;
-        this.imagePosition.y = (rect.height - this.imageSize.height) / 2;
-        this.imageRotation = 0;
-        this.imageScale = 1.0;
+        // Store original dimensions
+        const originalWidth = imageData.width || rect.width * 0.6;
+        const originalHeight = imageData.height || rect.height * 0.6;
+        
+        // Check if there's an existing transform from backgroundManager
+        const existingTransform = this.backgroundManager.imageTransform;
+        
+        // Use existing transform if available and valid, otherwise center the image initially
+        if (existingTransform && existingTransform.width > 0 && existingTransform.height > 0) {
+            // Use the existing transform to preserve current state
+            this.imageSize.width = existingTransform.width;
+            this.imageSize.height = existingTransform.height;
+            this.imagePosition.x = existingTransform.x;
+            this.imagePosition.y = existingTransform.y;
+            this.imageRotation = existingTransform.rotation || 0;
+            this.imageScale = existingTransform.scale || 1.0;
+        } else {
+            // Center the image initially (first time showing controls)
+            this.imageSize.width = originalWidth;
+            this.imageSize.height = originalHeight;
+            this.imagePosition.x = (rect.width - this.imageSize.width) / 2;
+            this.imagePosition.y = (rect.height - this.imageSize.height) / 2;
+            this.imageRotation = 0;
+            this.imageScale = 1.0;
+        }
+        
+        this.originalWidth = originalWidth;
+        this.originalHeight = originalHeight;
         
         this.updateControlBox();
     }
@@ -165,15 +177,40 @@ class ImageControls {
         this.overlay.style.display = 'none';
     }
     
+    confirmImage() {
+        // Mark image as confirmed and hide controls
+        this.isConfirmed = true;
+        this.hideControls();
+        // Save the confirmed state to localStorage
+        localStorage.setItem('backgroundImageConfirmed', 'true');
+        
+        // Dispatch event to notify that image has been confirmed
+        window.dispatchEvent(new CustomEvent('imageConfirmed'));
+    }
+    
+    resetConfirmation() {
+        // Reset confirmation state (used when uploading new image)
+        this.isConfirmed = false;
+        localStorage.removeItem('backgroundImageConfirmed');
+    }
+    
     updateControlBox() {
-        const canvas = this.backgroundManager.canvas;
+        const canvas = this.backgroundManager.bgCanvas;
         const rect = canvas.getBoundingClientRect();
         
-        // Apply transformations to control box
-        this.controlBox.style.left = `${rect.left + this.imagePosition.x}px`;
-        this.controlBox.style.top = `${rect.top + this.imagePosition.y}px`;
-        this.controlBox.style.width = `${this.imageSize.width}px`;
-        this.controlBox.style.height = `${this.imageSize.height}px`;
+        const canvasScale = this.getCanvasScale();
+        
+        // Calculate actual position and size accounting for canvas transform
+        const actualX = rect.left + (this.imagePosition.x * canvasScale);
+        const actualY = rect.top + (this.imagePosition.y * canvasScale);
+        const actualWidth = this.imageSize.width * canvasScale;
+        const actualHeight = this.imageSize.height * canvasScale;
+        
+        // Apply transformations to control box to match image exactly
+        this.controlBox.style.left = `${actualX}px`;
+        this.controlBox.style.top = `${actualY}px`;
+        this.controlBox.style.width = `${actualWidth}px`;
+        this.controlBox.style.height = `${actualHeight}px`;
         this.controlBox.style.transform = `rotate(${this.imageRotation}deg) scale(${this.imageScale})`;
         
         // Update background image with current transformations
@@ -202,8 +239,13 @@ class ImageControls {
     drag(e) {
         if (!this.isDragging) return;
         
-        const deltaX = e.clientX - this.dragStartPos.x;
-        const deltaY = e.clientY - this.dragStartPos.y;
+        // Get canvas scale to convert screen delta to canvas delta
+        // Screen coordinates (mouse position) need to be divided by scale
+        // to get the equivalent movement in canvas logical coordinates
+        const canvasScale = this.getCanvasScale();
+        
+        const deltaX = (e.clientX - this.dragStartPos.x) / canvasScale;
+        const deltaY = (e.clientY - this.dragStartPos.y) / canvasScale;
         
         this.imagePosition.x = this.dragStartImagePos.x + deltaX;
         this.imagePosition.y = this.dragStartImagePos.y + deltaY;
@@ -227,8 +269,13 @@ class ImageControls {
     resize(e) {
         if (!this.isResizing) return;
         
-        const deltaX = e.clientX - this.resizeStartPos.x;
-        const deltaY = e.clientY - this.resizeStartPos.y;
+        // Get canvas scale to convert screen delta to canvas delta
+        // Resize handles move in screen coordinates but we need to
+        // update image size in canvas logical coordinates
+        const canvasScale = this.getCanvasScale();
+        
+        const deltaX = (e.clientX - this.resizeStartPos.x) / canvasScale;
+        const deltaY = (e.clientY - this.resizeStartPos.y) / canvasScale;
         
         const aspectRatio = this.resizeStartSize.width / this.resizeStartSize.height;
         
@@ -310,37 +357,65 @@ class ImageControls {
         this.isRotating = false;
     }
     
+    getCanvasScale() {
+        // Helper method to get canvas transform scale
+        // Returns the scale factor applied to the canvas via CSS transforms
+        // This is used to convert between screen coordinates (pixels on screen)
+        // and canvas coordinates (logical canvas units)
+        const canvas = this.backgroundManager.bgCanvas;
+        const computedStyle = window.getComputedStyle(canvas);
+        const matrix = new DOMMatrix(computedStyle.transform);
+        // Return X-axis scale factor (assumes uniform scaling)
+        return matrix.a || 1;
+    }
+    
     resetImage() {
+        // Reset to original size and angle
         this.imageRotation = 0;
         this.imageScale = 1.0;
-        const canvas = this.backgroundManager.canvas;
+        
+        // Reset to original dimensions (stored when image was first shown)
+        this.imageSize.width = this.originalWidth || this.imageSize.width;
+        this.imageSize.height = this.originalHeight || this.imageSize.height;
+        
+        // Center the image
+        const canvas = this.backgroundManager.bgCanvas;
         const rect = canvas.getBoundingClientRect();
         this.imagePosition.x = (rect.width - this.imageSize.width) / 2;
         this.imagePosition.y = (rect.height - this.imageSize.height) / 2;
+        
         this.updateControlBox();
     }
     
     fitToCanvas() {
-        const canvas = this.backgroundManager.canvas;
+        const canvas = this.backgroundManager.bgCanvas;
         const rect = canvas.getBoundingClientRect();
         
-        // Fit image to canvas while maintaining aspect ratio
+        // Get the actual visible canvas size (accounting for zoom and transforms)
+        const computedStyle = window.getComputedStyle(canvas);
+        const transform = computedStyle.transform;
+        
+        // Use bounding rect which accounts for all transforms
+        const actualWidth = rect.width;
+        const actualHeight = rect.height;
+        
+        // Get current image aspect ratio
         const imageAspect = this.imageSize.width / this.imageSize.height;
-        const canvasAspect = rect.width / rect.height;
+        const canvasAspect = actualWidth / actualHeight;
         
         if (imageAspect > canvasAspect) {
-            // Image is wider
-            this.imageSize.width = rect.width * 0.9;
+            // Image is wider - fit to width
+            this.imageSize.width = actualWidth * 0.9;
             this.imageSize.height = this.imageSize.width / imageAspect;
         } else {
-            // Image is taller
-            this.imageSize.height = rect.height * 0.9;
+            // Image is taller - fit to height
+            this.imageSize.height = actualHeight * 0.9;
             this.imageSize.width = this.imageSize.height * imageAspect;
         }
         
-        // Center the image
-        this.imagePosition.x = (rect.width - this.imageSize.width) / 2;
-        this.imagePosition.y = (rect.height - this.imageSize.height) / 2;
+        // Center the image in the visible canvas area
+        this.imagePosition.x = (actualWidth - this.imageSize.width) / 2;
+        this.imagePosition.y = (actualHeight - this.imageSize.height) / 2;
         this.imageRotation = 0;
         this.imageScale = 1.0;
         
