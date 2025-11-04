@@ -131,8 +131,8 @@ class SettingsManager {
                     btn.style.minWidth = `${this.toolbarSize}px`;
                 } else {
                     span.style.display = 'none';
-                    btn.style.minWidth = `${this.toolbarSize * 0.8}px`; // Smaller width when text is hidden
-                    btn.style.padding = `${this.toolbarSize / 5}px`;
+                    // When text is hidden, reduce min-width to icon-only size
+                    btn.style.minWidth = `${this.toolbarSize * 0.8}px`;
                 }
             }
         });
