@@ -150,7 +150,8 @@ class DrawingEngine {
                     color: this.currentColor,
                     size: this.penSize,
                     penType: this.penType,
-                    tool: this.currentTool
+                    tool: this.currentTool,
+                    rotation: 0 // Initialize rotation property
                 });
             }
             

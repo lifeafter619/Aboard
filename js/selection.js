@@ -1,11 +1,10 @@
 // Selection Module
-// Handles selection of drawn strokes and images
+// Handles selection of drawn strokes
 
 class SelectionManager {
-    constructor(canvas, ctx, canvasImageManager, drawingEngine, strokeControls) {
+    constructor(canvas, ctx, drawingEngine, strokeControls) {
         this.canvas = canvas;
         this.ctx = ctx;
-        this.canvasImageManager = canvasImageManager;
         this.drawingEngine = drawingEngine;
         this.strokeControls = strokeControls;
         
@@ -13,7 +12,6 @@ class SelectionManager {
         this.selectionStart = null;
         this.selectionEnd = null;
         this.selectedStrokes = [];
-        this.selectedImage = null;
         
         // For lasso/rectangle selection (future enhancement)
         this.selectionMode = 'click'; // 'click' or 'rectangle'
@@ -41,25 +39,10 @@ class SelectionManager {
         const adjustedX = x * scaleX;
         const adjustedY = y * scaleY;
         
-        // Check if clicked on an image first
-        const imageId = this.canvasImageManager.getImageAtPoint(x, y);
-        if (imageId) {
-            this.canvasImageManager.selectImage(imageId);
-            this.selectedImage = imageId;
-            this.drawingEngine.deselectStroke();
-            // Hide stroke controls if showing
-            if (this.strokeControls) {
-                this.strokeControls.hideControls();
-            }
-            return true;
-        }
-        
         // Check if clicked on a stroke
         const strokeIndex = this.drawingEngine.findStrokeAtPoint(adjustedX, adjustedY);
         if (strokeIndex !== null) {
             this.drawingEngine.selectStroke(strokeIndex);
-            this.canvasImageManager.deselectImage();
-            this.selectedImage = null;
             // Show stroke controls for resizing and moving
             if (this.strokeControls) {
                 this.strokeControls.showControls(strokeIndex);
@@ -69,10 +52,8 @@ class SelectionManager {
             return true;
         }
         
-        // If not on image or stroke, deselect everything
-        this.canvasImageManager.deselectImage();
+        // If not on stroke, deselect everything
         this.drawingEngine.deselectStroke();
-        this.selectedImage = null;
         // Hide stroke controls
         if (this.strokeControls) {
             this.strokeControls.hideControls();
@@ -117,14 +98,10 @@ class SelectionManager {
     }
     
     hasSelection() {
-        return this.selectedImage !== null || this.drawingEngine.selectedStrokeIndex !== null;
+        return this.drawingEngine.selectedStrokeIndex !== null;
     }
     
     copySelection() {
-        if (this.selectedImage) {
-            this.canvasImageManager.copySelectedImage();
-            return true;
-        }
         if (this.drawingEngine.selectedStrokeIndex !== null) {
             const result = this.drawingEngine.copySelectedStroke();
             if (result) {
@@ -136,11 +113,6 @@ class SelectionManager {
     }
     
     deleteSelection() {
-        if (this.selectedImage) {
-            this.canvasImageManager.deleteSelectedImage();
-            this.selectedImage = null;
-            return true;
-        }
         if (this.drawingEngine.selectedStrokeIndex !== null) {
             const result = this.drawingEngine.deleteSelectedStroke();
             if (result) {
@@ -153,9 +125,7 @@ class SelectionManager {
     }
     
     clearSelection() {
-        this.canvasImageManager.deselectImage();
         this.drawingEngine.deselectStroke();
-        this.selectedImage = null;
         this.selectedStrokes = [];
     }
     
@@ -179,8 +149,5 @@ class SelectionManager {
         
         // Draw selection border if a stroke is selected
         this.drawingEngine.drawSelectionBorder();
-        
-        // Redraw images on top
-        this.canvasImageManager.drawImages();
     }
 }

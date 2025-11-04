@@ -89,6 +89,68 @@ class SettingsManager {
         });
         
         localStorage.setItem('toolbarSize', this.toolbarSize);
+        
+        // Apply responsive text visibility after size update
+        this.updateToolbarTextVisibility();
+    }
+    
+    updateToolbarTextVisibility() {
+        const toolbar = document.getElementById('toolbar');
+        const buttons = toolbar.querySelectorAll('.tool-btn');
+        const windowWidth = window.innerWidth;
+        
+        // Constants for responsive sizing
+        const ICON_ONLY_SIZE_RATIO = 0.8; // Size multiplier when text is hidden
+        const SCREEN_MARGIN = 40; // Margin from screen edge
+        const DEFAULT_GAP = 12; // Default gap between buttons if not specified in CSS
+        
+        // Calculate total toolbar width needed with text
+        let totalWidthWithText = 0;
+        const toolbarStyle = window.getComputedStyle(toolbar);
+        const toolbarPadding = parseFloat(toolbarStyle.paddingLeft) + parseFloat(toolbarStyle.paddingRight);
+        const gap = parseFloat(toolbarStyle.gap) || DEFAULT_GAP;
+        
+        // Store original display values before measuring
+        const originalDisplayValues = new Map();
+        buttons.forEach(btn => {
+            const span = btn.querySelector('span');
+            if (span) {
+                originalDisplayValues.set(span, window.getComputedStyle(span).display);
+                // Temporarily show to measure
+                if (originalDisplayValues.get(span) === 'none') {
+                    span.style.display = 'inline';
+                }
+            }
+        });
+        
+        buttons.forEach((btn, index) => {
+            const btnWidth = btn.offsetWidth;
+            totalWidthWithText += btnWidth;
+            if (index < buttons.length - 1) {
+                totalWidthWithText += gap;
+            }
+        });
+        totalWidthWithText += toolbarPadding;
+        
+        // Check if toolbar fits with text
+        const fitsWithText = totalWidthWithText + SCREEN_MARGIN * 2 <= windowWidth;
+        
+        // Show or hide text based on available space
+        buttons.forEach(btn => {
+            const span = btn.querySelector('span');
+            if (span) {
+                if (fitsWithText) {
+                    // Restore original display or use default
+                    const originalDisplay = originalDisplayValues.get(span);
+                    span.style.display = (originalDisplay !== 'none') ? originalDisplay : 'inline';
+                    btn.style.minWidth = `${this.toolbarSize}px`;
+                } else {
+                    span.style.display = 'none';
+                    // When text is hidden, reduce min-width to icon-only size
+                    btn.style.minWidth = `${this.toolbarSize * ICON_ONLY_SIZE_RATIO}px`;
+                }
+            }
+        });
     }
     
     updateConfigScale() {
