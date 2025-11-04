@@ -107,7 +107,7 @@
         <div id="select-config" class="config-panel">
             <div class="config-group">
                 <label>选择操作</label>
-                <p class="settings-hint">点击画布上的图片进行选择</p>
+                <p class="settings-hint">点击画布上的图片或文字进行选择</p>
                 <div class="button-size-options" style="grid-template-columns: 1fr 1fr;">
                     <button id="select-copy-btn" class="button-secondary" disabled>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 5px;">
@@ -124,6 +124,14 @@
                         删除
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Text configuration -->
+        <div id="text-config" class="config-panel">
+            <div class="config-group">
+                <label>文字工具</label>
+                <p class="settings-hint">点击画布插入文字</p>
             </div>
         </div>
 
@@ -595,12 +603,20 @@
             </svg>
             <span>笔</span>
         </button>
-        <button id="select-btn" class="tool-btn" data-tool="select" title="选择 (可选择笔迹和图片)">
+        <button id="select-btn" class="tool-btn" data-tool="select" title="选择 (可选择笔迹、图片和文字)">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path>
                 <path d="M13 13l6 6"></path>
             </svg>
             <span>选择</span>
+        </button>
+        <button id="text-btn" class="tool-btn" data-tool="text" title="插入文字">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="4 7 4 4 20 4 20 7"></polyline>
+                <line x1="9" y1="20" x2="15" y2="20"></line>
+                <line x1="12" y1="4" x2="12" y2="20"></line>
+            </svg>
+            <span>文字</span>
         </button>
         <button id="pan-btn" class="tool-btn" data-tool="pan" title="移动画布 (Shift+拖动)">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -648,6 +664,7 @@
     <script src="js/image-controls.js"></script>
     <script src="js/stroke-controls.js"></script>
     <script src="js/selection.js"></script>
+    <script src="js/text-insertion.js"></script>
     <script src="js/settings.js"></script>
     <script src="js/announcement.js"></script>
     <script src="js/export.js"></script>
