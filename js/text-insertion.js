@@ -26,9 +26,16 @@ class TextInsertionManager {
         this.isRotating = false;
         this.dragStart = { x: 0, y: 0 };
         this.resizeHandle = null;
+        this.resizeStartScale = 1.0;
+        this.rotateStartAngle = 0;
+        this.rotateStartRotation = 0;
         
         this.HANDLE_SIZE = 8;
         this.ROTATION_HANDLE_DISTANCE = 30;
+        this.HANDLE_THRESHOLD = 5;
+        this.MIN_SCALE = 0.5;
+        this.MAX_SCALE = 3.0;
+        this.RESIZE_SENSITIVITY = 100;
     }
     
     // Start text input at mouse position
@@ -267,7 +274,7 @@ class TextInsertionManager {
         this.ctx.scale(textObj.scale, textObj.scale);
         
         const width = textObj.width;
-        const height = textObj.height * textObj.text.split('\n').length;
+        const height = textObj.height * this.getLineCount(textObj.text);
         
         // Draw box
         this.ctx.strokeStyle = '#007AFF';
@@ -385,16 +392,135 @@ class TextInsertionManager {
         const scaleX = this.canvas.offsetWidth / rect.width;
         const scaleY = this.canvas.offsetHeight / rect.height;
         
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
+        
+        // Check if clicking on a handle
+        const handle = this.hitTestHandle(x, y);
+        if (handle === 'rotate') {
+            this.startRotate(e);
+            return;
+        } else if (handle && handle.startsWith('resize-')) {
+            this.startResize(e, handle);
+            return;
+        }
+        
+        // Otherwise start dragging
         this.isDragging = true;
-        this.dragStart = {
-            x: (e.clientX - rect.left) * scaleX,
-            y: (e.clientY - rect.top) * scaleY
-        };
+        this.dragStart = { x, y };
     }
     
     // Drag text
     dragText(e) {
-        if (!this.isDragging || this.selectedTextIndex === null) return;
+        if (this.selectedTextIndex === null) return;
+        
+        if (this.isResizing) {
+            this.resizeText(e);
+        } else if (this.isRotating) {
+            this.rotateText(e);
+        } else if (this.isDragging) {
+            const rect = this.canvas.getBoundingClientRect();
+            const scaleX = this.canvas.offsetWidth / rect.width;
+            const scaleY = this.canvas.offsetHeight / rect.height;
+            
+            const currentX = (e.clientX - rect.left) * scaleX;
+            const currentY = (e.clientY - rect.top) * scaleY;
+            
+            const dx = currentX - this.dragStart.x;
+            const dy = currentY - this.dragStart.y;
+            
+            const textObj = this.textObjects[this.selectedTextIndex];
+            textObj.x += dx;
+            textObj.y += dy;
+            
+            this.dragStart = { x: currentX, y: currentY };
+            this.redrawCanvas();
+        }
+    }
+    
+    // Stop dragging
+    stopDrag() {
+        if (this.isDragging || this.isResizing || this.isRotating) {
+            this.isDragging = false;
+            this.isResizing = false;
+            this.isRotating = false;
+            this.resizeHandle = null;
+            if (this.historyManager) {
+                this.historyManager.saveState();
+            }
+        }
+    }
+    
+    // Get line count for a text object
+    getLineCount(text) {
+        return text.split('\n').length;
+    }
+    
+    // Check if click is on a handle
+    hitTestHandle(x, y) {
+        if (this.selectedTextIndex === null || this.selectedTextIndex < 0) return null;
+        
+        const textObj = this.textObjects[this.selectedTextIndex];
+        if (!textObj) return null;
+        
+        // Transform point to text's local space
+        const dx = x - textObj.x;
+        const dy = y - textObj.y;
+        
+        const cos = Math.cos(-textObj.rotation * Math.PI / 180);
+        const sin = Math.sin(-textObj.rotation * Math.PI / 180);
+        
+        const localX = (dx * cos - dy * sin) / textObj.scale;
+        const localY = (dx * sin + dy * cos) / textObj.scale;
+        
+        const width = textObj.width;
+        const height = textObj.height * this.getLineCount(textObj.text);
+        const handleSize = this.HANDLE_SIZE;
+        const threshold = handleSize + this.HANDLE_THRESHOLD;
+        
+        // Check rotation handle
+        if (Math.abs(localX - width / 2) < threshold && 
+            Math.abs(localY - (-this.ROTATION_HANDLE_DISTANCE)) < threshold) {
+            return 'rotate';
+        }
+        
+        // Check corner handles for resizing
+        if (Math.abs(localX - (-5)) < threshold && Math.abs(localY - (-5)) < threshold) {
+            return 'resize-tl';
+        }
+        if (Math.abs(localX - (width + 5)) < threshold && Math.abs(localY - (-5)) < threshold) {
+            return 'resize-tr';
+        }
+        if (Math.abs(localX - (-5)) < threshold && Math.abs(localY - (height + 5)) < threshold) {
+            return 'resize-bl';
+        }
+        if (Math.abs(localX - (width + 5)) < threshold && Math.abs(localY - (height + 5)) < threshold) {
+            return 'resize-br';
+        }
+        
+        return null;
+    }
+    
+    // Start resize
+    startResize(e, handle) {
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.offsetWidth / rect.width;
+        const scaleY = this.canvas.offsetHeight / rect.height;
+        
+        this.isResizing = true;
+        this.resizeHandle = handle;
+        this.dragStart = {
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY
+        };
+        
+        const textObj = this.textObjects[this.selectedTextIndex];
+        this.resizeStartScale = textObj.scale;
+    }
+    
+    // Resize text
+    resizeText(e) {
+        if (!this.isResizing || this.selectedTextIndex === null) return;
         
         const rect = this.canvas.getBoundingClientRect();
         const scaleX = this.canvas.offsetWidth / rect.width;
@@ -407,21 +533,54 @@ class TextInsertionManager {
         const dy = currentY - this.dragStart.y;
         
         const textObj = this.textObjects[this.selectedTextIndex];
-        textObj.x += dx;
-        textObj.y += dy;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const factor = this.resizeHandle.includes('b') || this.resizeHandle.includes('r') ? 1 : -1;
         
-        this.dragStart = { x: currentX, y: currentY };
+        // Update scale based on drag distance
+        textObj.scale = Math.max(this.MIN_SCALE, Math.min(this.MAX_SCALE, this.resizeStartScale + (factor * distance / this.RESIZE_SENSITIVITY)));
+        
         this.redrawCanvas();
     }
     
-    // Stop dragging
-    stopDrag() {
-        if (this.isDragging) {
-            this.isDragging = false;
-            if (this.historyManager) {
-                this.historyManager.saveState();
-            }
-        }
+    // Start rotation
+    startRotate(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.offsetWidth / rect.width;
+        const scaleY = this.canvas.offsetHeight / rect.height;
+        
+        this.isRotating = true;
+        const textObj = this.textObjects[this.selectedTextIndex];
+        
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
+        
+        this.rotateStartAngle = Math.atan2(mouseY - textObj.y, mouseX - textObj.x) * 180 / Math.PI;
+        this.rotateStartRotation = textObj.rotation;
+    }
+    
+    // Rotate text
+    rotateText(e) {
+        if (!this.isRotating || this.selectedTextIndex === null) return;
+        
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.offsetWidth / rect.width;
+        const scaleY = this.canvas.offsetHeight / rect.height;
+        
+        const textObj = this.textObjects[this.selectedTextIndex];
+        
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
+        
+        const currentAngle = Math.atan2(mouseY - textObj.y, mouseX - textObj.x) * 180 / Math.PI;
+        const angleDelta = currentAngle - this.rotateStartAngle;
+        
+        textObj.rotation = this.rotateStartRotation + angleDelta;
+        
+        // Normalize to 0-360
+        while (textObj.rotation < 0) textObj.rotation += 360;
+        while (textObj.rotation >= 360) textObj.rotation -= 360;
+        
+        this.redrawCanvas();
     }
     
     // Redraw canvas with all text objects

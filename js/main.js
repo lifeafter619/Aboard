@@ -1157,20 +1157,20 @@ class DrawingBoard {
             
             this.backgroundManager.drawBackground();
         } else {
-            // In infinite canvas mode, canvas fills the viewport
+            // In infinite canvas mode, canvas fills the viewport and is centered
             this.canvas.style.position = 'absolute';
-            this.canvas.style.left = '0';
-            this.canvas.style.top = '0';
+            this.canvas.style.left = '50%';
+            this.canvas.style.top = '50%';
             this.canvas.style.width = '100%';
             this.canvas.style.height = '100%';
-            this.canvas.style.transform = `scale(${this.drawingEngine.canvasScale})`;
+            this.canvas.style.transform = `translate(-50%, -50%) scale(${this.drawingEngine.canvasScale})`;
             
             this.bgCanvas.style.position = 'absolute';
-            this.bgCanvas.style.left = '0';
-            this.bgCanvas.style.top = '0';
+            this.bgCanvas.style.left = '50%';
+            this.bgCanvas.style.top = '50%';
             this.bgCanvas.style.width = '100%';
             this.bgCanvas.style.height = '100%';
-            this.bgCanvas.style.transform = `scale(${this.drawingEngine.canvasScale})`;
+            this.bgCanvas.style.transform = `translate(-50%, -50%) scale(${this.drawingEngine.canvasScale})`;
             
             this.resizeCanvas();
         }
