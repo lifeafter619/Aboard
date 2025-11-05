@@ -1987,3 +1987,51 @@ body {
     display: block;
 }
 
+/* Text Input Modal */
+.text-input-modal-content {
+    min-width: 400px;
+    max-width: 500px;
+}
+
+.text-input-area {
+    width: 100%;
+    min-height: 120px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 16px;
+    resize: vertical;
+    margin-bottom: 16px;
+}
+
+.text-input-area:focus {
+    outline: none;
+    border-color: var(--theme-color);
+}
+
+.text-input-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.text-control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.text-control-group label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+.text-input-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+

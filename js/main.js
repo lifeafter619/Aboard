@@ -22,6 +22,7 @@ class DrawingBoard {
         this.imageControls = new ImageControls(this.backgroundManager);
         this.strokeControls = new StrokeControls(this.drawingEngine, this.canvas, this.ctx, this.historyManager);
         this.selectionManager = new SelectionManager(this.canvas, this.ctx, this.drawingEngine, this.strokeControls);
+        this.textInsertionManager = new TextInsertionManager(this.canvas, this.ctx, this.historyManager);
         this.settingsManager = new SettingsManager();
         this.announcementManager = new AnnouncementManager();
         this.exportManager = new ExportManager(this.canvas, this.bgCanvas);
@@ -131,6 +132,11 @@ class DrawingBoard {
         }
         
         this.backgroundManager.drawBackground();
+        
+        // Redraw text objects after resize
+        if (this.textInsertionManager) {
+            this.textInsertionManager.redrawCanvas();
+        }
     }
     
     setupEventListeners() {
@@ -197,8 +203,30 @@ class DrawingBoard {
                 this.setTool('pen', false); // Don't show config panel
             }
             
-            // Handle selection tool
+            // Handle text tool - show text input dialog
+            if (this.drawingEngine.currentTool === 'text') {
+                this.textInsertionManager.startTextInput(e);
+                return;
+            }
+            
+            // Handle selection tool - check for text objects first
             if (this.drawingEngine.currentTool === 'select') {
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.offsetWidth / rect.width;
+                const scaleY = this.canvas.offsetHeight / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+                
+                // Check if clicking on text object first
+                const textIndex = this.textInsertionManager.hitTestText(x, y);
+                if (textIndex >= 0) {
+                    this.textInsertionManager.selectText(textIndex);
+                    this.textInsertionManager.startDrag(e);
+                    this.updateUI();
+                    return;
+                }
+                
+                // Otherwise, handle normal selection
                 this.selectionManager.startSelection(e);
                 this.updateUI();
                 return;
@@ -214,6 +242,8 @@ class DrawingBoard {
         document.addEventListener('mousemove', (e) => {
             if (this.isDraggingCoordinateOrigin) {
                 this.dragCoordinateOrigin(e);
+            } else if (this.textInsertionManager.isDragging) {
+                this.textInsertionManager.dragText(e);
             } else if (this.drawingEngine.isPanning) {
                 this.drawingEngine.pan(e);
                 this.applyPanTransform();
@@ -227,6 +257,7 @@ class DrawingBoard {
         
         document.addEventListener('mouseup', () => {
             this.stopDraggingCoordinateOrigin();
+            this.textInsertionManager.stopDrag();
             this.handleDrawingComplete();
             this.drawingEngine.stopPanning();
         });
@@ -287,6 +318,7 @@ class DrawingBoard {
         // Toolbar buttons
         document.getElementById('pen-btn').addEventListener('click', () => this.setTool('pen'));
         document.getElementById('select-btn').addEventListener('click', () => this.setTool('select'));
+        document.getElementById('text-btn').addEventListener('click', () => this.setTool('text'));
         document.getElementById('pan-btn').addEventListener('click', () => this.setTool('pan'));
         document.getElementById('eraser-btn').addEventListener('click', () => this.setTool('eraser'));
         document.getElementById('background-btn').addEventListener('click', () => this.setTool('background'));
@@ -301,6 +333,10 @@ class DrawingBoard {
                 // Clear stroke selection as strokes are no longer valid
                 this.drawingEngine.clearStrokes();
                 this.updateUI();
+                // Redraw text objects after undo
+                if (this.textInsertionManager) {
+                    this.textInsertionManager.redrawCanvas();
+                }
             }
         });
         
@@ -309,6 +345,10 @@ class DrawingBoard {
                 // Clear stroke selection as strokes are no longer valid
                 this.drawingEngine.clearStrokes();
                 this.updateUI();
+                // Redraw text objects after redo
+                if (this.textInsertionManager) {
+                    this.textInsertionManager.redrawCanvas();
+                }
             }
         });
         
@@ -528,13 +568,19 @@ class DrawingBoard {
         
         // Selection tool buttons
         document.getElementById('select-copy-btn').addEventListener('click', () => {
-            if (this.selectionManager.copySelection()) {
+            // Try text copy first, then selection copy
+            if (this.textInsertionManager.hasSelection()) {
+                this.textInsertionManager.copySelectedText();
+            } else if (this.selectionManager.copySelection()) {
                 this.historyManager.saveState();
             }
         });
         
         document.getElementById('select-delete-btn').addEventListener('click', () => {
-            if (this.selectionManager.deleteSelection()) {
+            // Try text delete first, then selection delete
+            if (this.textInsertionManager.hasSelection()) {
+                this.textInsertionManager.deleteSelectedText();
+            } else if (this.selectionManager.deleteSelection()) {
                 this.historyManager.saveState();
             }
         });
@@ -956,6 +1002,7 @@ class DrawingBoard {
         // Clear selection when switching away from select tool
         if (tool !== 'select') {
             this.selectionManager.clearSelection();
+            this.textInsertionManager.deselectText();
         }
         
         this.updateUI();
@@ -963,7 +1010,7 @@ class DrawingBoard {
         // 使用"移动"功能时隐藏config-area
         if (tool === 'pan') {
             document.getElementById('config-area').classList.remove('show');
-        } else if (showConfig && (tool === 'pen' || tool === 'eraser' || tool === 'background' || tool === 'select')) {
+        } else if (showConfig && (tool === 'pen' || tool === 'eraser' || tool === 'background' || tool === 'select' || tool === 'text')) {
             document.getElementById('config-area').classList.add('show');
         }
     }
@@ -972,6 +1019,10 @@ class DrawingBoard {
         if (this.drawingEngine.stopDrawing()) {
             this.historyManager.saveState();
             this.closeConfigPanel();
+        }
+        // Redraw text objects on top
+        if (this.textInsertionManager) {
+            this.textInsertionManager.redrawCanvas();
         }
     }
     
@@ -993,6 +1044,7 @@ class DrawingBoard {
     
     clearCanvas(saveToHistory = true) {
         this.drawingEngine.clearCanvas();
+        this.textInsertionManager.clearAllText();
         if (saveToHistory) {
             this.historyManager.saveState();
         }
@@ -1016,10 +1068,14 @@ class DrawingBoard {
             document.getElementById('select-btn').classList.add('active');
             document.getElementById('select-config').classList.add('active');
             this.canvas.style.cursor = 'default';
-            // Update selection buttons state
-            const hasSelection = this.selectionManager.hasSelection();
+            // Update selection buttons state - check both image/stroke selection and text selection
+            const hasSelection = this.selectionManager.hasSelection() || this.textInsertionManager.hasSelection();
             document.getElementById('select-copy-btn').disabled = !hasSelection;
             document.getElementById('select-delete-btn').disabled = !hasSelection;
+        } else if (tool === 'text') {
+            document.getElementById('text-btn').classList.add('active');
+            document.getElementById('text-config').classList.add('active');
+            this.canvas.style.cursor = 'text';
         } else if (tool === 'pan') {
             document.getElementById('pan-btn').classList.add('active');
             this.canvas.style.cursor = 'grab';
@@ -1101,20 +1157,20 @@ class DrawingBoard {
             
             this.backgroundManager.drawBackground();
         } else {
-            // In infinite canvas mode, canvas fills the viewport
+            // In infinite canvas mode, canvas fills the viewport and is centered
             this.canvas.style.position = 'absolute';
-            this.canvas.style.left = '0';
-            this.canvas.style.top = '0';
+            this.canvas.style.left = '50%';
+            this.canvas.style.top = '50%';
             this.canvas.style.width = '100%';
             this.canvas.style.height = '100%';
-            this.canvas.style.transform = `scale(${this.drawingEngine.canvasScale})`;
+            this.canvas.style.transform = `translate(-50%, -50%) scale(${this.drawingEngine.canvasScale})`;
             
             this.bgCanvas.style.position = 'absolute';
-            this.bgCanvas.style.left = '0';
-            this.bgCanvas.style.top = '0';
+            this.bgCanvas.style.left = '50%';
+            this.bgCanvas.style.top = '50%';
             this.bgCanvas.style.width = '100%';
             this.bgCanvas.style.height = '100%';
-            this.bgCanvas.style.transform = `scale(${this.drawingEngine.canvasScale})`;
+            this.bgCanvas.style.transform = `translate(-50%, -50%) scale(${this.drawingEngine.canvasScale})`;
             
             this.resizeCanvas();
         }
@@ -1165,8 +1221,12 @@ class DrawingBoard {
             this.canvas.style.transform = transform;
             this.bgCanvas.style.transform = transform;
         } else {
-            // In infinite mode, simple scale with pan
-            const transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+            // In infinite mode, center the canvas and apply scale with pan
+            this.canvas.style.left = '50%';
+            this.canvas.style.top = '50%';
+            this.bgCanvas.style.left = '50%';
+            this.bgCanvas.style.top = '50%';
+            const transform = `translate(-50%, -50%) translate(${panX}px, ${panY}px) scale(${scale})`;
             this.canvas.style.transform = transform;
             this.bgCanvas.style.transform = transform;
         }
