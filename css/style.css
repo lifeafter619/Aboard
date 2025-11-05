@@ -2035,3 +2035,96 @@ body {
     gap: 12px;
 }
 
+/* Compact text input dialog styles */
+.text-input-modal-content.compact {
+    min-width: 380px;
+    max-width: 450px;
+}
+
+.text-input-area.compact {
+    min-height: 80px;
+    margin-bottom: 12px;
+}
+
+.text-input-controls.compact {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.text-control-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.text-control-row label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    min-width: 40px;
+}
+
+.text-control-row .slider-compact {
+    flex: 1;
+    height: 6px;
+}
+
+.text-control-row .value-label {
+    font-size: 13px;
+    color: #666;
+    min-width: 45px;
+    text-align: right;
+}
+
+.color-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    flex: 1;
+}
+
+.color-picker-grid .color-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+}
+
+.color-picker-icon-btn.compact {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.slider-compact {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #ddd;
+    outline: none;
+}
+
+.slider-compact::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--theme-color);
+    cursor: pointer;
+}
+
+.slider-compact::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--theme-color);
+    cursor: pointer;
+    border: none;
+}
+

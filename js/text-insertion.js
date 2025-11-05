@@ -51,7 +51,7 @@ class TextInsertionManager {
         modal.className = 'modal show';
         modal.id = 'text-input-modal';
         modal.innerHTML = `
-            <div class="modal-content text-input-modal-content">
+            <div class="modal-content text-input-modal-content compact">
                 <div class="modal-header">
                     <h2>插入文字</h2>
                     <button id="text-input-close-btn" class="modal-close-btn" title="关闭">
@@ -62,21 +62,29 @@ class TextInsertionManager {
                     </button>
                 </div>
                 <div class="modal-body">
-                    <textarea id="text-input-area" class="text-input-area" placeholder="请输入文字..." autofocus></textarea>
-                    <div class="text-input-controls">
-                        <div class="text-control-group">
-                            <label>字号 <span id="text-font-size-value">${this.defaultFontSize}</span>px</label>
-                            <input type="range" id="text-font-size-slider" min="12" max="72" value="${this.defaultFontSize}" class="slider">
+                    <textarea id="text-input-area" class="text-input-area compact" placeholder="请输入文字..." autofocus></textarea>
+                    <div class="text-input-controls compact">
+                        <div class="text-control-row">
+                            <label>字号</label>
+                            <input type="range" id="text-font-size-slider" min="12" max="72" value="${this.defaultFontSize}" class="slider-compact">
+                            <span id="text-font-size-value" class="value-label">${this.defaultFontSize}px</span>
                         </div>
-                        <div class="text-control-group">
+                        <div class="text-control-row">
                             <label>颜色</label>
-                            <div class="color-picker-row">
+                            <div class="color-picker-grid">
                                 <button class="color-btn active" data-text-color="#000000" style="background-color: #000000;" title="黑色"></button>
                                 <button class="color-btn" data-text-color="#FF0000" style="background-color: #FF0000;" title="红色"></button>
                                 <button class="color-btn" data-text-color="#0000FF" style="background-color: #0000FF;" title="蓝色"></button>
                                 <button class="color-btn" data-text-color="#00FF00" style="background-color: #00FF00;" title="绿色"></button>
-                                <label class="color-picker-icon-btn" for="text-custom-color-picker" title="取色器">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <button class="color-btn" data-text-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="黄色"></button>
+                                <button class="color-btn" data-text-color="#FF8800" style="background-color: #FF8800;" title="橙色"></button>
+                                <button class="color-btn" data-text-color="#8800FF" style="background-color: #8800FF;" title="紫色"></button>
+                                <button class="color-btn" data-text-color="#FF69B4" style="background-color: #FF69B4;" title="粉色"></button>
+                                <button class="color-btn" data-text-color="#8B4513" style="background-color: #8B4513;" title="棕色"></button>
+                                <button class="color-btn" data-text-color="#808080" style="background-color: #808080;" title="灰色"></button>
+                                <button class="color-btn" data-text-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="白色"></button>
+                                <label class="color-picker-icon-btn compact" for="text-custom-color-picker" title="取色器">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
                                         <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
                                     </svg>
@@ -385,16 +393,49 @@ class TextInsertionManager {
         const scaleX = this.canvas.offsetWidth / rect.width;
         const scaleY = this.canvas.offsetHeight / rect.height;
         
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
+        
+        const textObj = this.textObjects[this.selectedTextIndex];
+        
+        // Check if clicking on rotation handle
+        const rotationHandle = this.getRotationHandlePosition(textObj);
+        const distToRotation = Math.sqrt(
+            Math.pow(mouseX - rotationHandle.x, 2) + 
+            Math.pow(mouseY - rotationHandle.y, 2)
+        );
+        
+        if (distToRotation < this.HANDLE_SIZE) {
+            this.isRotating = true;
+            this.dragStart = { x: mouseX, y: mouseY };
+            return;
+        }
+        
+        // Check if clicking on resize handles
+        const handles = this.getResizeHandles(textObj);
+        for (let i = 0; i < handles.length; i++) {
+            const handle = handles[i];
+            const dist = Math.sqrt(
+                Math.pow(mouseX - handle.x, 2) + 
+                Math.pow(mouseY - handle.y, 2)
+            );
+            
+            if (dist < this.HANDLE_SIZE) {
+                this.isResizing = true;
+                this.resizeHandle = handle.type;
+                this.dragStart = { x: mouseX, y: mouseY };
+                return;
+            }
+        }
+        
+        // Otherwise, start dragging
         this.isDragging = true;
-        this.dragStart = {
-            x: (e.clientX - rect.left) * scaleX,
-            y: (e.clientY - rect.top) * scaleY
-        };
+        this.dragStart = { x: mouseX, y: mouseY };
     }
     
     // Drag text
     dragText(e) {
-        if (!this.isDragging || this.selectedTextIndex === null) return;
+        if (this.selectedTextIndex === null) return;
         
         const rect = this.canvas.getBoundingClientRect();
         const scaleX = this.canvas.offsetWidth / rect.width;
@@ -403,25 +444,112 @@ class TextInsertionManager {
         const currentX = (e.clientX - rect.left) * scaleX;
         const currentY = (e.clientY - rect.top) * scaleY;
         
-        const dx = currentX - this.dragStart.x;
-        const dy = currentY - this.dragStart.y;
-        
         const textObj = this.textObjects[this.selectedTextIndex];
-        textObj.x += dx;
-        textObj.y += dy;
         
-        this.dragStart = { x: currentX, y: currentY };
-        this.redrawCanvas();
+        if (this.isRotating) {
+            // Calculate rotation angle
+            const centerX = textObj.x + textObj.width / 2;
+            const centerY = textObj.y + textObj.height / 2;
+            
+            const startAngle = Math.atan2(this.dragStart.y - centerY, this.dragStart.x - centerX);
+            const currentAngle = Math.atan2(currentY - centerY, currentX - centerX);
+            
+            const deltaAngle = (currentAngle - startAngle) * 180 / Math.PI;
+            textObj.rotation += deltaAngle;
+            
+            this.dragStart = { x: currentX, y: currentY };
+            this.redrawCanvas();
+        } else if (this.isResizing) {
+            // Calculate scale change
+            const dx = currentX - this.dragStart.x;
+            const dy = currentY - this.dragStart.y;
+            
+            // Simple uniform scaling based on distance from center
+            const centerX = textObj.x + textObj.width / 2;
+            const centerY = textObj.y + textObj.height / 2;
+            
+            const oldDist = Math.sqrt(
+                Math.pow(this.dragStart.x - centerX, 2) + 
+                Math.pow(this.dragStart.y - centerY, 2)
+            );
+            const newDist = Math.sqrt(
+                Math.pow(currentX - centerX, 2) + 
+                Math.pow(currentY - centerY, 2)
+            );
+            
+            if (oldDist > 0) {
+                const scaleChange = newDist / oldDist;
+                textObj.scale = Math.max(0.1, Math.min(5.0, textObj.scale * scaleChange));
+            }
+            
+            this.dragStart = { x: currentX, y: currentY };
+            this.redrawCanvas();
+        } else if (this.isDragging) {
+            // Move text
+            const dx = currentX - this.dragStart.x;
+            const dy = currentY - this.dragStart.y;
+            
+            textObj.x += dx;
+            textObj.y += dy;
+            
+            this.dragStart = { x: currentX, y: currentY };
+            this.redrawCanvas();
+        }
     }
     
     // Stop dragging
     stopDrag() {
-        if (this.isDragging) {
+        if (this.isDragging || this.isResizing || this.isRotating) {
             this.isDragging = false;
+            this.isResizing = false;
+            this.isRotating = false;
+            this.resizeHandle = null;
             if (this.historyManager) {
                 this.historyManager.saveState();
             }
         }
+    }
+    
+    // Get rotation handle position
+    getRotationHandlePosition(textObj) {
+        const width = textObj.width * textObj.scale;
+        const height = textObj.height * textObj.scale;
+        
+        // Rotation handle is above the text
+        const localX = width / 2;
+        const localY = -this.ROTATION_HANDLE_DISTANCE;
+        
+        // Apply rotation transformation
+        const cos = Math.cos(textObj.rotation * Math.PI / 180);
+        const sin = Math.sin(textObj.rotation * Math.PI / 180);
+        
+        return {
+            x: textObj.x + localX * cos - localY * sin,
+            y: textObj.y + localX * sin + localY * cos
+        };
+    }
+    
+    // Get resize handles positions
+    getResizeHandles(textObj) {
+        const width = textObj.width * textObj.scale;
+        const height = textObj.height * textObj.scale;
+        
+        const corners = [
+            { x: -5, y: -5, type: 'top-left' },
+            { x: width + 5, y: -5, type: 'top-right' },
+            { x: -5, y: height + 5, type: 'bottom-left' },
+            { x: width + 5, y: height + 5, type: 'bottom-right' }
+        ];
+        
+        // Apply rotation transformation
+        const cos = Math.cos(textObj.rotation * Math.PI / 180);
+        const sin = Math.sin(textObj.rotation * Math.PI / 180);
+        
+        return corners.map(corner => ({
+            x: textObj.x + corner.x * cos - corner.y * sin,
+            y: textObj.y + corner.x * sin + corner.y * cos,
+            type: corner.type
+        }));
     }
     
     // Redraw canvas with all text objects

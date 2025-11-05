@@ -390,10 +390,16 @@ class DrawingBoard {
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(() => {
                 this.resizeCanvas();
+                // Re-center canvas after resize
+                this.applyZoom();
                 // Update toolbar text visibility on resize
                 this.settingsManager.updateToolbarTextVisibility();
                 // Reposition toolbars to ensure they stay within viewport
                 this.repositionToolbarsOnResize();
+                // Update config area scale on resize
+                if (this.settingsManager) {
+                    this.settingsManager.updateConfigScale();
+                }
             }, 150); // 150ms debounce delay
         });
         
