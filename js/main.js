@@ -353,7 +353,7 @@ class DrawingBoard {
         document.getElementById('background-btn').addEventListener('click', () => this.setTool('background'));
         document.getElementById('clear-btn').addEventListener('click', () => this.confirmClear());
         document.getElementById('settings-btn').addEventListener('click', () => this.openSettings());
-        document.getElementById('more-btn').addEventListener('click', () => this.timeDisplayManager.toggle());
+        document.getElementById('more-btn').addEventListener('click', () => this.setTool('more'));
         
         document.getElementById('config-close-btn').addEventListener('click', () => this.closeConfigPanel());
         
@@ -624,20 +624,37 @@ class DrawingBoard {
             });
         });
         
-        // Shape color picker
-        document.querySelectorAll('.color-btn[data-shape-color]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.shapeInsertionManager.setShapeColor(e.target.dataset.shapeColor);
-                document.querySelectorAll('.color-btn[data-shape-color]').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-            });
-        });
+        // More config panel (time display toggle)
+        const toggleTimeDisplayBtn = document.getElementById('toggle-time-display-btn');
+        const timeDisplayStatus = document.getElementById('time-display-status');
+        const timeDisplayOptions = document.getElementById('time-display-options');
+        const showDateCheckbox = document.getElementById('show-date-checkbox');
+        const showTimeCheckbox = document.getElementById('show-time-checkbox');
         
-        const customShapeColorPicker = document.getElementById('custom-shape-color-picker');
-        customShapeColorPicker.addEventListener('input', (e) => {
-            this.shapeInsertionManager.setShapeColor(e.target.value);
-            document.querySelectorAll('.color-btn[data-shape-color]').forEach(b => b.classList.remove('active'));
-        });
+        if (toggleTimeDisplayBtn) {
+            toggleTimeDisplayBtn.addEventListener('click', () => {
+                this.timeDisplayManager.toggle();
+                if (this.timeDisplayManager.enabled) {
+                    timeDisplayStatus.textContent = '隐藏时间';
+                    timeDisplayOptions.style.display = 'block';
+                } else {
+                    timeDisplayStatus.textContent = '显示时间';
+                    timeDisplayOptions.style.display = 'none';
+                }
+            });
+        }
+        
+        if (showDateCheckbox) {
+            showDateCheckbox.addEventListener('change', (e) => {
+                this.timeDisplayManager.setShowDate(e.target.checked);
+            });
+        }
+        
+        if (showTimeCheckbox) {
+            showTimeCheckbox.addEventListener('change', (e) => {
+                this.timeDisplayManager.setShowTime(e.target.checked);
+            });
+        }
     }
     
     setupSettingsListeners() {
@@ -816,6 +833,30 @@ class DrawingBoard {
                 this.timeDisplayManager.hide();
             }
         });
+        
+        // Independent date/time checkboxes
+        const showDateOnlyCheckbox = document.getElementById('show-date-only-checkbox');
+        const showTimeOnlyCheckbox = document.getElementById('show-time-only-checkbox');
+        
+        if (showDateOnlyCheckbox) {
+            showDateOnlyCheckbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this.timeDisplayManager.setShowDate(true);
+                    this.timeDisplayManager.setShowTime(false);
+                    showTimeOnlyCheckbox.checked = false;
+                }
+            });
+        }
+        
+        if (showTimeOnlyCheckbox) {
+            showTimeOnlyCheckbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this.timeDisplayManager.setShowDate(false);
+                    this.timeDisplayManager.setShowTime(true);
+                    showDateOnlyCheckbox.checked = false;
+                }
+            });
+        }
         
         document.getElementById('time-format-select').addEventListener('change', (e) => {
             this.timeDisplayManager.setTimeFormat(e.target.value);
@@ -1138,8 +1179,29 @@ class DrawingBoard {
         // 使用"移动"功能时隐藏config-area
         if (tool === 'pan') {
             document.getElementById('config-area').classList.remove('show');
-        } else if (showConfig && (tool === 'pen' || tool === 'eraser' || tool === 'background' || tool === 'select' || tool === 'shape')) {
+        } else if (showConfig && (tool === 'pen' || tool === 'eraser' || tool === 'background' || tool === 'select' || tool === 'shape' || tool === 'more')) {
             document.getElementById('config-area').classList.add('show');
+            
+            // Update More config panel state
+            if (tool === 'more') {
+                const timeDisplayStatus = document.getElementById('time-display-status');
+                const timeDisplayOptions = document.getElementById('time-display-options');
+                const showDateCheckbox = document.getElementById('show-date-checkbox');
+                const showTimeCheckbox = document.getElementById('show-time-checkbox');
+                
+                if (timeDisplayStatus) {
+                    timeDisplayStatus.textContent = this.timeDisplayManager.enabled ? '隐藏时间' : '显示时间';
+                }
+                if (timeDisplayOptions) {
+                    timeDisplayOptions.style.display = this.timeDisplayManager.enabled ? 'block' : 'none';
+                }
+                if (showDateCheckbox) {
+                    showDateCheckbox.checked = this.timeDisplayManager.showDate;
+                }
+                if (showTimeCheckbox) {
+                    showTimeCheckbox.checked = this.timeDisplayManager.showTime;
+                }
+            }
         }
     }
     
@@ -1226,6 +1288,10 @@ class DrawingBoard {
         } else if (tool === 'background') {
             document.getElementById('background-btn').classList.add('active');
             document.getElementById('background-config').classList.add('active');
+            this.canvas.style.cursor = 'default';
+        } else if (tool === 'more') {
+            document.getElementById('more-btn').classList.add('active');
+            document.getElementById('more-config').classList.add('active');
             this.canvas.style.cursor = 'default';
         }
         
@@ -1372,6 +1438,19 @@ class DrawingBoard {
         }
         this.canvas.style.transformOrigin = 'center center';
         this.bgCanvas.style.transformOrigin = 'center center';
+        
+        // Update config-area scale proportionally
+        this.updateConfigAreaScale();
+    }
+    
+    updateConfigAreaScale() {
+        const configArea = document.getElementById('config-area');
+        const scale = this.drawingEngine.canvasScale;
+        
+        // Apply proportional scaling to config-area
+        // The scale is relative to 100% (1.0)
+        configArea.style.transform = `translateX(-50%) scale(${scale})`;
+        configArea.style.transformOrigin = 'center bottom';
     }
     
     updateZoomUI() {

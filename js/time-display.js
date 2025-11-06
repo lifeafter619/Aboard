@@ -13,6 +13,8 @@ class TimeDisplayManager {
         this.color = localStorage.getItem('timeDisplayColor') || '#000000';
         this.fontSize = parseInt(localStorage.getItem('timeDisplayFontSize')) || 16;
         this.opacity = parseInt(localStorage.getItem('timeDisplayOpacity')) || 100;
+        this.showDate = localStorage.getItem('timeDisplayShowDate') !== 'false'; // Default true
+        this.showTime = localStorage.getItem('timeDisplayShowTime') !== 'false'; // Default true
         
         this.applySettings();
     }
@@ -64,10 +66,15 @@ class TimeDisplayManager {
         const timeString = this.formatTime(now);
         const dateString = this.formatDate(now);
         
-        this.timeDisplayElement.innerHTML = `
-            <div class="time-line" style="font-size: ${this.fontSize * 1.2}px; font-weight: 600;">${timeString}</div>
-            <div class="time-line" style="font-size: ${this.fontSize}px; margin-top: 4px;">${dateString}</div>
-        `;
+        let html = '';
+        if (this.showTime) {
+            html += `<div class="time-line" style="font-size: ${this.fontSize * 1.2}px; font-weight: 600;">${timeString}</div>`;
+        }
+        if (this.showDate) {
+            html += `<div class="time-line" style="font-size: ${this.fontSize}px; ${this.showTime ? 'margin-top: 4px;' : ''}">${dateString}</div>`;
+        }
+        
+        this.timeDisplayElement.innerHTML = html;
     }
     
     formatTime(date) {
@@ -144,6 +151,22 @@ class TimeDisplayManager {
         this.opacity = opacity;
         localStorage.setItem('timeDisplayOpacity', opacity);
         this.applySettings();
+    }
+    
+    setShowDate(show) {
+        this.showDate = show;
+        localStorage.setItem('timeDisplayShowDate', show);
+        if (this.enabled) {
+            this.updateDisplay();
+        }
+    }
+    
+    setShowTime(show) {
+        this.showTime = show;
+        localStorage.setItem('timeDisplayShowTime', show);
+        if (this.enabled) {
+            this.updateDisplay();
+        }
     }
     
     applySettings() {

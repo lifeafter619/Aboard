@@ -2038,7 +2038,7 @@ body {
 /* Time Display Styles */
 #time-display {
     position: fixed;
-    top: 20px;
+    top: 130px;  /* Below pagination controls (80px top + 36px height + 14px gap) */
     right: 20px;
     padding: 12px 20px;
     background: rgba(255, 255, 255, 0.95);

@@ -107,7 +107,7 @@
         <div id="select-config" class="config-panel">
             <div class="config-group">
                 <label>选择操作</label>
-                <p class="settings-hint">点击画布上的图片或文字进行选择</p>
+                <p class="settings-hint">点击画布上的笔迹、图片、文字或形状进行选择</p>
                 <div class="button-size-options" style="grid-template-columns: 1fr 1fr;">
                     <button id="select-copy-btn" class="button-secondary" disabled>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 5px;">
@@ -131,40 +131,12 @@
         <div id="shape-config" class="config-panel">
             <div class="config-group">
                 <label>形状类型</label>
-                <div class="button-size-options pen-type-grid">
-                    <button class="pen-type-btn active" data-shape-type="rectangle">长方形</button>
-                    <button class="pen-type-btn" data-shape-type="circle">圆形</button>
-                    <button class="pen-type-btn" data-shape-type="ellipse">椭圆形</button>
-                    <button class="pen-type-btn" data-shape-type="triangle">三角形</button>
-                    <button class="pen-type-btn" data-shape-type="line">直线</button>
-                    <button class="pen-type-btn" data-shape-type="arrow">箭头</button>
+                <div class="button-size-options" style="grid-template-columns: 1fr 1fr;">
+                    <button class="pen-type-btn active" data-shape-type="line">直线</button>
+                    <button class="pen-type-btn" data-shape-type="rectangle">矩形</button>
                 </div>
             </div>
-            <div class="config-group">
-                <label>颜色</label>
-                <div class="color-picker-row">
-                    <div class="color-picker-main">
-                        <button class="color-btn" data-shape-color="#000000" style="background-color: #000000;" title="黑色"></button>
-                        <button class="color-btn" data-shape-color="#FF0000" style="background-color: #FF0000;" title="红色"></button>
-                        <button class="color-btn active" data-shape-color="#007AFF" style="background-color: #007AFF;" title="蓝色"></button>
-                        <button class="color-btn" data-shape-color="#00FF00" style="background-color: #00FF00;" title="绿色"></button>
-                    </div>
-                    <div class="color-picker-main">
-                        <button class="color-btn" data-shape-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="黄色"></button>
-                        <button class="color-btn" data-shape-color="#FF8800" style="background-color: #FF8800;" title="橙色"></button>
-                        <button class="color-btn" data-shape-color="#8800FF" style="background-color: #8800FF;" title="紫色"></button>
-                        <button class="color-btn" data-shape-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="白色"></button>
-                    </div>
-                </div>
-                <label class="color-picker-icon-btn" for="custom-shape-color-picker" title="取色器" style="margin-top: 8px;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
-                        <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
-                    </svg>
-                    <input type="color" id="custom-shape-color-picker" class="custom-color-picker-input" value="#007AFF">
-                </label>
-            </div>
-            <p class="settings-hint">按住并拖动鼠标来绘制形状，松开鼠标完成绘制</p>
+            <p class="settings-hint">形状将使用当前笔的颜色、粗细和类型。点击第一个点，拖动鼠标实时预览，松开鼠标完成绘制。</p>
         </div>
 
         <!-- Eraser configuration -->
@@ -246,6 +218,32 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- More configuration (Time Display) -->
+        <div id="more-config" class="config-panel">
+            <div class="config-group">
+                <label>时间显示</label>
+                <div class="button-size-options" style="grid-template-columns: 1fr;">
+                    <button id="toggle-time-display-btn" class="button-secondary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 5px;">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <span id="time-display-status">显示时间</span>
+                    </button>
+                </div>
+            </div>
+            <div class="config-group" id="time-display-options" style="display: none;">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-date-checkbox" checked>
+                    <span>显示日期</span>
+                </label>
+                <label class="checkbox-label" style="margin-top: 8px;">
+                    <input type="checkbox" id="show-time-checkbox" checked>
+                    <span>显示时间</span>
+                </label>
             </div>
         </div>
             </div>
@@ -591,6 +589,20 @@
                                 <span>显示时间和日期</span>
                             </label>
                             <p class="settings-hint">在右上角显示当前时间和日期</p>
+                        </div>
+                        <div class="settings-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="show-date-only-checkbox">
+                                <span>仅显示日期</span>
+                            </label>
+                            <p class="settings-hint">仅显示日期，不显示时间</p>
+                        </div>
+                        <div class="settings-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="show-time-only-checkbox">
+                                <span>仅显示时间</span>
+                            </label>
+                            <p class="settings-hint">仅显示时间，不显示日期</p>
                         </div>
                         <div class="settings-group">
                             <label>时间格式</label>

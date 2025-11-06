@@ -62,7 +62,12 @@ class ShapeInsertionManager {
         this.isDrawingShape = true;
         this.dragStart = { x, y };
         
-        // Create a temporary shape with minimal size
+        // Use current pen properties for shapes
+        const penColor = this.drawingEngine.currentColor;
+        const penSize = this.drawingEngine.penSize;
+        const penType = this.drawingEngine.penType;
+        
+        // Create a temporary shape with minimal size using pen properties
         const shapeObj = {
             type: this.defaultShapeType,
             x: x,
@@ -70,9 +75,10 @@ class ShapeInsertionManager {
             width: 0,
             height: 0,
             rotation: 0,
-            color: this.defaultColor,
-            fillColor: this.defaultFillColor,
-            strokeWidth: this.defaultStrokeWidth
+            color: penColor,
+            size: penSize,
+            penType: penType,
+            strokeWidth: penSize
         };
         
         this.shapeObjects.push(shapeObj);
@@ -92,25 +98,24 @@ class ShapeInsertionManager {
         const dx = currentX - this.dragStart.x;
         const dy = currentY - this.dragStart.y;
         
-        // Update shape center and size
-        shapeObj.x = this.dragStart.x + dx / 2;
-        shapeObj.y = this.dragStart.y + dy / 2;
-        shapeObj.width = Math.abs(dx);
-        shapeObj.height = Math.abs(dy);
-        
-        // For circles, use the maximum dimension
-        if (shapeObj.type === 'circle') {
-            const maxDim = Math.max(Math.abs(dx), Math.abs(dy));
-            shapeObj.width = maxDim;
-            shapeObj.height = maxDim;
-        }
-        
-        // For lines and arrows, calculate rotation based on drag direction
-        if (shapeObj.type === 'line' || shapeObj.type === 'arrow') {
+        if (shapeObj.type === 'line') {
+            // For lines: center stays at drag start, calculate length and rotation
+            const length = Math.sqrt(dx * dx + dy * dy);
             const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            
+            shapeObj.x = this.dragStart.x;
+            shapeObj.y = this.dragStart.y;
+            shapeObj.width = length;
+            shapeObj.height = 0;
             shapeObj.rotation = angle;
-            shapeObj.width = Math.sqrt(dx * dx + dy * dy);
-            shapeObj.height = 0; // Lines don't have height
+        } else if (shapeObj.type === 'rectangle') {
+            // For rectangles: dragStart is top-left, current is bottom-right
+            // Center is midpoint between dragStart and current
+            shapeObj.x = this.dragStart.x + dx / 2;
+            shapeObj.y = this.dragStart.y + dy / 2;
+            shapeObj.width = Math.abs(dx);
+            shapeObj.height = Math.abs(dy);
+            shapeObj.rotation = 0;
         }
         
         // Redraw canvas with the temporary shape
@@ -121,12 +126,12 @@ class ShapeInsertionManager {
     isShapeTooSmall(shapeObj) {
         if (!shapeObj) return true;
         
-        // Lines and arrows only need width check
-        if (shapeObj.type === 'line' || shapeObj.type === 'arrow') {
+        // Lines only need width check
+        if (shapeObj.type === 'line') {
             return shapeObj.width < this.MIN_SIZE;
         }
         
-        // Other shapes need both width and height checks
+        // Rectangles need both width and height checks
         return shapeObj.width < this.MIN_SIZE || shapeObj.height < this.MIN_SIZE;
     }
     
@@ -170,54 +175,47 @@ class ShapeInsertionManager {
         this.ctx.translate(shapeObj.x, shapeObj.y);
         this.ctx.rotate(shapeObj.rotation * Math.PI / 180);
         
-        // Set styles
+        // Set styles based on pen properties
         this.ctx.strokeStyle = shapeObj.color;
-        this.ctx.fillStyle = shapeObj.fillColor;
-        this.ctx.lineWidth = shapeObj.strokeWidth;
+        this.ctx.lineWidth = shapeObj.strokeWidth || shapeObj.size;
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
         
-        // Draw based on shape type
-        if (shapeObj.type === 'rectangle') {
-            this.ctx.fillRect(-shapeObj.width / 2, -shapeObj.height / 2, shapeObj.width, shapeObj.height);
-            this.ctx.strokeRect(-shapeObj.width / 2, -shapeObj.height / 2, shapeObj.width, shapeObj.height);
-        } else if (shapeObj.type === 'circle') {
-            const radius = Math.min(shapeObj.width, shapeObj.height) / 2;
-            this.ctx.beginPath();
-            this.ctx.arc(0, 0, radius, 0, Math.PI * 2);
-            this.ctx.fill();
-            this.ctx.stroke();
-        } else if (shapeObj.type === 'ellipse') {
-            this.ctx.beginPath();
-            this.ctx.ellipse(0, 0, shapeObj.width / 2, shapeObj.height / 2, 0, 0, Math.PI * 2);
-            this.ctx.fill();
-            this.ctx.stroke();
-        } else if (shapeObj.type === 'triangle') {
-            this.ctx.beginPath();
-            this.ctx.moveTo(0, -shapeObj.height / 2);
-            this.ctx.lineTo(shapeObj.width / 2, shapeObj.height / 2);
-            this.ctx.lineTo(-shapeObj.width / 2, shapeObj.height / 2);
-            this.ctx.closePath();
-            this.ctx.fill();
-            this.ctx.stroke();
-        } else if (shapeObj.type === 'line') {
+        // Apply pen type alpha based on penType
+        const penType = shapeObj.penType || 'normal';
+        switch(penType) {
+            case 'pencil':
+                this.ctx.globalAlpha = 0.7;
+                break;
+            case 'ballpoint':
+                this.ctx.globalAlpha = 0.9;
+                break;
+            case 'fountain':
+                this.ctx.globalAlpha = 1.0;
+                break;
+            case 'brush':
+                this.ctx.globalAlpha = 0.85;
+                this.ctx.lineWidth = (shapeObj.strokeWidth || shapeObj.size) * 1.5;
+                break;
+            case 'normal':
+            default:
+                this.ctx.globalAlpha = 1.0;
+                break;
+        }
+        
+        // Draw based on shape type (only line and rectangle now)
+        if (shapeObj.type === 'line') {
             this.ctx.beginPath();
             this.ctx.moveTo(-shapeObj.width / 2, 0);
             this.ctx.lineTo(shapeObj.width / 2, 0);
             this.ctx.stroke();
-        } else if (shapeObj.type === 'arrow') {
-            const headLength = 15;
-            const headWidth = 10;
-            this.ctx.beginPath();
-            this.ctx.moveTo(-shapeObj.width / 2, 0);
-            this.ctx.lineTo(shapeObj.width / 2 - headLength, 0);
-            this.ctx.stroke();
-            // Arrow head
-            this.ctx.beginPath();
-            this.ctx.moveTo(shapeObj.width / 2, 0);
-            this.ctx.lineTo(shapeObj.width / 2 - headLength, -headWidth);
-            this.ctx.lineTo(shapeObj.width / 2 - headLength, headWidth);
-            this.ctx.closePath();
-            this.ctx.fill();
+        } else if (shapeObj.type === 'rectangle') {
+            // Draw rectangle outline only (no fill)
+            this.ctx.strokeRect(-shapeObj.width / 2, -shapeObj.height / 2, shapeObj.width, shapeObj.height);
         }
+        
+        this.ctx.restore();
+    }
         
         this.ctx.restore();
     }
@@ -286,19 +284,15 @@ class ShapeInsertionManager {
             const localY = dx * sin + dy * cos;
             
             // Check if point is inside shape bounds
-            if (shapeObj.type === 'circle') {
-                const radius = Math.min(shapeObj.width, shapeObj.height) / 2;
-                if (Math.sqrt(localX * localX + localY * localY) <= radius + 5) {
+            if (shapeObj.type === 'line') {
+                // For lines, check if point is close to the line segment
+                const threshold = (shapeObj.strokeWidth || shapeObj.size || 5) + 5;
+                if (localX >= -shapeObj.width / 2 - threshold && localX <= shapeObj.width / 2 + threshold && 
+                    Math.abs(localY) <= threshold) {
                     return i;
                 }
-            } else if (shapeObj.type === 'ellipse') {
-                const rx = shapeObj.width / 2;
-                const ry = shapeObj.height / 2;
-                if ((localX * localX) / (rx * rx) + (localY * localY) / (ry * ry) <= 1.1) {
-                    return i;
-                }
-            } else {
-                // Rectangle, triangle, line, arrow
+            } else if (shapeObj.type === 'rectangle') {
+                // For rectangles, check bounds
                 if (localX >= -shapeObj.width / 2 - 5 && localX <= shapeObj.width / 2 + 5 && 
                     localY >= -shapeObj.height / 2 - 5 && localY <= shapeObj.height / 2 + 5) {
                     return i;
@@ -573,33 +567,5 @@ class ShapeInsertionManager {
     // Set default shape properties from UI
     setShapeType(type) {
         this.defaultShapeType = type;
-    }
-    
-    setShapeColor(color) {
-        this.defaultColor = color;
-        // Update fill color with transparency
-        const rgb = this.hexToRgb(color);
-        this.defaultFillColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`;
-        
-        // If a shape is selected, update its colors
-        if (this.selectedShapeIndex !== null && this.selectedShapeIndex >= 0) {
-            const shapeObj = this.shapeObjects[this.selectedShapeIndex];
-            shapeObj.color = color;
-            shapeObj.fillColor = this.defaultFillColor;
-            this.redrawCanvas();
-            if (this.historyManager) {
-                this.historyManager.saveState();
-            }
-        }
-    }
-    
-    // Helper to convert hex to RGB
-    hexToRgb(hex) {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16)
-        } : { r: 0, g: 122, b: 255 };
     }
 }
