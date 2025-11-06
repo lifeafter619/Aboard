@@ -2,7 +2,8 @@
 // Handles the time and date display feature
 
 class TimeDisplayManager {
-    constructor() {
+    constructor(settingsManager) {
+        this.settingsManager = settingsManager;
         this.timeDisplayElement = document.getElementById('time-display');
         this.timeFullscreenModal = document.getElementById('time-fullscreen-modal');
         this.timeFullscreenContent = document.getElementById('time-fullscreen-content');
@@ -31,6 +32,18 @@ class TimeDisplayManager {
         
         this.applySettings();
         this.setupFullscreenListeners();
+        this.updatePosition();
+    }
+    
+    updatePosition() {
+        // Get the control position from settings manager
+        const position = this.settingsManager ? this.settingsManager.controlPosition : 'top-right';
+        
+        // Remove all position classes
+        this.timeDisplayElement.classList.remove('top-right', 'top-left', 'bottom-right', 'bottom-left');
+        
+        // Add the current position class
+        this.timeDisplayElement.classList.add(position);
     }
     
     toggle() {

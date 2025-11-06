@@ -240,6 +240,58 @@ body {
     align-items: flex-start;
 }
 
+/* Feature buttons grid for "More" panel */
+.more-features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.feature-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 12px;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #666;
+    font-size: 13px;
+    font-weight: 500;
+    min-height: 90px;
+}
+
+.feature-btn:hover {
+    background-color: #f0f0f0;
+    border-color: var(--theme-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.feature-btn.active {
+    background-color: var(--theme-color);
+    color: #ffffff;
+    border-color: var(--theme-color);
+}
+
+.feature-btn.active svg {
+    stroke: #ffffff;
+}
+
+.feature-btn svg {
+    flex-shrink: 0;
+}
+
+.feature-btn span {
+    text-align: center;
+    line-height: 1.3;
+}
+
 .config-group {
     display: flex;
     flex-direction: column;
@@ -697,6 +749,56 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
+}
+
+.settings-group.collapsible {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
+    background: #fafafa;
+}
+
+.settings-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.collapse-toggle {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.collapse-toggle svg {
+    width: 12px;
+    height: 12px;
+}
+
+.settings-group.collapsed .collapse-toggle {
+    transform: rotate(-90deg);
+}
+
+.settings-group-content {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    overflow: hidden;
+}
+
+.settings-group.collapsed .settings-group-content {
+    max-height: 0 !important;
+    opacity: 0;
+    margin-top: 0;
 }
 
 .settings-group label {
@@ -2051,6 +2153,36 @@ body {
     z-index: 900;
     pointer-events: none;
     user-select: none;
+    transition: top 0.3s ease, right 0.3s ease, bottom 0.3s ease, left 0.3s ease;
+}
+
+/* Time display positions */
+#time-display.top-right {
+    top: 140px;
+    right: 20px;
+    bottom: auto;
+    left: auto;
+}
+
+#time-display.top-left {
+    top: 140px;
+    left: 20px;
+    bottom: auto;
+    right: auto;
+}
+
+#time-display.bottom-right {
+    top: auto;
+    right: 20px;
+    bottom: 100px;
+    left: auto;
+}
+
+#time-display.bottom-left {
+    top: auto;
+    left: 20px;
+    bottom: 100px;
+    right: auto;
 }
 
 #time-display.show {

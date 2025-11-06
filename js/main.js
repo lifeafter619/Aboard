@@ -16,13 +16,14 @@ class DrawingBoard {
         this.eraserCursor = document.getElementById('eraser-cursor');
         
         // Initialize modules
+        this.settingsManager = new SettingsManager();
         this.drawingEngine = new DrawingEngine(this.canvas, this.ctx);
         this.historyManager = new HistoryManager(this.canvas, this.ctx);
         this.backgroundManager = new BackgroundManager(this.bgCanvas, this.bgCtx);
         this.imageControls = new ImageControls(this.backgroundManager);
         this.strokeControls = new StrokeControls(this.drawingEngine, this.canvas, this.ctx, this.historyManager);
-        this.timeDisplayManager = new TimeDisplayManager();
-        this.settingsManager = new SettingsManager();
+        this.timeDisplayManager = new TimeDisplayManager(this.settingsManager);
+        this.collapsibleManager = new CollapsibleManager();
         this.announcementManager = new AnnouncementManager();
         this.exportManager = new ExportManager(this.canvas, this.bgCanvas);
         
@@ -544,10 +545,40 @@ class DrawingBoard {
         const showDateCheckboxMore = document.getElementById('show-date-checkbox-more');
         const showTimeCheckboxMore = document.getElementById('show-time-checkbox-more');
         
+        // Time Display Feature Button
+        const timeDisplayFeatureBtn = document.getElementById('time-display-feature-btn');
+        const timeDisplayControls = document.getElementById('time-display-controls');
+        
+        if (timeDisplayFeatureBtn && timeDisplayControls) {
+            timeDisplayFeatureBtn.addEventListener('click', () => {
+                // Toggle the time display controls visibility
+                const isVisible = timeDisplayControls.style.display !== 'none';
+                if (isVisible) {
+                    timeDisplayControls.style.display = 'none';
+                    timeDisplayFeatureBtn.classList.remove('active');
+                } else {
+                    timeDisplayControls.style.display = 'flex';
+                    timeDisplayFeatureBtn.classList.add('active');
+                    // Refresh collapsible groups after showing new content
+                    if (this.collapsibleManager) {
+                        setTimeout(() => this.collapsibleManager.refreshAll(), 50);
+                    }
+                }
+            });
+        }
+        
         // Load initial checkbox states
         if (showDateCheckboxMore && showTimeCheckboxMore) {
             showDateCheckboxMore.checked = this.timeDisplayManager.showDate;
             showTimeCheckboxMore.checked = this.timeDisplayManager.showTime;
+            
+            // Set initial button state based on whether time display is enabled
+            if (timeDisplayFeatureBtn) {
+                if (this.timeDisplayManager.enabled) {
+                    timeDisplayFeatureBtn.classList.add('active');
+                    timeDisplayControls.style.display = 'flex';
+                }
+            }
             
             // Update visibility based on initial state
             if (showDateCheckboxMore.checked || showTimeCheckboxMore.checked) {
@@ -621,7 +652,7 @@ class DrawingBoard {
         
         document.querySelectorAll('.position-option-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.settingsManager.setControlPosition(e.target.dataset.position);
+                this.settingsManager.setControlPosition(e.target.dataset.position, this.timeDisplayManager);
             });
         });
         

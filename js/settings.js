@@ -160,7 +160,7 @@ class SettingsManager {
         localStorage.setItem('configScale', this.configScale);
     }
     
-    setControlPosition(position) {
+    setControlPosition(position, timeDisplayManager = null) {
         this.controlPosition = position;
         localStorage.setItem('controlPosition', position);
         
@@ -182,6 +182,11 @@ class SettingsManager {
                 btn.classList.add('active');
             }
         });
+        
+        // Update time display position if manager is provided
+        if (timeDisplayManager) {
+            timeDisplayManager.updatePosition();
+        }
     }
     
     loadSettings() {

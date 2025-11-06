@@ -187,10 +187,24 @@
             </div>
         </div>
 
-        <!-- More configuration (Time Display) -->
+        <!-- More configuration (Feature Buttons) -->
         <div id="more-config" class="config-panel">
             <div class="config-group">
-                <label>时间显示</label>
+                <label>小功能</label>
+                <div class="more-features-grid">
+                    <button id="time-display-feature-btn" class="feature-btn" title="时间显示">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <span>时间显示</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Time Display Controls (hidden by default, shown when button clicked) -->
+            <div id="time-display-controls" class="config-group" style="display: none;">
+                <label>时间显示选项</label>
                 <label class="checkbox-label">
                     <input type="checkbox" id="show-date-checkbox-more">
                     <span>显示日期</span>
@@ -823,6 +837,7 @@
     <script src="js/background.js"></script>
     <script src="js/image-controls.js"></script>
     <script src="js/stroke-controls.js"></script>
+    <script src="js/collapsible.js"></script>
     <script src="js/time-display.js"></script>
     <script src="js/settings.js"></script>
     <script src="js/announcement.js"></script>
