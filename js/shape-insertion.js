@@ -23,6 +23,7 @@ class ShapeInsertionManager {
         this.isDragging = false;
         this.isResizing = false;
         this.isRotating = false;
+        this.isDrawingShape = false; // New state for drag-to-insert
         this.dragStart = { x: 0, y: 0 };
         this.resizeHandle = null;
         this.resizeStartSize = { width: 100, height: 100 };
@@ -54,16 +55,20 @@ class ShapeInsertionManager {
         return { x, y };
     }
     
-    // Insert shape at mouse position
-    insertShape(e) {
+    // Start drawing a new shape with drag-to-insert
+    startDrawingShape(e) {
         const { x, y } = this.transformMouseCoords(e);
         
+        this.isDrawingShape = true;
+        this.dragStart = { x, y };
+        
+        // Create a temporary shape with minimal size
         const shapeObj = {
             type: this.defaultShapeType,
             x: x,
             y: y,
-            width: this.defaultSize,
-            height: this.defaultSize,
+            width: 0,
+            height: 0,
             rotation: 0,
             color: this.defaultColor,
             fillColor: this.defaultFillColor,
@@ -71,17 +76,83 @@ class ShapeInsertionManager {
         };
         
         this.shapeObjects.push(shapeObj);
-        
-        // Auto-select the newly inserted shape
         this.selectedShapeIndex = this.shapeObjects.length - 1;
+    }
+    
+    // Continue drawing shape as user drags
+    continueDrawingShape(e) {
+        if (!this.isDrawingShape) return;
         
-        // Render shape immediately
-        this.drawAllShapes();
-        this.drawShapeSelection();
+        const { x: currentX, y: currentY } = this.transformMouseCoords(e);
+        const shapeObj = this.shapeObjects[this.selectedShapeIndex];
         
-        if (this.historyManager) {
+        if (!shapeObj) return;
+        
+        // Calculate dimensions based on drag
+        const dx = currentX - this.dragStart.x;
+        const dy = currentY - this.dragStart.y;
+        
+        // Update shape center and size
+        shapeObj.x = this.dragStart.x + dx / 2;
+        shapeObj.y = this.dragStart.y + dy / 2;
+        shapeObj.width = Math.abs(dx);
+        shapeObj.height = Math.abs(dy);
+        
+        // For circles, use the maximum dimension
+        if (shapeObj.type === 'circle') {
+            const maxDim = Math.max(Math.abs(dx), Math.abs(dy));
+            shapeObj.width = maxDim;
+            shapeObj.height = maxDim;
+        }
+        
+        // For lines and arrows, calculate rotation based on drag direction
+        if (shapeObj.type === 'line' || shapeObj.type === 'arrow') {
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            shapeObj.rotation = angle;
+            shapeObj.width = Math.sqrt(dx * dx + dy * dy);
+            shapeObj.height = 0; // Lines don't have height
+        }
+        
+        // Redraw canvas with the temporary shape
+        this.redrawCanvas();
+    }
+    
+    // Helper method to check if shape is too small
+    isShapeTooSmall(shapeObj) {
+        if (!shapeObj) return true;
+        
+        // Lines and arrows only need width check
+        if (shapeObj.type === 'line' || shapeObj.type === 'arrow') {
+            return shapeObj.width < this.MIN_SIZE;
+        }
+        
+        // Other shapes need both width and height checks
+        return shapeObj.width < this.MIN_SIZE || shapeObj.height < this.MIN_SIZE;
+    }
+    
+    // Finish drawing shape
+    finishDrawingShape() {
+        if (!this.isDrawingShape) return;
+        
+        this.isDrawingShape = false;
+        
+        const shapeObj = this.shapeObjects[this.selectedShapeIndex];
+        
+        // If shape is too small, remove it
+        if (this.isShapeTooSmall(shapeObj)) {
+            this.shapeObjects.splice(this.selectedShapeIndex, 1);
+            this.selectedShapeIndex = null;
+        } else if (this.historyManager) {
             this.historyManager.saveState();
         }
+        
+        this.redrawCanvas();
+    }
+    
+    // Insert shape at mouse position (old method - now deprecated in favor of drag-to-insert)
+    insertShape(e) {
+        // This method is now just initiating the drag-to-insert process
+        this.startDrawingShape(e);
     }
     
     // Draw all shape objects

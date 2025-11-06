@@ -2035,3 +2035,68 @@ body {
     gap: 12px;
 }
 
+/* Time Display Styles */
+#time-display {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    z-index: 900;
+    pointer-events: none;
+    user-select: none;
+}
+
+#time-display.show {
+    display: block !important;
+}
+
+.time-line {
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+/* Format Select Styles */
+.format-select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    background-color: white;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.format-select:hover {
+    border-color: #999;
+}
+
+.format-select:focus {
+    border-color: var(--theme-color, #007AFF);
+}
+
+/* Size Input Styles */
+.size-input {
+    width: 70px;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.size-input:hover {
+    border-color: #999;
+}
+
+.size-input:focus {
+    border-color: var(--theme-color, #007AFF);
+}
+

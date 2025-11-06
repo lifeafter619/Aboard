@@ -23,6 +23,7 @@ class DrawingBoard {
         this.strokeControls = new StrokeControls(this.drawingEngine, this.canvas, this.ctx, this.historyManager);
         this.selectionManager = new SelectionManager(this.canvas, this.ctx, this.drawingEngine, this.strokeControls);
         this.shapeInsertionManager = new ShapeInsertionManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
+        this.timeDisplayManager = new TimeDisplayManager();
         this.settingsManager = new SettingsManager();
         this.announcementManager = new AnnouncementManager();
         this.exportManager = new ExportManager(this.canvas, this.bgCanvas);
@@ -153,6 +154,9 @@ class DrawingBoard {
         if (this.shapeInsertionManager) {
             this.shapeInsertionManager.redrawCanvas();
         }
+        
+        // Re-center the canvas after resize
+        this.centerCanvas();
     }
     
     setupEventListeners() {
@@ -262,6 +266,8 @@ class DrawingBoard {
         document.addEventListener('mousemove', (e) => {
             if (this.isDraggingCoordinateOrigin) {
                 this.dragCoordinateOrigin(e);
+            } else if (this.shapeInsertionManager.isDrawingShape) {
+                this.shapeInsertionManager.continueDrawingShape(e);
             } else if (this.shapeInsertionManager.isDragging || this.shapeInsertionManager.isResizing || this.shapeInsertionManager.isRotating) {
                 this.shapeInsertionManager.dragShape(e);
             } else if (this.drawingEngine.isPanning) {
@@ -277,6 +283,9 @@ class DrawingBoard {
         
         document.addEventListener('mouseup', () => {
             this.stopDraggingCoordinateOrigin();
+            if (this.shapeInsertionManager.isDrawingShape) {
+                this.shapeInsertionManager.finishDrawingShape();
+            }
             this.shapeInsertionManager.stopDrag();
             this.handleDrawingComplete();
             this.drawingEngine.stopPanning();
@@ -344,6 +353,7 @@ class DrawingBoard {
         document.getElementById('background-btn').addEventListener('click', () => this.setTool('background'));
         document.getElementById('clear-btn').addEventListener('click', () => this.confirmClear());
         document.getElementById('settings-btn').addEventListener('click', () => this.openSettings());
+        document.getElementById('more-btn').addEventListener('click', () => this.timeDisplayManager.toggle());
         
         document.getElementById('config-close-btn').addEventListener('click', () => this.closeConfigPanel());
         
@@ -798,6 +808,80 @@ class DrawingBoard {
             }
         });
         
+        // Time display settings
+        document.getElementById('show-time-display-checkbox').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                this.timeDisplayManager.show();
+            } else {
+                this.timeDisplayManager.hide();
+            }
+        });
+        
+        document.getElementById('time-format-select').addEventListener('change', (e) => {
+            this.timeDisplayManager.setTimeFormat(e.target.value);
+        });
+        
+        document.getElementById('date-format-select').addEventListener('change', (e) => {
+            this.timeDisplayManager.setDateFormat(e.target.value);
+        });
+        
+        // Time color buttons
+        document.querySelectorAll('.color-btn[data-time-color]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.timeDisplayManager.setColor(e.target.dataset.timeColor);
+                document.querySelectorAll('.color-btn[data-time-color]').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
+        
+        const customTimeColorPicker = document.getElementById('custom-time-color-picker');
+        customTimeColorPicker.addEventListener('input', (e) => {
+            this.timeDisplayManager.setColor(e.target.value);
+            document.querySelectorAll('.color-btn[data-time-color]').forEach(b => b.classList.remove('active'));
+        });
+        
+        // Font size slider and input
+        const timeFontSizeSlider = document.getElementById('time-font-size-slider');
+        const timeFontSizeValue = document.getElementById('time-font-size-value');
+        const timeFontSizeInput = document.getElementById('time-font-size-input');
+        
+        timeFontSizeSlider.addEventListener('input', (e) => {
+            const size = parseInt(e.target.value);
+            timeFontSizeValue.textContent = size;
+            timeFontSizeInput.value = size;
+            this.timeDisplayManager.setFontSize(size);
+        });
+        
+        timeFontSizeInput.addEventListener('change', (e) => {
+            const size = parseInt(e.target.value);
+            if (size >= 12 && size <= 48) {
+                timeFontSizeValue.textContent = size;
+                timeFontSizeSlider.value = size;
+                this.timeDisplayManager.setFontSize(size);
+            }
+        });
+        
+        // Opacity slider and input
+        const timeOpacitySlider = document.getElementById('time-opacity-slider');
+        const timeOpacityValue = document.getElementById('time-opacity-value');
+        const timeOpacityInput = document.getElementById('time-opacity-input');
+        
+        timeOpacitySlider.addEventListener('input', (e) => {
+            const opacity = parseInt(e.target.value);
+            timeOpacityValue.textContent = opacity;
+            timeOpacityInput.value = opacity;
+            this.timeDisplayManager.setOpacity(opacity);
+        });
+        
+        timeOpacityInput.addEventListener('change', (e) => {
+            const opacity = parseInt(e.target.value);
+            if (opacity >= 10 && opacity <= 100) {
+                timeOpacityValue.textContent = opacity;
+                timeOpacitySlider.value = opacity;
+                this.timeDisplayManager.setOpacity(opacity);
+            }
+        });
+        
         // Confirm modal
         document.getElementById('confirm-cancel-btn').addEventListener('click', () => {
             document.getElementById('confirm-modal').classList.remove('show');
@@ -1076,6 +1160,18 @@ class DrawingBoard {
     
     openSettings() {
         document.getElementById('settings-modal').classList.add('show');
+        
+        // Update time display settings UI with current values
+        document.getElementById('show-time-display-checkbox').checked = this.timeDisplayManager.enabled;
+        document.getElementById('time-format-select').value = this.timeDisplayManager.timeFormat;
+        document.getElementById('date-format-select').value = this.timeDisplayManager.dateFormat;
+        document.getElementById('time-font-size-slider').value = this.timeDisplayManager.fontSize;
+        document.getElementById('time-font-size-value').textContent = this.timeDisplayManager.fontSize;
+        document.getElementById('time-font-size-input').value = this.timeDisplayManager.fontSize;
+        document.getElementById('time-opacity-slider').value = this.timeDisplayManager.opacity;
+        document.getElementById('time-opacity-value').textContent = this.timeDisplayManager.opacity;
+        document.getElementById('time-opacity-input').value = this.timeDisplayManager.opacity;
+        document.getElementById('custom-time-color-picker').value = this.timeDisplayManager.color;
     }
     
     closeSettings() {

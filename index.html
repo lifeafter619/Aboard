@@ -164,7 +164,7 @@
                     <input type="color" id="custom-shape-color-picker" class="custom-color-picker-input" value="#007AFF">
                 </label>
             </div>
-            <p class="settings-hint">点击画布插入形状，可拖动、旋转、调整大小</p>
+            <p class="settings-hint">按住并拖动鼠标来绘制形状，松开鼠标完成绘制</p>
         </div>
 
         <!-- Eraser configuration -->
@@ -329,6 +329,14 @@
                             <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                         </svg>
                         <span>公告</span>
+                    </button>
+                    <button class="settings-tab-icon" data-tab="more" title="更多">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="1"></circle>
+                            <circle cx="12" cy="5" r="1"></circle>
+                            <circle cx="12" cy="19" r="1"></circle>
+                        </svg>
+                        <span>更多</span>
                     </button>
                 </div>
                 
@@ -573,6 +581,77 @@
                             <div id="settings-announcement-content" class="settings-announcement-content"></div>
                         </div>
                     </div>
+                    
+                    <!-- More settings -->
+                    <div id="more-settings" class="settings-tab-content">
+                        <h3>更多设置</h3>
+                        <div class="settings-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="show-time-display-checkbox">
+                                <span>显示时间和日期</span>
+                            </label>
+                            <p class="settings-hint">在右上角显示当前时间和日期</p>
+                        </div>
+                        <div class="settings-group">
+                            <label>时间格式</label>
+                            <p class="settings-hint">选择时间的显示格式</p>
+                            <select id="time-format-select" class="format-select">
+                                <option value="12h">12小时制 (上午/下午)</option>
+                                <option value="24h">24小时制</option>
+                            </select>
+                        </div>
+                        <div class="settings-group">
+                            <label>日期格式</label>
+                            <p class="settings-hint">选择日期的显示格式</p>
+                            <select id="date-format-select" class="format-select">
+                                <option value="yyyy-mm-dd">年-月-日 (2024-01-01)</option>
+                                <option value="mm-dd-yyyy">月-日-年 (01-01-2024)</option>
+                                <option value="dd-mm-yyyy">日-月-年 (01-01-2024)</option>
+                                <option value="chinese">中文 (2024年1月1日)</option>
+                            </select>
+                        </div>
+                        <div class="settings-group">
+                            <label>字体颜色</label>
+                            <p class="settings-hint">选择时间显示的颜色</p>
+                            <div class="color-picker-row">
+                                <div class="color-picker-main">
+                                    <button class="color-btn active" data-time-color="#000000" style="background-color: #000000;" title="黑色"></button>
+                                    <button class="color-btn" data-time-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="白色"></button>
+                                    <button class="color-btn" data-time-color="#007AFF" style="background-color: #007AFF;" title="蓝色"></button>
+                                    <button class="color-btn" data-time-color="#FF0000" style="background-color: #FF0000;" title="红色"></button>
+                                </div>
+                                <div class="color-picker-main">
+                                    <button class="color-btn" data-time-color="#00FF00" style="background-color: #00FF00;" title="绿色"></button>
+                                    <button class="color-btn" data-time-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="黄色"></button>
+                                    <button class="color-btn" data-time-color="#FF8800" style="background-color: #FF8800;" title="橙色"></button>
+                                    <button class="color-btn" data-time-color="#8800FF" style="background-color: #8800FF;" title="紫色"></button>
+                                </div>
+                            </div>
+                            <label class="color-picker-icon-btn" for="custom-time-color-picker" title="自定义颜色" style="margin-top: 8px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
+                                    <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
+                                </svg>
+                                <input type="color" id="custom-time-color-picker" class="custom-color-picker-input" value="#000000">
+                            </label>
+                        </div>
+                        <div class="settings-group">
+                            <label>字体大小 <span id="time-font-size-value">16</span>px</label>
+                            <p class="settings-hint">调整时间显示的字体大小</p>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="range" id="time-font-size-slider" min="12" max="48" value="16" class="slider" style="flex: 1;">
+                                <input type="number" id="time-font-size-input" min="12" max="48" value="16" class="size-input">
+                            </div>
+                        </div>
+                        <div class="settings-group">
+                            <label>透明度 <span id="time-opacity-value">100</span>%</label>
+                            <p class="settings-hint">调整时间显示的透明度</p>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="range" id="time-opacity-slider" min="10" max="100" value="100" class="slider" style="flex: 1;">
+                                <input type="number" id="time-opacity-input" min="10" max="100" value="100" class="size-input">
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -688,7 +767,18 @@
             </svg>
             <span>设置</span>
         </button>
+        <button id="more-btn" class="tool-btn" data-tool="more" title="更多">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="1"></circle>
+                <circle cx="12" cy="5" r="1"></circle>
+                <circle cx="12" cy="19" r="1"></circle>
+            </svg>
+            <span>更多</span>
+        </button>
     </div>
+
+    <!-- Time Display (for More feature) -->
+    <div id="time-display" style="display: none;"></div>
 
     <script src="js/drawing.js"></script>
     <script src="js/history.js"></script>
@@ -697,6 +787,7 @@
     <script src="js/stroke-controls.js"></script>
     <script src="js/selection.js"></script>
     <script src="js/shape-insertion.js"></script>
+    <script src="js/time-display.js"></script>
     <script src="js/settings.js"></script>
     <script src="js/announcement.js"></script>
     <script src="js/export.js"></script>

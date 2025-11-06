@@ -36,8 +36,12 @@ class SelectionManager {
         // Adjust coordinates for canvas scale
         const scaleX = this.canvas.offsetWidth / rect.width;
         const scaleY = this.canvas.offsetHeight / rect.height;
-        const adjustedX = x * scaleX;
-        const adjustedY = y * scaleY;
+        let adjustedX = x * scaleX;
+        let adjustedY = y * scaleY;
+        
+        // Transform to canvas coordinate space (account for pan and zoom)
+        adjustedX = (adjustedX - this.drawingEngine.panOffset.x) / this.drawingEngine.canvasScale;
+        adjustedY = (adjustedY - this.drawingEngine.panOffset.y) / this.drawingEngine.canvasScale;
         
         // Check if clicked on a stroke
         const strokeIndex = this.drawingEngine.findStrokeAtPoint(adjustedX, adjustedY);
