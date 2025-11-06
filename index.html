@@ -609,54 +609,58 @@
                             </select>
                         </div>
                         <div class="settings-group" id="time-color-settings" style="display: none;">
-                            <label>字体颜色</label>
-                            <p class="settings-hint">选择时间显示的颜色</p>
-                            <div class="color-picker-row">
-                                <div class="color-picker-main">
-                                    <button class="color-btn active" data-time-color="#000000" style="background-color: #000000;" title="黑色"></button>
-                                    <button class="color-btn" data-time-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="白色"></button>
-                                    <button class="color-btn" data-time-color="#007AFF" style="background-color: #007AFF;" title="蓝色"></button>
-                                    <button class="color-btn" data-time-color="#FF0000" style="background-color: #FF0000;" title="红色"></button>
+                            <label>颜色设置</label>
+                            <p class="settings-hint">设置时间显示的字体和背景颜色</p>
+                            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                                <div style="flex: 1; min-width: 200px;">
+                                    <label style="font-size: 11px; color: #666; display: block; margin-bottom: 8px;">字体颜色</label>
+                                    <div class="color-picker-row">
+                                        <div class="color-picker-main">
+                                            <button class="color-btn active" data-time-color="#000000" style="background-color: #000000;" title="黑色"></button>
+                                            <button class="color-btn" data-time-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="白色"></button>
+                                            <button class="color-btn" data-time-color="#007AFF" style="background-color: #007AFF;" title="蓝色"></button>
+                                            <button class="color-btn" data-time-color="#FF0000" style="background-color: #FF0000;" title="红色"></button>
+                                        </div>
+                                        <div class="color-picker-main">
+                                            <button class="color-btn" data-time-color="#00FF00" style="background-color: #00FF00;" title="绿色"></button>
+                                            <button class="color-btn" data-time-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="黄色"></button>
+                                            <button class="color-btn" data-time-color="#FF8800" style="background-color: #FF8800;" title="橙色"></button>
+                                            <button class="color-btn" data-time-color="#8800FF" style="background-color: #8800FF;" title="紫色"></button>
+                                        </div>
+                                    </div>
+                                    <label class="color-picker-icon-btn" for="custom-time-color-picker" title="自定义颜色" style="margin-top: 8px;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
+                                            <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
+                                        </svg>
+                                        <input type="color" id="custom-time-color-picker" class="custom-color-picker-input" value="#000000">
+                                    </label>
                                 </div>
-                                <div class="color-picker-main">
-                                    <button class="color-btn" data-time-color="#00FF00" style="background-color: #00FF00;" title="绿色"></button>
-                                    <button class="color-btn" data-time-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="黄色"></button>
-                                    <button class="color-btn" data-time-color="#FF8800" style="background-color: #FF8800;" title="橙色"></button>
-                                    <button class="color-btn" data-time-color="#8800FF" style="background-color: #8800FF;" title="紫色"></button>
+                                <div style="flex: 1; min-width: 200px;">
+                                    <label style="font-size: 11px; color: #666; display: block; margin-bottom: 8px;">背景颜色</label>
+                                    <div class="color-picker-row">
+                                        <div class="color-picker-main">
+                                            <button class="color-btn" data-time-bg-color="transparent" style="background: linear-gradient(135deg, #fff 45%, #f00 45%, #f00 55%, #fff 55%); border: 1px solid #ccc;" title="透明"></button>
+                                            <button class="color-btn active" data-time-bg-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="白色"></button>
+                                            <button class="color-btn" data-time-bg-color="#000000" style="background-color: #000000;" title="黑色"></button>
+                                            <button class="color-btn" data-time-bg-color="#007AFF" style="background-color: #007AFF;" title="蓝色"></button>
+                                        </div>
+                                        <div class="color-picker-main">
+                                            <button class="color-btn" data-time-bg-color="#FF0000" style="background-color: #FF0000;" title="红色"></button>
+                                            <button class="color-btn" data-time-bg-color="#00FF00" style="background-color: #00FF00;" title="绿色"></button>
+                                            <button class="color-btn" data-time-bg-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="黄色"></button>
+                                            <button class="color-btn" data-time-bg-color="#8800FF" style="background-color: #8800FF;" title="紫色"></button>
+                                        </div>
+                                    </div>
+                                    <label class="color-picker-icon-btn" for="custom-time-bg-color-picker" title="自定义颜色" style="margin-top: 8px;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
+                                            <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
+                                        </svg>
+                                        <input type="color" id="custom-time-bg-color-picker" class="custom-color-picker-input" value="#FFFFFF">
+                                    </label>
                                 </div>
                             </div>
-                            <label class="color-picker-icon-btn" for="custom-time-color-picker" title="自定义颜色" style="margin-top: 8px;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
-                                    <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
-                                </svg>
-                                <input type="color" id="custom-time-color-picker" class="custom-color-picker-input" value="#000000">
-                            </label>
-                        </div>
-                        <div class="settings-group" id="time-bg-color-settings" style="display: none;">
-                            <label>背景颜色</label>
-                            <p class="settings-hint">选择时间显示的背景颜色</p>
-                            <div class="color-picker-row">
-                                <div class="color-picker-main">
-                                    <button class="color-btn" data-time-bg-color="transparent" style="background: linear-gradient(135deg, #fff 45%, #f00 45%, #f00 55%, #fff 55%); border: 1px solid #ccc;" title="透明"></button>
-                                    <button class="color-btn active" data-time-bg-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="白色"></button>
-                                    <button class="color-btn" data-time-bg-color="#000000" style="background-color: #000000;" title="黑色"></button>
-                                    <button class="color-btn" data-time-bg-color="#007AFF" style="background-color: #007AFF;" title="蓝色"></button>
-                                </div>
-                                <div class="color-picker-main">
-                                    <button class="color-btn" data-time-bg-color="#FF0000" style="background-color: #FF0000;" title="红色"></button>
-                                    <button class="color-btn" data-time-bg-color="#00FF00" style="background-color: #00FF00;" title="绿色"></button>
-                                    <button class="color-btn" data-time-bg-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="黄色"></button>
-                                    <button class="color-btn" data-time-bg-color="#8800FF" style="background-color: #8800FF;" title="紫色"></button>
-                                </div>
-                            </div>
-                            <label class="color-picker-icon-btn" for="custom-time-bg-color-picker" title="自定义颜色" style="margin-top: 8px;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
-                                    <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
-                                </svg>
-                                <input type="color" id="custom-time-bg-color-picker" class="custom-color-picker-input" value="#FFFFFF">
-                            </label>
                         </div>
                         <div class="settings-group" id="time-font-size-settings" style="display: none;">
                             <label>字体大小 <span id="time-font-size-value">16</span>px</label>
@@ -676,10 +680,18 @@
                         </div>
                         <div class="settings-group" id="time-fullscreen-settings" style="display: none;">
                             <label class="checkbox-label">
-                                <input type="checkbox" id="time-fullscreen-enabled-checkbox">
+                                <input type="checkbox" id="time-fullscreen-enabled-checkbox" checked>
                                 <span>启用双击全屏</span>
                             </label>
                             <p class="settings-hint">双击时间窗口可全屏显示时间</p>
+                        </div>
+                        <div class="settings-group" id="time-fullscreen-font-size-settings" style="display: none;">
+                            <label>全屏字体大小 <span id="time-fullscreen-font-size-value">15</span>%</label>
+                            <p class="settings-hint">调整全屏时间显示的字体大小</p>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="range" id="time-fullscreen-font-size-slider" min="8" max="25" value="15" class="slider" style="flex: 1;">
+                                <input type="number" id="time-fullscreen-font-size-input" min="8" max="25" value="15" class="size-input">
+                            </div>
                         </div>
                     </div>
                 </div>

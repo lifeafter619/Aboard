@@ -758,10 +758,10 @@ class DrawingBoard {
             const timeFormatSettings = document.getElementById('time-format-settings');
             const dateFormatSettings = document.getElementById('date-format-settings');
             const timeColorSettings = document.getElementById('time-color-settings');
-            const timeBgColorSettings = document.getElementById('time-bg-color-settings');
             const timeFontSizeSettings = document.getElementById('time-font-size-settings');
             const timeOpacitySettings = document.getElementById('time-opacity-settings');
             const timeFullscreenSettings = document.getElementById('time-fullscreen-settings');
+            const timeFullscreenFontSizeSettings = document.getElementById('time-fullscreen-font-size-settings');
             
             if (e.target.checked) {
                 this.timeDisplayManager.show();
@@ -770,10 +770,10 @@ class DrawingBoard {
                 timeFormatSettings.style.display = 'flex';
                 dateFormatSettings.style.display = 'flex';
                 timeColorSettings.style.display = 'flex';
-                timeBgColorSettings.style.display = 'flex';
                 timeFontSizeSettings.style.display = 'flex';
                 timeOpacitySettings.style.display = 'flex';
                 timeFullscreenSettings.style.display = 'flex';
+                timeFullscreenFontSizeSettings.style.display = 'flex';
             } else {
                 this.timeDisplayManager.hide();
                 timeDisplaySettings.style.display = 'none';
@@ -781,10 +781,10 @@ class DrawingBoard {
                 timeFormatSettings.style.display = 'none';
                 dateFormatSettings.style.display = 'none';
                 timeColorSettings.style.display = 'none';
-                timeBgColorSettings.style.display = 'none';
                 timeFontSizeSettings.style.display = 'none';
                 timeOpacitySettings.style.display = 'none';
                 timeFullscreenSettings.style.display = 'none';
+                timeFullscreenFontSizeSettings.style.display = 'none';
             }
         });
         
@@ -859,6 +859,29 @@ class DrawingBoard {
         document.getElementById('time-fullscreen-enabled-checkbox').addEventListener('change', (e) => {
             this.timeDisplayManager.setFullscreenEnabled(e.target.checked);
         });
+        
+        // Fullscreen font size slider and input
+        const timeFullscreenFontSizeSlider = document.getElementById('time-fullscreen-font-size-slider');
+        const timeFullscreenFontSizeValue = document.getElementById('time-fullscreen-font-size-value');
+        const timeFullscreenFontSizeInput = document.getElementById('time-fullscreen-font-size-input');
+        
+        if (timeFullscreenFontSizeSlider && timeFullscreenFontSizeValue && timeFullscreenFontSizeInput) {
+            timeFullscreenFontSizeSlider.addEventListener('input', (e) => {
+                const size = parseInt(e.target.value);
+                timeFullscreenFontSizeValue.textContent = size;
+                timeFullscreenFontSizeInput.value = size;
+                this.timeDisplayManager.setFullscreenFontSize(size);
+            });
+            
+            timeFullscreenFontSizeInput.addEventListener('change', (e) => {
+                const size = parseInt(e.target.value);
+                if (size >= 8 && size <= 25) {
+                    timeFullscreenFontSizeValue.textContent = size;
+                    timeFullscreenFontSizeSlider.value = size;
+                    this.timeDisplayManager.setFullscreenFontSize(size);
+                }
+            });
+        }
         
         // Font size slider and input
         const timeFontSizeSlider = document.getElementById('time-font-size-slider');
@@ -1194,10 +1217,10 @@ class DrawingBoard {
         const timeFormatSettings = document.getElementById('time-format-settings');
         const dateFormatSettings = document.getElementById('date-format-settings');
         const timeColorSettings = document.getElementById('time-color-settings');
-        const timeBgColorSettings = document.getElementById('time-bg-color-settings');
         const timeFontSizeSettings = document.getElementById('time-font-size-settings');
         const timeOpacitySettings = document.getElementById('time-opacity-settings');
         const timeFullscreenSettings = document.getElementById('time-fullscreen-settings');
+        const timeFullscreenFontSizeSettings = document.getElementById('time-fullscreen-font-size-settings');
         
         const isEnabled = this.timeDisplayManager.enabled;
         timeDisplaySettings.style.display = isEnabled ? 'flex' : 'none';
@@ -1205,10 +1228,10 @@ class DrawingBoard {
         timeFormatSettings.style.display = isEnabled ? 'flex' : 'none';
         dateFormatSettings.style.display = isEnabled ? 'flex' : 'none';
         timeColorSettings.style.display = isEnabled ? 'flex' : 'none';
-        timeBgColorSettings.style.display = isEnabled ? 'flex' : 'none';
         timeFontSizeSettings.style.display = isEnabled ? 'flex' : 'none';
         timeOpacitySettings.style.display = isEnabled ? 'flex' : 'none';
         timeFullscreenSettings.style.display = isEnabled ? 'flex' : 'none';
+        timeFullscreenFontSizeSettings.style.display = isEnabled ? 'flex' : 'none';
         
         // Set active display type button
         document.querySelectorAll('.display-option-btn').forEach(btn => btn.classList.remove('active'));
@@ -1236,6 +1259,13 @@ class DrawingBoard {
         const defaultBgColor = '#FFFFFF'; // Default background color constant
         document.getElementById('custom-time-bg-color-picker').value = this.timeDisplayManager.bgColor === 'transparent' ? defaultBgColor : this.timeDisplayManager.bgColor;
         document.getElementById('time-fullscreen-enabled-checkbox').checked = this.timeDisplayManager.fullscreenEnabled;
+        
+        // Set fullscreen font size values
+        if (document.getElementById('time-fullscreen-font-size-slider')) {
+            document.getElementById('time-fullscreen-font-size-slider').value = this.timeDisplayManager.fullscreenFontSize;
+            document.getElementById('time-fullscreen-font-size-value').textContent = this.timeDisplayManager.fullscreenFontSize;
+            document.getElementById('time-fullscreen-font-size-input').value = this.timeDisplayManager.fullscreenFontSize;
+        }
     }
     
     closeSettings() {

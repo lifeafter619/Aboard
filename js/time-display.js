@@ -20,9 +20,14 @@ class TimeDisplayManager {
         this.opacity = parseInt(localStorage.getItem('timeDisplayOpacity')) || 100;
         this.showDate = localStorage.getItem('timeDisplayShowDate') !== 'false'; // Default true
         this.showTime = localStorage.getItem('timeDisplayShowTime') !== 'false'; // Default true
-        this.fullscreenEnabled = localStorage.getItem('timeDisplayFullscreenEnabled') === 'true'; // Default false
+        this.fullscreenEnabled = localStorage.getItem('timeDisplayFullscreenEnabled') !== 'false'; // Default true
+        this.fullscreenFontSize = parseInt(localStorage.getItem('timeDisplayFullscreenFontSize')) || 15; // Default 15 (vmin percentage)
         // Get user's current timezone by default, or use saved value
         this.timezone = localStorage.getItem('timeDisplayTimezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        
+        // Double-click detection settings
+        this.lastClickTime = 0;
+        this.doubleClickDelay = 600; // Increased from default ~300ms to 600ms for easier double-clicking
         
         this.applySettings();
         this.setupFullscreenListeners();
@@ -252,6 +257,14 @@ class TimeDisplayManager {
         localStorage.setItem('timeDisplayFullscreenEnabled', enabled);
     }
     
+    setFullscreenFontSize(size) {
+        this.fullscreenFontSize = size;
+        localStorage.setItem('timeDisplayFullscreenFontSize', size);
+        if (this.isFullscreen) {
+            this.updateFullscreenDisplay();
+        }
+    }
+    
     setFontSize(size) {
         this.fontSize = size;
         localStorage.setItem('timeDisplayFontSize', size);
@@ -324,10 +337,19 @@ class TimeDisplayManager {
     }
     
     setupFullscreenListeners() {
-        // Double-click to enter fullscreen
-        this.timeDisplayElement.addEventListener('dblclick', () => {
-            if (this.fullscreenEnabled && this.enabled) {
+        // Custom double-click implementation with longer delay for better sensitivity
+        this.timeDisplayElement.addEventListener('click', (e) => {
+            if (!this.fullscreenEnabled || !this.enabled) return;
+            
+            const now = Date.now();
+            const timeSinceLastClick = now - this.lastClickTime;
+            
+            if (timeSinceLastClick < this.doubleClickDelay && timeSinceLastClick > 50) {
+                // Double-click detected
                 this.enterFullscreen();
+                this.lastClickTime = 0; // Reset to prevent triple-click
+            } else {
+                this.lastClickTime = now;
             }
         });
         
@@ -381,10 +403,10 @@ class TimeDisplayManager {
         const timeString = this.formatTime(now);
         const dateString = this.formatDate(now);
         
-        // Calculate font size based on viewport
+        // Use the configurable fullscreen font size
         const vmin = Math.min(window.innerWidth, window.innerHeight);
-        const timeFontSize = Math.floor(vmin * 0.15);
-        const dateFontSize = Math.floor(vmin * 0.05);
+        const timeFontSize = Math.floor(vmin * (this.fullscreenFontSize / 100));
+        const dateFontSize = Math.floor(vmin * (this.fullscreenFontSize / 100) * 0.35);
         
         let html = '';
         if (this.showTime) {
