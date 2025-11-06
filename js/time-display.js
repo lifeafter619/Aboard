@@ -9,7 +9,6 @@ class TimeDisplayManager {
         this.updateInterval = null;
         this.fullscreenUpdateInterval = null;
         this.isFullscreen = false;
-        this.doubleClickTimer = null;
         
         // Load settings from localStorage
         this.enabled = localStorage.getItem('timeDisplayEnabled') === 'true';
@@ -303,6 +302,9 @@ class TimeDisplayManager {
                 } else {
                     this.timeDisplayElement.style.boxShadow = '0 2px 8px rgba(255, 255, 255, 0.15)';
                 }
+            } else {
+                // Fallback shadow for invalid colors
+                this.timeDisplayElement.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
             }
         }
         

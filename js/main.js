@@ -1233,7 +1233,8 @@ class DrawingBoard {
         document.getElementById('time-opacity-value').textContent = this.timeDisplayManager.opacity;
         document.getElementById('time-opacity-input').value = this.timeDisplayManager.opacity;
         document.getElementById('custom-time-color-picker').value = this.timeDisplayManager.color;
-        document.getElementById('custom-time-bg-color-picker').value = this.timeDisplayManager.bgColor === 'transparent' ? '#FFFFFF' : this.timeDisplayManager.bgColor;
+        const defaultBgColor = '#FFFFFF'; // Default background color constant
+        document.getElementById('custom-time-bg-color-picker').value = this.timeDisplayManager.bgColor === 'transparent' ? defaultBgColor : this.timeDisplayManager.bgColor;
         document.getElementById('time-fullscreen-enabled-checkbox').checked = this.timeDisplayManager.fullscreenEnabled;
     }
     

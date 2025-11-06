@@ -296,31 +296,31 @@ class SettingsManager {
                 fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
                 break;
             case 'serif':
-                fontFamily = 'SimSun, "Times New Roman", Times, serif';
+                fontFamily = 'SimSun, "Times New Roman", Times, Georgia, serif';
                 break;
             case 'sans-serif':
                 fontFamily = 'SimHei, Arial, "Helvetica Neue", Helvetica, sans-serif';
                 break;
             case 'monospace':
-                fontFamily = '"Courier New", Courier, monospace';
+                fontFamily = '"Courier New", Courier, "Consolas", monospace';
                 break;
             case 'cursive':
                 fontFamily = '"Comic Sans MS", "Apple Chancery", cursive';
                 break;
             case 'Microsoft YaHei':
-                fontFamily = '"Microsoft YaHei", sans-serif';
+                fontFamily = '"Microsoft YaHei", "微软雅黑", Arial, sans-serif';
                 break;
             case 'SimSun':
-                fontFamily = 'SimSun, serif';
+                fontFamily = 'SimSun, "宋体", Georgia, serif';
                 break;
             case 'SimHei':
-                fontFamily = 'SimHei, sans-serif';
+                fontFamily = 'SimHei, "黑体", Arial, sans-serif';
                 break;
             case 'KaiTi':
-                fontFamily = 'KaiTi, serif';
+                fontFamily = 'KaiTi, "楷体", Georgia, serif';
                 break;
             case 'FangSong':
-                fontFamily = 'FangSong, serif';
+                fontFamily = 'FangSong, "仿宋", Georgia, serif';
                 break;
             default:
                 fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
