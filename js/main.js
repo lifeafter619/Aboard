@@ -21,7 +21,6 @@ class DrawingBoard {
         this.backgroundManager = new BackgroundManager(this.bgCanvas, this.bgCtx);
         this.imageControls = new ImageControls(this.backgroundManager);
         this.strokeControls = new StrokeControls(this.drawingEngine, this.canvas, this.ctx, this.historyManager);
-        this.selectionManager = new SelectionManager(this.canvas, this.ctx, this.drawingEngine, this.strokeControls);
         this.timeDisplayManager = new TimeDisplayManager();
         this.settingsManager = new SettingsManager();
         this.announcementManager = new AnnouncementManager();
@@ -197,8 +196,8 @@ class DrawingBoard {
                 }
             }
             
-            // Check if clicking on coordinate origin point (in background or select mode)
-            if ((this.drawingEngine.currentTool === 'background' || this.drawingEngine.currentTool === 'select') && 
+            // Check if clicking on coordinate origin point (in background mode)
+            if (this.drawingEngine.currentTool === 'background' && 
                 this.backgroundManager.backgroundPattern === 'coordinate') {
                 const rect = this.bgCanvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
@@ -215,14 +214,6 @@ class DrawingBoard {
             // But not if image controls are active (user is manipulating background image)
             if (this.drawingEngine.currentTool === 'background' && !this.imageControls.isActive) {
                 this.setTool('pen', false); // Don't show config panel
-            }
-            
-            // Handle selection tool
-            if (this.drawingEngine.currentTool === 'select') {
-                // Handle normal selection
-                this.selectionManager.startSelection(e);
-                this.updateUI();
-                return;
             }
             
             if (e.button === 1 || (e.button === 0 && e.shiftKey) || this.drawingEngine.currentTool === 'pan') {
@@ -307,7 +298,6 @@ class DrawingBoard {
         
         // Toolbar buttons
         document.getElementById('pen-btn').addEventListener('click', () => this.setTool('pen'));
-        document.getElementById('select-btn').addEventListener('click', () => this.setTool('select'));
         document.getElementById('pan-btn').addEventListener('click', () => this.setTool('pan'));
         document.getElementById('eraser-btn').addEventListener('click', () => this.setTool('eraser'));
         document.getElementById('background-btn').addEventListener('click', () => this.setTool('background'));
@@ -550,19 +540,6 @@ class DrawingBoard {
             }
         });
         
-        // Selection tool buttons
-        document.getElementById('select-copy-btn').addEventListener('click', () => {
-            if (this.selectionManager.copySelection()) {
-                this.historyManager.saveState();
-            }
-        });
-        
-        document.getElementById('select-delete-btn').addEventListener('click', () => {
-            if (this.selectionManager.deleteSelection()) {
-                this.historyManager.saveState();
-            }
-        });
-        
         // More config panel (time display checkboxes)
         const showDateCheckboxMore = document.getElementById('show-date-checkbox-more');
         const showTimeCheckboxMore = document.getElementById('show-time-checkbox-more');
@@ -651,6 +628,11 @@ class DrawingBoard {
         document.getElementById('edge-snap-checkbox').addEventListener('change', (e) => {
             this.settingsManager.edgeSnapEnabled = e.target.checked;
             localStorage.setItem('edgeSnapEnabled', e.target.checked);
+        });
+        
+        // Global font selector
+        document.getElementById('global-font-select').addEventListener('change', (e) => {
+            this.settingsManager.setGlobalFont(e.target.value);
         });
         
         // Canvas mode buttons
@@ -776,8 +758,10 @@ class DrawingBoard {
             const timeFormatSettings = document.getElementById('time-format-settings');
             const dateFormatSettings = document.getElementById('date-format-settings');
             const timeColorSettings = document.getElementById('time-color-settings');
+            const timeBgColorSettings = document.getElementById('time-bg-color-settings');
             const timeFontSizeSettings = document.getElementById('time-font-size-settings');
             const timeOpacitySettings = document.getElementById('time-opacity-settings');
+            const timeFullscreenSettings = document.getElementById('time-fullscreen-settings');
             
             if (e.target.checked) {
                 this.timeDisplayManager.show();
@@ -786,8 +770,10 @@ class DrawingBoard {
                 timeFormatSettings.style.display = 'flex';
                 dateFormatSettings.style.display = 'flex';
                 timeColorSettings.style.display = 'flex';
+                timeBgColorSettings.style.display = 'flex';
                 timeFontSizeSettings.style.display = 'flex';
                 timeOpacitySettings.style.display = 'flex';
+                timeFullscreenSettings.style.display = 'flex';
             } else {
                 this.timeDisplayManager.hide();
                 timeDisplaySettings.style.display = 'none';
@@ -795,8 +781,10 @@ class DrawingBoard {
                 timeFormatSettings.style.display = 'none';
                 dateFormatSettings.style.display = 'none';
                 timeColorSettings.style.display = 'none';
+                timeBgColorSettings.style.display = 'none';
                 timeFontSizeSettings.style.display = 'none';
                 timeOpacitySettings.style.display = 'none';
+                timeFullscreenSettings.style.display = 'none';
             }
         });
         
@@ -850,6 +838,26 @@ class DrawingBoard {
         customTimeColorPicker.addEventListener('input', (e) => {
             this.timeDisplayManager.setColor(e.target.value);
             document.querySelectorAll('.color-btn[data-time-color]').forEach(b => b.classList.remove('active'));
+        });
+        
+        // Time background color buttons
+        document.querySelectorAll('.color-btn[data-time-bg-color]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.timeDisplayManager.setBgColor(e.target.dataset.timeBgColor);
+                document.querySelectorAll('.color-btn[data-time-bg-color]').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
+        
+        const customTimeBgColorPicker = document.getElementById('custom-time-bg-color-picker');
+        customTimeBgColorPicker.addEventListener('input', (e) => {
+            this.timeDisplayManager.setBgColor(e.target.value);
+            document.querySelectorAll('.color-btn[data-time-bg-color]').forEach(b => b.classList.remove('active'));
+        });
+        
+        // Time fullscreen enabled checkbox
+        document.getElementById('time-fullscreen-enabled-checkbox').addEventListener('change', (e) => {
+            this.timeDisplayManager.setFullscreenEnabled(e.target.checked);
         });
         
         // Font size slider and input
@@ -1139,17 +1147,12 @@ class DrawingBoard {
             this.hideEraserCursor();
         }
         
-        // Clear selection when switching away from select tool
-        if (tool !== 'select') {
-            this.selectionManager.clearSelection();
-        }
-        
         this.updateUI();
         
         // 使用"移动"功能时隐藏config-area
         if (tool === 'pan') {
             document.getElementById('config-area').classList.remove('show');
-        } else if (showConfig && (tool === 'pen' || tool === 'eraser' || tool === 'background' || tool === 'select' || tool === 'more')) {
+        } else if (showConfig && (tool === 'pen' || tool === 'eraser' || tool === 'background' || tool === 'more')) {
             document.getElementById('config-area').classList.add('show');
             
             // Update More config panel state
@@ -1191,8 +1194,10 @@ class DrawingBoard {
         const timeFormatSettings = document.getElementById('time-format-settings');
         const dateFormatSettings = document.getElementById('date-format-settings');
         const timeColorSettings = document.getElementById('time-color-settings');
+        const timeBgColorSettings = document.getElementById('time-bg-color-settings');
         const timeFontSizeSettings = document.getElementById('time-font-size-settings');
         const timeOpacitySettings = document.getElementById('time-opacity-settings');
+        const timeFullscreenSettings = document.getElementById('time-fullscreen-settings');
         
         const isEnabled = this.timeDisplayManager.enabled;
         timeDisplaySettings.style.display = isEnabled ? 'flex' : 'none';
@@ -1200,8 +1205,10 @@ class DrawingBoard {
         timeFormatSettings.style.display = isEnabled ? 'flex' : 'none';
         dateFormatSettings.style.display = isEnabled ? 'flex' : 'none';
         timeColorSettings.style.display = isEnabled ? 'flex' : 'none';
+        timeBgColorSettings.style.display = isEnabled ? 'flex' : 'none';
         timeFontSizeSettings.style.display = isEnabled ? 'flex' : 'none';
         timeOpacitySettings.style.display = isEnabled ? 'flex' : 'none';
+        timeFullscreenSettings.style.display = isEnabled ? 'flex' : 'none';
         
         // Set active display type button
         document.querySelectorAll('.display-option-btn').forEach(btn => btn.classList.remove('active'));
@@ -1226,6 +1233,8 @@ class DrawingBoard {
         document.getElementById('time-opacity-value').textContent = this.timeDisplayManager.opacity;
         document.getElementById('time-opacity-input').value = this.timeDisplayManager.opacity;
         document.getElementById('custom-time-color-picker').value = this.timeDisplayManager.color;
+        document.getElementById('custom-time-bg-color-picker').value = this.timeDisplayManager.bgColor === 'transparent' ? '#FFFFFF' : this.timeDisplayManager.bgColor;
+        document.getElementById('time-fullscreen-enabled-checkbox').checked = this.timeDisplayManager.fullscreenEnabled;
     }
     
     closeSettings() {
@@ -1257,14 +1266,6 @@ class DrawingBoard {
             document.getElementById('pen-btn').classList.add('active');
             document.getElementById('pen-config').classList.add('active');
             this.canvas.style.cursor = 'crosshair';
-        } else if (tool === 'select') {
-            document.getElementById('select-btn').classList.add('active');
-            document.getElementById('select-config').classList.add('active');
-            this.canvas.style.cursor = 'default';
-            // Update selection buttons state
-            const hasSelection = this.selectionManager.hasSelection();
-            document.getElementById('select-copy-btn').disabled = !hasSelection;
-            document.getElementById('select-delete-btn').disabled = !hasSelection;
         } else if (tool === 'pan') {
             document.getElementById('pan-btn').classList.add('active');
             this.canvas.style.cursor = 'grab';

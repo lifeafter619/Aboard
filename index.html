@@ -103,29 +103,7 @@
             </div>
         </div>
 
-        <!-- Selection configuration -->
-        <div id="select-config" class="config-panel">
-            <div class="config-group">
-                <label>选择操作</label>
-                <p class="settings-hint">点击画布上的笔迹、图片、文字或形状进行选择</p>
-                <div class="button-size-options" style="grid-template-columns: 1fr 1fr;">
-                    <button id="select-copy-btn" class="button-secondary" disabled>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 5px;">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                        </svg>
-                        复制
-                    </button>
-                    <button id="select-delete-btn" class="button-secondary" disabled>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 5px;">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-                        </svg>
-                        删除
-                    </button>
-                </div>
-            </div>
-        </div>
+
 
         <!-- Eraser configuration -->
         <div id="eraser-config" class="config-panel">
@@ -320,6 +298,22 @@
                     <!-- General settings -->
                     <div id="general-settings" class="settings-tab-content active">
                         <h3>通用设置</h3>
+                        <div class="settings-group">
+                            <label>全局字体</label>
+                            <p class="settings-hint">选择应用程序使用的字体</p>
+                            <select id="global-font-select" class="format-select">
+                                <option value="system">系统默认</option>
+                                <option value="serif">宋体（衬线体）</option>
+                                <option value="sans-serif">黑体（无衬线体）</option>
+                                <option value="monospace">等宽字体</option>
+                                <option value="cursive">手写体</option>
+                                <option value="Microsoft YaHei">微软雅黑</option>
+                                <option value="SimSun">宋体</option>
+                                <option value="SimHei">黑体</option>
+                                <option value="KaiTi">楷体</option>
+                                <option value="FangSong">仿宋</option>
+                            </select>
+                        </div>
                         <div class="settings-group">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="edge-snap-checkbox" checked>
@@ -639,6 +633,31 @@
                                 <input type="color" id="custom-time-color-picker" class="custom-color-picker-input" value="#000000">
                             </label>
                         </div>
+                        <div class="settings-group" id="time-bg-color-settings" style="display: none;">
+                            <label>背景颜色</label>
+                            <p class="settings-hint">选择时间显示的背景颜色</p>
+                            <div class="color-picker-row">
+                                <div class="color-picker-main">
+                                    <button class="color-btn" data-time-bg-color="transparent" style="background: linear-gradient(135deg, #fff 45%, #f00 45%, #f00 55%, #fff 55%); border: 1px solid #ccc;" title="透明"></button>
+                                    <button class="color-btn active" data-time-bg-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="白色"></button>
+                                    <button class="color-btn" data-time-bg-color="#000000" style="background-color: #000000;" title="黑色"></button>
+                                    <button class="color-btn" data-time-bg-color="#007AFF" style="background-color: #007AFF;" title="蓝色"></button>
+                                </div>
+                                <div class="color-picker-main">
+                                    <button class="color-btn" data-time-bg-color="#FF0000" style="background-color: #FF0000;" title="红色"></button>
+                                    <button class="color-btn" data-time-bg-color="#00FF00" style="background-color: #00FF00;" title="绿色"></button>
+                                    <button class="color-btn" data-time-bg-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="黄色"></button>
+                                    <button class="color-btn" data-time-bg-color="#8800FF" style="background-color: #8800FF;" title="紫色"></button>
+                                </div>
+                            </div>
+                            <label class="color-picker-icon-btn" for="custom-time-bg-color-picker" title="自定义颜色" style="margin-top: 8px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
+                                    <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
+                                </svg>
+                                <input type="color" id="custom-time-bg-color-picker" class="custom-color-picker-input" value="#FFFFFF">
+                            </label>
+                        </div>
                         <div class="settings-group" id="time-font-size-settings" style="display: none;">
                             <label>字体大小 <span id="time-font-size-value">16</span>px</label>
                             <p class="settings-hint">调整时间显示的字体大小</p>
@@ -654,6 +673,13 @@
                                 <input type="range" id="time-opacity-slider" min="10" max="100" value="100" class="slider" style="flex: 1;">
                                 <input type="number" id="time-opacity-input" min="10" max="100" value="100" class="size-input">
                             </div>
+                        </div>
+                        <div class="settings-group" id="time-fullscreen-settings" style="display: none;">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="time-fullscreen-enabled-checkbox">
+                                <span>启用双击全屏</span>
+                            </label>
+                            <p class="settings-hint">双击时间窗口可全屏显示时间</p>
                         </div>
                     </div>
                 </div>
@@ -718,13 +744,6 @@
             </svg>
             <span>笔</span>
         </button>
-        <button id="select-btn" class="tool-btn" data-tool="select" title="选择 (可选择笔迹和图片)">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path>
-                <path d="M13 13l6 6"></path>
-            </svg>
-            <span>选择</span>
-        </button>
         <button id="pan-btn" class="tool-btn" data-tool="pan" title="移动画布 (Shift+拖动)">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
@@ -776,12 +795,22 @@
     <!-- Time Display (for More feature) -->
     <div id="time-display" style="display: none;"></div>
 
+    <!-- Fullscreen Time Display Modal -->
+    <div id="time-fullscreen-modal" class="time-fullscreen-modal">
+        <button id="time-fullscreen-close-btn" class="time-fullscreen-close-btn" title="关闭全屏">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+        <div id="time-fullscreen-content"></div>
+    </div>
+
     <script src="js/drawing.js"></script>
     <script src="js/history.js"></script>
     <script src="js/background.js"></script>
     <script src="js/image-controls.js"></script>
     <script src="js/stroke-controls.js"></script>
-    <script src="js/selection.js"></script>
     <script src="js/time-display.js"></script>
     <script src="js/settings.js"></script>
     <script src="js/announcement.js"></script>

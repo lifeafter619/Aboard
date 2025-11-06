@@ -4,21 +4,29 @@
 class TimeDisplayManager {
     constructor() {
         this.timeDisplayElement = document.getElementById('time-display');
+        this.timeFullscreenModal = document.getElementById('time-fullscreen-modal');
+        this.timeFullscreenContent = document.getElementById('time-fullscreen-content');
         this.updateInterval = null;
+        this.fullscreenUpdateInterval = null;
+        this.isFullscreen = false;
+        this.doubleClickTimer = null;
         
         // Load settings from localStorage
         this.enabled = localStorage.getItem('timeDisplayEnabled') === 'true';
         this.timeFormat = localStorage.getItem('timeDisplayTimeFormat') || '24h';
         this.dateFormat = localStorage.getItem('timeDisplayDateFormat') || 'yyyy-mm-dd';
         this.color = localStorage.getItem('timeDisplayColor') || '#000000';
+        this.bgColor = localStorage.getItem('timeDisplayBgColor') || '#FFFFFF';
         this.fontSize = parseInt(localStorage.getItem('timeDisplayFontSize')) || 16;
         this.opacity = parseInt(localStorage.getItem('timeDisplayOpacity')) || 100;
         this.showDate = localStorage.getItem('timeDisplayShowDate') !== 'false'; // Default true
         this.showTime = localStorage.getItem('timeDisplayShowTime') !== 'false'; // Default true
+        this.fullscreenEnabled = localStorage.getItem('timeDisplayFullscreenEnabled') === 'true'; // Default false
         // Get user's current timezone by default, or use saved value
         this.timezone = localStorage.getItem('timeDisplayTimezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
         
         this.applySettings();
+        this.setupFullscreenListeners();
     }
     
     toggle() {
@@ -234,6 +242,17 @@ class TimeDisplayManager {
         this.applySettings();
     }
     
+    setBgColor(bgColor) {
+        this.bgColor = bgColor;
+        localStorage.setItem('timeDisplayBgColor', bgColor);
+        this.applySettings();
+    }
+    
+    setFullscreenEnabled(enabled) {
+        this.fullscreenEnabled = enabled;
+        localStorage.setItem('timeDisplayFullscreenEnabled', enabled);
+    }
+    
     setFontSize(size) {
         this.fontSize = size;
         localStorage.setItem('timeDisplayFontSize', size);
@@ -269,9 +288,110 @@ class TimeDisplayManager {
         this.timeDisplayElement.style.color = this.color;
         this.timeDisplayElement.style.opacity = this.opacity / 100;
         
+        // Apply background color (support transparent)
+        if (this.bgColor === 'transparent') {
+            this.timeDisplayElement.style.backgroundColor = 'transparent';
+            this.timeDisplayElement.style.boxShadow = 'none';
+        } else {
+            this.timeDisplayElement.style.backgroundColor = this.bgColor;
+            // Adjust shadow based on background brightness
+            const rgb = this.hexToRgb(this.bgColor);
+            if (rgb) {
+                const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
+                if (brightness > 128) {
+                    this.timeDisplayElement.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
+                } else {
+                    this.timeDisplayElement.style.boxShadow = '0 2px 8px rgba(255, 255, 255, 0.15)';
+                }
+            }
+        }
+        
         // If enabled, start updating
         if (this.enabled) {
             this.show();
         }
+    }
+    
+    hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : null;
+    }
+    
+    setupFullscreenListeners() {
+        // Double-click to enter fullscreen
+        this.timeDisplayElement.addEventListener('dblclick', () => {
+            if (this.fullscreenEnabled && this.enabled) {
+                this.enterFullscreen();
+            }
+        });
+        
+        // Close button
+        const closeBtn = document.getElementById('time-fullscreen-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                this.exitFullscreen();
+            });
+        }
+        
+        // ESC key to exit
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isFullscreen) {
+                this.exitFullscreen();
+            }
+        });
+    }
+    
+    enterFullscreen() {
+        this.isFullscreen = true;
+        this.timeFullscreenModal.classList.add('show');
+        this.startFullscreenUpdating();
+    }
+    
+    exitFullscreen() {
+        this.isFullscreen = false;
+        this.timeFullscreenModal.classList.remove('show');
+        this.stopFullscreenUpdating();
+    }
+    
+    startFullscreenUpdating() {
+        // Update immediately
+        this.updateFullscreenDisplay();
+        
+        // Update every second
+        this.fullscreenUpdateInterval = setInterval(() => {
+            this.updateFullscreenDisplay();
+        }, 1000);
+    }
+    
+    stopFullscreenUpdating() {
+        if (this.fullscreenUpdateInterval) {
+            clearInterval(this.fullscreenUpdateInterval);
+            this.fullscreenUpdateInterval = null;
+        }
+    }
+    
+    updateFullscreenDisplay() {
+        const now = this.getCurrentTime();
+        const timeString = this.formatTime(now);
+        const dateString = this.formatDate(now);
+        
+        // Calculate font size based on viewport
+        const vmin = Math.min(window.innerWidth, window.innerHeight);
+        const timeFontSize = Math.floor(vmin * 0.15);
+        const dateFontSize = Math.floor(vmin * 0.05);
+        
+        let html = '';
+        if (this.showTime) {
+            html += `<div class="time-line" style="font-size: ${timeFontSize}px; font-weight: 600; margin-bottom: ${vmin * 0.02}px;">${timeString}</div>`;
+        }
+        if (this.showDate) {
+            html += `<div class="time-line" style="font-size: ${dateFontSize}px;">${dateString}</div>`;
+        }
+        
+        this.timeFullscreenContent.innerHTML = html;
     }
 }

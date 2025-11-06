@@ -15,6 +15,7 @@ class SettingsManager {
         this.canvasHeight = parseInt(localStorage.getItem('canvasHeight')) || 1080;
         this.canvasPreset = localStorage.getItem('canvasPreset') || 'custom';
         this.themeColor = localStorage.getItem('themeColor') || '#007AFF';
+        this.globalFont = localStorage.getItem('globalFont') || 'system';
     }
     
     loadPatternPreferences() {
@@ -222,6 +223,10 @@ class SettingsManager {
         document.querySelectorAll('.color-btn[data-theme-color]').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.themeColor === this.themeColor);
         });
+        
+        // Load global font
+        this.applyGlobalFont();
+        document.getElementById('global-font-select').value = this.globalFont;
     }
     
     updateCanvasSizeSettings() {
@@ -276,5 +281,50 @@ class SettingsManager {
     
     applyThemeColor() {
         document.documentElement.style.setProperty('--theme-color', this.themeColor);
+    }
+    
+    setGlobalFont(font) {
+        this.globalFont = font;
+        localStorage.setItem('globalFont', font);
+        this.applyGlobalFont();
+    }
+    
+    applyGlobalFont() {
+        let fontFamily;
+        switch(this.globalFont) {
+            case 'system':
+                fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+                break;
+            case 'serif':
+                fontFamily = 'SimSun, "Times New Roman", Times, serif';
+                break;
+            case 'sans-serif':
+                fontFamily = 'SimHei, Arial, "Helvetica Neue", Helvetica, sans-serif';
+                break;
+            case 'monospace':
+                fontFamily = '"Courier New", Courier, monospace';
+                break;
+            case 'cursive':
+                fontFamily = '"Comic Sans MS", "Apple Chancery", cursive';
+                break;
+            case 'Microsoft YaHei':
+                fontFamily = '"Microsoft YaHei", sans-serif';
+                break;
+            case 'SimSun':
+                fontFamily = 'SimSun, serif';
+                break;
+            case 'SimHei':
+                fontFamily = 'SimHei, sans-serif';
+                break;
+            case 'KaiTi':
+                fontFamily = 'KaiTi, serif';
+                break;
+            case 'FangSong':
+                fontFamily = 'FangSong, serif';
+                break;
+            default:
+                fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+        }
+        document.body.style.fontFamily = fontFamily;
     }
 }
