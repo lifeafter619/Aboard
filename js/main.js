@@ -262,6 +262,9 @@ class DrawingBoard {
         document.addEventListener('mousemove', (e) => {
             if (this.isDraggingCoordinateOrigin) {
                 this.dragCoordinateOrigin(e);
+            } else if (this.shapeInsertionManager.isDrawingShape) {
+                // Handle shape drag-to-insert
+                this.shapeInsertionManager.continueDrawingShape(e);
             } else if (this.shapeInsertionManager.isDragging || this.shapeInsertionManager.isResizing || this.shapeInsertionManager.isRotating) {
                 this.shapeInsertionManager.dragShape(e);
             } else if (this.drawingEngine.isPanning) {
@@ -277,6 +280,9 @@ class DrawingBoard {
         
         document.addEventListener('mouseup', () => {
             this.stopDraggingCoordinateOrigin();
+            if (this.shapeInsertionManager.isDrawingShape) {
+                this.shapeInsertionManager.finishDrawingShape();
+            }
             this.shapeInsertionManager.stopDrag();
             this.handleDrawingComplete();
             this.drawingEngine.stopPanning();
