@@ -781,11 +781,11 @@ class DrawingBoard {
             
             if (e.target.checked) {
                 this.timeDisplayManager.show();
-                timeDisplaySettings.style.display = 'block';
-                timezoneSettings.style.display = 'block';
+                timeDisplaySettings.style.display = 'flex';
+                timezoneSettings.style.display = 'flex';
                 timeFormatSettings.style.display = 'flex';
                 dateFormatSettings.style.display = 'flex';
-                timeColorSettings.style.display = 'block';
+                timeColorSettings.style.display = 'flex';
                 timeFontSizeSettings.style.display = 'flex';
                 timeOpacitySettings.style.display = 'flex';
             } else {
@@ -1195,11 +1195,11 @@ class DrawingBoard {
         const timeOpacitySettings = document.getElementById('time-opacity-settings');
         
         const isEnabled = this.timeDisplayManager.enabled;
-        timeDisplaySettings.style.display = isEnabled ? 'block' : 'none';
-        timezoneSettings.style.display = isEnabled ? 'block' : 'none';
+        timeDisplaySettings.style.display = isEnabled ? 'flex' : 'none';
+        timezoneSettings.style.display = isEnabled ? 'flex' : 'none';
         timeFormatSettings.style.display = isEnabled ? 'flex' : 'none';
         dateFormatSettings.style.display = isEnabled ? 'flex' : 'none';
-        timeColorSettings.style.display = isEnabled ? 'block' : 'none';
+        timeColorSettings.style.display = isEnabled ? 'flex' : 'none';
         timeFontSizeSettings.style.display = isEnabled ? 'flex' : 'none';
         timeOpacitySettings.style.display = isEnabled ? 'flex' : 'none';
         
