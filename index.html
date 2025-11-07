@@ -37,7 +37,7 @@
             </svg>
         </button>
         <button id="fullscreen-btn" class="history-btn" title="全屏 (F11)">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
             </svg>
         </button>
@@ -732,8 +732,8 @@
                             <label>全屏字体大小 <span id="time-fullscreen-font-size-value">15</span>%</label>
                             <p class="settings-hint">调整全屏时间显示的字体大小</p>
                             <div style="display: flex; gap: 10px; align-items: center;">
-                                <input type="range" id="time-fullscreen-font-size-slider" min="8" max="25" value="15" class="slider" style="flex: 1;">
-                                <input type="number" id="time-fullscreen-font-size-input" min="8" max="25" value="15" class="size-input">
+                                <input type="range" id="time-fullscreen-font-size-slider" min="5" max="50" value="15" class="slider" style="flex: 1;">
+                                <input type="number" id="time-fullscreen-font-size-input" min="5" max="50" value="15" class="size-input">
                             </div>
                         </div>
                     </div>
@@ -861,7 +861,7 @@
         <div id="time-fullscreen-content"></div>
         <div class="time-fullscreen-controls">
             <div class="time-fullscreen-slider-label">字体大小调节</div>
-            <input type="range" id="time-fullscreen-font-slider" class="time-fullscreen-slider" min="8" max="25" value="15" step="0.5">
+            <input type="range" id="time-fullscreen-font-slider" class="time-fullscreen-slider" min="5" max="50" value="15" step="0.5">
         </div>
     </div>
 
