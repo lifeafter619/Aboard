@@ -1,0 +1,110 @@
+/* Export Module Styles */
+
+.export-modal-content {
+    width: 500px;
+    max-width: 90vw;
+}
+
+.export-options {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.export-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.export-group label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.export-format-btn {
+    padding: 10px 20px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+}
+
+.export-format-btn:hover {
+    background-color: #f0f0f0;
+    border-color: var(--theme-color);
+}
+
+.export-format-btn.active {
+    background-color: var(--theme-color);
+    color: #ffffff;
+    border-color: var(--theme-color);
+}
+
+.export-filename-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.export-filename-input:focus {
+    border-color: var(--theme-color);
+}
+
+.export-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.button-secondary {
+    flex: 1;
+    padding: 12px 24px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #666;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.button-secondary:hover {
+    background-color: #f0f0f0;
+    border-color: #999;
+}
+
+.button-primary {
+    flex: 1;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--theme-color);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.button-primary:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.button-primary:active {
+    transform: translateY(0);
+}

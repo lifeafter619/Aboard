@@ -23,9 +23,10 @@ class DrawingBoard {
         this.imageControls = new ImageControls(this.backgroundManager);
         this.strokeControls = new StrokeControls(this.drawingEngine, this.canvas, this.ctx, this.historyManager);
         this.timeDisplayManager = new TimeDisplayManager(this.settingsManager);
+        this.timeDisplayControls = new TimeDisplayControls(this.timeDisplayManager);
         this.collapsibleManager = new CollapsibleManager();
         this.announcementManager = new AnnouncementManager();
-        this.exportManager = new ExportManager(this.canvas, this.bgCanvas);
+        this.exportManager = new ExportManager(this.canvas, this.bgCanvas, this);
         
         // Pagination
         this.currentPage = 1;
@@ -887,9 +888,14 @@ class DrawingBoard {
             document.querySelectorAll('.color-btn[data-time-bg-color]').forEach(b => b.classList.remove('active'));
         });
         
-        // Time fullscreen enabled checkbox
-        document.getElementById('time-fullscreen-enabled-checkbox').addEventListener('change', (e) => {
-            this.timeDisplayManager.setFullscreenEnabled(e.target.checked);
+        // Time fullscreen mode buttons
+        document.querySelectorAll('.fullscreen-mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const mode = e.target.dataset.mode;
+                document.querySelectorAll('.fullscreen-mode-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                this.timeDisplayManager.setFullscreenMode(mode);
+            });
         });
         
         // Fullscreen font size slider and input
@@ -1020,6 +1026,7 @@ class DrawingBoard {
         const panels = [
             document.getElementById('history-controls'),
             document.getElementById('config-area'),
+            document.getElementById('time-display-area'),
             document.getElementById('feature-area'),
             document.getElementById('toolbar'),
             document.getElementById('pagination-controls')
@@ -1086,10 +1093,11 @@ class DrawingBoard {
     setupDraggablePanels() {
         const historyControls = document.getElementById('history-controls');
         const configArea = document.getElementById('config-area');
+        const timeDisplayArea = document.getElementById('time-display-area');
         const featureArea = document.getElementById('feature-area');
         const toolbar = document.getElementById('toolbar');
         
-        [historyControls, configArea, featureArea, toolbar].forEach(element => {
+        [historyControls, configArea, timeDisplayArea, featureArea, toolbar].forEach(element => {
             element.addEventListener('mousedown', (e) => {
                 if (e.target.closest('button') || e.target.closest('input')) return;
                 
@@ -1121,6 +1129,7 @@ class DrawingBoard {
             const windowHeight = window.innerHeight;
             const isToolbar = this.draggedElement.id === 'toolbar';
             const isConfigArea = this.draggedElement.id === 'config-area';
+            const isTimeDisplayArea = this.draggedElement.id === 'time-display-area';
             const isFeatureArea = this.draggedElement.id === 'feature-area';
             
             let snappedToEdge = false;
@@ -1139,7 +1148,7 @@ class DrawingBoard {
                 // Check for right edge snap
                 else if (x + this.draggedElementWidth > windowWidth - edgeSnapDistance) {
                     // When vertical, need to recalculate width
-                    if (isToolbar || isConfigArea || isFeatureArea) {
+                    if (isToolbar || isConfigArea || isTimeDisplayArea || isFeatureArea) {
                         // Temporarily add vertical class to get correct dimensions
                         this.draggedElement.classList.add('vertical');
                         const tempWidth = this.draggedElement.getBoundingClientRect().width;
@@ -1164,8 +1173,8 @@ class DrawingBoard {
                 }
             }
             
-            // Apply vertical layout for toolbar and config area when snapped to left/right
-            if ((isToolbar || isConfigArea) && snappedToEdge && isVertical) {
+            // Apply vertical layout for toolbar, config area, time display area, and feature area when snapped to left/right
+            if ((isToolbar || isConfigArea || isTimeDisplayArea || isFeatureArea) && snappedToEdge && isVertical) {
                 this.draggedElement.classList.add('vertical');
                 // Recalculate position after adding vertical class to account for dimension changes
                 if (snappedRight) {
@@ -1300,7 +1309,15 @@ class DrawingBoard {
         document.getElementById('custom-time-color-picker').value = this.timeDisplayManager.color;
         const defaultBgColor = '#FFFFFF'; // Default background color constant
         document.getElementById('custom-time-bg-color-picker').value = this.timeDisplayManager.bgColor === 'transparent' ? defaultBgColor : this.timeDisplayManager.bgColor;
-        document.getElementById('time-fullscreen-enabled-checkbox').checked = this.timeDisplayManager.fullscreenEnabled;
+        
+        // Set fullscreen mode buttons
+        document.querySelectorAll('.fullscreen-mode-btn').forEach(btn => {
+            if (btn.dataset.mode === this.timeDisplayManager.fullscreenMode) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
         
         // Set fullscreen font size values
         if (document.getElementById('time-fullscreen-font-size-slider')) {

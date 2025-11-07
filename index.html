@@ -6,6 +6,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Aboard - 简约白板</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/modules/time-display.css">
+    <link rel="stylesheet" href="css/modules/feature-area.css">
+    <link rel="stylesheet" href="css/modules/export.css">
 </head>
 <body>
     <!-- Zoom controls in top right corner -->
@@ -196,6 +199,29 @@
         </div>
     </div>
 
+    <!-- Time Display Area (independent, draggable, with edge snapping) -->
+    <div id="time-display-area">
+        <!-- Close button for time display area -->
+        <button id="time-display-area-close-btn" class="config-close-btn" title="关闭">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+        
+        <div class="config-group">
+            <label>时间显示选项</label>
+            <label class="checkbox-label">
+                <input type="checkbox" id="show-date-checkbox-area">
+                <span>显示日期</span>
+            </label>
+            <label class="checkbox-label" style="margin-top: 8px;">
+                <input type="checkbox" id="show-time-checkbox-area">
+                <span>显示时间</span>
+            </label>
+        </div>
+    </div>
+
     <!-- Feature buttons area (independent, draggable, with edge snapping) -->
     <div id="feature-area" class="feature-area">
         <!-- Close button for feature panel -->
@@ -214,22 +240,9 @@
                         <circle cx="12" cy="12" r="10"></circle>
                         <polyline points="12 6 12 12 16 14"></polyline>
                     </svg>
-                    <span>时间显示</span>
+                    <span>时间</span>
                 </button>
             </div>
-        </div>
-        
-        <!-- Time Display Controls (hidden by default, shown when button clicked) -->
-        <div id="time-display-controls" class="config-group" style="display: none;">
-            <label>时间显示选项</label>
-            <label class="checkbox-label">
-                <input type="checkbox" id="show-date-checkbox-more">
-                <span>显示日期</span>
-            </label>
-            <label class="checkbox-label" style="margin-top: 8px;">
-                <input type="checkbox" id="show-time-checkbox-more">
-                <span>显示时间</span>
-            </label>
         </div>
     </div>
 
@@ -707,11 +720,13 @@
                             </div>
                         </div>
                         <div class="settings-group" id="time-fullscreen-settings" style="display: none;">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="time-fullscreen-enabled-checkbox" checked>
-                                <span>启用双击全屏</span>
-                            </label>
-                            <p class="settings-hint">双击时间窗口可全屏显示时间</p>
+                            <label>全屏模式</label>
+                            <p class="settings-hint">选择如何触发时间全屏显示</p>
+                            <div class="button-size-options" style="grid-template-columns: 1fr 1fr 1fr;">
+                                <button class="fullscreen-mode-btn" data-mode="disabled">关闭</button>
+                                <button class="fullscreen-mode-btn" data-mode="single">单击</button>
+                                <button class="fullscreen-mode-btn active" data-mode="double">双击</button>
+                            </div>
                         </div>
                         <div class="settings-group" id="time-fullscreen-font-size-settings" style="display: none;">
                             <label>全屏字体大小 <span id="time-fullscreen-font-size-value">15</span>%</label>
@@ -844,6 +859,10 @@
             </svg>
         </button>
         <div id="time-fullscreen-content"></div>
+        <div class="time-fullscreen-controls">
+            <div class="time-fullscreen-slider-label">字体大小调节</div>
+            <input type="range" id="time-fullscreen-font-slider" class="time-fullscreen-slider" min="8" max="25" value="15" step="0.5">
+        </div>
     </div>
 
     <script src="js/drawing.js"></script>
@@ -853,6 +872,7 @@
     <script src="js/stroke-controls.js"></script>
     <script src="js/collapsible.js"></script>
     <script src="js/time-display.js"></script>
+    <script src="js/modules/time-display-controls.js"></script>
     <script src="js/settings.js"></script>
     <script src="js/announcement.js"></script>
     <script src="js/export.js"></script>

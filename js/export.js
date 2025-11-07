@@ -2,9 +2,10 @@
 // Handles exporting canvas content to image files
 
 class ExportManager {
-    constructor(canvas, bgCanvas) {
+    constructor(canvas, bgCanvas, drawingBoard = null) {
         this.canvas = canvas;
         this.bgCanvas = bgCanvas;
+        this.drawingBoard = drawingBoard;
         this.exportModal = null;
         
         this.createExportModal();
@@ -26,6 +27,13 @@ class ExportManager {
                     </div>
                     <div class="modal-body">
                         <div class="export-options">
+                            <div class="export-group">
+                                <label>导出范围</label>
+                                <div class="button-size-options button-size-options-2">
+                                    <button class="export-scope-btn active" data-scope="current">当前页</button>
+                                    <button class="export-scope-btn" data-scope="all">全部页面</button>
+                                </div>
+                            </div>
                             <div class="export-group">
                                 <label>图片格式</label>
                                 <div class="button-size-options button-size-options-2">
@@ -63,6 +71,14 @@ class ExportManager {
     }
     
     setupEventListeners() {
+        // Export scope buttons
+        document.querySelectorAll('.export-scope-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.export-scope-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
+        
         // Format buttons
         document.querySelectorAll('.export-format-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -122,10 +138,26 @@ class ExportManager {
     }
     
     exportCanvas() {
+        const scope = document.querySelector('.export-scope-btn.active').dataset.scope;
         const format = document.querySelector('.export-format-btn.active').dataset.format;
         const filename = document.getElementById('export-filename').value || 'aboard-export';
         const quality = parseInt(document.getElementById('export-quality-slider').value) / 100;
         
+        if (scope === 'current') {
+            // Export current page
+            this.exportSinglePage(filename, format, quality);
+        } else if (scope === 'all' && this.drawingBoard) {
+            // Export all pages
+            this.exportAllPages(filename, format, quality);
+        } else {
+            // Fallback to current page if drawingBoard is not available
+            this.exportSinglePage(filename, format, quality);
+        }
+        
+        this.closeModal();
+    }
+    
+    exportSinglePage(filename, format, quality) {
         // Create a temporary canvas to combine background and main canvas
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = this.canvas.width;
@@ -151,7 +183,42 @@ class ExportManager {
         link.download = `${filename}.${format}`;
         link.href = dataURL;
         link.click();
+    }
+    
+    exportAllPages(baseFilename, format, quality) {
+        if (!this.drawingBoard || !this.drawingBoard.pages || this.drawingBoard.pages.length === 0) {
+            // No pages to export, just export current
+            this.exportSinglePage(baseFilename, format, quality);
+            return;
+        }
         
-        this.closeModal();
+        // Save current state
+        const currentPage = this.drawingBoard.currentPage;
+        const currentCanvasData = this.canvas.toDataURL();
+        
+        // Export each page
+        for (let i = 0; i < this.drawingBoard.pages.length; i++) {
+            const pageNum = i + 1;
+            
+            // Switch to page
+            if (this.drawingBoard.currentPage !== pageNum) {
+                this.drawingBoard.switchToPage(pageNum);
+            }
+            
+            // Give a moment for the page to render
+            setTimeout(() => {
+                const filename = this.drawingBoard.pages.length > 1 
+                    ? `${baseFilename}-page${pageNum}` 
+                    : baseFilename;
+                this.exportSinglePage(filename, format, quality);
+                
+                // If last page, restore original page
+                if (i === this.drawingBoard.pages.length - 1 && currentPage !== pageNum) {
+                    setTimeout(() => {
+                        this.drawingBoard.switchToPage(currentPage);
+                    }, 100);
+                }
+            }, i * 200);
+        }
     }
 }

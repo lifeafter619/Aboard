@@ -21,12 +21,12 @@ class TimeDisplayManager {
         this.opacity = parseInt(localStorage.getItem('timeDisplayOpacity')) || 100;
         this.showDate = localStorage.getItem('timeDisplayShowDate') !== 'false'; // Default true
         this.showTime = localStorage.getItem('timeDisplayShowTime') !== 'false'; // Default true
-        this.fullscreenEnabled = localStorage.getItem('timeDisplayFullscreenEnabled') !== 'false'; // Default true
+        this.fullscreenMode = localStorage.getItem('timeDisplayFullscreenMode') || 'double'; // Default 'double' (disabled/single/double)
         this.fullscreenFontSize = parseInt(localStorage.getItem('timeDisplayFullscreenFontSize')) || 15; // Default 15 (vmin percentage)
         // Get user's current timezone by default, or use saved value
         this.timezone = localStorage.getItem('timeDisplayTimezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
         
-        // Double-click detection settings
+        // Click detection settings
         this.lastClickTime = 0;
         this.doubleClickDelay = 600; // Increased from default ~300ms to 600ms for easier double-clicking
         
@@ -265,9 +265,9 @@ class TimeDisplayManager {
         this.applySettings();
     }
     
-    setFullscreenEnabled(enabled) {
-        this.fullscreenEnabled = enabled;
-        localStorage.setItem('timeDisplayFullscreenEnabled', enabled);
+    setFullscreenMode(mode) {
+        this.fullscreenMode = mode;
+        localStorage.setItem('timeDisplayFullscreenMode', mode);
     }
     
     setFullscreenFontSize(size) {
@@ -350,19 +350,25 @@ class TimeDisplayManager {
     }
     
     setupFullscreenListeners() {
-        // Custom double-click implementation with longer delay for better sensitivity
+        // Click listener with support for single/double click modes
         this.timeDisplayElement.addEventListener('click', (e) => {
-            if (!this.fullscreenEnabled || !this.enabled) return;
+            if (this.fullscreenMode === 'disabled' || !this.enabled) return;
             
-            const now = Date.now();
-            const timeSinceLastClick = now - this.lastClickTime;
-            
-            if (timeSinceLastClick < this.doubleClickDelay && timeSinceLastClick > 50) {
-                // Double-click detected
+            if (this.fullscreenMode === 'single') {
+                // Single-click mode
                 this.enterFullscreen();
-                this.lastClickTime = 0; // Reset to prevent triple-click
-            } else {
-                this.lastClickTime = now;
+            } else if (this.fullscreenMode === 'double') {
+                // Double-click mode
+                const now = Date.now();
+                const timeSinceLastClick = now - this.lastClickTime;
+                
+                if (timeSinceLastClick < this.doubleClickDelay && timeSinceLastClick > 50) {
+                    // Double-click detected
+                    this.enterFullscreen();
+                    this.lastClickTime = 0; // Reset to prevent triple-click
+                } else {
+                    this.lastClickTime = now;
+                }
             }
         });
         
@@ -371,6 +377,15 @@ class TimeDisplayManager {
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
                 this.exitFullscreen();
+            });
+        }
+        
+        // Fullscreen font size slider
+        const fontSlider = document.getElementById('time-fullscreen-font-slider');
+        if (fontSlider) {
+            fontSlider.value = this.fullscreenFontSize;
+            fontSlider.addEventListener('input', (e) => {
+                this.setFullscreenFontSize(parseFloat(e.target.value));
             });
         }
         
