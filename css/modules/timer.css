@@ -413,8 +413,7 @@
 
 .timer-display-widget.fullscreen .timer-display-controls,
 .timer-display-widget.fullscreen .timer-display-actions {
-    position: absolute;
-    bottom: 100px;
+    display: none;
 }
 
 .timer-display-widget.fullscreen .timer-font-size-control {
