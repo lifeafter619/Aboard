@@ -3,7 +3,7 @@
 /* Feature buttons grid for "More" panel */
 .more-features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
     gap: 10px;
     margin-top: 8px;
 }

@@ -1,198 +1,191 @@
-// Timer Module
-// Handles stopwatch and countdown timer functionality
+// Timer Module - Refactored to support multiple timer instances
+// Each timer can be stopwatch or countdown, independently controlled
 
-class TimerManager {
-    constructor() {
-        this.mode = 'stopwatch'; // 'stopwatch' or 'countdown'
+// Single Timer Instance Class
+class TimerInstance {
+    constructor(id, mode, duration, playSound, selectedSound, customSoundUrl, manager) {
+        this.id = id;
+        this.mode = mode; // 'stopwatch' or 'countdown'
+        this.manager = manager;
+        
+        // Timer state
         this.isRunning = false;
         this.isPaused = false;
         this.startTime = 0;
         this.elapsedTime = 0;
-        this.countdownDuration = 0; // in milliseconds
-        this.remainingTime = 0; // in milliseconds
+        this.countdownDuration = duration; // in milliseconds
+        this.remainingTime = duration; // in milliseconds
         this.intervalId = null;
-        this.playSound = false;
-        this.selectedSound = 'class-bell';
-        this.customSoundUrl = null;
         
-        // Preloaded sounds
-        this.sounds = {
-            'class-bell': '/sounds/class-bell.mp3',
-            'exam-end': '/sounds/exam-end.mp3',
-            'gentle-alarm': '/sounds/gentle-alarm.mp3',
-            'digital-beep': '/sounds/digital-beep.mp3'
-        };
+        // Sound settings
+        this.playSound = playSound;
+        this.selectedSound = selectedSound;
+        this.customSoundUrl = customSoundUrl;
+        
+        // UI elements
+        this.displayElement = null;
+        this.isFullscreen = false;
+        this.fontSize = 32;
         
         // For dragging
         this.isDragging = false;
         this.dragOffset = { x: 0, y: 0 };
         
+        this.createDisplayElement();
+        this.startTimerLoop();
+    }
+    
+    createDisplayElement() {
+        const display = document.createElement('div');
+        display.className = 'timer-display-widget';
+        display.dataset.timerId = this.id;
+        
+        display.innerHTML = `
+            <div class="timer-display-header">
+                <div class="timer-display-mode">${this.mode === 'stopwatch' ? '正计时' : '倒计时'}</div>
+                <button class="timer-close-btn" title="关闭">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="timer-display-time">00:00:00</div>
+            <div class="timer-display-controls">
+                <button class="timer-control-btn timer-play-pause-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="6" y="4" width="4" height="16"></rect>
+                        <rect x="14" y="4" width="4" height="16"></rect>
+                    </svg>
+                    暂停
+                </button>
+                <button class="timer-control-btn timer-reset-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                        <path d="M21 3v5h-5"></path>
+                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                        <path d="M3 21v-5h5"></path>
+                    </svg>
+                    重置
+                </button>
+            </div>
+            <div class="timer-display-actions">
+                <button class="timer-action-btn timer-adjust-btn" title="调整">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"></path>
+                    </svg>
+                    调整
+                </button>
+                <button class="timer-action-btn timer-fullscreen-btn" title="全屏">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                    </svg>
+                    全屏
+                </button>
+            </div>
+            <div class="timer-font-size-control">
+                <label>字体大小</label>
+                <input type="range" class="timer-font-size-slider" min="16" max="60" value="32" step="2">
+            </div>
+        `;
+        
+        document.body.appendChild(display);
+        this.displayElement = display;
+        
+        // Position the timer (stagger based on id)
+        const offset = (this.id % 5) * 30;
+        display.style.top = `${180 + offset}px`;
+        display.style.right = `${20 + offset}px`;
+        
         this.setupEventListeners();
+        this.setupDragging();
+        
+        // Initialize time display
+        if (this.mode === 'stopwatch') {
+            this.displayTime(this.elapsedTime);
+        } else {
+            this.displayTime(this.remainingTime);
+        }
     }
     
     setupEventListeners() {
-        // Timer mode buttons
-        document.querySelectorAll('.timer-mode-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.mode = e.currentTarget.dataset.mode;
-                document.querySelectorAll('.timer-mode-btn').forEach(b => b.classList.remove('active'));
-                e.currentTarget.classList.add('active');
-                this.updateSoundGroupVisibility();
-            });
-        });
+        const playPauseBtn = this.displayElement.querySelector('.timer-play-pause-btn');
+        const resetBtn = this.displayElement.querySelector('.timer-reset-btn');
+        const closeBtn = this.displayElement.querySelector('.timer-close-btn');
+        const adjustBtn = this.displayElement.querySelector('.timer-adjust-btn');
+        const fullscreenBtn = this.displayElement.querySelector('.timer-fullscreen-btn');
+        const fontSizeSlider = this.displayElement.querySelector('.timer-font-size-slider');
         
-        // Sound checkbox
-        const soundCheckbox = document.getElementById('timer-sound-checkbox');
-        if (soundCheckbox) {
-            soundCheckbox.addEventListener('change', (e) => {
-                this.playSound = e.target.checked;
-            });
-        }
-        
-        // Sound preset buttons
-        document.querySelectorAll('.sound-preset-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const button = e.currentTarget;
-                this.selectedSound = button.dataset.sound;
-                this.customSoundUrl = null;
-                document.querySelectorAll('.sound-preset-btn').forEach(b => b.classList.remove('active'));
-                button.classList.add('active');
-            });
-        });
-        
-        // Sound preview buttons
-        document.querySelectorAll('.sound-preview-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const sound = e.currentTarget.closest('.sound-preset-btn').dataset.sound;
-                this.previewSound(sound);
-            });
-        });
-        
-        // Sound upload
-        const soundUploadInput = document.getElementById('timer-sound-upload');
-        if (soundUploadInput) {
-            soundUploadInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file && file.type.startsWith('audio/')) {
-                    const url = URL.createObjectURL(file);
-                    this.customSoundUrl = url;
-                    this.selectedSound = null;
-                    // Update UI to show custom sound is selected
-                    document.querySelectorAll('.sound-preset-btn').forEach(b => b.classList.remove('active'));
-                    alert('自定义音频已上传');
-                }
-            });
-        }
-        
-        // Action buttons
-        const timerCancelBtn = document.getElementById('timer-cancel-btn');
-        if (timerCancelBtn) {
-            timerCancelBtn.addEventListener('click', () => {
-                this.hideSettingsModal();
-            });
-        }
-        
-        const timerStartBtn = document.getElementById('timer-start-btn');
-        if (timerStartBtn) {
-            timerStartBtn.addEventListener('click', () => {
-                this.startTimer();
-            });
-        }
-        
-        // Timer display controls
-        const playPauseBtn = document.getElementById('timer-play-pause-btn');
-        if (playPauseBtn) {
-            playPauseBtn.addEventListener('click', () => {
-                this.togglePlayPause();
-            });
-        }
-        
-        const resetBtn = document.getElementById('timer-reset-btn');
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => {
-                this.resetTimer();
-            });
-        }
-        
-        // Close timer display
-        const timerCloseBtn = document.getElementById('timer-display-close-btn');
-        if (timerCloseBtn) {
-            timerCloseBtn.addEventListener('click', () => {
-                this.closeTimer();
-            });
-        }
-        
-        // Setup dragging for timer display
-        this.setupTimerDisplayDragging();
+        playPauseBtn.addEventListener('click', () => this.togglePlayPause());
+        resetBtn.addEventListener('click', () => this.resetTimer());
+        closeBtn.addEventListener('click', () => this.closeTimer());
+        adjustBtn.addEventListener('click', () => this.adjustTimer());
+        fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+        fontSizeSlider.addEventListener('input', (e) => this.updateFontSize(e.target.value));
     }
     
-    updateSoundGroupVisibility() {
-        const soundGroup = document.querySelector('.timer-sound-group');
-        if (soundGroup) {
-            if (this.mode === 'countdown') {
-                soundGroup.classList.remove('disabled');
-            } else {
-                soundGroup.classList.add('disabled');
+    setupDragging() {
+        const header = this.displayElement.querySelector('.timer-display-header');
+        
+        header.addEventListener('mousedown', (e) => {
+            // Don't start dragging if clicking on close button
+            if (e.target.closest('.timer-close-btn')) return;
+            
+            this.isDragging = true;
+            this.displayElement.classList.add('dragging');
+            
+            const rect = this.displayElement.getBoundingClientRect();
+            this.dragOffset.x = e.clientX - rect.left;
+            this.dragOffset.y = e.clientY - rect.top;
+            
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!this.isDragging) return;
+            
+            const x = e.clientX - this.dragOffset.x;
+            const y = e.clientY - this.dragOffset.y;
+            
+            // Apply edge snapping
+            const edgeSnapDistance = 30;
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            const rect = this.displayElement.getBoundingClientRect();
+            
+            let finalX = x;
+            let finalY = y;
+            
+            // Snap to edges
+            if (x < edgeSnapDistance) {
+                finalX = 10;
+            } else if (x + rect.width > windowWidth - edgeSnapDistance) {
+                finalX = windowWidth - rect.width - 10;
             }
-        }
-    }
-    
-    showSettingsModal() {
-        const modal = document.getElementById('timer-settings-modal');
-        if (modal) {
-            modal.classList.add('show');
             
-            // Reset to defaults
-            this.mode = 'stopwatch';
-            document.querySelectorAll('.timer-mode-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector('.timer-mode-btn[data-mode="stopwatch"]').classList.add('active');
-            
-            this.updateSoundGroupVisibility();
-            
-            // Clear time inputs
-            document.getElementById('timer-hours').value = '0';
-            document.getElementById('timer-minutes').value = '0';
-            document.getElementById('timer-seconds').value = '0';
-            
-            // Reset sound settings
-            document.getElementById('timer-sound-checkbox').checked = false;
-            this.playSound = false;
-            document.querySelectorAll('.sound-preset-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector('.sound-preset-btn[data-sound="class-bell"]').classList.add('active');
-            this.selectedSound = 'class-bell';
-            this.customSoundUrl = null;
-        }
-    }
-    
-    hideSettingsModal() {
-        const modal = document.getElementById('timer-settings-modal');
-        if (modal) {
-            modal.classList.remove('show');
-        }
-    }
-    
-    startTimer() {
-        // Get time input values
-        const hours = parseInt(document.getElementById('timer-hours').value) || 0;
-        const minutes = parseInt(document.getElementById('timer-minutes').value) || 0;
-        const seconds = parseInt(document.getElementById('timer-seconds').value) || 0;
-        
-        if (this.mode === 'countdown') {
-            this.countdownDuration = (hours * 3600 + minutes * 60 + seconds) * 1000;
-            if (this.countdownDuration === 0) {
-                alert('请设置倒计时时间');
-                return;
+            if (y < edgeSnapDistance) {
+                finalY = 10;
+            } else if (y + rect.height > windowHeight - edgeSnapDistance) {
+                finalY = windowHeight - rect.height - 10;
             }
-            this.remainingTime = this.countdownDuration;
-        } else {
-            // Stopwatch mode - can start from a specific time if set
-            this.elapsedTime = (hours * 3600 + minutes * 60 + seconds) * 1000;
-        }
+            
+            // Keep within bounds
+            finalX = Math.max(0, Math.min(finalX, windowWidth - rect.width));
+            finalY = Math.max(0, Math.min(finalY, windowHeight - rect.height));
+            
+            this.displayElement.style.left = `${finalX}px`;
+            this.displayElement.style.top = `${finalY}px`;
+            this.displayElement.style.right = 'auto';
+            this.displayElement.style.bottom = 'auto';
+        });
         
-        this.hideSettingsModal();
-        this.showTimerDisplay();
-        this.startTimerLoop();
+        document.addEventListener('mouseup', () => {
+            if (this.isDragging) {
+                this.isDragging = false;
+                this.displayElement.classList.remove('dragging');
+            }
+        });
     }
     
     startTimerLoop() {
@@ -202,7 +195,7 @@ class TimerManager {
         
         this.intervalId = setInterval(() => {
             this.updateTimer();
-        }, 100); // Update every 100ms for smooth display
+        }, 100);
         
         this.updatePlayPauseButton();
         this.updateTimerDisplayClass();
@@ -239,7 +232,7 @@ class TimerManager {
         
         const timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         
-        const timeDisplay = document.querySelector('.timer-display-time');
+        const timeDisplay = this.displayElement.querySelector('.timer-display-time');
         if (timeDisplay) {
             timeDisplay.textContent = timeString;
         }
@@ -267,7 +260,7 @@ class TimerManager {
     }
     
     updatePlayPauseButton() {
-        const btn = document.getElementById('timer-play-pause-btn');
+        const btn = this.displayElement.querySelector('.timer-play-pause-btn');
         if (btn) {
             if (this.isPaused) {
                 btn.innerHTML = `
@@ -289,7 +282,7 @@ class TimerManager {
     }
     
     updateTimerDisplayClass() {
-        const timeDisplay = document.querySelector('.timer-display-time');
+        const timeDisplay = this.displayElement.querySelector('.timer-display-time');
         if (timeDisplay) {
             timeDisplay.classList.remove('running', 'paused', 'finished');
             if (this.isPaused) {
@@ -307,7 +300,7 @@ class TimerManager {
         }
         
         this.isRunning = false;
-        this.isPaused = false;
+        this.isPaused = true; // Set to paused state after reset
         
         if (this.mode === 'stopwatch') {
             this.elapsedTime = 0;
@@ -329,7 +322,7 @@ class TimerManager {
         
         this.isRunning = false;
         
-        const timeDisplay = document.querySelector('.timer-display-time');
+        const timeDisplay = this.displayElement.querySelector('.timer-display-time');
         if (timeDisplay) {
             timeDisplay.classList.add('finished');
         }
@@ -340,31 +333,18 @@ class TimerManager {
         }
     }
     
-    previewSound(soundKey) {
-        const soundUrl = this.sounds[soundKey];
-        if (soundUrl) {
-            const audio = new Audio(soundUrl);
-            audio.play().catch(err => {
-                console.warn('无法播放音频预览:', err);
-                // Fallback to a simple beep
-                this.playBeep();
-            });
-        }
-    }
-    
     playFinishSound() {
         let soundUrl;
         if (this.customSoundUrl) {
             soundUrl = this.customSoundUrl;
-        } else if (this.selectedSound && this.sounds[this.selectedSound]) {
-            soundUrl = this.sounds[this.selectedSound];
+        } else if (this.selectedSound && this.manager.sounds[this.selectedSound]) {
+            soundUrl = this.manager.sounds[this.selectedSound];
         }
         
         if (soundUrl) {
             const audio = new Audio(soundUrl);
             audio.play().catch(err => {
                 console.warn('无法播放音频:', err);
-                // Fallback to a simple beep
                 this.playBeep();
             });
         } else {
@@ -373,41 +353,55 @@ class TimerManager {
     }
     
     playBeep() {
-        // Create a simple beep sound using Web Audio API
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.value = 800;
-        oscillator.type = 'sine';
-        
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.5);
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        } catch (err) {
+            console.warn('无法播放提示音:', err);
+        }
     }
     
-    showTimerDisplay() {
-        const display = document.getElementById('timer-display');
-        if (display) {
-            display.classList.add('show');
-            
-            // Set mode label
-            const modeLabel = document.querySelector('.timer-display-mode');
-            if (modeLabel) {
-                modeLabel.textContent = this.mode === 'stopwatch' ? '正计时' : '倒计时';
-            }
-            
-            // Initialize time display
-            if (this.mode === 'stopwatch') {
-                this.displayTime(this.elapsedTime);
-            } else {
-                this.displayTime(this.remainingTime);
-            }
+    adjustTimer() {
+        // Show settings modal to adjust this timer
+        this.manager.showSettingsModalForTimer(this);
+    }
+    
+    toggleFullscreen() {
+        if (this.isFullscreen) {
+            this.exitFullscreen();
+        } else {
+            this.enterFullscreen();
+        }
+    }
+    
+    enterFullscreen() {
+        this.isFullscreen = true;
+        this.displayElement.classList.add('fullscreen');
+    }
+    
+    exitFullscreen() {
+        this.isFullscreen = false;
+        this.displayElement.classList.remove('fullscreen');
+    }
+    
+    updateFontSize(size) {
+        this.fontSize = parseInt(size);
+        const timeDisplay = this.displayElement.querySelector('.timer-display-time');
+        if (timeDisplay) {
+            timeDisplay.style.fontSize = `${this.fontSize}px`;
         }
     }
     
@@ -418,79 +412,305 @@ class TimerManager {
             this.intervalId = null;
         }
         
-        this.isRunning = false;
-        this.isPaused = false;
-        this.elapsedTime = 0;
-        this.remainingTime = 0;
+        // Remove from DOM
+        if (this.displayElement) {
+            this.displayElement.remove();
+        }
         
-        // Hide the display
-        const display = document.getElementById('timer-display');
-        if (display) {
-            display.classList.remove('show');
+        // Remove from manager
+        this.manager.removeTimer(this.id);
+    }
+    
+    updateSettings(duration, playSound, selectedSound, customSoundUrl) {
+        this.countdownDuration = duration;
+        this.remainingTime = duration;
+        this.playSound = playSound;
+        this.selectedSound = selectedSound;
+        this.customSoundUrl = customSoundUrl;
+        
+        // Reset timer with new settings
+        this.resetTimer();
+    }
+}
+
+// Timer Manager - Manages multiple timer instances
+class TimerManager {
+    constructor() {
+        this.timers = new Map();
+        this.nextTimerId = 1;
+        
+        // Preloaded sounds
+        this.sounds = {
+            'class-bell': '/sounds/class-bell.mp3',
+            'exam-end': '/sounds/exam-end.mp3',
+            'gentle-alarm': '/sounds/gentle-alarm.mp3',
+            'digital-beep': '/sounds/digital-beep.mp3'
+        };
+        
+        // Current timer being adjusted (for adjust functionality)
+        this.adjustingTimer = null;
+        
+        this.setupEventListeners();
+    }
+    
+    setupEventListeners() {
+        // Timer mode buttons
+        document.querySelectorAll('.timer-mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const mode = e.currentTarget.dataset.mode;
+                document.querySelectorAll('.timer-mode-btn').forEach(b => b.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                this.updateSoundGroupVisibility(mode);
+                this.updateTimerLabel(mode);
+            });
+        });
+        
+        // Sound checkbox
+        const soundCheckbox = document.getElementById('timer-sound-checkbox');
+        if (soundCheckbox) {
+            soundCheckbox.addEventListener('change', (e) => {
+                // This is handled when creating the timer
+            });
+        }
+        
+        // Sound preset buttons
+        document.querySelectorAll('.sound-preset-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (e.target.classList.contains('sound-preview-btn') || 
+                    e.target.closest('.sound-preview-btn')) {
+                    return; // Let the preview button handle it
+                }
+                
+                const button = e.currentTarget;
+                if (button.dataset.sound) {
+                    document.querySelectorAll('.sound-preset-btn').forEach(b => b.classList.remove('active'));
+                    button.classList.add('active');
+                }
+            });
+        });
+        
+        // Sound preview buttons
+        document.querySelectorAll('.sound-preview-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const presetBtn = e.currentTarget.closest('.sound-preset-btn');
+                if (presetBtn && presetBtn.dataset.sound) {
+                    this.previewSound(presetBtn.dataset.sound);
+                }
+            });
+        });
+        
+        // Sound upload
+        const soundUploadInput = document.getElementById('timer-sound-upload');
+        if (soundUploadInput) {
+            soundUploadInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file && file.type.startsWith('audio/')) {
+                    const url = URL.createObjectURL(file);
+                    soundUploadInput.dataset.customSoundUrl = url;
+                    // Update UI to show custom sound is selected
+                    document.querySelectorAll('.sound-preset-btn').forEach(b => b.classList.remove('active'));
+                    alert('自定义音频已上传');
+                }
+            });
+        }
+        
+        // Action buttons
+        const timerCancelBtn = document.getElementById('timer-cancel-btn');
+        if (timerCancelBtn) {
+            timerCancelBtn.addEventListener('click', () => {
+                this.hideSettingsModal();
+            });
+        }
+        
+        const timerStartBtn = document.getElementById('timer-start-btn');
+        if (timerStartBtn) {
+            timerStartBtn.addEventListener('click', () => {
+                this.startTimer();
+            });
+        }
+        
+        // Timer settings modal close button
+        const timerSettingsCloseBtn = document.getElementById('timer-settings-close-btn');
+        if (timerSettingsCloseBtn) {
+            timerSettingsCloseBtn.addEventListener('click', () => {
+                this.hideSettingsModal();
+            });
         }
     }
     
-    setupTimerDisplayDragging() {
-        const timerDisplay = document.getElementById('timer-display');
-        if (!timerDisplay) return;
-        
-        timerDisplay.addEventListener('mousedown', (e) => {
-            // Don't start dragging if clicking on buttons
-            if (e.target.closest('button')) return;
-            
-            this.isDragging = true;
-            timerDisplay.classList.add('dragging');
-            
-            const rect = timerDisplay.getBoundingClientRect();
-            this.dragOffset.x = e.clientX - rect.left;
-            this.dragOffset.y = e.clientY - rect.top;
-            
-            e.preventDefault();
-        });
-        
-        document.addEventListener('mousemove', (e) => {
-            if (!this.isDragging) return;
-            
-            const x = e.clientX - this.dragOffset.x;
-            const y = e.clientY - this.dragOffset.y;
-            
-            // Apply edge snapping
-            const edgeSnapDistance = 30;
-            const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight;
-            const rect = timerDisplay.getBoundingClientRect();
-            
-            let finalX = x;
-            let finalY = y;
-            
-            // Snap to edges
-            if (x < edgeSnapDistance) {
-                finalX = 10;
-            } else if (x + rect.width > windowWidth - edgeSnapDistance) {
-                finalX = windowWidth - rect.width - 10;
+    updateSoundGroupVisibility(mode) {
+        const soundGroup = document.querySelector('.timer-sound-group');
+        if (soundGroup) {
+            if (mode === 'countdown') {
+                soundGroup.classList.remove('disabled');
+            } else {
+                soundGroup.classList.add('disabled');
             }
-            
-            if (y < edgeSnapDistance) {
-                finalY = 10;
-            } else if (y + rect.height > windowHeight - edgeSnapDistance) {
-                finalY = windowHeight - rect.height - 10;
+        }
+    }
+    
+    updateTimerLabel(mode) {
+        const label = document.getElementById('timer-time-label');
+        if (label) {
+            if (mode === 'stopwatch') {
+                label.textContent = '设置开始时间';
+            } else {
+                label.textContent = '设置总时间';
             }
-            
-            // Keep within bounds
-            finalX = Math.max(0, Math.min(finalX, windowWidth - rect.width));
-            finalY = Math.max(0, Math.min(finalY, windowHeight - rect.height));
-            
-            timerDisplay.style.left = `${finalX}px`;
-            timerDisplay.style.top = `${finalY}px`;
-            timerDisplay.style.right = 'auto';
-            timerDisplay.style.bottom = 'auto';
-        });
+        }
+    }
+    
+    showSettingsModal() {
+        this.adjustingTimer = null; // Not adjusting, creating new timer
         
-        document.addEventListener('mouseup', () => {
-            if (this.isDragging) {
-                this.isDragging = false;
-                timerDisplay.classList.remove('dragging');
+        const modal = document.getElementById('timer-settings-modal');
+        if (modal) {
+            modal.classList.add('show');
+            
+            // Reset to defaults
+            const mode = 'stopwatch';
+            document.querySelectorAll('.timer-mode-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('.timer-mode-btn[data-mode="stopwatch"]').classList.add('active');
+            
+            this.updateSoundGroupVisibility(mode);
+            this.updateTimerLabel(mode);
+            
+            // Clear time inputs
+            document.getElementById('timer-hours').value = '0';
+            document.getElementById('timer-minutes').value = '0';
+            document.getElementById('timer-seconds').value = '0';
+            
+            // Reset sound settings
+            document.getElementById('timer-sound-checkbox').checked = false;
+            document.querySelectorAll('.sound-preset-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('.sound-preset-btn[data-sound="class-bell"]').classList.add('active');
+            
+            const soundUploadInput = document.getElementById('timer-sound-upload');
+            if (soundUploadInput) {
+                soundUploadInput.value = '';
+                delete soundUploadInput.dataset.customSoundUrl;
             }
-        });
+        }
+    }
+    
+    showSettingsModalForTimer(timer) {
+        this.adjustingTimer = timer;
+        
+        const modal = document.getElementById('timer-settings-modal');
+        if (modal) {
+            modal.classList.add('show');
+            
+            // Set mode based on timer
+            document.querySelectorAll('.timer-mode-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.timer-mode-btn[data-mode="${timer.mode}"]`).classList.add('active');
+            
+            this.updateSoundGroupVisibility(timer.mode);
+            this.updateTimerLabel(timer.mode);
+            
+            // Set time inputs based on timer duration
+            const totalSeconds = Math.floor(timer.countdownDuration / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            
+            document.getElementById('timer-hours').value = hours;
+            document.getElementById('timer-minutes').value = minutes;
+            document.getElementById('timer-seconds').value = seconds;
+            
+            // Set sound settings
+            document.getElementById('timer-sound-checkbox').checked = timer.playSound;
+            
+            if (timer.selectedSound) {
+                document.querySelectorAll('.sound-preset-btn').forEach(b => b.classList.remove('active'));
+                const soundBtn = document.querySelector(`.sound-preset-btn[data-sound="${timer.selectedSound}"]`);
+                if (soundBtn) {
+                    soundBtn.classList.add('active');
+                }
+            }
+        }
+    }
+    
+    hideSettingsModal() {
+        const modal = document.getElementById('timer-settings-modal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+        this.adjustingTimer = null;
+    }
+    
+    startTimer() {
+        // Get time input values
+        const hours = parseInt(document.getElementById('timer-hours').value) || 0;
+        const minutes = parseInt(document.getElementById('timer-minutes').value) || 0;
+        const seconds = parseInt(document.getElementById('timer-seconds').value) || 0;
+        
+        // Get mode
+        const activeMode = document.querySelector('.timer-mode-btn.active');
+        const mode = activeMode ? activeMode.dataset.mode : 'stopwatch';
+        
+        // Get sound settings
+        const playSound = document.getElementById('timer-sound-checkbox').checked;
+        const activeSoundBtn = document.querySelector('.sound-preset-btn.active');
+        const selectedSound = activeSoundBtn ? activeSoundBtn.dataset.sound : 'class-bell';
+        const soundUploadInput = document.getElementById('timer-sound-upload');
+        const customSoundUrl = soundUploadInput ? soundUploadInput.dataset.customSoundUrl : null;
+        
+        const duration = (hours * 3600 + minutes * 60 + seconds) * 1000;
+        
+        if (mode === 'countdown' && duration === 0) {
+            alert('请设置倒计时时间');
+            return;
+        }
+        
+        if (this.adjustingTimer) {
+            // Update existing timer
+            this.adjustingTimer.updateSettings(duration, playSound, selectedSound, customSoundUrl);
+            this.adjustingTimer = null;
+        } else {
+            // Create new timer
+            const id = this.nextTimerId++;
+            const timer = new TimerInstance(id, mode, duration, playSound, selectedSound, customSoundUrl, this);
+            this.timers.set(id, timer);
+        }
+        
+        this.hideSettingsModal();
+    }
+    
+    removeTimer(id) {
+        this.timers.delete(id);
+    }
+    
+    previewSound(soundKey) {
+        const soundUrl = this.sounds[soundKey];
+        if (soundUrl) {
+            const audio = new Audio(soundUrl);
+            audio.play().catch(err => {
+                console.warn('无法播放音频预览:', err);
+                this.playBeep();
+            });
+        }
+    }
+    
+    playBeep() {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        } catch (err) {
+            console.warn('无法播放提示音:', err);
+        }
     }
 }
