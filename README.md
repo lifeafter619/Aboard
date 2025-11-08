@@ -32,10 +32,18 @@
 - **撤销/重做**：支持最多50步历史记录（Ctrl+Z / Ctrl+Y）
 - **全屏模式**：专注创作，沉浸体验（F11）
 
+### ⏱️ 计时器功能
+- **正计时模式**：支持设置起始时间，从指定时间开始计时
+- **倒计时模式**：精确倒计时，适合考试、演讲等场景
+- **提示音系统**：内置4种提示音，支持上传自定义音频
+- **循环播放**：支持设置循环播放次数（1-100次）
+- **拖动与全屏**：支持拖动定位，一键进入全屏显示
+- **多实例支持**：可同时创建多个独立计时器
+
 ### ⚙️ 个性化设置
 - **界面定制**：工具栏大小、属性栏缩放、主题色可调
 - **控制布局**：控制按钮位置可选（四个角落）
-- **边缘吸附**：拖动面板自动吸附到屏幕边缘
+- **边缘吸附**：拖动面板自动吸附到屏幕边缘，避免画布留痕
 - **背景偏好**：自定义属性栏中显示的背景图案
 
 ### 💾 数据管理
@@ -47,6 +55,12 @@
 
 ### 在线使用
 直接打开 `index.html` 文件即可开始使用，无需安装任何依赖。
+
+### 一键部署到 Cloudflare Pages
+
+[![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/lifeafter619/Aboard)
+
+点击上方按钮即可快速部署到 Cloudflare Pages，享受全球CDN加速。
 
 ### 本地服务器
 如果需要完整功能（如加载公告），建议使用HTTP服务器运行：
@@ -116,7 +130,12 @@ Aboard/
 ├── index.html              # 主HTML文件
 ├── announcements.json      # 公告内容配置
 ├── css/
-│   └── style.css          # 样式表
+│   ├── style.css          # 主样式表
+│   └── modules/           # 模块化样式
+│       ├── timer.css      # 计时器样式
+│       ├── time-display.css # 时间显示样式
+│       ├── export.css     # 导出功能样式
+│       └── feature-area.css # 功能区样式
 ├── js/
 │   ├── drawing.js         # 绘图引擎模块
 │   ├── history.js         # 历史记录管理模块
@@ -127,7 +146,16 @@ Aboard/
 │   ├── settings.js        # 设置管理模块
 │   ├── announcement.js    # 公告管理模块
 │   ├── export.js          # 导出功能模块
+│   ├── time-display.js    # 时间显示模块
+│   ├── modules/
+│   │   ├── timer.js       # 计时器模块
+│   │   └── time-display-controls.js # 时间显示控制
 │   └── main.js            # 主应用入口
+├── sounds/                 # 提示音文件夹
+│   ├── class-bell.MP3     # 上课铃声
+│   ├── exam-end.MP3       # 考试结束音
+│   ├── gentle-alarm.MP3   # 柔和提示音
+│   └── digital-beep.MP3   # 数字提示音
 └── README.md              # 项目文档
 ```
 
@@ -142,6 +170,9 @@ Aboard/
 - **SelectionManager** - 选择管理，处理元素选择和操作
 - **SettingsManager** - 设置管理，持久化用户偏好
 - **AnnouncementManager** - 公告管理，处理首次访问提示
+- **TimerManager** - 计时器管理，支持多实例计时器
+- **TimeDisplayManager** - 时间显示管理，处理日期时间显示
+- **ExportManager** - 导出管理，处理画布导出功能
 - **DrawingBoard** - 主应用类，集成所有模块并协调交互
 
 ### 性能优化
@@ -149,7 +180,14 @@ Aboard/
 - 单路径渲染减少绘制调用次数
 - 防抖处理窗口resize事件
 - 智能状态管理避免不必要的重绘
-- 使用requestAnimationFrame优化动画
+- 使用requestAnimationFrame优化拖动和动画性能
+- 事件监听器按需添加/移除，减少内存占用
+
+### 安全与用户体验
+- 拖动面板时自动禁用绘图，避免误操作
+- 窗口调整后智能重新定位面板
+- 全屏模式使用标准浏览器API，支持ESC退出
+- 音频播放使用HTML5 Audio元素，避免Web Audio API复杂性
 
 ## 🤝 贡献指南
 

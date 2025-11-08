@@ -242,6 +242,43 @@
     align-items: center;
 }
 
+.sound-loop-settings {
+    margin-bottom: 16px;
+    padding: 12px;
+    background-color: #f8f8f8;
+    border-radius: 8px;
+}
+
+.sound-loop-count {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.sound-loop-count label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #666;
+    margin: 0;
+}
+
+.loop-count-input {
+    width: 80px;
+    padding: 6px 12px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    color: #333;
+}
+
+.loop-count-input:focus {
+    outline: none;
+    border-color: var(--theme-color);
+}
+
 .sound-upload-btn {
     flex: 1;
     padding: 12px;
