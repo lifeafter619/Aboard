@@ -173,7 +173,10 @@ class DrawingBoard {
                     e.target.closest('#config-area') || 
                     e.target.closest('#history-controls') || 
                     e.target.closest('#pagination-controls') ||
+                    e.target.closest('#time-display-area') ||
+                    e.target.closest('#feature-area') ||
                     e.target.closest('.modal') ||
+                    e.target.closest('.timer-display-widget') ||
                     e.target.closest('.canvas-image-selection')) {
                     return;
                 }
@@ -227,6 +230,11 @@ class DrawingBoard {
         });
         
         document.addEventListener('mousemove', (e) => {
+            // Don't draw when dragging panels
+            if (this.isDraggingPanel) {
+                return;
+            }
+            
             if (this.isDraggingCoordinateOrigin) {
                 this.dragCoordinateOrigin(e);
             } else if (this.drawingEngine.isPanning) {
@@ -1547,9 +1555,20 @@ class DrawingBoard {
         const scale = this.drawingEngine.canvasScale;
         
         // Apply proportional scaling to config-area
-        // The scale is relative to 100% (1.0)
-        configArea.style.transform = `translateX(-50%) scale(${scale})`;
-        configArea.style.transformOrigin = 'center bottom';
+        // Only apply scale if config-area is in its default centered position
+        // Check if it has been dragged (has explicit left/top positioning)
+        const hasBeenDragged = configArea.style.left && configArea.style.left !== 'auto' && 
+                               configArea.style.left !== '50%';
+        
+        if (hasBeenDragged) {
+            // Don't apply the translateX transform if it's been dragged
+            configArea.style.transform = `scale(${scale})`;
+            configArea.style.transformOrigin = 'center bottom';
+        } else {
+            // Apply original transform for centered config-area
+            configArea.style.transform = `translateX(-50%) scale(${scale})`;
+            configArea.style.transformOrigin = 'center bottom';
+        }
     }
     
     updateZoomUI() {

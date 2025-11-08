@@ -3,7 +3,7 @@
 
 // Single Timer Instance Class
 class TimerInstance {
-    constructor(id, mode, duration, playSound, selectedSound, customSoundUrl, manager) {
+    constructor(id, mode, duration, playSound, selectedSound, customSoundUrl, loopSound, loopCount, manager) {
         this.id = id;
         this.mode = mode; // 'stopwatch' or 'countdown'
         this.manager = manager;
@@ -12,7 +12,15 @@ class TimerInstance {
         this.isRunning = false;
         this.isPaused = false;
         this.startTime = 0;
-        this.elapsedTime = 0;
+        
+        // For stopwatch mode, duration is the starting time
+        // For countdown mode, duration is the total time
+        if (mode === 'stopwatch') {
+            this.elapsedTime = duration; // Start from this time
+        } else {
+            this.elapsedTime = 0;
+        }
+        
         this.countdownDuration = duration; // in milliseconds
         this.remainingTime = duration; // in milliseconds
         this.intervalId = null;
@@ -21,6 +29,10 @@ class TimerInstance {
         this.playSound = playSound;
         this.selectedSound = selectedSound;
         this.customSoundUrl = customSoundUrl;
+        this.loopSound = loopSound;
+        this.loopCount = loopCount;
+        this.currentAudio = null; // Track the current audio element
+        this.currentLoopIteration = 0; // Track current loop iteration
         
         // UI elements
         this.displayElement = null;
@@ -33,6 +45,28 @@ class TimerInstance {
         
         this.createDisplayElement();
         this.startTimerLoop();
+        this.setupFullscreenChangeListener();
+    }
+    
+    setupFullscreenChangeListener() {
+        // Listen for fullscreen changes (e.g., ESC key)
+        const handleFullscreenChange = () => {
+            const isInFullscreen = document.fullscreenElement === this.displayElement ||
+                                 document.webkitFullscreenElement === this.displayElement ||
+                                 document.mozFullScreenElement === this.displayElement ||
+                                 document.msFullscreenElement === this.displayElement;
+            
+            if (!isInFullscreen && this.isFullscreen) {
+                // User exited fullscreen using ESC or browser UI
+                this.isFullscreen = false;
+                this.displayElement.classList.remove('fullscreen');
+            }
+        };
+        
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
     }
     
     createDisplayElement() {
@@ -128,6 +162,56 @@ class TimerInstance {
     setupDragging() {
         const header = this.displayElement.querySelector('.timer-display-header');
         
+        const handleMouseMove = (e) => {
+            if (!this.isDragging) return;
+            
+            // Use requestAnimationFrame for smooth dragging performance
+            requestAnimationFrame(() => {
+                const x = e.clientX - this.dragOffset.x;
+                const y = e.clientY - this.dragOffset.y;
+                
+                // Apply edge snapping
+                const edgeSnapDistance = 30;
+                const windowWidth = window.innerWidth;
+                const windowHeight = window.innerHeight;
+                const rect = this.displayElement.getBoundingClientRect();
+                
+                let finalX = x;
+                let finalY = y;
+                
+                // Snap to edges
+                if (x < edgeSnapDistance) {
+                    finalX = 10;
+                } else if (x + rect.width > windowWidth - edgeSnapDistance) {
+                    finalX = windowWidth - rect.width - 10;
+                }
+                
+                if (y < edgeSnapDistance) {
+                    finalY = 10;
+                } else if (y + rect.height > windowHeight - edgeSnapDistance) {
+                    finalY = windowHeight - rect.height - 10;
+                }
+                
+                // Keep within bounds
+                finalX = Math.max(0, Math.min(finalX, windowWidth - rect.width));
+                finalY = Math.max(0, Math.min(finalY, windowHeight - rect.height));
+                
+                this.displayElement.style.left = `${finalX}px`;
+                this.displayElement.style.top = `${finalY}px`;
+                this.displayElement.style.right = 'auto';
+                this.displayElement.style.bottom = 'auto';
+            });
+        };
+        
+        const handleMouseUp = () => {
+            if (this.isDragging) {
+                this.isDragging = false;
+                this.displayElement.classList.remove('dragging');
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            }
+        };
+        
         header.addEventListener('mousedown', (e) => {
             // Don't start dragging if clicking on close button
             if (e.target.closest('.timer-close-btn')) return;
@@ -139,52 +223,11 @@ class TimerInstance {
             this.dragOffset.x = e.clientX - rect.left;
             this.dragOffset.y = e.clientY - rect.top;
             
+            // Add listeners only when dragging starts
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            
             e.preventDefault();
-        });
-        
-        document.addEventListener('mousemove', (e) => {
-            if (!this.isDragging) return;
-            
-            const x = e.clientX - this.dragOffset.x;
-            const y = e.clientY - this.dragOffset.y;
-            
-            // Apply edge snapping
-            const edgeSnapDistance = 30;
-            const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight;
-            const rect = this.displayElement.getBoundingClientRect();
-            
-            let finalX = x;
-            let finalY = y;
-            
-            // Snap to edges
-            if (x < edgeSnapDistance) {
-                finalX = 10;
-            } else if (x + rect.width > windowWidth - edgeSnapDistance) {
-                finalX = windowWidth - rect.width - 10;
-            }
-            
-            if (y < edgeSnapDistance) {
-                finalY = 10;
-            } else if (y + rect.height > windowHeight - edgeSnapDistance) {
-                finalY = windowHeight - rect.height - 10;
-            }
-            
-            // Keep within bounds
-            finalX = Math.max(0, Math.min(finalX, windowWidth - rect.width));
-            finalY = Math.max(0, Math.min(finalY, windowHeight - rect.height));
-            
-            this.displayElement.style.left = `${finalX}px`;
-            this.displayElement.style.top = `${finalY}px`;
-            this.displayElement.style.right = 'auto';
-            this.displayElement.style.bottom = 'auto';
-        });
-        
-        document.addEventListener('mouseup', () => {
-            if (this.isDragging) {
-                this.isDragging = false;
-                this.displayElement.classList.remove('dragging');
-            }
         });
     }
     
@@ -192,6 +235,9 @@ class TimerInstance {
         this.isRunning = true;
         this.isPaused = false;
         this.startTime = Date.now();
+        
+        // For stopwatch mode, if there's an initial duration, it means we start from that time
+        // For countdown mode, we already have remainingTime set
         
         this.intervalId = setInterval(() => {
             this.updateTimer();
@@ -303,8 +349,9 @@ class TimerInstance {
         this.isPaused = true; // Set to paused state after reset
         
         if (this.mode === 'stopwatch') {
-            this.elapsedTime = 0;
-            this.displayTime(0);
+            // Reset to the initial starting time (which is stored in countdownDuration)
+            this.elapsedTime = this.countdownDuration;
+            this.displayTime(this.countdownDuration);
         } else {
             this.remainingTime = this.countdownDuration;
             this.displayTime(this.countdownDuration);
@@ -342,36 +389,41 @@ class TimerInstance {
         }
         
         if (soundUrl) {
-            const audio = new Audio(soundUrl);
-            audio.play().catch(err => {
-                console.warn('无法播放音频:', err);
-                this.playBeep();
-            });
-        } else {
-            this.playBeep();
+            this.currentLoopIteration = 0;
+            this.playSound_Internal(soundUrl);
         }
     }
     
-    playBeep() {
-        try {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
-            
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.5);
-        } catch (err) {
-            console.warn('无法播放提示音:', err);
+    playSound_Internal(soundUrl) {
+        // Stop any currently playing audio
+        if (this.currentAudio) {
+            this.currentAudio.pause();
+            this.currentAudio = null;
         }
+        
+        const audio = new Audio(soundUrl);
+        this.currentAudio = audio;
+        
+        audio.addEventListener('ended', () => {
+            if (this.loopSound && this.currentLoopIteration < this.loopCount - 1) {
+                this.currentLoopIteration++;
+                // Play again for the next loop
+                this.playSound_Internal(soundUrl);
+            } else {
+                this.currentAudio = null;
+                this.currentLoopIteration = 0;
+            }
+        });
+        
+        audio.addEventListener('error', (err) => {
+            console.warn('无法播放音频:', err);
+            this.currentAudio = null;
+        });
+        
+        audio.play().catch(err => {
+            console.warn('无法播放音频:', err);
+            this.currentAudio = null;
+        });
     }
     
     adjustTimer() {
@@ -389,11 +441,50 @@ class TimerInstance {
     
     enterFullscreen() {
         this.isFullscreen = true;
-        this.displayElement.classList.add('fullscreen');
+        
+        // Use browser's fullscreen API for true fullscreen
+        if (this.displayElement.requestFullscreen) {
+            this.displayElement.requestFullscreen().then(() => {
+                this.displayElement.classList.add('fullscreen');
+            }).catch(err => {
+                console.warn('无法进入全屏:', err);
+                // Fallback to CSS fullscreen
+                this.displayElement.classList.add('fullscreen');
+            });
+        } else if (this.displayElement.webkitRequestFullscreen) {
+            this.displayElement.webkitRequestFullscreen();
+            this.displayElement.classList.add('fullscreen');
+        } else if (this.displayElement.mozRequestFullScreen) {
+            this.displayElement.mozRequestFullScreen();
+            this.displayElement.classList.add('fullscreen');
+        } else if (this.displayElement.msRequestFullscreen) {
+            this.displayElement.msRequestFullscreen();
+            this.displayElement.classList.add('fullscreen');
+        } else {
+            // Fallback to CSS fullscreen
+            this.displayElement.classList.add('fullscreen');
+        }
     }
     
     exitFullscreen() {
         this.isFullscreen = false;
+        
+        // Exit browser fullscreen if active
+        if (document.fullscreenElement === this.displayElement ||
+            document.webkitFullscreenElement === this.displayElement ||
+            document.mozFullScreenElement === this.displayElement ||
+            document.msFullscreenElement === this.displayElement) {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
+        
         this.displayElement.classList.remove('fullscreen');
     }
     
@@ -412,6 +503,12 @@ class TimerInstance {
             this.intervalId = null;
         }
         
+        // Stop any playing audio
+        if (this.currentAudio) {
+            this.currentAudio.pause();
+            this.currentAudio = null;
+        }
+        
         // Remove from DOM
         if (this.displayElement) {
             this.displayElement.remove();
@@ -421,12 +518,20 @@ class TimerInstance {
         this.manager.removeTimer(this.id);
     }
     
-    updateSettings(duration, playSound, selectedSound, customSoundUrl) {
+    updateSettings(duration, playSound, selectedSound, customSoundUrl, loopSound, loopCount) {
         this.countdownDuration = duration;
-        this.remainingTime = duration;
+        
+        if (this.mode === 'stopwatch') {
+            this.elapsedTime = duration;
+        } else {
+            this.remainingTime = duration;
+        }
+        
         this.playSound = playSound;
         this.selectedSound = selectedSound;
         this.customSoundUrl = customSoundUrl;
+        this.loopSound = loopSound;
+        this.loopCount = loopCount;
         
         // Reset timer with new settings
         this.resetTimer();
@@ -439,12 +544,12 @@ class TimerManager {
         this.timers = new Map();
         this.nextTimerId = 1;
         
-        // Preloaded sounds
+        // Preloaded sounds (use correct case-insensitive paths)
         this.sounds = {
-            'class-bell': '/sounds/class-bell.mp3',
-            'exam-end': '/sounds/exam-end.mp3',
-            'gentle-alarm': '/sounds/gentle-alarm.mp3',
-            'digital-beep': '/sounds/digital-beep.mp3'
+            'class-bell': 'sounds/class-bell.MP3',
+            'exam-end': 'sounds/exam-end.MP3',
+            'gentle-alarm': 'sounds/gentle-alarm.MP3',
+            'digital-beep': 'sounds/digital-beep.MP3'
         };
         
         // Current timer being adjusted (for adjust functionality)
@@ -511,6 +616,19 @@ class TimerManager {
                     // Update UI to show custom sound is selected
                     document.querySelectorAll('.sound-preset-btn').forEach(b => b.classList.remove('active'));
                     alert('自定义音频已上传');
+                }
+            });
+        }
+        
+        // Loop checkbox
+        const loopCheckbox = document.getElementById('timer-loop-checkbox');
+        const loopCountGroup = document.getElementById('sound-loop-count-group');
+        if (loopCheckbox && loopCountGroup) {
+            loopCheckbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    loopCountGroup.style.display = 'flex';
+                } else {
+                    loopCountGroup.style.display = 'none';
                 }
             });
         }
@@ -586,6 +704,17 @@ class TimerManager {
             document.querySelectorAll('.sound-preset-btn').forEach(b => b.classList.remove('active'));
             document.querySelector('.sound-preset-btn[data-sound="class-bell"]').classList.add('active');
             
+            // Reset loop settings
+            const loopCheckbox = document.getElementById('timer-loop-checkbox');
+            const loopCountGroup = document.getElementById('sound-loop-count-group');
+            if (loopCheckbox) {
+                loopCheckbox.checked = false;
+            }
+            if (loopCountGroup) {
+                loopCountGroup.style.display = 'none';
+            }
+            document.getElementById('timer-loop-count').value = '3';
+            
             const soundUploadInput = document.getElementById('timer-sound-upload');
             if (soundUploadInput) {
                 soundUploadInput.value = '';
@@ -620,6 +749,23 @@ class TimerManager {
             
             // Set sound settings
             document.getElementById('timer-sound-checkbox').checked = timer.playSound;
+            
+            // Set loop settings
+            const loopCheckbox = document.getElementById('timer-loop-checkbox');
+            const loopCountGroup = document.getElementById('sound-loop-count-group');
+            if (loopCheckbox) {
+                loopCheckbox.checked = timer.loopSound;
+                if (timer.loopSound && loopCountGroup) {
+                    loopCountGroup.style.display = 'flex';
+                } else if (loopCountGroup) {
+                    loopCountGroup.style.display = 'none';
+                }
+            }
+            
+            const loopCountInput = document.getElementById('timer-loop-count');
+            if (loopCountInput) {
+                loopCountInput.value = timer.loopCount;
+            }
             
             if (timer.selectedSound) {
                 document.querySelectorAll('.sound-preset-btn').forEach(b => b.classList.remove('active'));
@@ -656,6 +802,10 @@ class TimerManager {
         const soundUploadInput = document.getElementById('timer-sound-upload');
         const customSoundUrl = soundUploadInput ? soundUploadInput.dataset.customSoundUrl : null;
         
+        // Get loop settings
+        const loopSound = document.getElementById('timer-loop-checkbox').checked;
+        const loopCount = parseInt(document.getElementById('timer-loop-count').value) || 3;
+        
         const duration = (hours * 3600 + minutes * 60 + seconds) * 1000;
         
         if (mode === 'countdown' && duration === 0) {
@@ -665,12 +815,12 @@ class TimerManager {
         
         if (this.adjustingTimer) {
             // Update existing timer
-            this.adjustingTimer.updateSettings(duration, playSound, selectedSound, customSoundUrl);
+            this.adjustingTimer.updateSettings(duration, playSound, selectedSound, customSoundUrl, loopSound, loopCount);
             this.adjustingTimer = null;
         } else {
             // Create new timer
             const id = this.nextTimerId++;
-            const timer = new TimerInstance(id, mode, duration, playSound, selectedSound, customSoundUrl, this);
+            const timer = new TimerInstance(id, mode, duration, playSound, selectedSound, customSoundUrl, loopSound, loopCount, this);
             this.timers.set(id, timer);
         }
         
@@ -687,30 +837,7 @@ class TimerManager {
             const audio = new Audio(soundUrl);
             audio.play().catch(err => {
                 console.warn('无法播放音频预览:', err);
-                this.playBeep();
             });
-        }
-    }
-    
-    playBeep() {
-        try {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
-            
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.5);
-        } catch (err) {
-            console.warn('无法播放提示音:', err);
         }
     }
 }
