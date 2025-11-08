@@ -634,7 +634,6 @@ class TimerManager {
                 }
             });
         }
-        }
         
         // Loop checkbox
         const loopCheckbox = document.getElementById('timer-loop-checkbox');
