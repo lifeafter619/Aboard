@@ -53,24 +53,7 @@ class TimerInstance {
     }
     
     setupFullscreenChangeListener() {
-        // Listen for fullscreen changes (e.g., ESC key)
-        const handleFullscreenChange = () => {
-            const isInFullscreen = document.fullscreenElement === this.displayElement ||
-                                 document.webkitFullscreenElement === this.displayElement ||
-                                 document.mozFullScreenElement === this.displayElement ||
-                                 document.msFullscreenElement === this.displayElement;
-            
-            if (!isInFullscreen && this.isFullscreen) {
-                // User exited fullscreen using ESC or browser UI
-                this.isFullscreen = false;
-                this.displayElement.classList.remove('fullscreen');
-            }
-        };
-        
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+        // No browser fullscreen API listeners needed - using CSS fullscreen only
     }
 
     createDisplayElement() {
@@ -222,6 +205,8 @@ class TimerInstance {
             
             // Use requestAnimationFrame for smooth dragging performance
             requestAnimationFrame(() => {
+                if (!this.isDragging) return; // Double check inside RAF
+                
                 const x = e.clientX - this.dragOffset.x;
                 const y = e.clientY - this.dragOffset.y;
                 
@@ -262,13 +247,16 @@ class TimerInstance {
             if (this.isDragging) {
                 this.isDragging = false;
                 this.displayElement.classList.remove('dragging');
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
             }
         };
         
+        // Keep listeners attached permanently to document
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
+        
+        // Store references for cleanup when timer is closed
+        this.mouseMoveHandler = handleMouseMove;
+        this.mouseUpHandler = handleMouseUp;
     }
     
     startTimerLoop() {
@@ -499,28 +487,8 @@ class TimerInstance {
             timeDisplay.style.fontSize = `${constrainedPercent}vmin`;
         }
         
-        // Use browser's fullscreen API for true fullscreen
-        if (this.displayElement.requestFullscreen) {
-            this.displayElement.requestFullscreen().then(() => {
-                this.displayElement.classList.add('fullscreen');
-            }).catch(err => {
-                console.warn('无法进入全屏:', err);
-                // Fallback to CSS fullscreen
-                this.displayElement.classList.add('fullscreen');
-            });
-        } else if (this.displayElement.webkitRequestFullscreen) {
-            this.displayElement.webkitRequestFullscreen();
-            this.displayElement.classList.add('fullscreen');
-        } else if (this.displayElement.mozRequestFullScreen) {
-            this.displayElement.mozRequestFullScreen();
-            this.displayElement.classList.add('fullscreen');
-        } else if (this.displayElement.msRequestFullscreen) {
-            this.displayElement.msRequestFullscreen();
-            this.displayElement.classList.add('fullscreen');
-        } else {
-            // Fallback to CSS fullscreen
-            this.displayElement.classList.add('fullscreen');
-        }
+        // Use CSS fullscreen only (no browser fullscreen API)
+        this.displayElement.classList.add('fullscreen');
     }
     
     exitFullscreen() {
@@ -532,22 +500,7 @@ class TimerInstance {
             timeDisplay.style.fontSize = `${this.fontSize}px`;
         }
         
-        // Exit browser fullscreen if active
-        if (document.fullscreenElement === this.displayElement ||
-            document.webkitFullscreenElement === this.displayElement ||
-            document.mozFullScreenElement === this.displayElement ||
-            document.msFullscreenElement === this.displayElement) {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            } else if (document.mozCancelFullScreen) {
-                document.mozCancelFullScreen();
-            } else if (document.msExitFullscreen) {
-                document.msExitFullscreen();
-            }
-        }
-        
+        // Remove CSS fullscreen class
         this.displayElement.classList.remove('fullscreen');
     }
     
@@ -570,6 +523,14 @@ class TimerInstance {
         if (this.currentAudio) {
             this.currentAudio.pause();
             this.currentAudio = null;
+        }
+        
+        // Remove event listeners
+        if (this.mouseMoveHandler) {
+            document.removeEventListener('mousemove', this.mouseMoveHandler);
+        }
+        if (this.mouseUpHandler) {
+            document.removeEventListener('mouseup', this.mouseUpHandler);
         }
         
         // Remove from DOM

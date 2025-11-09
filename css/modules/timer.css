@@ -1,5 +1,10 @@
 /* Timer Module Styles */
 
+/* Timer Alert Modal - Higher z-index than settings modal (warning level) */
+#timer-alert-modal {
+    z-index: 10002;
+}
+
 /* Timer Settings Modal */
 #timer-settings-modal {
     position: fixed;
@@ -189,6 +194,13 @@
     margin-bottom: 16px;
 }
 
+/* Grid layout for default sound presets (2 rows of 2) */
+.sound-presets-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
 .sound-preset-btn {
     width: 100%;
     padding: 12px 8px;
@@ -202,7 +214,7 @@
     color: #666;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: 6px;
     position: relative;
 }
