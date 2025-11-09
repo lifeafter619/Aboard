@@ -71,6 +71,14 @@ class DrawingBoard {
         this.backgroundManager.drawBackground();
         this.updateUI();
         this.historyManager.saveState();
+        
+        // Initialize pages array for pagination mode
+        if (!this.settingsManager.infiniteCanvas && this.pages.length === 0) {
+            this.pages.push(this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height));
+            this.currentPage = 1;
+            this.updatePaginationUI();
+        }
+        
         this.initializeCanvasView(); // Initialize canvas view (70% scale, centered)
         this.updateZoomUI();
         this.applyZoom(false); // Don't update config-area scale on refresh
@@ -1935,7 +1943,8 @@ class DrawingBoard {
         nextOrAddBtn.disabled = false;
         
         // Update button icon and title based on whether we're on the last page
-        if (this.currentPage >= this.pages.length) {
+        // Also show "+" icon when there's only one page total
+        if (this.currentPage >= this.pages.length || this.pages.length === 1) {
             // Show add icon
             nextOrAddBtn.innerHTML = `
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

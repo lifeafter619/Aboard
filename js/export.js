@@ -172,7 +172,7 @@ class ExportManager {
             return;
         }
         
-        // Create a checkbox button for each page
+        // Create a checkbox button for each page (show even if there's only 1 page)
         for (let i = 0; i < pageCount; i++) {
             const pageNum = i + 1;
             const button = document.createElement('button');
@@ -194,9 +194,15 @@ class ExportManager {
     }
     
     showModal() {
-        // Set default filename with timestamp (format: YYYY-MM-DDTHH-MM-SS)
+        // Set default filename with timestamp in user's current timezone
         const now = new Date();
-        const timestamp = now.toISOString().slice(0, 19).replace(/:/g, '-');
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const timestamp = `${year}-${month}-${day}T${hours}-${minutes}-${seconds}`;
         document.getElementById('export-filename').value = `aboard-${timestamp}`;
         
         // Reset to current page scope
@@ -277,7 +283,7 @@ class ExportManager {
             if (pageIndex >= this.drawingBoard.pages.length) {
                 // All pages exported, restore original page
                 if (currentPage !== this.drawingBoard.currentPage) {
-                    this.drawingBoard.switchToPage(currentPage);
+                    this.drawingBoard.goToPage(currentPage);
                 }
                 return;
             }
@@ -286,7 +292,7 @@ class ExportManager {
             
             // Switch to page
             if (this.drawingBoard.currentPage !== pageNum) {
-                this.drawingBoard.switchToPage(pageNum);
+                this.drawingBoard.goToPage(pageNum);
             }
             
             // Wait a bit for the page to render
@@ -331,7 +337,7 @@ class ExportManager {
             if (pageIndex >= selectedPages.length) {
                 // All selected pages exported, restore original page
                 if (currentPage !== this.drawingBoard.currentPage) {
-                    this.drawingBoard.switchToPage(currentPage);
+                    this.drawingBoard.goToPage(currentPage);
                 }
                 return;
             }
@@ -340,7 +346,7 @@ class ExportManager {
             
             // Switch to page
             if (this.drawingBoard.currentPage !== pageNum) {
-                this.drawingBoard.switchToPage(pageNum);
+                this.drawingBoard.goToPage(pageNum);
             }
             
             // Wait a bit for the page to render
