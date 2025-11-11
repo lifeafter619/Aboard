@@ -269,17 +269,17 @@ class EventHandlers {
     setupZoomControls() {
         const board = this.board;
         
-        document.getElementById('zoom-in-btn').addEventListener('click', () => board.zoomIn());
-        document.getElementById('zoom-out-btn').addEventListener('click', () => board.zoomOut());
-        document.getElementById('zoom-input').addEventListener('change', (e) => board.setZoom(e.target.value));
+        document.getElementById('zoom-in-btn').addEventListener('click', () => board.canvasView.zoomIn());
+        document.getElementById('zoom-out-btn').addEventListener('click', () => board.canvasView.zoomOut());
+        document.getElementById('zoom-input').addEventListener('change', (e) => board.canvasView.setZoom(e.target.value));
         document.getElementById('zoom-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                board.setZoom(e.target.value);
+                board.canvasView.setZoom(e.target.value);
             }
         });
         
         // Setup canvas zoom with Ctrl+scroll
-        board.setupCanvasZoom();
+        board.canvasView.setupCanvasZoom();
     }
 
     /**
@@ -287,7 +287,7 @@ class EventHandlers {
      */
     setupFullscreenButton() {
         const board = this.board;
-        document.getElementById('fullscreen-btn').addEventListener('click', () => board.toggleFullscreen());
+        document.getElementById('fullscreen-btn').addEventListener('click', () => board.canvasView.toggleFullscreen());
     }
 
     /**
@@ -307,12 +307,12 @@ class EventHandlers {
         
         // Pagination controls - merged next and add button
         // 分页控制 - 合并下一页和添加按钮
-        document.getElementById('prev-page-btn').addEventListener('click', () => board.prevPage());
-        document.getElementById('next-or-add-page-btn').addEventListener('click', () => board.nextOrAddPage());
-        document.getElementById('page-input').addEventListener('change', (e) => board.goToPage(parseInt(e.target.value)));
+        document.getElementById('prev-page-btn').addEventListener('click', () => board.pagination.prevPage());
+        document.getElementById('next-or-add-page-btn').addEventListener('click', () => board.pagination.nextOrAddPage());
+        document.getElementById('page-input').addEventListener('change', (e) => board.pagination.goToPage(parseInt(e.target.value)));
         document.getElementById('page-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                board.goToPage(parseInt(e.target.value));
+                board.pagination.goToPage(parseInt(e.target.value));
             }
         });
     }

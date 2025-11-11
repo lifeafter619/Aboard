@@ -229,7 +229,7 @@ class Pagination {
         const board = this.board;
         const paginationControls = document.getElementById('pagination-controls');
         const pageInput = document.getElementById('page-input');
-        const totalPages = document.getElementById('total-pages');
+        const pageTotal = document.getElementById('page-total');
         const nextOrAddBtn = document.getElementById('next-or-add-page-btn');
         
         if (board.settingsManager.infiniteCanvas) {
@@ -237,7 +237,7 @@ class Pagination {
         } else {
             paginationControls.style.display = 'flex';
             pageInput.value = board.currentPage;
-            totalPages.textContent = board.pages.length;
+            pageTotal.textContent = `/ ${board.pages.length}`;
             
             // Update next/add button appearance
             // 更新下一页/添加按钮的外观
