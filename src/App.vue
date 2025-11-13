@@ -66,8 +66,13 @@
       @update:pen-type="penType = $event"
       @update:eraser-size="eraserSize = $event"
       @update:eraser-shape="eraserShape = $event"
-      @update:bg-color="bgColor = $event"
-      @update:bg-pattern="bgPattern = $event"
+      @update:bg-color="backgroundColor = $event"
+      @update:bg-pattern="backgroundPattern = $event"
+      @update:bg-image="setBackgroundImage($event)"
+      @update:shape-type="currentShapeType = $event"
+      @update:stroke-width="handleStrokeWidthUpdate"
+      @update:font-size="handleFontSizeUpdate"
+      @update:text-align="handleTextAlignUpdate"
       @close="showConfig = false"
     />
 
@@ -307,7 +312,7 @@ const handleToolChange = (tool) => {
   currentTool.value = tool
   
   // 根据工具显示配置面板
-  if (tool === 'pen' || tool === 'eraser' || tool === 'background') {
+  if (['pen', 'eraser', 'background', 'shape', 'text'].includes(tool)) {
     showConfig.value = true
   } else {
     showConfig.value = false
@@ -324,6 +329,8 @@ const handleToolChange = (tool) => {
     toggleTimeDisplay()
   } else if (tool === 'text') {
     // 文本工具会在画布点击时触发
+  } else if (tool === 'select') {
+    // 选择工具激活
   }
 }
 
@@ -425,6 +432,28 @@ const handleDeletePage = () => {
       deletePage()
     }
     showConfirm.value = true
+  }
+}
+
+// 工具配置更新处理
+const handleStrokeWidthUpdate = (value) => {
+  // 更新形状描边宽度
+  if (currentTool.value === 'shape') {
+    // 形状描边宽度会在 useShapes 中处理
+  }
+}
+
+const handleFontSizeUpdate = (value) => {
+  // 更新文本字体大小
+  if (currentTool.value === 'text') {
+    // 字体大小会在 useText 中处理
+  }
+}
+
+const handleTextAlignUpdate = (value) => {
+  // 更新文本对齐方式
+  if (currentTool.value === 'text') {
+    // 文本对齐会在 useText 中处理
   }
 }
 
