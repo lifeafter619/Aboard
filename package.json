@@ -1,0 +1,21 @@
+{
+  "name": "aboard",
+  "version": "2.2.0",
+  "type": "module",
+  "description": "一个简约的网页白板应用，专为教学和演示设计",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": ["whiteboard", "drawing", "canvas", "education", "teaching"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "vue": "^3.5.24"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "vite": "^7.2.2"
+  }
+}

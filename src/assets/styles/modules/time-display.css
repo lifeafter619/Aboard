@@ -1,0 +1,205 @@
+/* Time Display Module Styles */
+
+/* Time Display Area - Independent draggable box */
+#time-display-area {
+    position: fixed;
+    /* Position will be set dynamically above feature-area */
+    right: 20px;
+    z-index: 998;
+    padding: 16px 24px;
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    min-width: 280px;
+    display: none;
+    cursor: move;
+}
+
+#time-display-area.show {
+    display: block;
+}
+
+#time-display-area.dragging {
+    cursor: grabbing;
+}
+
+/* Vertical time display area layout (when snapped to left or right) */
+#time-display-area.vertical {
+    min-width: auto;
+    max-width: 250px;
+    max-height: 80vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Time Display Widget */
+#time-display {
+    position: fixed;
+    top: 140px;  /* Below pagination controls with appropriate gap (80px top + 36px height + 24px gap) */
+    right: 20px;
+    padding: 12px 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    z-index: 900;
+    cursor: pointer;
+    pointer-events: auto;
+    user-select: none;
+    transition: transform 0.2s ease, top 0.3s ease, right 0.3s ease, bottom 0.3s ease, left 0.3s ease;
+}
+
+#time-display:hover {
+    transform: scale(1.05);
+}
+
+/* Time display positions */
+#time-display.top-right {
+    top: 140px;
+    right: 20px;
+    bottom: auto;
+    left: auto;
+}
+
+#time-display.top-left {
+    top: 140px;
+    left: 20px;
+    bottom: auto;
+    right: auto;
+}
+
+#time-display.bottom-right {
+    top: auto;
+    right: 20px;
+    bottom: 240px; /* Above pagination controls - pagination is at 170px */
+    left: auto;
+}
+
+#time-display.bottom-left {
+    top: auto;
+    left: 20px;
+    bottom: 240px; /* Above pagination controls - pagination is at 170px */
+    right: auto;
+}
+
+#time-display.show {
+    display: block !important;
+}
+
+.time-line {
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+/* Fullscreen Time Display Modal */
+.time-fullscreen-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.time-fullscreen-modal.show {
+    display: flex;
+}
+
+.time-fullscreen-close-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border: none;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 10001;
+}
+
+.time-fullscreen-close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.time-fullscreen-close-btn:active {
+    transform: scale(0.95);
+}
+
+#time-fullscreen-content {
+    text-align: center;
+    color: white;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+#time-fullscreen-content .time-line {
+    line-height: 1.3;
+    margin: 10px 0;
+}
+
+/* Fullscreen Font Size Slider */
+.time-fullscreen-controls {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    z-index: 10001;
+    width: 80%;
+    max-width: 600px;
+}
+
+.time-fullscreen-slider-label {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.time-fullscreen-slider {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.time-fullscreen-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.time-fullscreen-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
