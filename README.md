@@ -6,6 +6,38 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+## 🚀 重大更新：Vue 3 重构版本
+
+**最新版本已升级到 Vue 3 + Vite 架构！**
+
+### 新版本特性
+- ✅ **现代化框架**：Vue 3 + Vite，更快的开发和构建
+- ✅ **模块化代码**：所有文件小于 500 行，易于维护
+- ✅ **完整注释**：全面的代码注释和文档
+- ✅ **性能优化**：更快的页面加载和运行速度
+- ✅ **开发体验**：热模块替换 (HMR)，即时反馈
+
+### 快速开始（新版）
+
+```bash
+# 安装依赖
+npm install
+
+# 开发模式
+npm run dev
+
+# 生产构建
+npm run build
+```
+
+📖 **详细文档**: [README_VUE.md](README_VUE.md)
+
+### 查看旧版本
+- 原始代码保存在 `old_src/` 目录
+- 旧版 HTML: `index.html.old`
+
+---
+
 ## ✨ 特色功能
 
 ### 🎨 多样化绘图工具
