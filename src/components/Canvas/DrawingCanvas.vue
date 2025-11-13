@@ -41,7 +41,13 @@ import { useDrawing } from '@/composables/useDrawing'
 
 const props = defineProps({
   bgColor: { type: String, default: '#ffffff' },
-  bgPattern: { type: String, default: 'blank' }
+  bgPattern: { type: String, default: 'blank' },
+  currentTool: { type: String, default: 'pen' },
+  currentColor: { type: String, default: '#000000' },
+  penSize: { type: Number, default: 5 },
+  penType: { type: String, default: 'normal' },
+  eraserSize: { type: Number, default: 20 },
+  eraserShape: { type: String, default: 'circle' }
 })
 
 const emit = defineEmits(['drawing-end'])
@@ -72,6 +78,14 @@ const {
   zoom,
   getPosition
 } = useDrawing(mainCanvas, mainCtx)
+
+// ========== 同步 props 到 composable ==========
+watch(() => props.currentTool, (val) => { currentTool.value = val })
+watch(() => props.currentColor, (val) => { currentColor.value = val })
+watch(() => props.penSize, (val) => { penSize.value = val })
+watch(() => props.penType, (val) => { penType.value = val })
+watch(() => props.eraserSize, (val) => { eraserSize.value = val })
+watch(() => props.eraserShape, (val) => { eraserShape.value = val })
 
 // ========== 计算属性 ==========
 const canvasStyle = computed(() => ({
@@ -211,7 +225,11 @@ defineExpose({
   bgCanvas,
   mainCtx,
   bgCtx,
-  resizeCanvas
+  resizeCanvas,
+  zoom,
+  setZoom: (value) => {
+    canvasScale.value = value
+  }
 })
 </script>
 

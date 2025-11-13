@@ -1,6 +1,6 @@
 {
   "name": "aboard",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "type": "module",
   "description": "一个简约的网页白板应用，专为教学和演示设计",
   "scripts": {

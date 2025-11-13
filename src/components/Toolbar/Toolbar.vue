@@ -74,6 +74,49 @@
       <span>橡皮</span>
     </button>
 
+    <!-- 选择 -->
+    <button
+      class="tool-btn"
+      :class="{ active: currentTool === 'select' }"
+      @click="$emit('tool-change', 'select')"
+      title="选择"
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path>
+        <path d="M13 13l6 6"></path>
+      </svg>
+      <span>选择</span>
+    </button>
+
+    <!-- 形状 -->
+    <button
+      class="tool-btn"
+      :class="{ active: currentTool === 'shape' }"
+      @click="$emit('tool-change', 'shape')"
+      title="形状"
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+        <circle cx="12" cy="12" r="4"></circle>
+      </svg>
+      <span>形状</span>
+    </button>
+
+    <!-- 文本 -->
+    <button
+      class="tool-btn"
+      :class="{ active: currentTool === 'text' }"
+      @click="$emit('tool-change', 'text')"
+      title="文本"
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="4 7 4 4 20 4 20 7"></polyline>
+        <line x1="9" y1="20" x2="15" y2="20"></line>
+        <line x1="12" y1="4" x2="12" y2="20"></line>
+      </svg>
+      <span>文本</span>
+    </button>
+
     <!-- 背景 -->
     <button
       class="tool-btn"
@@ -89,6 +132,35 @@
       <span>背景</span>
     </button>
 
+    <!-- 计时器 -->
+    <button
+      class="tool-btn"
+      :class="{ active: currentTool === 'timer' }"
+      @click="$emit('tool-change', 'timer')"
+      title="计时器"
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="13" r="8"></circle>
+        <polyline points="12 9 12 13 15 15"></polyline>
+        <path d="M16.51 17.35l-.35 3.83a2 2 0 01-2 1.82H9.83a2 2 0 01-2-1.82l-.35-3.83m.01-10.7l.35-3.83A2 2 0 019.83 1h4.35a2 2 0 012 1.82l.35 3.83"></path>
+      </svg>
+      <span>计时</span>
+    </button>
+
+    <!-- 时间显示 -->
+    <button
+      class="tool-btn"
+      :class="{ active: currentTool === 'time-display' }"
+      @click="$emit('tool-change', 'time-display')"
+      title="时间显示"
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+      </svg>
+      <span>时间</span>
+    </button>
+
     <!-- 清空 -->
     <button
       class="tool-btn"
@@ -100,21 +172,6 @@
         <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
       </svg>
       <span>清空</span>
-    </button>
-
-    <!-- 更多 -->
-    <button
-      class="tool-btn"
-      :class="{ active: currentTool === 'more' }"
-      @click="$emit('tool-change', 'more')"
-      title="更多"
-    >
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="1"></circle>
-        <circle cx="12" cy="5" r="1"></circle>
-        <circle cx="12" cy="19" r="1"></circle>
-      </svg>
-      <span>更多</span>
     </button>
 
     <!-- 设置 -->
