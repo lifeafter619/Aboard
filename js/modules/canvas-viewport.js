@@ -2,9 +2,10 @@
 // Handles canvas centering and viewport adjustments
 
 class CanvasViewportManager {
-    constructor(drawingEngine, canvas) {
+    constructor(drawingEngine, canvas, settingsManager) {
         this.drawingEngine = drawingEngine;
         this.canvas = canvas;
+        this.settingsManager = settingsManager;
     }
     
     /**
@@ -28,28 +29,6 @@ class CanvasViewportManager {
         // Save to localStorage
         localStorage.setItem('panOffsetX', this.drawingEngine.panOffset.x);
         localStorage.setItem('panOffsetY', this.drawingEngine.panOffset.y);
-        
-        // Apply the transform to both canvases
-        this.applyPanTransform();
-    }
-    
-    /**
-     * Apply pan transform to canvas
-     */
-    applyPanTransform() {
-        const scale = this.drawingEngine.canvasScale;
-        const offsetX = this.drawingEngine.panOffset.x * scale;
-        const offsetY = this.drawingEngine.panOffset.y * scale;
-        
-        this.canvas.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
-        this.canvas.style.transformOrigin = '0 0';
-        
-        // Also apply to background canvas
-        const bgCanvas = document.getElementById('background-canvas');
-        if (bgCanvas) {
-            bgCanvas.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
-            bgCanvas.style.transformOrigin = '0 0';
-        }
     }
     
     /**

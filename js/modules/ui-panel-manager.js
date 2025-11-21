@@ -101,10 +101,10 @@ class UIPanelManager {
             }
             
             // Ensure panel doesn't overflow left or top edges
-            if (left < this.EDGE_SPACING && computedStyle.left !== 'auto') {
+            if (left < this.EDGE_SPACING) {
                 panel.style.left = `${this.EDGE_SPACING}px`;
             }
-            if (top < this.EDGE_SPACING && computedStyle.top !== 'auto') {
+            if (top < this.EDGE_SPACING) {
                 panel.style.top = `${this.EDGE_SPACING}px`;
             }
         });

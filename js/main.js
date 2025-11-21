@@ -29,7 +29,7 @@ class DrawingBoard {
         this.collapsibleManager = new CollapsibleManager();
         this.announcementManager = new AnnouncementManager();
         this.exportManager = new ExportManager(this.canvas, this.bgCanvas, this);
-        this.canvasViewportManager = new CanvasViewportManager(this.drawingEngine, this.canvas);
+        this.canvasViewportManager = new CanvasViewportManager(this.drawingEngine, this.canvas, this.settingsManager);
         this.uiPanelManager = new UIPanelManager();
         
         // Pagination
@@ -103,6 +103,8 @@ class DrawingBoard {
     centerCanvas() {
         // Delegate to canvas viewport manager
         this.canvasViewportManager.centerCanvas();
+        // Apply the transform after centering
+        this.applyPanTransform();
     }
     
     
