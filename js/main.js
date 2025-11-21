@@ -3,6 +3,9 @@
 
 class DrawingBoard {
     constructor() {
+        // Constants
+        this.FULLSCREEN_TRANSITION_DELAY = 100; // ms - delay for fullscreen transition to complete
+        
         // Canvas setup
         this.canvas = document.getElementById('canvas');
         this.ctx = this.canvas.getContext('2d', { 
@@ -1677,7 +1680,7 @@ class DrawingBoard {
         setTimeout(() => {
             this.centerCanvas();
             this.uiPanelManager.fixConfigAreaPosition();
-        }, 100); // Small delay to let fullscreen transition complete
+        }, this.FULLSCREEN_TRANSITION_DELAY); // Small delay to let fullscreen transition complete
     }
     
     setupCanvasZoom() {

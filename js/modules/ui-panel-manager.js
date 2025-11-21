@@ -4,6 +4,8 @@
 class UIPanelManager {
     constructor() {
         this.EDGE_SPACING = 10; // Minimum spacing from viewport edges
+        this.CONFIG_AREA_MIN_SPACING = 20; // Minimum spacing between config-area and toolbar
+        this.CONFIG_AREA_TOP_SPACING = 20; // Space from top of viewport
     }
     
     /**
@@ -23,14 +25,12 @@ class UIPanelManager {
         // Calculate toolbar's distance from bottom
         const toolbarDistanceFromBottom = windowHeight - toolbarRect.top;
         
-        // Set config-area bottom to be at least 20px above the toolbar
-        const minBottomSpacing = 20;
-        const configAreaBottom = toolbarDistanceFromBottom + minBottomSpacing;
+        // Set config-area bottom to be at least CONFIG_AREA_MIN_SPACING above the toolbar
+        const configAreaBottom = toolbarDistanceFromBottom + this.CONFIG_AREA_MIN_SPACING;
         
         // Calculate max-height for config-area
         // Leave space for: toolbar height + spacing + top spacing
-        const topSpacing = 20; // Space from top of viewport
-        const maxHeight = windowHeight - toolbarDistanceFromBottom - minBottomSpacing - topSpacing;
+        const maxHeight = windowHeight - toolbarDistanceFromBottom - this.CONFIG_AREA_MIN_SPACING - this.CONFIG_AREA_TOP_SPACING;
         
         // Apply the calculated values
         configArea.style.bottom = `${configAreaBottom}px`;
