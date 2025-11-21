@@ -1059,12 +1059,25 @@ class DrawingBoard {
     repositionToolbarsOnResize() {
         // Ensure all toolbars and panels stay within viewport after window resize
         const EDGE_SPACING = 10; // Minimum spacing from viewport edges
+        const toolbar = document.getElementById('toolbar');
+        const configArea = document.getElementById('config-area');
+        
+        // Calculate minimum bottom spacing for config-area to avoid overlapping with toolbar
+        let minConfigBottom = EDGE_SPACING;
+        if (toolbar) {
+            const toolbarRect = toolbar.getBoundingClientRect();
+            const toolbarComputedStyle = window.getComputedStyle(toolbar);
+            const toolbarBottom = parseFloat(toolbarComputedStyle.bottom) || 20;
+            // Ensure config-area is at least toolbar height + toolbar bottom + spacing above bottom
+            minConfigBottom = Math.max(EDGE_SPACING, toolbarBottom + toolbarRect.height + 10);
+        }
+        
         const panels = [
             document.getElementById('history-controls'),
-            document.getElementById('config-area'),
+            configArea,
             document.getElementById('time-display-area'),
             document.getElementById('feature-area'),
-            document.getElementById('toolbar'),
+            toolbar,
             document.getElementById('pagination-controls'),
             document.getElementById('timer-display')
         ];
@@ -1108,7 +1121,9 @@ class DrawingBoard {
                 // Panel is bottom-aligned - check if actual top position would be negative
                 const actualTop = windowHeight - bottom - rect.height;
                 if (actualTop < 0) {
-                    panel.style.bottom = `${EDGE_SPACING}px`;
+                    // Special handling for config-area to avoid toolbar overlap
+                    const minBottom = (panel === configArea) ? minConfigBottom : EDGE_SPACING;
+                    panel.style.bottom = `${minBottom}px`;
                 }
             } else if (top + rect.height > windowHeight - EDGE_SPACING) {
                 // Panel overflows bottom edge (accounting for edge spacing)
@@ -1738,6 +1753,9 @@ class DrawingBoard {
             `;
             btn.title = '退出全屏 (F11)';
         }
+        
+        // Re-center the canvas when entering or exiting fullscreen
+        this.centerCanvas();
     }
     
     setupCanvasZoom() {
