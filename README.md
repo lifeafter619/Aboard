@@ -216,7 +216,9 @@ Aboard/
 │   ├── time-display.js    # 时间显示模块
 │   ├── modules/
 │   │   ├── timer.js       # 计时器模块
-│   │   └── time-display-controls.js # 时间显示控制
+│   │   ├── time-display-controls.js # 时间显示控制
+│   │   ├── canvas-viewport.js # 画布视口管理模块
+│   │   └── ui-panel-manager.js # UI面板定位管理模块
 │   └── main.js            # 主应用入口
 ├── sounds/                 # 提示音文件夹
 │   ├── class-bell.MP3     # 上课铃声
@@ -240,6 +242,8 @@ Aboard/
 - **TimerManager** - 计时器管理，支持多实例计时器
 - **TimeDisplayManager** - 时间显示管理，处理日期时间显示
 - **ExportManager** - 导出管理，处理画布导出功能
+- **CanvasViewportManager** - 画布视口管理，处理画布居中和缩放
+- **UIPanelManager** - UI面板管理，确保UI面板正确定位和避免重叠
 - **DrawingBoard** - 主应用类，集成所有模块并协调交互
 
 ### 性能优化

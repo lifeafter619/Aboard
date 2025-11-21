@@ -29,6 +29,8 @@ class DrawingBoard {
         this.collapsibleManager = new CollapsibleManager();
         this.announcementManager = new AnnouncementManager();
         this.exportManager = new ExportManager(this.canvas, this.bgCanvas, this);
+        this.canvasViewportManager = new CanvasViewportManager(this.drawingEngine, this.canvas);
+        this.uiPanelManager = new UIPanelManager();
         
         // Pagination
         this.currentPage = 1;
@@ -94,39 +96,33 @@ class DrawingBoard {
     
     
     initializeCanvasView() {
-        // On startup or refresh, set canvas to 70% of fullscreen size and center it
-        // Only apply if no saved scale exists
-        const savedScale = localStorage.getItem('canvasScale');
-        if (!savedScale) {
-            this.drawingEngine.canvasScale = 0.7;
-            localStorage.setItem('canvasScale', 0.7);
-        }
-        
-        // Center the canvas on startup
-        this.centerCanvas();
+        // Delegate to canvas viewport manager
+        this.canvasViewportManager.initializeCanvasView();
     }
     
     centerCanvas() {
-        // Get the viewport dimensions
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
+        // Delegate to canvas viewport manager
+        this.canvasViewportManager.centerCanvas();
+    }
+    
+    
+    applyPanTransform() {
+        // Apply pan offset using CSS transform for better performance
+        const panX = this.drawingEngine.panOffset.x;
+        const panY = this.drawingEngine.panOffset.y;
+        const scale = this.drawingEngine.canvasScale;
         
-        // Get the canvas center (at 0,0 without pan offset, canvas is conceptually infinite)
-        // We want to move the canvas so that the origin (0,0) is centered in the viewport
-        // Pan offset moves the canvas, so positive offset moves content right/down
-        const centerX = viewportWidth / 2;
-        const centerY = viewportHeight / 2;
-        
-        // Set pan offset to center the origin
-        this.drawingEngine.panOffset.x = centerX / this.drawingEngine.canvasScale;
-        this.drawingEngine.panOffset.y = centerY / this.drawingEngine.canvasScale;
-        
-        // Save to localStorage
-        localStorage.setItem('panOffsetX', this.drawingEngine.panOffset.x);
-        localStorage.setItem('panOffsetY', this.drawingEngine.panOffset.y);
-        
-        // Apply the transform
-        this.applyPanTransform();
+        if (!this.settingsManager.infiniteCanvas) {
+            // In paginated mode, combine translate and scale
+            const transform = `translate(-50%, -50%) translate(${panX}px, ${panY}px) scale(${scale})`;
+            this.canvas.style.transform = transform;
+            this.bgCanvas.style.transform = transform;
+        } else {
+            // In infinite mode, combine translate and scale
+            const transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+            this.canvas.style.transform = transform;
+            this.bgCanvas.style.transform = transform;
+        }
     }
     
     resizeCanvas() {
@@ -1057,74 +1053,8 @@ class DrawingBoard {
     }
     
     repositionToolbarsOnResize() {
-        // Ensure all toolbars and panels stay within viewport after window resize
-        const EDGE_SPACING = 10; // Minimum spacing from viewport edges
-        const panels = [
-            document.getElementById('history-controls'),
-            document.getElementById('config-area'),
-            document.getElementById('time-display-area'),
-            document.getElementById('feature-area'),
-            document.getElementById('toolbar'),
-            document.getElementById('pagination-controls'),
-            document.getElementById('timer-display')
-        ];
-        
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
-        
-        panels.forEach(panel => {
-            if (!panel) return;
-            
-            const rect = panel.getBoundingClientRect();
-            const computedStyle = window.getComputedStyle(panel);
-            
-            // Get current position
-            let left = parseFloat(computedStyle.left) || 0;
-            let top = parseFloat(computedStyle.top) || 0;
-            let right = computedStyle.right !== 'auto' ? parseFloat(computedStyle.right) : null;
-            let bottom = computedStyle.bottom !== 'auto' ? parseFloat(computedStyle.bottom) : null;
-            
-            // Check if panel is positioned and might overflow
-            const hasCustomPosition = computedStyle.left !== 'auto' || computedStyle.top !== 'auto' || 
-                                     computedStyle.right !== 'auto' || computedStyle.bottom !== 'auto';
-            
-            if (!hasCustomPosition) return;
-            
-            // Adjust position if overflowing
-            if (right !== null) {
-                // Panel is right-aligned - check if actual left position would be negative
-                const actualLeft = windowWidth - right - rect.width;
-                if (actualLeft < 0) {
-                    panel.style.right = `${EDGE_SPACING}px`;
-                }
-            } else if (left + rect.width > windowWidth - EDGE_SPACING) {
-                // Panel overflows right edge (accounting for edge spacing)
-                const newLeft = Math.max(EDGE_SPACING, windowWidth - rect.width - EDGE_SPACING);
-                panel.style.left = `${newLeft}px`;
-                panel.style.right = 'auto';
-            }
-            
-            if (bottom !== null) {
-                // Panel is bottom-aligned - check if actual top position would be negative
-                const actualTop = windowHeight - bottom - rect.height;
-                if (actualTop < 0) {
-                    panel.style.bottom = `${EDGE_SPACING}px`;
-                }
-            } else if (top + rect.height > windowHeight - EDGE_SPACING) {
-                // Panel overflows bottom edge (accounting for edge spacing)
-                const newTop = Math.max(EDGE_SPACING, windowHeight - rect.height - EDGE_SPACING);
-                panel.style.top = `${newTop}px`;
-                panel.style.bottom = 'auto';
-            }
-            
-            // Also ensure panel doesn't overflow left or top edges
-            if (left < EDGE_SPACING) {
-                panel.style.left = `${EDGE_SPACING}px`;
-            }
-            if (top < EDGE_SPACING) {
-                panel.style.top = `${EDGE_SPACING}px`;
-            }
-        });
+        // Delegate to UI panel manager
+        this.uiPanelManager.repositionPanelsOnResize();
     }
     
     repositionModalsOnResize() {
@@ -1317,6 +1247,8 @@ class DrawingBoard {
         // Show appropriate panel based on tool
         if (showConfig && (tool === 'pen' || tool === 'eraser' || tool === 'background')) {
             document.getElementById('config-area').classList.add('show');
+            // Fix config-area position when shown
+            this.uiPanelManager.fixConfigAreaPosition();
         } else if (tool === 'more') {
             document.getElementById('feature-area').classList.add('show');
             
@@ -1738,6 +1670,12 @@ class DrawingBoard {
             `;
             btn.title = '退出全屏 (F11)';
         }
+        
+        // Center canvas after fullscreen change
+        setTimeout(() => {
+            this.centerCanvas();
+            this.uiPanelManager.fixConfigAreaPosition();
+        }, 100); // Small delay to let fullscreen transition complete
     }
     
     setupCanvasZoom() {
@@ -2118,25 +2056,6 @@ class DrawingBoard {
             x: (touch1.clientX + touch2.clientX) / 2,
             y: (touch1.clientY + touch2.clientY) / 2
         };
-    }
-    
-    applyPanTransform() {
-        // Apply pan offset using CSS transform for better performance
-        const panX = this.drawingEngine.panOffset.x;
-        const panY = this.drawingEngine.panOffset.y;
-        const scale = this.drawingEngine.canvasScale;
-        
-        if (!this.settingsManager.infiniteCanvas) {
-            // In paginated mode, combine translate and scale
-            const transform = `translate(-50%, -50%) translate(${panX}px, ${panY}px) scale(${scale})`;
-            this.canvas.style.transform = transform;
-            this.bgCanvas.style.transform = transform;
-        } else {
-            // In infinite mode, combine translate and scale
-            const transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
-            this.canvas.style.transform = transform;
-            this.bgCanvas.style.transform = transform;
-        }
     }
     
     loadUploadedImages() {
