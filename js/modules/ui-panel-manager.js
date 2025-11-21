@@ -108,8 +108,5 @@ class UIPanelManager {
                 panel.style.top = `${this.EDGE_SPACING}px`;
             }
         });
-        
-        // Fix config-area positioning after general repositioning
-        this.fixConfigAreaPosition();
     }
 }
