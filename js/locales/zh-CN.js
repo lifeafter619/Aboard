@@ -36,6 +36,7 @@ window.translations = {
         eraser: '橡皮',
         clear: '清空',
         background: '背景',
+        shape: '形状',
         teachingTools: '教具',
         more: '更多',
         settings: '设置',
@@ -347,6 +348,18 @@ window.translations = {
         moreFeatures: '更多功能',
         time: '时间',
         timer: '计时'
+    },
+
+    // Shapes
+    shapes: {
+        title: '形状',
+        line: '直线',
+        strokeColor: '线条颜色',
+        strokeWidth: '线条粗细',
+        lineHint: '点击画布上的两个点来绘制直线',
+        startDrawing: '开始绘制',
+        clickFirstPoint: '点击第一个点开始绘制',
+        clickSecondPoint: '点击第二个点完成绘制'
     },
 
     // Teaching Tools

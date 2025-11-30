@@ -1,0 +1,232 @@
+/**
+ * Shape Drawing Module Styles
+ */
+
+/* Shape Modal */
+.shape-modal-content {
+    max-width: 400px;
+    width: 90%;
+}
+
+.shape-modal-body {
+    padding: 20px;
+}
+
+/* Shape Options Grid */
+.shape-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.shape-option-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.shape-option-btn:hover {
+    border-color: #999;
+    background: #f5f5f5;
+}
+
+.shape-option-btn.active {
+    border-color: var(--theme-color, #007AFF);
+    background: rgba(0, 122, 255, 0.1);
+}
+
+.shape-option-btn svg {
+    margin-bottom: 6px;
+    stroke: #333;
+}
+
+.shape-option-btn.active svg {
+    stroke: var(--theme-color, #007AFF);
+}
+
+.shape-option-btn span {
+    font-size: 12px;
+    color: #666;
+}
+
+.shape-option-btn.active span {
+    color: var(--theme-color, #007AFF);
+    font-weight: 500;
+}
+
+/* Shape Settings */
+.shape-settings {
+    margin-bottom: 20px;
+}
+
+.shape-setting-group {
+    margin-bottom: 16px;
+}
+
+.shape-setting-group label {
+    display: block;
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.shape-setting-group .slider {
+    width: 100%;
+}
+
+/* Shape Hint */
+.shape-hint {
+    background: #f0f7ff;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 20px;
+}
+
+.shape-hint p {
+    margin: 0;
+    font-size: 13px;
+    color: #0066cc;
+    text-align: center;
+}
+
+/* Shape Action Buttons */
+.shape-action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.shape-action-btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.shape-action-btn.primary {
+    background: var(--theme-color, #007AFF);
+    color: #fff;
+}
+
+.shape-action-btn.primary:hover {
+    background: #0056b3;
+}
+
+.shape-action-btn.secondary {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.shape-action-btn.secondary:hover {
+    background: #e0e0e0;
+}
+
+/* Drawing Instruction Overlay */
+.shape-drawing-instruction {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 24px;
+    font-size: 14px;
+    z-index: 10000;
+    display: none;
+    text-align: center;
+    pointer-events: auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.shape-drawing-instruction .cancel-drawing-btn {
+    display: block;
+    margin: 10px auto 0;
+    padding: 6px 16px;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.shape-drawing-instruction .cancel-drawing-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Shape Config Panel (for toolbar) */
+#shape-config {
+    min-width: 280px;
+}
+
+#shape-config .config-group {
+    margin-bottom: 16px;
+}
+
+#shape-config .shape-type-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+#shape-config .shape-type-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 4px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#shape-config .shape-type-btn:hover {
+    border-color: #999;
+}
+
+#shape-config .shape-type-btn.active {
+    border-color: var(--theme-color, #007AFF);
+    background: rgba(0, 122, 255, 0.1);
+}
+
+#shape-config .shape-type-btn svg {
+    width: 20px;
+    height: 20px;
+    margin-bottom: 4px;
+}
+
+#shape-config .shape-type-btn span {
+    font-size: 11px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .shape-modal-content {
+        max-width: 95%;
+        margin: 10px;
+    }
+    
+    .shape-options {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .shape-drawing-instruction {
+        bottom: 80px;
+        padding: 10px 20px;
+        font-size: 13px;
+    }
+}

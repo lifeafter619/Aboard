@@ -200,6 +200,7 @@ class I18n {
             'eraser-btn': { span: 'toolbar.eraser', title: 'toolbar.eraser' },
             'clear-btn': { span: 'toolbar.clear', title: 'toolbar.clear' },
             'background-btn': { span: 'toolbar.background', title: 'toolbar.background' },
+            'shape-btn': { span: 'toolbar.shape', title: 'toolbar.shape' },
             'more-btn': { span: 'toolbar.more', title: 'toolbar.more' },
             'settings-btn': { span: 'toolbar.settings', title: 'toolbar.settings' },
             'export-btn-top': { title: 'toolbar.export' },

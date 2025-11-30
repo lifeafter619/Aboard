@@ -36,6 +36,7 @@ window.translations = {
         eraser: 'Radiergummi',
         clear: 'Löschen',
         background: 'Hintergrund',
+        shape: 'Form',
         teachingTools: 'Werkzeuge',
         more: 'Mehr',
         settings: 'Einstellungen',
@@ -373,6 +374,18 @@ window.translations = {
         moreFeatures: 'Weitere Funktionen',
         time: 'Zeit',
         timer: 'Timer'
+    },
+
+    // Shapes
+    shapes: {
+        title: 'Formen',
+        line: 'Linie',
+        strokeColor: 'Strichfarbe',
+        strokeWidth: 'Strichstärke',
+        lineHint: 'Klicken Sie auf zwei Punkte auf der Leinwand, um eine Linie zu zeichnen',
+        startDrawing: 'Zeichnen starten',
+        clickFirstPoint: 'Klicken Sie auf den ersten Punkt, um zu beginnen',
+        clickSecondPoint: 'Klicken Sie auf den zweiten Punkt, um fertig zu werden'
     },
 
     // Teaching Tools

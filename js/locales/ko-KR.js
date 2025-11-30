@@ -36,6 +36,7 @@ window.translations = {
         eraser: '지우개',
         clear: '지우기',
         background: '배경',
+        shape: '도형',
         teachingTools: '교구',
         more: '더보기',
         settings: '설정',
@@ -332,6 +333,18 @@ window.translations = {
         moreFeatures: '더 많은 기능',
         time: '시간',
         timer: '타이머'
+    },
+
+    // Shapes
+    shapes: {
+        title: '도형',
+        line: '직선',
+        strokeColor: '선 색상',
+        strokeWidth: '선 두께',
+        lineHint: '캔버스에서 두 점을 클릭하여 직선을 그립니다',
+        startDrawing: '그리기 시작',
+        clickFirstPoint: '첫 번째 점을 클릭하여 시작',
+        clickSecondPoint: '두 번째 점을 클릭하여 완료'
     },
 
     // Teaching Tools

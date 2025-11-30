@@ -31,6 +31,9 @@ class DrawingBoard {
         this.exportManager = new ExportManager(this.canvas, this.bgCanvas, this);
         this.teachingToolsManager = new TeachingToolsManager(this.canvas, this.ctx, this.historyManager);
         
+        // Initialize shape drawing manager
+        this.shapeDrawingManager = new ShapeDrawingManager(this.canvas, this.ctx, this.historyManager, this.backgroundManager);
+        
         // Initialize edge drawing manager for teaching tools
         this.edgeDrawingManager = new EdgeDrawingManager(this.teachingToolsManager, this.drawingEngine);
         
@@ -235,8 +238,8 @@ class DrawingBoard {
                 }
             }
             
-            // Check if clicking on coordinate origin point (in background mode)
-            if (this.drawingEngine.currentTool === 'background' && 
+            // Check if clicking on coordinate origin point (in background mode or pan mode)
+            if ((this.drawingEngine.currentTool === 'background' || this.drawingEngine.currentTool === 'pan') && 
                 this.backgroundManager.backgroundPattern === 'coordinate') {
                 const rect = this.bgCanvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
@@ -365,6 +368,7 @@ class DrawingBoard {
         document.getElementById('settings-btn').addEventListener('click', () => this.openSettings());
         document.getElementById('more-btn').addEventListener('click', () => this.setTool('more'));
         document.getElementById('teaching-tools-btn').addEventListener('click', () => this.teachingToolsManager.showModal());
+        document.getElementById('shape-btn').addEventListener('click', () => this.shapeDrawingManager.showModal());
         
         document.getElementById('config-close-btn').addEventListener('click', () => this.closeConfigPanel());
         document.getElementById('feature-close-btn').addEventListener('click', () => this.closeFeaturePanel());

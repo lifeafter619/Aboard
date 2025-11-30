@@ -57,11 +57,13 @@ graph LR
 - **Smart Eraser**: Supports circular and square shapes, adjustable size (10-50px)
 - **Rich Color Selection**: 8 preset common colors + custom color picker
 - **Flexible Stroke Width**: Adjustable pen thickness from 1-50px
+- **Shape Drawing**: Draw lines and other shapes by clicking two points on the canvas
 
 ### 📐 Professional Background Patterns
 - **Multiple Teaching Backgrounds**: Blank, dots, grid, Tianzige (Chinese grid), English 4-line, staff, coordinate system
 - **Custom Background**: Support uploading images as backgrounds with adjustable size and position
 - **Background Styles**: 8 preset background colors + custom colors, adjustable transparency and pattern intensity
+- **Dynamic Coordinate System**: Coordinate system defaults to canvas center and can be moved by dragging the origin point in Move mode
 
 ### 📄 Pagination Canvas Mode
 - **Pagination Mode**: Multi-page management, perfect for classroom presentations and teaching
@@ -185,7 +187,9 @@ Aboard/
 │       ├── timer.css      # Timer styles
 │       ├── time-display.css # Time display styles
 │       ├── export.css     # Export function styles
-│       └── feature-area.css # Feature area styles
+│       ├── feature-area.css # Feature area styles
+│       ├── teaching-tools.css # Teaching tools styles
+│       └── shape-drawing.css # Shape drawing styles
 ├── js/
 │   ├── drawing.js         # Drawing engine module
 │   ├── history.js         # History management module
@@ -213,8 +217,16 @@ Aboard/
 │   │   ├── timer.js       # Timer module
 │   │   ├── time-display-controls.js # Time display controls
 │   │   ├── time-display-settings.js # Time display settings
+│   │   ├── edge-drawing.js # Edge drawing module (draw along teaching tools)
+│   │   ├── teaching-tools.js # Teaching tools module
+│   │   ├── shape-drawing.js # Shape drawing module (lines and shapes)
 │   │   └── i18n.js        # Internationalization core module
 │   └── main.js            # Main application entry point
+├── img/                    # Image resources directory
+│   ├── ruler_1.png        # Ruler style 1
+│   ├── ruler_2.png        # Ruler style 2
+│   ├── set_square_1.png   # 60° set square (√3:1 aspect ratio)
+│   └── set_square_2.png   # 45° set square (1:1 aspect ratio)
 ├── public/                 # Public documentation directory
 │   ├── README.en.md       # English README
 │   └── README.zh-TW.md    # Traditional Chinese README

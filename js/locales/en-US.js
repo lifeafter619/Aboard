@@ -36,6 +36,7 @@ window.translations = {
         eraser: 'Eraser',
         clear: 'Clear',
         background: 'Background',
+        shape: 'Shape',
         teachingTools: 'Tools',
         more: 'More',
         settings: 'Settings',
@@ -347,6 +348,18 @@ window.translations = {
         moreFeatures: 'More Features',
         time: 'Time',
         timer: 'Timer'
+    },
+
+    // Shapes
+    shapes: {
+        title: 'Shapes',
+        line: 'Line',
+        strokeColor: 'Stroke Color',
+        strokeWidth: 'Stroke Width',
+        lineHint: 'Click two points on the canvas to draw a line',
+        startDrawing: 'Start Drawing',
+        clickFirstPoint: 'Click the first point to start',
+        clickSecondPoint: 'Click the second point to finish'
     },
 
     // Teaching Tools

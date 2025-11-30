@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="css/modules/export.css">
     <link rel="stylesheet" href="css/modules/timer.css">
     <link rel="stylesheet" href="css/modules/teaching-tools.css">
+    <link rel="stylesheet" href="css/modules/shape-drawing.css">
 </head>
 <body>
     <!-- Zoom controls in top right corner -->
@@ -885,6 +886,14 @@
             </svg>
             <span>背景</span>
         </button>
+        <button id="shape-btn" class="tool-btn" data-tool="shape" title="形状">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="19" x2="19" y2="5"></line>
+                <circle cx="5" cy="19" r="2"></circle>
+                <circle cx="19" cy="5" r="2"></circle>
+            </svg>
+            <span>形状</span>
+        </button>
         <button id="teaching-tools-btn" class="tool-btn" data-tool="teaching-tools" title="教具">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polygon points="3,21 3,3 21,21"></polygon>
@@ -1333,6 +1342,7 @@
     <script src="js/modules/timer.js"></script>
     <script src="js/modules/edge-drawing.js"></script>
     <script src="js/modules/teaching-tools.js"></script>
+    <script src="js/modules/shape-drawing.js"></script>
     <script src="js/settings.js"></script>
     <script src="js/announcement.js"></script>
     <script src="js/export.js"></script>

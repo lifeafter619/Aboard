@@ -36,6 +36,7 @@ window.translations = {
         eraser: '消しゴム',
         clear: 'クリア',
         background: '背景',
+        shape: '図形',
         teachingTools: '教具',
         more: 'もっと',
         settings: '設定',
@@ -332,6 +333,18 @@ window.translations = {
         moreFeatures: 'その他の機能',
         time: '時刻',
         timer: 'タイマー'
+    },
+
+    // Shapes
+    shapes: {
+        title: '図形',
+        line: '直線',
+        strokeColor: '線の色',
+        strokeWidth: '線の太さ',
+        lineHint: 'キャンバス上の2点をクリックして直線を描画します',
+        startDrawing: '描画開始',
+        clickFirstPoint: '最初の点をクリックして開始',
+        clickSecondPoint: '2番目の点をクリックして完了'
     },
 
     // Teaching Tools
