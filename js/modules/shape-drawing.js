@@ -31,8 +31,6 @@ class ShapeDrawingManager {
         // Bind event handlers
         this.handleCanvasClick = this.handleCanvasClick.bind(this);
         this.handleCanvasMouseMove = this.handleCanvasMouseMove.bind(this);
-        this.handleCanvasMouseDown = this.handleCanvasMouseDown.bind(this);
-        this.handleCanvasMouseUp = this.handleCanvasMouseUp.bind(this);
         
         this.initModal();
     }
@@ -218,25 +216,7 @@ class ShapeDrawingManager {
             const key = el.getAttribute('data-i18n');
             const translation = window.i18n.t(key);
             if (translation !== key) {
-                if (el.tagName === 'SPAN' || el.tagName === 'P' || el.tagName === 'LABEL' || el.tagName === 'H2') {
-                    // Check if element has child elements we should preserve
-                    const childSpan = el.querySelector('span');
-                    if (childSpan && el.tagName === 'LABEL') {
-                        // For labels with value spans, only update the first text node
-                        const textPart = translation.split('：')[0] + '：';
-                        const firstTextNode = Array.from(el.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
-                        if (firstTextNode) {
-                            firstTextNode.textContent = textPart;
-                        }
-                    } else {
-                        el.textContent = translation;
-                    }
-                } else if (el.tagName === 'BUTTON' && el.querySelector('span')) {
-                    // Button with icon and span
-                    el.querySelector('span').textContent = translation;
-                } else if (el.tagName === 'BUTTON') {
-                    el.textContent = translation;
-                }
+                this.applyTranslationToElement(el, translation);
             }
         });
         
@@ -244,6 +224,44 @@ class ShapeDrawingManager {
         const closeBtn = document.getElementById('shape-modal-close-btn');
         if (closeBtn) {
             closeBtn.title = window.i18n.t('common.close');
+        }
+    }
+    
+    /**
+     * Apply translation to a specific element based on its type
+     */
+    applyTranslationToElement(el, translation) {
+        switch (el.tagName) {
+            case 'SPAN':
+            case 'P':
+            case 'H2':
+                el.textContent = translation;
+                break;
+            case 'LABEL':
+                // For labels, check if there's a child span (for dynamic values)
+                const childSpan = el.querySelector('span');
+                if (childSpan) {
+                    // Keep the span, update only the label text before it
+                    const firstTextNode = Array.from(el.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
+                    if (firstTextNode) {
+                        // Add space after translation for visual separation
+                        firstTextNode.textContent = translation + ' ';
+                    }
+                } else {
+                    el.textContent = translation;
+                }
+                break;
+            case 'BUTTON':
+                const buttonSpan = el.querySelector('span');
+                if (buttonSpan) {
+                    // Button with icon and span - update span only
+                    buttonSpan.textContent = translation;
+                } else {
+                    el.textContent = translation;
+                }
+                break;
+            default:
+                el.textContent = translation;
         }
     }
     
@@ -372,8 +390,9 @@ class ShapeDrawingManager {
      */
     getCanvasPosition(e) {
         const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.offsetWidth / rect.width;
-        const scaleY = this.canvas.offsetHeight / rect.height;
+        // Use canvas width/height for proper coordinate scaling
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
         
         return {
             x: (e.clientX - rect.left) * scaleX,
@@ -464,8 +483,8 @@ class ShapeDrawingManager {
         this.previewActive = false;
         this.canvasImageData = null;
         
-        // Restore cursor
-        this.canvas.style.cursor = 'crosshair';
+        // Restore cursor to default
+        this.canvas.style.cursor = '';
         
         // Hide instruction
         this.hideDrawingInstruction();

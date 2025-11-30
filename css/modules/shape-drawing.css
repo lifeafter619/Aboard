@@ -40,6 +40,7 @@
 
 .shape-option-btn.active {
     border-color: var(--theme-color, #007AFF);
+    /* Using default theme color with transparency - matches pattern in style.css */
     background: rgba(0, 122, 255, 0.1);
 }
 
