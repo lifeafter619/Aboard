@@ -50,7 +50,8 @@
             "colorPicker": "取色器",
             "size": "粗细",
             "sizeLabel": "粗细：当前",
-            "sizePx": "px"
+            "sizePx": "px",
+            "contrastWarning": "颜色不能与背景颜色相同"
         },
         "shape": {
             "title": "形状",
@@ -394,7 +395,8 @@
         "time": "时间",
         "timer": "计时",
         "scoreboard": "计分板",
-        "randomPicker": "点名器"
+        "randomPicker": "点名器",
+        "insertImage": "插入图片"
     },
     "scoreboard": {
         "title": "计分板",

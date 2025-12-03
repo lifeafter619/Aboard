@@ -369,6 +369,7 @@ Aboard/
 │   │   ├── edge-drawing.js # 边缘绘制模块（沿教具边缘画线）
 │   │   ├── teaching-tools.js # 教具功能模块
 │   │   ├── shape-drawing.js # 形状绘制模块（支持直线、矩形、圆形）
+│   │   ├── image-annotation.js # 图片标注/插入图片功能
 │   │   ├── line-style-modal.js # 线条样式设置弹窗模块
 │   │   ├── scoreboard.js  # 计分板模块
 │   │   ├── random-picker.js # 随机点名模块

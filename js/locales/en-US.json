@@ -50,7 +50,8 @@
             "colorPicker": "Color Picker",
             "size": "Size",
             "sizeLabel": "Size: Current",
-            "sizePx": "px"
+            "sizePx": "px",
+            "contrastWarning": "Color cannot be the same as background color"
         },
         "shape": {
             "title": "Shape",
@@ -371,7 +372,8 @@
         "time": "Time",
         "timer": "Timer",
         "scoreboard": "Scoreboard",
-        "randomPicker": "Random Picker"
+        "randomPicker": "Random Picker",
+        "insertImage": "Insert Image"
     },
     "scoreboard": {
         "title": "Scoreboard",

@@ -1,0 +1,226 @@
+:root {
+    /* Main colors */
+    --primary-color: #007aff;
+    --primary-hover: #0066d6;
+    --primary-active: #0055b3;
+
+    /* Neutral colors */
+    --bg-color: #ffffff;
+    --bg-secondary: #f5f5f7;
+    --bg-tertiary: #f0f0f0;
+
+    /* Text colors */
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --text-tertiary: #999999;
+
+    /* Border colors */
+    --border-color: #e0e0e0;
+    --border-hover: #cccccc;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+    --shadow-floating: 0 4px 20px rgba(0, 0, 0, 0.15);
+
+    /* Radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-round: 50%;
+
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+}
+
+/* Base Styles */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text-primary);
+}
+
+/* Modern Panel Style (Glassmorphism-like but solid for performance/clarity) */
+.modern-panel {
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-floating);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Unified Button Styles */
+.modern-btn {
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
+    border-radius: var(--radius-md);
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.modern-btn:hover {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-hover);
+    transform: translateY(-1px);
+}
+
+.modern-btn:active {
+    transform: translateY(0);
+    background-color: var(--bg-tertiary);
+}
+
+.modern-btn.primary {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: transparent;
+}
+
+.modern-btn.primary:hover {
+    background-color: var(--primary-hover);
+}
+
+.modern-btn.primary:active {
+    background-color: var(--primary-active);
+}
+
+/* Icon Buttons */
+.icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    color: var(--text-secondary);
+}
+
+.icon-btn:hover {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.icon-btn.active {
+    background-color: var(--bg-secondary);
+    color: var(--primary-color);
+    border-color: var(--border-color);
+}
+
+/* Apply to specific existing IDs/Classes to override */
+
+#toolbar {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-xl) !important;
+    box-shadow: var(--shadow-floating) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 8px 12px !important;
+}
+
+.tool-btn {
+    border-radius: 10px !important;
+    margin: 0 4px !important;
+    transition: all var(--transition-fast) !important;
+}
+
+.tool-btn:hover {
+    background-color: var(--bg-secondary) !important;
+    transform: translateY(-2px);
+}
+
+.tool-btn.active {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--primary-color) !important;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Config Panels */
+.config-panel {
+    background-color: rgba(255, 255, 255, 0.98) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow-floating) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    padding: 16px !important;
+}
+
+.config-group {
+    background-color: transparent !important;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+}
+
+.config-group:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* Modal Styling */
+.modal-content {
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow-lg) !important;
+    border: none !important;
+    overflow: hidden;
+}
+
+.modal-header {
+    background-color: var(--bg-secondary) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    padding: 16px 20px !important;
+}
+
+.modal-header h2 {
+    font-size: 18px !important;
+    font-weight: 600 !important;
+}
+
+/* Settings Sidebar */
+.settings-sidebar {
+    background-color: var(--bg-secondary) !important;
+    border-right: 1px solid var(--border-color) !important;
+}
+
+.settings-tab-icon {
+    border-radius: var(--radius-md) !important;
+    margin: 4px 8px !important;
+    width: calc(100% - 16px) !important;
+}
+
+.settings-tab-icon:hover {
+    background-color: rgba(0,0,0,0.05) !important;
+}
+
+.settings-tab-icon.active {
+    background-color: white !important;
+    box-shadow: var(--shadow-sm) !important;
+    color: var(--primary-color) !important;
+}
+
+/* Inputs and Selects */
+input[type="text"],
+input[type="number"],
+select {
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-sm) !important;
+    padding: 6px 10px !important;
+    transition: border-color var(--transition-fast);
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+    border-color: var(--primary-color) !important;
+    outline: none;
+}

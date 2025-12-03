@@ -8,7 +8,8 @@ class DrawingEngine {
         
         // Drawing state
         this.isDrawing = false;
-        this.currentColor = '#000000';
+        this.penColor = '#000000'; // Separate pen color
+        this.shapeColor = '#000000'; // Separate shape color
         this.penSize = 5;
         this.penType = localStorage.getItem('penType') || 'normal';
         this.eraserSize = 20;
@@ -152,7 +153,7 @@ class DrawingEngine {
             this.ctx.lineCap = 'round';
             this.ctx.lineJoin = 'round';
             this.ctx.globalCompositeOperation = 'source-over';
-            this.ctx.strokeStyle = this.currentColor;
+            this.ctx.strokeStyle = this.penColor; // Use penColor
             this.ctx.lineWidth = this.penSize;
             
             switch(this.penType) {
@@ -648,7 +649,22 @@ class DrawingEngine {
     }
     
     setColor(color) {
-        this.currentColor = color;
+        if (this.currentTool === 'pen') {
+            this.penColor = color;
+        } else if (this.currentTool === 'shape') {
+            this.shapeColor = color;
+        } else {
+            // Default fallback if tool isn't specific
+            this.penColor = color;
+        }
+    }
+
+    setPenColor(color) {
+        this.penColor = color;
+    }
+
+    setShapeColor(color) {
+        this.shapeColor = color;
     }
     
     setPenSize(size) {
@@ -730,7 +746,19 @@ class DrawingEngine {
     }
     
     getStrokeBounds(stroke) {
-        if (!stroke || stroke.points.length === 0) return null;
+        if (!stroke) return null;
+
+        // Handle image objects
+        if (stroke.type === 'image') {
+            return {
+                x: stroke.x,
+                y: stroke.y,
+                width: stroke.width,
+                height: stroke.height
+            };
+        }
+
+        if (stroke.points.length === 0) return null;
         
         let minX = stroke.points[0].x;
         let minY = stroke.points[0].y;
@@ -844,7 +872,29 @@ class DrawingEngine {
         }
         
         // Draw the stroke
-        if (stroke.points.length > 0) {
+        if (stroke.type === 'image') {
+            this.ctx.save();
+            // Move to center of image for rotation
+            const centerX = stroke.x + stroke.width / 2;
+            const centerY = stroke.y + stroke.height / 2;
+            this.ctx.translate(centerX, centerY);
+            if (stroke.rotation) {
+                this.ctx.rotate(stroke.rotation * Math.PI / 180);
+            }
+            // Draw image centered at (0,0)
+            try {
+                this.ctx.drawImage(stroke.img, -stroke.width / 2, -stroke.height / 2, stroke.width, stroke.height);
+            } catch (e) {
+                // If image object is lost (e.g. after reload), try to recreate it from src
+                if (stroke.src && !stroke.img) {
+                    const img = new Image();
+                    img.src = stroke.src;
+                    stroke.img = img;
+                    // Might flash once, but will draw next frame
+                }
+            }
+            this.ctx.restore();
+        } else if (stroke.points.length > 0) {
             this.ctx.beginPath();
             this.ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
             

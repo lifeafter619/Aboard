@@ -262,7 +262,7 @@ class ShapeDrawingManager {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.globalCompositeOperation = 'source-over';
-        ctx.strokeStyle = this.drawingEngine.currentColor;
+        ctx.strokeStyle = this.drawingEngine.shapeColor; // Use shapeColor
         ctx.fillStyle = 'transparent';
         
         // Calculate line width

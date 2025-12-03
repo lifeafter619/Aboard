@@ -237,6 +237,7 @@
                 <label>背景颜色</label>
                 <div class="color-picker-row">
                     <div class="color-picker-main">
+                        <!-- Ensure all background options are opaque -->
                         <button class="color-btn active" data-bg-color="#ffffff" style="background-color: #ffffff; border: 1px solid #ccc;"></button>
                         <button class="color-btn" data-bg-color="#f5f5f5" style="background-color: #f5f5f5; border: 1px solid #ccc;"></button>
                         <button class="color-btn" data-bg-color="#fffef0" style="background-color: #fffef0; border: 1px solid #ccc;"></button>
@@ -393,6 +394,31 @@
                     </svg>
                     <span data-i18n="features.timer">Timer</span>
                 </button>
+                <button id="scoreboard-feature-btn" class="feature-btn" data-i18n-title="features.scoreboard">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+                        <line x1="12" y1="4" x2="12" y2="20"></line>
+                        <text x="6" y="15" font-size="8" text-anchor="middle" font-weight="bold">A</text>
+                        <text x="18" y="15" font-size="8" text-anchor="middle" font-weight="bold">B</text>
+                    </svg>
+                    <span data-i18n="features.scoreboard">Scoreboard</span>
+                </button>
+                <button id="random-picker-feature-btn" class="feature-btn" data-i18n-title="features.randomPicker">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path>
+                        <path d="M12 12l2.3 2.3"></path>
+                        <path d="M12 6v6"></path>
+                    </svg>
+                    <span data-i18n="features.randomPicker">Picker</span>
+                </button>
+                <button id="insert-image-btn" class="feature-btn" data-i18n-title="features.insertImage">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    <span data-i18n="features.insertImage">Image</span>
+                </button>
             </div>
         </div>
     </div>
@@ -460,23 +486,6 @@
                         </svg>
                         <span>背景</span>
                     </button>
-            <button class="feature-btn" id="scoreboard-feature-btn">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
-                    <line x1="12" y1="4" x2="12" y2="20"></line>
-                    <text x="6" y="15" font-size="8" text-anchor="middle" font-weight="bold">A</text>
-                    <text x="18" y="15" font-size="8" text-anchor="middle" font-weight="bold">B</text>
-                </svg>
-                <span>计分板</span>
-            </button>
-            <button class="feature-btn" id="random-picker-feature-btn">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path>
-                    <path d="M12 12l2.3 2.3"></path>
-                    <path d="M12 6v6"></path>
-                </svg>
-                <span>点名器</span>
-            </button>
                     <button class="settings-tab-icon" data-tab="about">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
@@ -662,7 +671,8 @@
                     <!-- Background settings -->
                     <div id="background-settings" class="settings-tab-content">
                         <h3>背景设置</h3>
-                        <div class="settings-group">
+                        <!-- Background opacity setting removed to enforce opaque background -->
+                        <div class="settings-group" style="display: none;">
                             <label>背景透明度：当前 <span id="bg-opacity-value">100</span>%</label>
                             <p class="settings-hint">调整背景的透明度,100%为完全不透明</p>
                             <div style="display: flex; gap: 10px; align-items: center;">
@@ -1472,6 +1482,7 @@
     <script src="js/modules/edge-drawing.js"></script>
     <script src="js/modules/teaching-tools.js"></script>
     <script src="js/modules/shape-drawing.js"></script>
+    <script src="js/modules/image-annotation.js"></script>
     <script src="js/modules/line-style-modal.js"></script>
     <script src="js/settings.js"></script>
     <script src="js/announcement.js"></script>
