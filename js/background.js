@@ -272,21 +272,29 @@ class BackgroundManager {
         // The origin offset is applied relative to this center
         const centerX = this.bgCanvas.width / 2;
         const centerY = this.bgCanvas.height / 2;
+
+        // Apply offset to get the actual origin position
+        const originX = centerX + (this.coordinateOriginX || 0);
+        const originY = centerY + (this.coordinateOriginY || 0);
+
         const baseGridSize = 20 * dpr;
         const gridSize = baseGridSize / this.patternDensity;
         
         this.bgCtx.strokeStyle = this.isLightBackground() ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
         this.bgCtx.lineWidth = 0.5 * dpr;
         
-        // Draw grid lines
-        for (let x = centerX % gridSize; x < this.bgCanvas.width; x += gridSize) {
+        // Draw grid lines (align with origin)
+        // Start from a point that aligns with originX but is off-screen to the left
+        const startX = (originX % gridSize + gridSize) % gridSize;
+        for (let x = startX; x < this.bgCanvas.width; x += gridSize) {
             this.bgCtx.beginPath();
             this.bgCtx.moveTo(x, 0);
             this.bgCtx.lineTo(x, this.bgCanvas.height);
             this.bgCtx.stroke();
         }
         
-        for (let y = centerY % gridSize; y < this.bgCanvas.height; y += gridSize) {
+        const startY = (originY % gridSize + gridSize) % gridSize;
+        for (let y = startY; y < this.bgCanvas.height; y += gridSize) {
             this.bgCtx.beginPath();
             this.bgCtx.moveTo(0, y);
             this.bgCtx.lineTo(this.bgCanvas.width, y);
@@ -297,38 +305,42 @@ class BackgroundManager {
         this.bgCtx.strokeStyle = patternColor;
         this.bgCtx.lineWidth = 2 * dpr;
         
-        // X-axis
+        // X-axis (horizontal line at originY)
         this.bgCtx.beginPath();
-        this.bgCtx.moveTo(0, centerY);
-        this.bgCtx.lineTo(this.bgCanvas.width, centerY);
+        this.bgCtx.moveTo(0, originY);
+        this.bgCtx.lineTo(this.bgCanvas.width, originY);
         this.bgCtx.stroke();
         
-        // Y-axis
+        // Y-axis (vertical line at originX)
         this.bgCtx.beginPath();
-        this.bgCtx.moveTo(centerX, 0);
-        this.bgCtx.lineTo(centerX, this.bgCanvas.height);
+        this.bgCtx.moveTo(originX, 0);
+        this.bgCtx.lineTo(originX, this.bgCanvas.height);
         this.bgCtx.stroke();
         
-        // Draw arrow on X-axis
+        // Draw arrow on X-axis (right end)
         const arrowSize = 10 * dpr;
         
-        this.bgCtx.beginPath();
-        this.bgCtx.moveTo(this.bgCanvas.width - arrowSize, centerY - arrowSize / 2);
-        this.bgCtx.lineTo(this.bgCanvas.width, centerY);
-        this.bgCtx.lineTo(this.bgCanvas.width - arrowSize, centerY + arrowSize / 2);
-        this.bgCtx.stroke();
+        if (originY >= 0 && originY <= this.bgCanvas.height) {
+            this.bgCtx.beginPath();
+            this.bgCtx.moveTo(this.bgCanvas.width - arrowSize, originY - arrowSize / 2);
+            this.bgCtx.lineTo(this.bgCanvas.width, originY);
+            this.bgCtx.lineTo(this.bgCanvas.width - arrowSize, originY + arrowSize / 2);
+            this.bgCtx.stroke();
+        }
         
-        // Draw arrow on Y-axis
-        this.bgCtx.beginPath();
-        this.bgCtx.moveTo(centerX - arrowSize / 2, arrowSize);
-        this.bgCtx.lineTo(centerX, 0);
-        this.bgCtx.lineTo(centerX + arrowSize / 2, arrowSize);
-        this.bgCtx.stroke();
+        // Draw arrow on Y-axis (top end)
+        if (originX >= 0 && originX <= this.bgCanvas.width) {
+            this.bgCtx.beginPath();
+            this.bgCtx.moveTo(originX - arrowSize / 2, arrowSize);
+            this.bgCtx.lineTo(originX, 0);
+            this.bgCtx.lineTo(originX + arrowSize / 2, arrowSize);
+            this.bgCtx.stroke();
+        }
         
         // Draw draggable origin point
         this.bgCtx.fillStyle = patternColor;
         this.bgCtx.beginPath();
-        this.bgCtx.arc(centerX, centerY, 5 * dpr, 0, Math.PI * 2);
+        this.bgCtx.arc(originX, originY, 5 * dpr, 0, Math.PI * 2);
         this.bgCtx.fill();
         this.bgCtx.strokeStyle = this.backgroundColor;
         this.bgCtx.lineWidth = 2 * dpr;

@@ -26,6 +26,9 @@ class DrawingBoard {
         this.timeDisplayControls = new TimeDisplayControls(this.timeDisplayManager);
         this.timeDisplaySettingsModal = new TimeDisplaySettingsModal(this.timeDisplayManager);
         this.timerManager = new TimerManager();
+        this.scoreboardManager = new ScoreboardManager();
+        this.randomPickerManager = new RandomPickerManager();
+        this.imageInsertionManager = new ImageInsertionManager();
         this.collapsibleManager = new CollapsibleManager();
         this.announcementManager = new AnnouncementManager();
         this.exportManager = new ExportManager(this.canvas, this.bgCanvas, this);
@@ -495,17 +498,12 @@ class DrawingBoard {
             });
         });
         
-        // Color picker
-        document.querySelectorAll('.color-btn[data-color]').forEach(btn => {
+        // Color picker (Pen)
+        document.querySelectorAll('#pen-config .color-btn[data-color]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 this.drawingEngine.setColor(e.target.dataset.color);
-                document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('#pen-config .color-btn[data-color]').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
-                // Sync shape color picker value
-                const shapeColorPicker = document.getElementById('shape-custom-color-picker');
-                if (shapeColorPicker) {
-                    shapeColorPicker.value = e.target.dataset.color;
-                }
             });
         });
         
@@ -513,25 +511,34 @@ class DrawingBoard {
         const customColorPickerBtn = document.querySelector('label[for="custom-color-picker"]');
         customColorPicker.addEventListener('input', (e) => {
             this.drawingEngine.setColor(e.target.value);
-            document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
-            // Mark color picker button as active
+            document.querySelectorAll('#pen-config .color-btn[data-color]').forEach(b => b.classList.remove('active'));
             if (customColorPickerBtn) {
                 customColorPickerBtn.classList.add('active');
             }
-            // Sync shape color picker
-            const shapeColorPicker = document.getElementById('shape-custom-color-picker');
-            if (shapeColorPicker) {
-                shapeColorPicker.value = e.target.value;
-            }
         });
-        // Deactivate color picker when a preset is selected
-        document.querySelectorAll('.color-btn[data-color]').forEach(btn => {
+
+        // Deactivate custom color picker when a preset is selected (Pen)
+        document.querySelectorAll('#pen-config .color-btn[data-color]').forEach(btn => {
             btn.addEventListener('click', () => {
                 if (customColorPickerBtn) {
                     customColorPickerBtn.classList.remove('active');
                 }
-                // Also deactivate shape color picker button
-                const shapeCustomColorPickerBtn = document.querySelector('label[for="shape-custom-color-picker"]');
+            });
+        });
+
+        // Shape Color Picker (Independent)
+        document.querySelectorAll('#shape-config .color-btn[data-color]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.shapeDrawingManager.setColor(e.target.dataset.color);
+                document.querySelectorAll('#shape-config .color-btn[data-color]').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
+
+        // Deactivate custom shape color picker when a preset is selected
+        const shapeCustomColorPickerBtn = document.querySelector('label[for="shape-custom-color-picker"]');
+        document.querySelectorAll('#shape-config .color-btn[data-color]').forEach(btn => {
+            btn.addEventListener('click', () => {
                 if (shapeCustomColorPickerBtn) {
                     shapeCustomColorPickerBtn.classList.remove('active');
                 }
@@ -702,25 +709,18 @@ class DrawingBoard {
             arrowSizeValue.textContent = this.shapeDrawingManager.arrowSize;
         }
         
-        // Shape custom color picker - syncs with pen color picker
+        // Shape custom color picker - independent from pen color picker
         const shapeCustomColorPicker = document.getElementById('shape-custom-color-picker');
         const shapeCustomColorPickerBtn = document.querySelector('label[for="shape-custom-color-picker"]');
         if (shapeCustomColorPicker) {
             shapeCustomColorPicker.addEventListener('input', (e) => {
-                this.drawingEngine.setColor(e.target.value);
-                document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
-                // Mark color picker button as active
+                this.shapeDrawingManager.setColor(e.target.value);
+                // Mark color picker button as active within shape config
+                const shapeColorBtns = document.querySelectorAll('#shape-config .color-btn[data-color]');
+                shapeColorBtns.forEach(b => b.classList.remove('active'));
+
                 if (shapeCustomColorPickerBtn) {
                     shapeCustomColorPickerBtn.classList.add('active');
-                }
-                // Sync pen color picker value and active state
-                const penColorPicker = document.getElementById('custom-color-picker');
-                const penColorPickerBtn = document.querySelector('label[for="custom-color-picker"]');
-                if (penColorPicker) {
-                    penColorPicker.value = e.target.value;
-                }
-                if (penColorPickerBtn) {
-                    penColorPickerBtn.classList.add('active');
                 }
             });
         }
@@ -817,6 +817,36 @@ class DrawingBoard {
             timerFeatureBtn.addEventListener('click', () => {
                 this.timerManager.showSettingsModal();
                 // Auto-switch to pen tool after opening timer
+                this.closeFeaturePanel();
+                this.switchToPen();
+            });
+        }
+
+        // Insert Image Feature Button
+        const insertImageBtn = document.getElementById('insert-image-feature-btn');
+        if (insertImageBtn) {
+            insertImageBtn.addEventListener('click', () => {
+                this.imageInsertionManager.triggerUpload();
+                this.closeFeaturePanel();
+                this.switchToPen();
+            });
+        }
+
+        // Scoreboard Feature Button
+        const scoreboardFeatureBtn = document.getElementById('scoreboard-feature-btn');
+        if (scoreboardFeatureBtn) {
+            scoreboardFeatureBtn.addEventListener('click', () => {
+                this.scoreboardManager.show();
+                this.closeFeaturePanel();
+                this.switchToPen();
+            });
+        }
+
+        // Random Picker Feature Button
+        const pickerFeatureBtn = document.getElementById('random-picker-feature-btn');
+        if (pickerFeatureBtn) {
+            pickerFeatureBtn.addEventListener('click', () => {
+                this.randomPickerManager.show();
                 this.closeFeaturePanel();
                 this.switchToPen();
             });

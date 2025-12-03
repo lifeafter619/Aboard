@@ -2278,3 +2278,213 @@ body {
     background-color: #e0e0e0;
     color: #333;
 }
+
+/* Update for CSS Style - Applying the modern look */
+
+/* Rounded corners and shadows for all panels */
+#toolbar,
+#config-area,
+#time-display-area,
+#feature-area,
+#history-controls,
+#pagination-controls,
+.modal-content,
+.image-controls-toolbar,
+.text-input-modal-content {
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    background-color: #ffffff;
+    border: 1px solid rgba(0,0,0,0.05); /* Subtle border for definition */
+}
+
+/* Updated Colors */
+:root {
+    --theme-color: #007AFF;
+    --bg-color-light: #f5f5f7;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+}
+
+/* Buttons Styling */
+.tool-btn,
+.history-btn,
+.feature-btn,
+.config-close-btn,
+.modal-close-btn,
+.page-nav-btn,
+.image-control-btn {
+    border-radius: 8px; /* Slightly rounder buttons */
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.tool-btn:hover,
+.history-btn:hover,
+.feature-btn:hover,
+.config-close-btn:hover,
+.modal-close-btn:hover,
+.page-nav-btn:hover,
+.image-control-btn:hover {
+    background-color: var(--bg-color-light);
+    transform: translateY(-1px); /* Slight lift effect */
+}
+
+.tool-btn:active,
+.history-btn:active,
+.feature-btn:active {
+    transform: translateY(0) scale(0.98); /* Click effect */
+}
+
+/* Active state for tool buttons */
+.tool-btn.active {
+    background-color: var(--theme-color);
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+}
+
+/* Configuration Panels Headers */
+.feature-header,
+.modal-header,
+.settings-group-header {
+    background-color: var(--bg-color-light);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 12px 12px 0 0; /* Only top corners rounded if header */
+    margin: -12px -16px 12px -16px; /* Negate padding of container */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Adjust padding for config area to accommodate header */
+#config-area, #feature-area {
+    padding: 12px 16px;
+    overflow: hidden; /* Ensure header corners are clipped */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Make config content scrollable if needed */
+.config-content, .feature-content {
+    overflow-y: auto;
+    max-height: calc(80vh - 50px);
+    padding-top: 8px;
+}
+
+/* Inputs styling */
+input[type="text"],
+input[type="number"],
+textarea,
+select {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+    background-color: #f9f9f9;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--theme-color);
+    background-color: #fff;
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1);
+}
+
+/* Typography */
+h1, h2, h3, h4, .widget-title {
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+/* Feature Area specific adjustments */
+#feature-area {
+    padding: 0; /* Reset padding to let header handle it */
+    display: none;
+    flex-direction: column;
+}
+
+#feature-area.show {
+    display: flex;
+}
+
+/* Ensure feature buttons inside are nicely laid out */
+.feature-content {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 16px;
+}
+
+.feature-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    background-color: #fff;
+    border: 1px solid var(--border-color);
+    gap: 8px;
+    color: #555;
+    cursor: pointer;
+}
+
+.feature-btn svg {
+    width: 24px;
+    height: 24px;
+    color: var(--theme-color);
+}
+
+.feature-btn span {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.feature-btn:hover {
+    border-color: var(--theme-color);
+    background-color: #f0f7ff;
+}
+
+/* Separator in feature menu */
+.feature-separator {
+    grid-column: span 2;
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 4px 0;
+}
+
+/* Modal backdrop */
+.modal {
+    backdrop-filter: blur(2px); /* Modern blur effect */
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Sliders update */
+input[type=range] {
+    height: 4px;
+    border-radius: 2px;
+}
+
+input[type=range]::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+    margin-top: -6px; /* align center */
+    background: #fff;
+    border: 2px solid var(--theme-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Refined color picker buttons */
+.color-btn {
+    border-radius: 50%; /* Circle color buttons */
+    width: 32px;
+    height: 32px;
+    border: 2px solid rgba(0,0,0,0.1);
+}
+
+.color-btn.active {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 2px white, 0 0 0 4px var(--theme-color);
+    border-color: transparent;
+}

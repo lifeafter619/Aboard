@@ -15,6 +15,9 @@ class ShapeDrawingManager {
         this.startPoint = null;
         this.endPoint = null;
         
+        // Independent color for shapes
+        this.color = '#000000';
+
         // Line style settings
         this.lineStyle = 'solid'; // solid, dashed, dotted, wavy, double, triple, arrow, doubleArrow
         this.dashDensity = 10; // Dash segment length
@@ -57,6 +60,7 @@ class ShapeDrawingManager {
         this.multiLineCount = parseInt(localStorage.getItem('shapeMultiLineCount')) || 2;
         this.multiLineSpacing = parseInt(localStorage.getItem('shapeMultiLineSpacing')) || 4;
         this.arrowSize = parseInt(localStorage.getItem('shapeArrowSize')) || this.ARROW_SIZE_DEFAULT;
+        this.color = localStorage.getItem('shapeColor') || '#000000';
     }
     
     saveSettings() {
@@ -66,6 +70,12 @@ class ShapeDrawingManager {
         localStorage.setItem('shapeMultiLineCount', this.multiLineCount);
         localStorage.setItem('shapeMultiLineSpacing', this.multiLineSpacing);
         localStorage.setItem('shapeArrowSize', this.arrowSize);
+        localStorage.setItem('shapeColor', this.color);
+    }
+
+    setColor(color) {
+        this.color = color;
+        this.saveSettings();
     }
     
     setArrowSize(size) {
@@ -262,7 +272,8 @@ class ShapeDrawingManager {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.globalCompositeOperation = 'source-over';
-        ctx.strokeStyle = this.drawingEngine.currentColor;
+        // Use independent shape color
+        ctx.strokeStyle = this.color;
         ctx.fillStyle = 'transparent';
         
         // Calculate line width
