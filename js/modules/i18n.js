@@ -87,20 +87,15 @@ class I18n {
      */
     async loadTranslations() {
         try {
-            const response = await fetch(`js/locales/${this.currentLocale}.js`);
+            const response = await fetch(`js/locales/${this.currentLocale}.json`);
             if (!response.ok) {
                 console.warn(`Failed to load ${this.currentLocale}, falling back to ${this.fallbackLocale}`);
                 this.currentLocale = this.fallbackLocale;
-                const fallbackResponse = await fetch(`js/locales/${this.fallbackLocale}.js`);
-                const fallbackText = await fallbackResponse.text();
-                eval(fallbackText);
+                const fallbackResponse = await fetch(`js/locales/${this.fallbackLocale}.json`);
+                this.translations = await fallbackResponse.json();
             } else {
-                const text = await response.text();
-                eval(text);
+                this.translations = await response.json();
             }
-            
-            // Translations are now in window.translations
-            this.translations = window.translations || {};
         } catch (error) {
             console.error('Error loading translations:', error);
             this.translations = {};
@@ -378,6 +373,24 @@ class I18n {
                 span.textContent = this.t('features.timer');
             }
             timerBtn.title = this.t('timer.title');
+        }
+
+        const scoreboardBtn = document.getElementById('scoreboard-feature-btn');
+        if (scoreboardBtn) {
+            const span = scoreboardBtn.querySelector('span');
+            if (span) {
+                span.textContent = this.t('features.scoreboard');
+            }
+            scoreboardBtn.title = this.t('scoreboard.title');
+        }
+
+        const pickerBtn = document.getElementById('random-picker-feature-btn');
+        if (pickerBtn) {
+            const span = pickerBtn.querySelector('span');
+            if (span) {
+                span.textContent = this.t('features.randomPicker');
+            }
+            pickerBtn.title = this.t('randomPicker.title');
         }
         
         // Translate close button titles

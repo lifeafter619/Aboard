@@ -26,6 +26,8 @@ class DrawingBoard {
         this.timeDisplayControls = new TimeDisplayControls(this.timeDisplayManager);
         this.timeDisplaySettingsModal = new TimeDisplaySettingsModal(this.timeDisplayManager);
         this.timerManager = new TimerManager();
+        this.scoreboardManager = new ScoreboardManager();
+        this.randomPickerManager = new RandomPickerManager();
         this.collapsibleManager = new CollapsibleManager();
         this.announcementManager = new AnnouncementManager();
         this.exportManager = new ExportManager(this.canvas, this.bgCanvas, this);
@@ -817,6 +819,26 @@ class DrawingBoard {
             timerFeatureBtn.addEventListener('click', () => {
                 this.timerManager.showSettingsModal();
                 // Auto-switch to pen tool after opening timer
+                this.closeFeaturePanel();
+                this.switchToPen();
+            });
+        }
+
+        // Scoreboard Feature Button
+        const scoreboardFeatureBtn = document.getElementById('scoreboard-feature-btn');
+        if (scoreboardFeatureBtn) {
+            scoreboardFeatureBtn.addEventListener('click', () => {
+                this.scoreboardManager.show();
+                this.closeFeaturePanel();
+                this.switchToPen();
+            });
+        }
+
+        // Random Picker Feature Button
+        const pickerFeatureBtn = document.getElementById('random-picker-feature-btn');
+        if (pickerFeatureBtn) {
+            pickerFeatureBtn.addEventListener('click', () => {
+                this.randomPickerManager.show();
                 this.closeFeaturePanel();
                 this.switchToPen();
             });

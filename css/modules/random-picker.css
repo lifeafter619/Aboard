@@ -1,0 +1,120 @@
+#random-picker-widget {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: opacity 0.3s ease;
+}
+
+#random-picker-widget.hidden {
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+}
+
+#random-picker-widget.dragging {
+    opacity: 0.9;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    cursor: move;
+}
+
+.picker-content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.picker-display {
+    width: 100%;
+    height: 80px;
+    background-color: #f5f5f7;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: 700;
+    color: #333;
+    border: 1px solid #e0e0e0;
+}
+
+.picker-display span.winner {
+    color: #007aff;
+    transform: scale(1.2);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.picker-input-area {
+    width: 100%;
+}
+
+#picker-names-input {
+    width: 100%;
+    height: 100px;
+    padding: 8px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    resize: none;
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+#picker-names-input:focus {
+    outline: none;
+    border-color: #007aff;
+}
+
+.picker-controls {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+.picker-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.picker-btn.primary {
+    background-color: #007aff;
+    color: white;
+}
+
+.picker-btn.primary:hover {
+    background-color: #005bb5;
+}
+
+.picker-btn.primary.stop-mode {
+    background-color: #ff3b30;
+}
+
+.picker-btn.primary.stop-mode:hover {
+    background-color: #d63026;
+}
+
+.picker-btn.secondary {
+    background-color: #f5f5f7;
+    color: #333;
+    border: 1px solid #e0e0e0;
+}
+
+.picker-btn.secondary:hover {
+    background-color: #e5e5e7;
+}
