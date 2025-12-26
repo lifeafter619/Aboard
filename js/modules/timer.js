@@ -106,43 +106,44 @@ class TimerInstance {
 
     createDisplayElement() {
         const display = document.createElement('div');
-        display.className = 'timer-display-widget';
+        display.className = 'timer-display-widget feature-widget'; // Add feature-widget class
         display.dataset.timerId = this.id;
         
-        const titleHTML = this.title ? `<div class="timer-display-title">${this.title}</div>` : '';
+        // If title exists, use it, otherwise use mode name
+        const displayTitle = this.title ? this.title : (this.mode === 'stopwatch' ? '正计时' : '倒计时');
         
         display.innerHTML = `
-            <div class="timer-display-header">
-                <div class="timer-display-mode">${this.mode === 'stopwatch' ? '正计时' : '倒计时'}</div>
-                <button class="timer-close-btn" title="关闭">
+            <div class="widget-header">
+                <span class="widget-title timer-display-mode">${displayTitle}</span>
+                <button class="widget-close-btn timer-close-btn" title="关闭">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
                 </button>
             </div>
-            ${titleHTML}
-            <div class="timer-display-time">00:00:00</div>
-            <div class="timer-display-controls">
-                <button class="timer-control-btn timer-play-pause-btn">
+            <div class="widget-content">
+                <div class="timer-display-time">00:00:00</div>
+                <div class="timer-display-controls">
+                    <button class="timer-control-btn timer-play-pause-btn">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="6" y="4" width="4" height="16"></rect>
                         <rect x="14" y="4" width="4" height="16"></rect>
-                    </svg>
-                    暂停
-                </button>
-                <button class="timer-control-btn timer-reset-btn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-                        <path d="M21 3v5h-5"></path>
-                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-                        <path d="M3 21v-5h5"></path>
-                    </svg>
-                    重置
-                </button>
-            </div>
-            <div class="timer-display-actions">
-                <button class="timer-action-btn timer-minimal-btn" title="最简显示 (双击恢复)">
+                        </svg>
+                        暂停
+                    </button>
+                    <button class="timer-control-btn timer-reset-btn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+                            <path d="M21 3v5h-5"></path>
+                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+                            <path d="M3 21v-5h5"></path>
+                        </svg>
+                        重置
+                    </button>
+                </div>
+                <div class="timer-display-actions">
+                    <button class="timer-action-btn timer-minimal-btn" title="最简显示 (双击恢复)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                         <line x1="9" y1="9" x2="15" y2="15"></line>
@@ -160,13 +161,14 @@ class TimerInstance {
                 <button class="timer-action-btn timer-fullscreen-btn" title="全屏">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
-                    </svg>
-                    全屏
-                </button>
-            </div>
-            <div class="timer-font-size-control">
-                <label>字体大小</label>
-                <input type="range" class="timer-font-size-slider" min="16" max="60" value="32" step="2">
+                        </svg>
+                        全屏
+                    </button>
+                </div>
+                <div class="timer-font-size-control">
+                    <label>字体大小</label>
+                    <input type="range" class="timer-font-size-slider" min="16" max="60" value="32" step="2">
+                </div>
             </div>
         `;
         
@@ -177,6 +179,10 @@ class TimerInstance {
         display.style.backgroundColor = this.bgColor;
         display.style.color = this.textColor;
         
+        // Prevent drawing on canvas when interacting with timer
+        display.addEventListener('mousedown', (e) => e.stopPropagation());
+        display.addEventListener('touchstart', (e) => e.stopPropagation());
+
         // Also apply to specific elements that have their own color
         const timeDisplay = display.querySelector('.timer-display-time');
         const titleDisplay = display.querySelector('.timer-display-title');
@@ -242,7 +248,7 @@ class TimerInstance {
     }
     
     setupDragging() {
-        const header = this.displayElement.querySelector('.timer-display-header');
+        const header = this.displayElement.querySelector('.widget-header');
         const timeDisplay = this.displayElement.querySelector('.timer-display-time');
         
         // Unified handler for mouse and touch start
@@ -713,24 +719,10 @@ class TimerInstance {
             if (modeDisplay) modeDisplay.style.color = this.textColor;
         }
         
-        // Update title in display if changed
-        const oldTitleElement = this.displayElement.querySelector('.timer-display-title');
-        if (this.title) {
-            if (oldTitleElement) {
-                oldTitleElement.textContent = this.title;
-            } else {
-                // Insert title after header
-                const header = this.displayElement.querySelector('.timer-display-header');
-                const titleElement = document.createElement('div');
-                titleElement.className = 'timer-display-title';
-                titleElement.textContent = this.title;
-                header.insertAdjacentElement('afterend', titleElement);
-            }
-        } else {
-            // Remove title if it was cleared
-            if (oldTitleElement) {
-                oldTitleElement.remove();
-            }
+        // Update title/mode in header
+        const titleElement = this.displayElement.querySelector('.widget-title');
+        if (titleElement) {
+            titleElement.textContent = this.title ? this.title : (this.mode === 'stopwatch' ? '正计时' : '倒计时');
         }
         
         // Reset timer with new settings

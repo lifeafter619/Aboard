@@ -1,14 +1,18 @@
-// Random Picker Module
-// A simple random name picker for classroom activities
+// Random Picker Module - Redesigned
+// A unified widget for picking random names or numbers
 
 class RandomPickerManager {
     constructor() {
         this.isVisible = false;
         this.element = null;
         this.isRunning = false;
-        this.names = [];
-        this.mode = 'names'; // 'names' or 'numbers'
+        this.mode = 'names'; // 'names' | 'numbers'
         this.intervalId = null;
+
+        // Data
+        this.names = [];
+        this.minNum = 1;
+        this.maxNum = 50;
 
         // Dragging state
         this.isDragging = false;
@@ -16,21 +20,23 @@ class RandomPickerManager {
 
         this.createPickerElement();
         this.setupEventListeners();
+        this.loadSettings();
     }
 
     createPickerElement() {
         const div = document.createElement('div');
         div.id = 'random-picker-widget';
-        div.className = 'feature-widget hidden';
+        div.className = 'feature-widget hidden'; // Use common widget styles
 
+        // Labels
         const titleLabel = window.i18n ? window.i18n.t('randomPicker.title') : '随机点名';
-        const placeholder = window.i18n ? window.i18n.t('randomPicker.placeholder') : '输入名字，每行一个...';
-        const startLabel = window.i18n ? window.i18n.t('randomPicker.start') : '开始';
-        const resetLabel = window.i18n ? window.i18n.t('common.reset') : '重置';
         const namesLabel = window.i18n ? window.i18n.t('randomPicker.names') : '名字';
         const numbersLabel = window.i18n ? window.i18n.t('randomPicker.numbers') : '数字';
+        const startLabel = window.i18n ? window.i18n.t('randomPicker.start') : '开始';
+        const resetLabel = window.i18n ? window.i18n.t('common.reset') : '重置';
         const minLabel = window.i18n ? window.i18n.t('randomPicker.min') : '最小';
         const maxLabel = window.i18n ? window.i18n.t('randomPicker.max') : '最大';
+        const placeholder = window.i18n ? window.i18n.t('randomPicker.placeholder') : '输入名字，每行一个...';
 
         div.innerHTML = `
             <div class="widget-header">
@@ -42,37 +48,39 @@ class RandomPickerManager {
                     </svg>
                 </button>
             </div>
-            <div class="picker-tabs">
-                <button class="picker-tab active" data-mode="names">${namesLabel}</button>
-                <button class="picker-tab" data-mode="numbers">${numbersLabel}</button>
-            </div>
-            <div class="picker-content">
-                <div class="picker-display">
-                    <span id="picker-result">?</span>
+
+            <div class="widget-content">
+                <div class="picker-mode-switch">
+                    <button class="mode-btn active" data-mode="names">${namesLabel}</button>
+                    <button class="mode-btn" data-mode="numbers">${numbersLabel}</button>
                 </div>
 
-                <div id="picker-names-panel" class="picker-panel active">
-                    <div class="picker-input-area">
-                        <textarea id="picker-names-input" placeholder="${placeholder}"></textarea>
-                    </div>
+                <div class="picker-result-container">
+                    <div id="picker-result" class="picker-result">?</div>
                 </div>
 
-                <div id="picker-numbers-panel" class="picker-panel">
-                    <div class="picker-number-inputs">
+                <!-- Names Section -->
+                <div id="section-names" class="picker-input-section active">
+                    <textarea id="picker-names-input" class="names-input" placeholder="${placeholder}"></textarea>
+                </div>
+
+                <!-- Numbers Section -->
+                <div id="section-numbers" class="picker-input-section">
+                    <div class="number-range-inputs">
                         <div class="number-input-group">
                             <label>${minLabel}</label>
-                            <input type="number" id="picker-min-input" value="1" min="0">
+                            <input type="number" id="picker-min" class="widget-input" value="1">
                         </div>
                         <div class="number-input-group">
                             <label>${maxLabel}</label>
-                            <input type="number" id="picker-max-input" value="50" min="1">
+                            <input type="number" id="picker-max" class="widget-input" value="50">
                         </div>
                     </div>
                 </div>
 
                 <div class="picker-controls">
-                    <button class="picker-btn primary" id="picker-start-btn">${startLabel}</button>
-                    <button class="picker-btn secondary" id="picker-reset-btn">${resetLabel}</button>
+                    <button id="picker-start-btn" class="widget-btn primary">${startLabel}</button>
+                    <button id="picker-reset-btn" class="widget-btn secondary">${resetLabel}</button>
                 </div>
             </div>
         `;
@@ -82,75 +90,98 @@ class RandomPickerManager {
     }
 
     setupEventListeners() {
+        // Prevent drawing on canvas when interacting with widget
+        this.element.addEventListener('mousedown', (e) => e.stopPropagation());
+        this.element.addEventListener('touchstart', (e) => e.stopPropagation());
+
         // Close button
         this.element.querySelector('.widget-close-btn').addEventListener('click', () => {
             this.hide();
         });
 
         // Mode switching
-        this.element.querySelectorAll('.picker-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                const mode = e.target.dataset.mode;
-                this.setMode(mode);
+        this.element.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.setMode(e.target.dataset.mode);
             });
         });
 
-        // Start/Stop button
+        // Start/Stop
         const startBtn = document.getElementById('picker-start-btn');
         startBtn.addEventListener('click', () => {
             if (this.isRunning) {
-                this.stopPicking();
+                this.stop();
             } else {
-                this.startPicking();
+                this.start();
             }
         });
 
-        // Reset button
+        // Reset
         document.getElementById('picker-reset-btn').addEventListener('click', () => {
             this.reset();
         });
 
-        // Input textarea - save names
-        const input = document.getElementById('picker-names-input');
-        input.addEventListener('change', () => {
-            this.parseNames();
+        // Inputs
+        document.getElementById('picker-names-input').addEventListener('change', (e) => {
+            this.parseNames(e.target.value);
+            this.saveSettings();
         });
 
-        // Load saved names if any
-        const savedNames = localStorage.getItem('randomPickerNames');
-        if (savedNames) {
-            input.value = savedNames;
-            this.parseNames();
-        }
+        document.getElementById('picker-min').addEventListener('change', (e) => {
+            this.minNum = parseInt(e.target.value) || 1;
+            this.saveSettings();
+        });
 
-        // Dragging (same logic as Scoreboard)
+        document.getElementById('picker-max').addEventListener('change', (e) => {
+            this.maxNum = parseInt(e.target.value) || 50;
+            this.saveSettings();
+        });
+
+        // Dragging
+        this.setupDragging();
+    }
+
+    setupDragging() {
         const header = this.element.querySelector('.widget-header');
 
         const handleStart = (e) => {
             if (e.target.closest('.widget-close-btn')) return;
+
             this.isDragging = true;
             this.element.classList.add('dragging');
+
             const rect = this.element.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
             this.dragOffset.x = clientX - rect.left;
             this.dragOffset.y = clientY - rect.top;
+
+            // Critical: stop propagation to prevent drawing
             e.preventDefault();
+            e.stopPropagation();
         };
 
         const handleMove = (e) => {
             if (!this.isDragging) return;
+
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
             requestAnimationFrame(() => {
                 if (!this.isDragging) return;
+
                 const x = clientX - this.dragOffset.x;
                 const y = clientY - this.dragOffset.y;
+
                 const windowWidth = window.innerWidth;
                 const windowHeight = window.innerHeight;
                 const rect = this.element.getBoundingClientRect();
+
+                // Keep within bounds
                 const finalX = Math.max(0, Math.min(x, windowWidth - rect.width));
                 const finalY = Math.max(0, Math.min(y, windowHeight - rect.height));
+
                 this.element.style.left = `${finalX}px`;
                 this.element.style.top = `${finalY}px`;
                 this.element.style.transform = 'none';
@@ -166,105 +197,137 @@ class RandomPickerManager {
 
         header.addEventListener('mousedown', handleStart);
         header.addEventListener('touchstart', handleStart, { passive: false });
+
         document.addEventListener('mousemove', handleMove);
         document.addEventListener('touchmove', handleMove, { passive: false });
+
         document.addEventListener('mouseup', handleEnd);
         document.addEventListener('touchend', handleEnd);
     }
 
     setMode(mode) {
         this.mode = mode;
-        this.element.querySelectorAll('.picker-tab').forEach(t => t.classList.remove('active'));
-        this.element.querySelector(`.picker-tab[data-mode="${mode}"]`).classList.add('active');
 
-        this.element.querySelectorAll('.picker-panel').forEach(p => p.classList.remove('active'));
-        document.getElementById(`picker-${mode}-panel`).classList.add('active');
+        // Update UI buttons
+        this.element.querySelectorAll('.mode-btn').forEach(btn => {
+            if (btn.dataset.mode === mode) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
 
-        // Reset result
-        document.getElementById('picker-result').textContent = '?';
+        // Show/hide sections
+        document.getElementById('section-names').classList.remove('active');
+        document.getElementById('section-numbers').classList.remove('active');
+        document.getElementById(`section-${mode}`).classList.add('active');
+
+        this.resetResult();
     }
 
-    parseNames() {
-        const input = document.getElementById('picker-names-input');
-        const text = input.value.trim();
+    parseNames(text) {
         if (!text) {
             this.names = [];
-        } else {
-            this.names = text.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+            return;
         }
-        localStorage.setItem('randomPickerNames', input.value);
+        this.names = text.split('\n')
+            .map(n => n.trim())
+            .filter(n => n.length > 0);
     }
 
-    startPicking() {
+    start() {
         if (this.mode === 'names') {
-            this.parseNames();
+            const text = document.getElementById('picker-names-input').value;
+            this.parseNames(text);
+
             if (this.names.length === 0) {
                 alert(window.i18n ? window.i18n.t('randomPicker.noNames') : '请输入名字');
                 return;
             }
         } else {
-            // Numbers mode validation
-            const min = parseInt(document.getElementById('picker-min-input').value);
-            const max = parseInt(document.getElementById('picker-max-input').value);
-            if (isNaN(min) || isNaN(max) || min >= max) {
-                alert('请输入有效的数字范围 (最小值必须小于最大值)');
+            // Validate numbers
+            const min = parseInt(document.getElementById('picker-min').value);
+            const max = parseInt(document.getElementById('picker-max').value);
+
+            if (isNaN(min) || isNaN(max)) {
+                alert('请输入有效数字');
                 return;
             }
+            if (min >= max) {
+                alert('最小值必须小于最大值');
+                return;
+            }
+            this.minNum = min;
+            this.maxNum = max;
         }
-
-        // Hide input panels
-        this.element.querySelectorAll('.picker-panel').forEach(p => p.style.display = 'none');
 
         this.isRunning = true;
         const startBtn = document.getElementById('picker-start-btn');
         startBtn.textContent = window.i18n ? window.i18n.t('randomPicker.stop') : '停止';
-        startBtn.classList.add('stop-mode');
+        // Add style for stop button if needed, or rely on text
+        startBtn.classList.add('primary'); // Make sure it's primary
 
-        const display = document.getElementById('picker-result');
-        display.classList.remove('winner');
+        const resultEl = document.getElementById('picker-result');
+        resultEl.classList.remove('highlight');
 
-        // Fast rolling animation
+        // Start animation loop
         this.intervalId = setInterval(() => {
-            if (this.mode === 'names') {
-                const randomIndex = Math.floor(Math.random() * this.names.length);
-                display.textContent = this.names[randomIndex];
-            } else {
-                const min = parseInt(document.getElementById('picker-min-input').value);
-                const max = parseInt(document.getElementById('picker-max-input').value);
-                const randomNum = Math.floor(Math.random() * (max - min + 1)) + min;
-                display.textContent = randomNum;
-            }
+            this.updateRandomDisplay();
         }, 50);
     }
 
-    stopPicking() {
+    stop() {
         if (!this.isRunning) return;
 
         clearInterval(this.intervalId);
+        this.intervalId = null;
         this.isRunning = false;
 
         const startBtn = document.getElementById('picker-start-btn');
         startBtn.textContent = window.i18n ? window.i18n.t('randomPicker.start') : '开始';
-        startBtn.classList.remove('stop-mode');
 
-        const display = document.getElementById('picker-result');
-        display.classList.add('winner');
+        const resultEl = document.getElementById('picker-result');
+        resultEl.classList.add('highlight');
 
-        // Restore input panel visibility (but keep active one visible)
-        this.element.querySelectorAll('.picker-panel').forEach(p => p.style.display = '');
-        this.setMode(this.mode); // Re-apply active class logic
+        // Ensure final result is valid
+        this.updateRandomDisplay();
+    }
 
-        setTimeout(() => display.classList.remove('winner'), 500);
+    updateRandomDisplay() {
+        const resultEl = document.getElementById('picker-result');
+
+        if (this.mode === 'names') {
+            if (this.names.length > 0) {
+                const idx = Math.floor(Math.random() * this.names.length);
+                resultEl.textContent = this.names[idx];
+            }
+        } else {
+            const range = this.maxNum - this.minNum + 1;
+            const num = Math.floor(Math.random() * range) + this.minNum;
+            resultEl.textContent = num;
+        }
     }
 
     reset() {
-        if (this.isRunning) this.stopPicking();
+        if (this.isRunning) this.stop();
+        this.resetResult();
+    }
 
+    resetResult() {
         document.getElementById('picker-result').textContent = '?';
+        document.getElementById('picker-result').classList.remove('highlight');
+    }
 
-        // Restore visibility
-        this.element.querySelectorAll('.picker-panel').forEach(p => p.style.display = '');
-        this.setMode(this.mode);
+    loadSettings() {
+        const savedNames = localStorage.getItem('randomPickerNames');
+        if (savedNames) {
+            document.getElementById('picker-names-input').value = savedNames;
+            this.parseNames(savedNames);
+        }
+
+        // Could save numbers range too, but not critical
+    }
+
+    saveSettings() {
+        const names = document.getElementById('picker-names-input').value;
+        localStorage.setItem('randomPickerNames', names);
     }
 
     show() {
@@ -280,35 +343,11 @@ class RandomPickerManager {
     hide() {
         this.isVisible = false;
         this.element.classList.add('hidden');
-        this.stopPicking();
+        if (this.isRunning) this.stop();
     }
+}
 
-    toggle() {
-        if (this.isVisible) this.hide();
-        else this.show();
-    }
-
-    updateLabels() {
-        if (!window.i18n) return;
-        this.element.querySelector('.widget-title').textContent = window.i18n.t('randomPicker.title');
-        document.getElementById('picker-names-input').placeholder = window.i18n.t('randomPicker.placeholder');
-        if (!this.isRunning) {
-            document.getElementById('picker-start-btn').textContent = window.i18n.t('randomPicker.start');
-        } else {
-            document.getElementById('picker-start-btn').textContent = window.i18n.t('randomPicker.stop');
-        }
-        document.getElementById('picker-reset-btn').textContent = window.i18n.t('common.reset');
-
-        const tabs = this.element.querySelectorAll('.picker-tab');
-        if (tabs.length >= 2) {
-            tabs[0].textContent = window.i18n.t('randomPicker.names') || '名字';
-            tabs[1].textContent = window.i18n.t('randomPicker.numbers') || '数字';
-        }
-
-        const numberInputs = this.element.querySelectorAll('.number-input-group label');
-        if (numberInputs.length >= 2) {
-            numberInputs[0].textContent = window.i18n.t('randomPicker.min') || '最小';
-            numberInputs[1].textContent = window.i18n.t('randomPicker.max') || '最大';
-        }
-    }
+// Export
+if (typeof window !== 'undefined') {
+    window.RandomPickerManager = RandomPickerManager;
 }

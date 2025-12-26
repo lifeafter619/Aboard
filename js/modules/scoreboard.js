@@ -79,6 +79,10 @@ class ScoreboardManager {
     }
 
     setupEventListeners() {
+        // Stop propagation to prevent drawing on canvas when interacting with widget
+        this.element.addEventListener('mousedown', (e) => e.stopPropagation());
+        this.element.addEventListener('touchstart', (e) => e.stopPropagation());
+
         // Close button
         this.element.querySelector('.widget-close-btn').addEventListener('click', () => {
             this.hide();
@@ -122,6 +126,7 @@ class ScoreboardManager {
             this.dragOffset.y = clientY - rect.top;
 
             e.preventDefault();
+            e.stopPropagation(); // Ensure dragging doesn't trigger other document events
         };
 
         const handleMove = (e) => {

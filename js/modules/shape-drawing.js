@@ -153,8 +153,10 @@ class ShapeDrawingManager {
         
         // Always update transform - even if size didn't change, we need to ensure it's correct
         // The transform maps "Canvas Units" (from getCanvasPosition) to "Preview Physical Pixels"
-        // Formula: CanvasUnit * Scale(Screen/Canvas) * DPR = PreviewPhysicalPixel
-        this.previewCtx.setTransform(scaleX * dpr, 0, 0, scaleY * dpr, 0, 0);
+        // Formula: CanvasUnit * Scale(Screen/Canvas) * DPR * DPR = PreviewPhysicalPixel
+        // We need the extra DPR factor because scaleX is (Zoom/DPR), so scaleX*dpr is Zoom.
+        // But we want to draw in physical pixels, so we need Zoom * DPR.
+        this.previewCtx.setTransform(scaleX * dpr * dpr, 0, 0, scaleY * dpr * dpr, 0, 0);
 
         // Always update position (cheap operation) - handles canvas movement without resize
         this.previewCanvas.style.left = rect.left + 'px';

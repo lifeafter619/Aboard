@@ -21,6 +21,7 @@
     "toolbar": {
         "undo": "Undo",
         "redo": "Redo",
+        "select": "Select",
         "pen": "Pen",
         "shape": "Shape",
         "move": "Move",

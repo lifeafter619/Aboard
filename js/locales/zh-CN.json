@@ -21,6 +21,7 @@
     "toolbar": {
         "undo": "撤销",
         "redo": "重做",
+        "select": "选择",
         "pen": "笔",
         "shape": "形状",
         "move": "移动",

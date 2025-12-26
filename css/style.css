@@ -25,6 +25,7 @@ body {
 
 @import url('modules/shape.css');
 @import url('modules/line-style-modal.css');
+@import url('modules/feature-widget.css');
 @import url('theme.css');
 
 /* Canvas */
