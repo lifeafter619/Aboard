@@ -50,7 +50,8 @@
             "colorPicker": "取色器",
             "size": "粗细",
             "sizeLabel": "粗细：当前",
-            "sizePx": "px"
+            "sizePx": "px",
+            "contrastWarning": "颜色不能与背景颜色相同"
         },
         "shape": {
             "title": "形状",
@@ -394,7 +395,8 @@
         "time": "时间",
         "timer": "计时",
         "scoreboard": "计分板",
-        "randomPicker": "点名器"
+        "randomPicker": "点名器",
+        "insertImage": "图片"
     },
     "scoreboard": {
         "title": "计分板",
@@ -406,7 +408,11 @@
         "placeholder": "输入名字，每行一个...",
         "start": "开始",
         "stop": "停止",
-        "noNames": "请输入名字"
+        "noNames": "请输入名字",
+        "names": "名字",
+        "numbers": "数字",
+        "min": "最小",
+        "max": "最大"
     },
     "teachingTools": {
         "title": "教具",

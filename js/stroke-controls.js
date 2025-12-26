@@ -198,14 +198,24 @@ class StrokeControls {
         const deltaX = (e.clientX - this.dragStartPos.x) / canvasScale;
         const deltaY = (e.clientY - this.dragStartPos.y) / canvasScale;
         
-        // Move all points in the stroke
-        for (let point of stroke.points) {
-            if (!point.originalX) {
-                point.originalX = point.x;
-                point.originalY = point.y;
+        // Move stroke
+        if (stroke.type === 'image') {
+            if (stroke.originalX === undefined) {
+                stroke.originalX = stroke.x;
+                stroke.originalY = stroke.y;
             }
-            point.x = point.originalX + deltaX;
-            point.y = point.originalY + deltaY;
+            stroke.x = stroke.originalX + deltaX;
+            stroke.y = stroke.originalY + deltaY;
+        } else {
+            // Move all points in the stroke
+            for (let point of stroke.points) {
+                if (!point.originalX) {
+                    point.originalX = point.x;
+                    point.originalY = point.y;
+                }
+                point.x = point.originalX + deltaX;
+                point.y = point.originalY + deltaY;
+            }
         }
         
         this.updateControlBox();
@@ -221,9 +231,14 @@ class StrokeControls {
             if (this.currentStrokeIndex !== null) {
                 const stroke = this.drawingEngine.strokes[this.currentStrokeIndex];
                 if (stroke) {
-                    for (let point of stroke.points) {
-                        delete point.originalX;
-                        delete point.originalY;
+                    if (stroke.type === 'image') {
+                        delete stroke.originalX;
+                        delete stroke.originalY;
+                    } else {
+                        for (let point of stroke.points) {
+                            delete point.originalX;
+                            delete point.originalY;
+                        }
                     }
                 }
             }
@@ -241,9 +256,16 @@ class StrokeControls {
         this.resizeStartBounds = this.drawingEngine.getStrokeBounds(stroke);
         
         // Store original positions
-        for (let point of stroke.points) {
-            point.originalX = point.x;
-            point.originalY = point.y;
+        if (stroke.type === 'image') {
+            stroke.originalX = stroke.x;
+            stroke.originalY = stroke.y;
+            stroke.originalWidth = stroke.width;
+            stroke.originalHeight = stroke.height;
+        } else {
+            for (let point of stroke.points) {
+                point.originalX = point.x;
+                point.originalY = point.y;
+            }
         }
     }
     
@@ -298,16 +320,24 @@ class StrokeControls {
                 break;
         }
         
-        // Scale all points in the stroke
-        const scaleX = newBounds.width / startBounds.width;
-        const scaleY = newBounds.height / startBounds.height;
-        
-        for (let point of stroke.points) {
-            if (point.originalX !== undefined && point.originalY !== undefined) {
-                const relX = (point.originalX - startBounds.x) / startBounds.width;
-                const relY = (point.originalY - startBounds.y) / startBounds.height;
-                point.x = newBounds.x + relX * newBounds.width;
-                point.y = newBounds.y + relY * newBounds.height;
+        // Apply resize
+        if (stroke.type === 'image') {
+            stroke.x = newBounds.x;
+            stroke.y = newBounds.y;
+            stroke.width = newBounds.width;
+            stroke.height = newBounds.height;
+        } else {
+            // Scale all points in the stroke
+            const scaleX = newBounds.width / startBounds.width;
+            const scaleY = newBounds.height / startBounds.height;
+
+            for (let point of stroke.points) {
+                if (point.originalX !== undefined && point.originalY !== undefined) {
+                    const relX = (point.originalX - startBounds.x) / startBounds.width;
+                    const relY = (point.originalY - startBounds.y) / startBounds.height;
+                    point.x = newBounds.x + relX * newBounds.width;
+                    point.y = newBounds.y + relY * newBounds.height;
+                }
             }
         }
         
@@ -325,9 +355,16 @@ class StrokeControls {
             if (this.currentStrokeIndex !== null) {
                 const stroke = this.drawingEngine.strokes[this.currentStrokeIndex];
                 if (stroke) {
-                    for (let point of stroke.points) {
-                        delete point.originalX;
-                        delete point.originalY;
+                    if (stroke.type === 'image') {
+                        delete stroke.originalX;
+                        delete stroke.originalY;
+                        delete stroke.originalWidth;
+                        delete stroke.originalHeight;
+                    } else {
+                        for (let point of stroke.points) {
+                            delete point.originalX;
+                            delete point.originalY;
+                        }
                     }
                 }
             }
@@ -354,9 +391,14 @@ class StrokeControls {
             }
             
             // Store original positions for all points
-            for (let point of stroke.points) {
-                point.originalX = point.x;
-                point.originalY = point.y;
+            if (stroke.type === 'image') {
+                stroke.originalX = stroke.x;
+                stroke.originalY = stroke.y;
+            } else {
+                for (let point of stroke.points) {
+                    point.originalX = point.x;
+                    point.originalY = point.y;
+                }
             }
         }
     }
@@ -384,21 +426,37 @@ class StrokeControls {
         const strokeCenterX = bounds.x + bounds.width / 2;
         const strokeCenterY = bounds.y + bounds.height / 2;
         
-        // Rotate all points around the stroke center
-        const angleRad = (stroke.rotation - this.rotateStartRotation) * Math.PI / 180;
-        for (let point of stroke.points) {
-            if (point.originalX !== undefined && point.originalY !== undefined) {
-                // Get relative position from center
-                const relX = point.originalX - strokeCenterX;
-                const relY = point.originalY - strokeCenterY;
-                
-                // Apply rotation
-                const rotatedX = relX * Math.cos(angleRad) - relY * Math.sin(angleRad);
-                const rotatedY = relX * Math.sin(angleRad) + relY * Math.cos(angleRad);
-                
-                // Set new position
-                point.x = strokeCenterX + rotatedX;
-                point.y = strokeCenterY + rotatedY;
+        // Rotate logic
+        if (stroke.type === 'image') {
+            // For images, we just update rotation and center point
+            // The bounds (x,y) need to be adjusted so the center stays fixed relative to the visual center?
+            // Actually, for image drawing, we use center + rotation.
+            // But our 'x' and 'y' are top-left of the bounding box.
+            // If we rotate, the bounding box changes.
+            // Simplified: We just update stroke.rotation.
+            // The `drag` and `resize` logic assumes unrotated bounding box for now or handles it via `transform` in CSS for the box.
+            // For actual drawing, `redrawStroke` handles it.
+            // For controls, `updateControlBox` applies rotation.
+
+            // However, if we just rotate, the center stays the same.
+            // We don't need to change X/Y of the image if we rotate around its center.
+        } else {
+            // Rotate all points around the stroke center
+            const angleRad = (stroke.rotation - this.rotateStartRotation) * Math.PI / 180;
+            for (let point of stroke.points) {
+                if (point.originalX !== undefined && point.originalY !== undefined) {
+                    // Get relative position from center
+                    const relX = point.originalX - strokeCenterX;
+                    const relY = point.originalY - strokeCenterY;
+
+                    // Apply rotation
+                    const rotatedX = relX * Math.cos(angleRad) - relY * Math.sin(angleRad);
+                    const rotatedY = relX * Math.sin(angleRad) + relY * Math.cos(angleRad);
+
+                    // Set new position
+                    point.x = strokeCenterX + rotatedX;
+                    point.y = strokeCenterY + rotatedY;
+                }
             }
         }
         
@@ -414,9 +472,14 @@ class StrokeControls {
             if (this.currentStrokeIndex !== null) {
                 const stroke = this.drawingEngine.strokes[this.currentStrokeIndex];
                 if (stroke) {
-                    for (let point of stroke.points) {
-                        delete point.originalX;
-                        delete point.originalY;
+                    if (stroke.type === 'image') {
+                        delete stroke.originalX;
+                        delete stroke.originalY;
+                    } else {
+                        for (let point of stroke.points) {
+                            delete point.originalX;
+                            delete point.originalY;
+                        }
                     }
                     // Clear original bounds after rotation is complete
                     delete stroke.originalBounds;

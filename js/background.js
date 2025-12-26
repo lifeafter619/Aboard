@@ -373,7 +373,8 @@ class BackgroundManager {
     }
     
     setOpacity(opacity) {
-        this.bgOpacity = opacity;
+        // Enforce opacity is 1 (opaque) as per requirement: "background cannot be transparent"
+        this.bgOpacity = 1;
         this.drawBackground();
     }
     

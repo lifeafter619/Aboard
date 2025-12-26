@@ -128,12 +128,15 @@ class ShapeDrawingManager {
         
         // Calculate the CSS scale factor of the main canvas
         // This is the ratio of displayed size to actual size
-        // Guard against division by zero when canvas is hidden
         const offsetWidth = this.canvas.offsetWidth;
         this.canvasCssScale = offsetWidth > 0 ? rect.width / offsetWidth : 1.0;
         
+        // Calculate the ratio between screen pixels (rect) and canvas buffer pixels
+        // This is used to map canvas coordinates to preview canvas coordinates
+        const scaleX = this.canvas.width > 0 ? rect.width / this.canvas.width : 1.0;
+        const scaleY = this.canvas.height > 0 ? rect.height / this.canvas.height : 1.0;
+
         // Only resize if dimensions actually changed (avoid expensive operations)
-        // Note: Position is always updated after this block regardless of resize
         const needsResize = !this.lastCanvasRect ||
             this.lastCanvasRect.width !== rect.width ||
             this.lastCanvasRect.height !== rect.height;
@@ -146,12 +149,13 @@ class ShapeDrawingManager {
             // Set CSS size to match the main canvas display size
             this.previewCanvas.style.width = rect.width + 'px';
             this.previewCanvas.style.height = rect.height + 'px';
-            
-            // Apply DPR scaling once after resize
-            // This allows drawing in CSS pixel coordinates while the buffer is sized for retina
-            this.previewCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
         
+        // Always update transform - even if size didn't change, we need to ensure it's correct
+        // The transform maps "Canvas Units" (from getCanvasPosition) to "Preview Physical Pixels"
+        // Formula: CanvasUnit * Scale(Screen/Canvas) * DPR = PreviewPhysicalPixel
+        this.previewCtx.setTransform(scaleX * dpr, 0, 0, scaleY * dpr, 0, 0);
+
         // Always update position (cheap operation) - handles canvas movement without resize
         this.previewCanvas.style.left = rect.left + 'px';
         this.previewCanvas.style.top = rect.top + 'px';
@@ -180,11 +184,9 @@ class ShapeDrawingManager {
     
     startDrawing(e) {
         this.isDrawing = true;
-        // Store both screen coordinates (for preview) and canvas coordinates (for final drawing)
-        this.startPoint = this.getCanvasPosition(e);  // Canvas coords for final draw
-        this.startScreenPoint = this.getPosition(e);   // Screen coords for preview
+        // Store canvas coordinates for both preview and final drawing
+        this.startPoint = this.getCanvasPosition(e);
         this.endPoint = null;
-        this.endScreenPoint = null;
         
         // Sync and show preview canvas
         this.syncPreviewCanvas();
@@ -194,17 +196,15 @@ class ShapeDrawingManager {
     draw(e) {
         if (!this.isDrawing || !this.startPoint) return;
         
-        this.endPoint = this.getCanvasPosition(e);     // Canvas coords for final draw
-        this.endScreenPoint = this.getPosition(e);      // Screen coords for preview
+        this.endPoint = this.getCanvasPosition(e);
         
         // Use requestAnimationFrame to throttle preview updates for better performance
-        // This prevents excessive redraws on older devices during fast mouse movements
         if (!this.pendingDraw) {
             this.pendingDraw = true;
             this.rafId = requestAnimationFrame(() => {
                 this.pendingDraw = false;
                 // Only draw preview if we have both start and end points
-                if (this.startScreenPoint && this.endScreenPoint) {
+                if (this.startPoint && this.endPoint) {
                     this.clearPreview();
                     this.drawShapePreview();
                 }
@@ -236,8 +236,6 @@ class ShapeDrawingManager {
         this.isDrawing = false;
         this.startPoint = null;
         this.endPoint = null;
-        this.startScreenPoint = null;
-        this.endScreenPoint = null;
         
         // Hide preview canvas
         this.clearPreview();
@@ -245,16 +243,14 @@ class ShapeDrawingManager {
     }
     
     clearPreview() {
-        // Optimized clear: just clear the rect without resetting transform.
-        // 
-        // Coordinate system note:
-        // - The canvas buffer is sized at (width * dpr) x (height * dpr) pixels
-        // - syncPreviewCanvas() applies a DPR scale transform via setTransform(dpr, 0, 0, dpr, 0, 0)
-        // - This means drawing coordinates are in CSS pixels, not physical pixels
-        // - clearRect needs CSS pixel dimensions (canvas.width/dpr, canvas.height/dpr)
-        //   because the transform scales our coordinates up by DPR
-        const dpr = this.cachedDpr;
-        this.previewCtx.clearRect(0, 0, this.previewCanvas.width / dpr, this.previewCanvas.height / dpr);
+        // Since we have a transform applied, we need to clear using transformed coordinates
+        // Or reset transform, clear, and restore.
+        // Simpler: Clear a large enough area in transformed space.
+        // Canvas dimensions in "Canvas Units":
+        this.previewCtx.save();
+        this.previewCtx.setTransform(1, 0, 0, 1, 0, 0);
+        this.previewCtx.clearRect(0, 0, this.previewCanvas.width, this.previewCanvas.height);
+        this.previewCtx.restore();
     }
     
     setupDrawingContext(ctx, isPreview = false) {
@@ -262,7 +258,7 @@ class ShapeDrawingManager {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.globalCompositeOperation = 'source-over';
-        ctx.strokeStyle = this.drawingEngine.currentColor;
+        ctx.strokeStyle = this.drawingEngine.shapeColor; // Use shapeColor
         ctx.fillStyle = 'transparent';
         
         // Calculate line width
@@ -289,13 +285,9 @@ class ShapeDrawingManager {
                 break;
         }
         
-        // For preview canvas: the context has setTransform(dpr, 0, 0, dpr, 0, 0) applied,
-        // which scales all drawing operations including lineWidth. To match the final
-        // drawing (which doesn't have this transform), we need to compensate by dividing
-        // lineWidth by DPR when drawing on the preview canvas.
-        if (isPreview) {
-            lineWidth = lineWidth / this.cachedDpr;
-        }
+        // No need to adjust lineWidth for preview anymore because
+        // we scale the context to map Canvas Units to Preview Pixels.
+        // The dpr scaling is handled by the transform.
         
         ctx.lineWidth = lineWidth;
         
@@ -326,25 +318,25 @@ class ShapeDrawingManager {
     drawShapePreview() {
         this.setupDrawingContext(this.previewCtx, true);
         
-        // Use screen coordinates for preview (matches what user sees on screen)
+        // Use canvas coordinates for preview (transform handles mapping to screen)
         switch(this.currentShape) {
             case 'line':
-                this.drawLineWithStyle(this.previewCtx, this.startScreenPoint, this.endScreenPoint);
+                this.drawLineWithStyle(this.previewCtx, this.startPoint, this.endPoint);
                 break;
             case 'arrow':
-                this.drawArrowLine(this.previewCtx, this.startScreenPoint, this.endScreenPoint, false);
+                this.drawArrowLine(this.previewCtx, this.startPoint, this.endPoint, false);
                 break;
             case 'doubleArrow':
-                this.drawArrowLine(this.previewCtx, this.startScreenPoint, this.endScreenPoint, true);
+                this.drawArrowLine(this.previewCtx, this.startPoint, this.endPoint, true);
                 break;
             case 'rectangle':
-                this.drawRectangleWithStyle(this.previewCtx, this.startScreenPoint, this.endScreenPoint);
+                this.drawRectangleWithStyle(this.previewCtx, this.startPoint, this.endPoint);
                 break;
             case 'circle':
-                this.drawCircleWithStyle(this.previewCtx, this.startScreenPoint, this.endScreenPoint);
+                this.drawCircleWithStyle(this.previewCtx, this.startPoint, this.endPoint);
                 break;
             case 'ellipse':
-                this.drawEllipseWithStyle(this.previewCtx, this.startScreenPoint, this.endScreenPoint);
+                this.drawEllipseWithStyle(this.previewCtx, this.startPoint, this.endPoint);
                 break;
         }
         

@@ -23,6 +23,10 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+@import url('modules/shape.css');
+@import url('modules/line-style-modal.css');
+@import url('theme.css');
+
 /* Canvas */
 #background-canvas {
     position: absolute;

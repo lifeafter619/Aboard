@@ -50,7 +50,8 @@
             "colorPicker": "Color Picker",
             "size": "Size",
             "sizeLabel": "Size: Current",
-            "sizePx": "px"
+            "sizePx": "px",
+            "contrastWarning": "Color cannot be the same as background color"
         },
         "shape": {
             "title": "Shape",
@@ -371,7 +372,8 @@
         "time": "Time",
         "timer": "Timer",
         "scoreboard": "Scoreboard",
-        "randomPicker": "Random Picker"
+        "randomPicker": "Random Picker",
+        "insertImage": "Image"
     },
     "scoreboard": {
         "title": "Scoreboard",
@@ -383,7 +385,11 @@
         "placeholder": "Enter names, one per line...",
         "start": "Start",
         "stop": "Stop",
-        "noNames": "Please enter names"
+        "noNames": "Please enter names",
+        "names": "Names",
+        "numbers": "Numbers",
+        "min": "Min",
+        "max": "Max"
     },
     "teachingTools": {
         "title": "Teaching Tools",

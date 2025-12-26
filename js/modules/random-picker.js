@@ -7,6 +7,7 @@ class RandomPickerManager {
         this.element = null;
         this.isRunning = false;
         this.names = [];
+        this.mode = 'names'; // 'names' or 'numbers'
         this.intervalId = null;
 
         // Dragging state
@@ -26,6 +27,10 @@ class RandomPickerManager {
         const placeholder = window.i18n ? window.i18n.t('randomPicker.placeholder') : '输入名字，每行一个...';
         const startLabel = window.i18n ? window.i18n.t('randomPicker.start') : '开始';
         const resetLabel = window.i18n ? window.i18n.t('common.reset') : '重置';
+        const namesLabel = window.i18n ? window.i18n.t('randomPicker.names') : '名字';
+        const numbersLabel = window.i18n ? window.i18n.t('randomPicker.numbers') : '数字';
+        const minLabel = window.i18n ? window.i18n.t('randomPicker.min') : '最小';
+        const maxLabel = window.i18n ? window.i18n.t('randomPicker.max') : '最大';
 
         div.innerHTML = `
             <div class="widget-header">
@@ -37,13 +42,34 @@ class RandomPickerManager {
                     </svg>
                 </button>
             </div>
+            <div class="picker-tabs">
+                <button class="picker-tab active" data-mode="names">${namesLabel}</button>
+                <button class="picker-tab" data-mode="numbers">${numbersLabel}</button>
+            </div>
             <div class="picker-content">
                 <div class="picker-display">
                     <span id="picker-result">?</span>
                 </div>
-                <div class="picker-input-area">
-                    <textarea id="picker-names-input" placeholder="${placeholder}"></textarea>
+
+                <div id="picker-names-panel" class="picker-panel active">
+                    <div class="picker-input-area">
+                        <textarea id="picker-names-input" placeholder="${placeholder}"></textarea>
+                    </div>
                 </div>
+
+                <div id="picker-numbers-panel" class="picker-panel">
+                    <div class="picker-number-inputs">
+                        <div class="number-input-group">
+                            <label>${minLabel}</label>
+                            <input type="number" id="picker-min-input" value="1" min="0">
+                        </div>
+                        <div class="number-input-group">
+                            <label>${maxLabel}</label>
+                            <input type="number" id="picker-max-input" value="50" min="1">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="picker-controls">
                     <button class="picker-btn primary" id="picker-start-btn">${startLabel}</button>
                     <button class="picker-btn secondary" id="picker-reset-btn">${resetLabel}</button>
@@ -59,6 +85,14 @@ class RandomPickerManager {
         // Close button
         this.element.querySelector('.widget-close-btn').addEventListener('click', () => {
             this.hide();
+        });
+
+        // Mode switching
+        this.element.querySelectorAll('.picker-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                const mode = e.target.dataset.mode;
+                this.setMode(mode);
+            });
         });
 
         // Start/Stop button
@@ -138,6 +172,18 @@ class RandomPickerManager {
         document.addEventListener('touchend', handleEnd);
     }
 
+    setMode(mode) {
+        this.mode = mode;
+        this.element.querySelectorAll('.picker-tab').forEach(t => t.classList.remove('active'));
+        this.element.querySelector(`.picker-tab[data-mode="${mode}"]`).classList.add('active');
+
+        this.element.querySelectorAll('.picker-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById(`picker-${mode}-panel`).classList.add('active');
+
+        // Reset result
+        document.getElementById('picker-result').textContent = '?';
+    }
+
     parseNames() {
         const input = document.getElementById('picker-names-input');
         const text = input.value.trim();
@@ -150,15 +196,24 @@ class RandomPickerManager {
     }
 
     startPicking() {
-        this.parseNames(); // Ensure names are up to date
-
-        if (this.names.length === 0) {
-            alert(window.i18n ? window.i18n.t('randomPicker.noNames') : '请输入名字');
-            return;
+        if (this.mode === 'names') {
+            this.parseNames();
+            if (this.names.length === 0) {
+                alert(window.i18n ? window.i18n.t('randomPicker.noNames') : '请输入名字');
+                return;
+            }
+        } else {
+            // Numbers mode validation
+            const min = parseInt(document.getElementById('picker-min-input').value);
+            const max = parseInt(document.getElementById('picker-max-input').value);
+            if (isNaN(min) || isNaN(max) || min >= max) {
+                alert('请输入有效的数字范围 (最小值必须小于最大值)');
+                return;
+            }
         }
 
-        // Collapse input area to focus on result
-        this.element.querySelector('.picker-input-area').style.display = 'none';
+        // Hide input panels
+        this.element.querySelectorAll('.picker-panel').forEach(p => p.style.display = 'none');
 
         this.isRunning = true;
         const startBtn = document.getElementById('picker-start-btn');
@@ -166,11 +221,19 @@ class RandomPickerManager {
         startBtn.classList.add('stop-mode');
 
         const display = document.getElementById('picker-result');
+        display.classList.remove('winner');
 
         // Fast rolling animation
         this.intervalId = setInterval(() => {
-            const randomIndex = Math.floor(Math.random() * this.names.length);
-            display.textContent = this.names[randomIndex];
+            if (this.mode === 'names') {
+                const randomIndex = Math.floor(Math.random() * this.names.length);
+                display.textContent = this.names[randomIndex];
+            } else {
+                const min = parseInt(document.getElementById('picker-min-input').value);
+                const max = parseInt(document.getElementById('picker-max-input').value);
+                const randomNum = Math.floor(Math.random() * (max - min + 1)) + min;
+                display.textContent = randomNum;
+            }
         }, 50);
     }
 
@@ -187,7 +250,9 @@ class RandomPickerManager {
         const display = document.getElementById('picker-result');
         display.classList.add('winner');
 
-        // Play sound if available (reuse timer beep if possible, or just visual)
+        // Restore input panel visibility (but keep active one visible)
+        this.element.querySelectorAll('.picker-panel').forEach(p => p.style.display = '');
+        this.setMode(this.mode); // Re-apply active class logic
 
         setTimeout(() => display.classList.remove('winner'), 500);
     }
@@ -196,7 +261,10 @@ class RandomPickerManager {
         if (this.isRunning) this.stopPicking();
 
         document.getElementById('picker-result').textContent = '?';
-        this.element.querySelector('.picker-input-area').style.display = 'block';
+
+        // Restore visibility
+        this.element.querySelectorAll('.picker-panel').forEach(p => p.style.display = '');
+        this.setMode(this.mode);
     }
 
     show() {
@@ -230,5 +298,17 @@ class RandomPickerManager {
             document.getElementById('picker-start-btn').textContent = window.i18n.t('randomPicker.stop');
         }
         document.getElementById('picker-reset-btn').textContent = window.i18n.t('common.reset');
+
+        const tabs = this.element.querySelectorAll('.picker-tab');
+        if (tabs.length >= 2) {
+            tabs[0].textContent = window.i18n.t('randomPicker.names') || '名字';
+            tabs[1].textContent = window.i18n.t('randomPicker.numbers') || '数字';
+        }
+
+        const numberInputs = this.element.querySelectorAll('.number-input-group label');
+        if (numberInputs.length >= 2) {
+            numberInputs[0].textContent = window.i18n.t('randomPicker.min') || '最小';
+            numberInputs[1].textContent = window.i18n.t('randomPicker.max') || '最大';
+        }
     }
 }
