@@ -2779,6 +2779,21 @@ class DrawingBoard {
     }
 }
 
+// Loading animation transition duration (matches CSS)
+const LOADING_FADE_DURATION = 300;
+
+// Hide loading indicator
+function hideLoadingIndicator() {
+    const loadingEl = document.getElementById('app-loading');
+    if (loadingEl) {
+        loadingEl.classList.add('hidden');
+        // Remove from DOM after animation completes
+        setTimeout(() => {
+            loadingEl.remove();
+        }, LOADING_FADE_DURATION);
+    }
+}
+
 // Initialize the application with error handling
 async function initializeApp() {
     try {
@@ -2801,9 +2816,15 @@ async function initializeApp() {
             }
         });
         
+        // Hide loading indicator
+        hideLoadingIndicator();
+        
         console.log('Aboard: Application initialized successfully');
     } catch (error) {
         console.error('Aboard: Failed to initialize application:', error);
+        
+        // Hide loading indicator
+        hideLoadingIndicator();
         
         // Show user-friendly error message
         const errorDiv = document.createElement('div');

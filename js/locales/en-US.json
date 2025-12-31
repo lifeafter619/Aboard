@@ -12,7 +12,8 @@
         "no": "No",
         "ok": "OK",
         "apply": "Apply",
-        "reset": "Reset"
+        "reset": "Reset",
+        "loading": "Loading..."
     },
     "app": {
         "title": "Aboard - Minimalist Whiteboard",

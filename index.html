@@ -45,6 +45,12 @@
     </noscript>
 </head>
 <body>
+    <!-- Loading indicator - hidden once app is ready -->
+    <div id="app-loading" class="app-loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" data-i18n="common.loading">Loading...</div>
+    </div>
+    
     <!-- Zoom controls in top right corner -->
     <div id="history-controls">
         <button id="export-btn-top" class="history-btn">
@@ -1557,7 +1563,10 @@
         </div>
     </div>
 
-    <!-- JavaScript: Core modules first, then features -->
+    <!-- JavaScript: Utility modules first -->
+    <script src="js/utils/storage.js" defer></script>
+    
+    <!-- Core modules -->
     <!-- Using defer for non-blocking loading while maintaining execution order -->
     <script src="js/drawing.js" defer></script>
     <script src="js/history.js" defer></script>

@@ -12,7 +12,8 @@
         "no": "否",
         "ok": "好的",
         "apply": "应用",
-        "reset": "重置"
+        "reset": "重置",
+        "loading": "加载中..."
     },
     "app": {
         "title": "Aboard - 简约白板",
