@@ -33,6 +33,9 @@ class DrawingBoard {
         this.exportManager = new ExportManager(this.canvas, this.bgCanvas, this);
         this.teachingToolsManager = new TeachingToolsManager(this.canvas, this.ctx, this.historyManager);
         
+        // Initialize ImageAnnotationManager
+        this.imageAnnotationManager = new ImageAnnotationManager(this.canvas, this.ctx, this.drawingEngine, this.historyManager);
+
         // Set callback for teaching tools insertion to auto-switch to pen
         this.teachingToolsManager.onToolsInserted = () => {
             this.closeFeaturePanel();
@@ -203,6 +206,18 @@ class DrawingBoard {
     }
     
     setupEventListeners() {
+        // Image Annotation Button Event Listener
+        // Assuming there is a button with id "insert-image-btn" in the toolbar or feature area
+        // I will add it to the Shape/Tools menu or as a new feature button.
+        // For now, let's assume it's part of the feature-area or shape config.
+        const insertImageBtn = document.getElementById('insert-image-btn');
+        if (insertImageBtn) {
+            insertImageBtn.addEventListener('click', () => {
+                this.imageAnnotationManager.triggerUpload();
+                this.closeFeaturePanel();
+            });
+        }
+
         // Canvas drawing events - use document-level listeners for continuous drawing
         document.addEventListener('mousedown', (e) => {
             // Skip if clicking on UI elements (except canvas)
@@ -497,44 +512,71 @@ class DrawingBoard {
             });
         });
         
-        // Color picker
-        document.querySelectorAll('.color-btn[data-color]').forEach(btn => {
+        // Color picker (Pen)
+        document.querySelectorAll('#pen-config .color-btn[data-color]').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.drawingEngine.setColor(e.target.dataset.color);
-                document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                // Sync shape color picker value
-                const shapeColorPicker = document.getElementById('shape-custom-color-picker');
-                if (shapeColorPicker) {
-                    shapeColorPicker.value = e.target.dataset.color;
+                const color = e.target.dataset.color;
+                if (color.toLowerCase() === this.backgroundManager.backgroundColor.toLowerCase()) {
+                    alert(window.i18n ? window.i18n.t('tools.pen.contrastWarning') : 'Pen color cannot be the same as background color');
+                    return;
                 }
+                this.drawingEngine.setPenColor(color);
+                document.querySelectorAll('#pen-config .color-btn[data-color]').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
+
+        // Color picker (Shape)
+        document.querySelectorAll('#shape-config .color-btn[data-color]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const color = e.target.dataset.color;
+                if (color.toLowerCase() === this.backgroundManager.backgroundColor.toLowerCase()) {
+                    alert(window.i18n ? window.i18n.t('tools.pen.contrastWarning') : 'Shape color cannot be the same as background color');
+                    return;
+                }
+                this.drawingEngine.setShapeColor(color);
+                document.querySelectorAll('#shape-config .color-btn[data-color]').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
             });
         });
         
         const customColorPicker = document.getElementById('custom-color-picker');
         const customColorPickerBtn = document.querySelector('label[for="custom-color-picker"]');
         customColorPicker.addEventListener('input', (e) => {
-            this.drawingEngine.setColor(e.target.value);
-            document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
+            // Check for contrast with background
+            if (e.target.value.toLowerCase() === this.backgroundManager.backgroundColor.toLowerCase()) {
+                alert(window.i18n ? window.i18n.t('tools.pen.contrastWarning') : 'Pen color cannot be the same as background color');
+                // Reset to previous valid color or black if needed, but for now just alert
+                // Or we can just let them pick it but warn them.
+                // Requirement says "pen color cannot be same as background color", implies prevention.
+                // However, without a "previous value" stored easily here, alert is a good first step.
+                // Let's reset to black if it matches.
+                e.target.value = '#000000';
+                this.drawingEngine.setPenColor('#000000');
+                return;
+            }
+            this.drawingEngine.setPenColor(e.target.value);
+            document.querySelectorAll('#pen-config .color-btn[data-color]').forEach(b => b.classList.remove('active'));
             // Mark color picker button as active
             if (customColorPickerBtn) {
                 customColorPickerBtn.classList.add('active');
             }
-            // Sync shape color picker
-            const shapeColorPicker = document.getElementById('shape-custom-color-picker');
-            if (shapeColorPicker) {
-                shapeColorPicker.value = e.target.value;
-            }
         });
+
         // Deactivate color picker when a preset is selected
         document.querySelectorAll('.color-btn[data-color]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (customColorPickerBtn) {
+            btn.addEventListener('click', (e) => {
+                // Determine if this is pen or shape config
+                const isPenConfig = e.target.closest('#pen-config');
+                const isShapeConfig = e.target.closest('#shape-config');
+
+                if (isPenConfig && customColorPickerBtn) {
                     customColorPickerBtn.classList.remove('active');
                 }
+
                 // Also deactivate shape color picker button
                 const shapeCustomColorPickerBtn = document.querySelector('label[for="shape-custom-color-picker"]');
-                if (shapeCustomColorPickerBtn) {
+                if (isShapeConfig && shapeCustomColorPickerBtn) {
                     shapeCustomColorPickerBtn.classList.remove('active');
                 }
             });
@@ -704,25 +746,23 @@ class DrawingBoard {
             arrowSizeValue.textContent = this.shapeDrawingManager.arrowSize;
         }
         
-        // Shape custom color picker - syncs with pen color picker
+        // Shape custom color picker - Independent
         const shapeCustomColorPicker = document.getElementById('shape-custom-color-picker');
         const shapeCustomColorPickerBtn = document.querySelector('label[for="shape-custom-color-picker"]');
         if (shapeCustomColorPicker) {
             shapeCustomColorPicker.addEventListener('input', (e) => {
-                this.drawingEngine.setColor(e.target.value);
-                document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
+                // Check for contrast with background
+                if (e.target.value.toLowerCase() === this.backgroundManager.backgroundColor.toLowerCase()) {
+                    alert(window.i18n ? window.i18n.t('tools.pen.contrastWarning') : 'Shape color cannot be the same as background color');
+                    e.target.value = '#000000';
+                    this.drawingEngine.setShapeColor('#000000');
+                    return;
+                }
+                this.drawingEngine.setShapeColor(e.target.value);
+                document.querySelectorAll('#shape-config .color-btn[data-color]').forEach(b => b.classList.remove('active'));
                 // Mark color picker button as active
                 if (shapeCustomColorPickerBtn) {
                     shapeCustomColorPickerBtn.classList.add('active');
-                }
-                // Sync pen color picker value and active state
-                const penColorPicker = document.getElementById('custom-color-picker');
-                const penColorPickerBtn = document.querySelector('label[for="custom-color-picker"]');
-                if (penColorPicker) {
-                    penColorPicker.value = e.target.value;
-                }
-                if (penColorPickerBtn) {
-                    penColorPickerBtn.classList.add('active');
                 }
             });
         }
@@ -1360,6 +1400,16 @@ class DrawingBoard {
         window.addEventListener('imageConfirmed', () => {
             // Auto-switch to pen tool when user confirms background image
             if (this.drawingEngine.currentTool === 'background') {
+                this.setTool('pen', false);
+            }
+        });
+
+        // Listen for stroke added event (e.g. from ImageAnnotationManager)
+        window.addEventListener('strokeAdded', (e) => {
+            if (this.strokeControls && e.detail && typeof e.detail.index === 'number') {
+                this.strokeControls.showControls(e.detail.index);
+                // Switch to pen tool to ensure we are not in 'insert-image' or other temporary states
+                // But don't show config panel
                 this.setTool('pen', false);
             }
         });

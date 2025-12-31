@@ -1,0 +1,126 @@
+/* Unified Feature Widget Styles */
+
+.feature-widget {
+    position: fixed;
+    /* Default centering, can be overridden */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 320px;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: opacity 0.3s ease;
+}
+
+.feature-widget.hidden {
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.feature-widget.dragging {
+    opacity: 0.9;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    cursor: move;
+}
+
+.widget-header {
+    background-color: #f5f5f7;
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e0e0e0;
+    cursor: move;
+    /* Prevent text selection */
+    user-select: none;
+}
+
+.widget-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+}
+
+.widget-close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.widget-close-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #333;
+}
+
+.widget-content {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.widget-footer {
+    padding: 10px 15px;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: center;
+    background-color: #fafafa;
+}
+
+/* Common button styles inside widgets */
+.widget-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    background-color: white;
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.widget-btn:hover {
+    background-color: #f5f5f7;
+    border-color: #ccc;
+}
+
+.widget-btn.primary {
+    background-color: var(--theme-color, #007AFF);
+    color: white;
+    border-color: var(--theme-color, #007AFF);
+}
+
+.widget-btn.primary:hover {
+    opacity: 0.9;
+}
+
+.widget-input {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 100%;
+}
+
+.widget-input:focus {
+    outline: none;
+    border-color: var(--theme-color, #007AFF);
+}

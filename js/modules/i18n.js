@@ -361,7 +361,8 @@ class I18n {
         if (timeDisplayBtn) {
             const span = timeDisplayBtn.querySelector('span');
             if (span) {
-                span.textContent = this.t('features.time');
+                const text = this.t('features.time');
+                if (text !== 'features.time') span.textContent = text;
             }
             timeDisplayBtn.title = this.t('timeDisplay.title');
         }
@@ -370,7 +371,8 @@ class I18n {
         if (timerBtn) {
             const span = timerBtn.querySelector('span');
             if (span) {
-                span.textContent = this.t('features.timer');
+                const text = this.t('features.timer');
+                if (text !== 'features.timer') span.textContent = text;
             }
             timerBtn.title = this.t('timer.title');
         }
@@ -379,7 +381,8 @@ class I18n {
         if (scoreboardBtn) {
             const span = scoreboardBtn.querySelector('span');
             if (span) {
-                span.textContent = this.t('features.scoreboard');
+                const text = this.t('features.scoreboard');
+                if (text !== 'features.scoreboard') span.textContent = text;
             }
             scoreboardBtn.title = this.t('scoreboard.title');
         }
@@ -388,9 +391,20 @@ class I18n {
         if (pickerBtn) {
             const span = pickerBtn.querySelector('span');
             if (span) {
-                span.textContent = this.t('features.randomPicker');
+                const text = this.t('features.randomPicker');
+                if (text !== 'features.randomPicker') span.textContent = text;
             }
             pickerBtn.title = this.t('randomPicker.title');
+        }
+
+        const insertImageBtn = document.getElementById('insert-image-btn');
+        if (insertImageBtn) {
+            const span = insertImageBtn.querySelector('span');
+            if (span) {
+                const text = this.t('features.insertImage');
+                if (text !== 'features.insertImage') span.textContent = text;
+            }
+            insertImageBtn.title = this.t('features.insertImage');
         }
         
         // Translate close button titles

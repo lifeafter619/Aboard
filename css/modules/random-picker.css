@@ -1,120 +1,113 @@
-#random-picker-widget {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 300px;
-    background-color: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    transition: opacity 0.3s ease;
-}
+/* Specific Random Picker Styles */
+/* Base widget styles imported from feature-widget.css */
 
-#random-picker-widget.hidden {
-    display: none;
-    opacity: 0;
-    pointer-events: none;
-}
-
-#random-picker-widget.dragging {
-    opacity: 0.9;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-    cursor: move;
-}
-
-.picker-content {
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-}
-
-.picker-display {
-    width: 100%;
-    height: 80px;
-    background-color: #f5f5f7;
-    border-radius: 8px;
+.picker-result-container {
+    height: 100px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
-    font-weight: 700;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    margin-bottom: 12px;
+}
+
+.picker-result {
+    font-size: 36px;
+    font-weight: 800;
     color: #333;
-    border: 1px solid #e0e0e0;
+    text-align: center;
+    transition: transform 0.2s;
+    padding: 0 10px;
+    word-break: break-all;
+    max-height: 100%;
+    overflow: hidden;
+    line-height: 1.2;
 }
 
-.picker-display span.winner {
-    color: #007aff;
-    transform: scale(1.2);
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+.picker-result.highlight {
+    color: var(--theme-color, #007AFF);
+    transform: scale(1.1);
 }
 
-.picker-input-area {
-    width: 100%;
+.picker-mode-switch {
+    display: flex;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 12px;
 }
 
-#picker-names-input {
-    width: 100%;
-    height: 100px;
-    padding: 8px;
-    border: 1px solid #e0e0e0;
+.mode-btn {
+    flex: 1;
+    padding: 6px;
+    border: none;
+    background: transparent;
     border-radius: 6px;
+    font-size: 13px;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mode-btn.active {
+    background-color: white;
+    color: var(--theme-color, #007AFF);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    font-weight: 600;
+}
+
+.picker-input-section {
+    display: none;
+}
+
+.picker-input-section.active {
+    display: block;
+}
+
+.names-input {
+    width: 100%;
+    height: 120px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
     resize: none;
     font-size: 14px;
+    line-height: 1.5;
     font-family: inherit;
-    box-sizing: border-box;
 }
 
-#picker-names-input:focus {
+.names-input:focus {
     outline: none;
-    border-color: #007aff;
+    border-color: var(--theme-color, #007AFF);
+}
+
+.number-range-inputs {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 0;
+}
+
+.number-input-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.number-input-group label {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
 }
 
 .picker-controls {
     display: flex;
     gap: 10px;
-    width: 100%;
+    margin-top: 4px;
 }
 
-.picker-btn {
+.picker-controls button {
     flex: 1;
-    padding: 10px;
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.picker-btn.primary {
-    background-color: #007aff;
-    color: white;
-}
-
-.picker-btn.primary:hover {
-    background-color: #005bb5;
-}
-
-.picker-btn.primary.stop-mode {
-    background-color: #ff3b30;
-}
-
-.picker-btn.primary.stop-mode:hover {
-    background-color: #d63026;
-}
-
-.picker-btn.secondary {
-    background-color: #f5f5f7;
-    color: #333;
-    border: 1px solid #e0e0e0;
-}
-
-.picker-btn.secondary:hover {
-    background-color: #e5e5e7;
 }
