@@ -2395,9 +2395,11 @@ body {
         font-size: 9px;
     }
     
-    /* Hide less important tools on very small screens */
+    /* On very small screens, move less-used tools to overflow menu instead of hiding */
+    /* The select tool is available via the More menu on small devices */
     #select-btn {
-        display: none;
+        /* Reduce priority but keep accessible - users can scroll toolbar if needed */
+        order: 10;
     }
     
     #history-controls {

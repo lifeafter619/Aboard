@@ -2753,7 +2753,7 @@ class DrawingBoard {
     cleanup() {
         // Clear any pending timeouts or intervals
         if (this.timerManager) {
-            this.timerManager.stopAll && this.timerManager.stopAll();
+            this.timerManager.stopAll?.();
         }
         
         // Clear any animation frames
