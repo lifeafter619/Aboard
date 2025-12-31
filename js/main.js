@@ -1367,6 +1367,17 @@ class DrawingBoard {
     
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
+            // Don't trigger shortcuts when typing in input fields
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+                // Allow Escape to close modals even when in input
+                if (e.key === 'Escape') {
+                    this.closeSettings();
+                    this.closeConfigPanel();
+                    this.closeShortcutsModal();
+                }
+                return;
+            }
+            
             if (e.ctrlKey || e.metaKey) {
                 if (e.key === 'z' && !e.shiftKey) {
                     e.preventDefault();
@@ -1390,11 +1401,33 @@ class DrawingBoard {
                 this.zoomOut();
             }
             
+            // Show keyboard shortcuts help with '?' key
+            if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+                e.preventDefault();
+                this.showShortcutsModal();
+            }
+            
             if (e.key === 'Escape') {
                 this.closeSettings();
                 this.closeConfigPanel();
+                this.closeShortcutsModal();
             }
         });
+        
+        // Setup shortcuts modal event listeners
+        const shortcutsCloseBtn = document.getElementById('shortcuts-close-btn');
+        if (shortcutsCloseBtn) {
+            shortcutsCloseBtn.addEventListener('click', () => this.closeShortcutsModal());
+        }
+        
+        const shortcutsModal = document.getElementById('shortcuts-modal');
+        if (shortcutsModal) {
+            shortcutsModal.addEventListener('click', (e) => {
+                if (e.target.id === 'shortcuts-modal') {
+                    this.closeShortcutsModal();
+                }
+            });
+        }
         
         // Listen for image confirmed event from background image controls
         window.addEventListener('imageConfirmed', () => {
@@ -1413,6 +1446,20 @@ class DrawingBoard {
                 this.setTool('pen', false);
             }
         });
+    }
+    
+    showShortcutsModal() {
+        const modal = document.getElementById('shortcuts-modal');
+        if (modal) {
+            modal.classList.add('show');
+        }
+    }
+    
+    closeShortcutsModal() {
+        const modal = document.getElementById('shortcuts-modal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
     }
     
     repositionToolbarsOnResize() {
@@ -2698,23 +2745,101 @@ class DrawingBoard {
             }
         }
     }
+    
+    /**
+     * Cleanup method to be called when the application is unloading.
+     * This helps prevent memory leaks by cleaning up event listeners and resources.
+     */
+    cleanup() {
+        // Clear any pending timeouts or intervals
+        if (this.timerManager) {
+            this.timerManager.stopAll && this.timerManager.stopAll();
+        }
+        
+        // Clear any animation frames
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+        }
+        
+        // Clear canvas contexts to free memory
+        if (this.ctx) {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+        if (this.bgCtx) {
+            this.bgCtx.clearRect(0, 0, this.bgCanvas.width, this.bgCanvas.height);
+        }
+        
+        // Clear uploaded images array to free memory
+        this.uploadedImages = [];
+        
+        // Clear pages array
+        this.pages = [];
+        
+        console.log('Aboard: Cleanup completed');
+    }
 }
 
-// Initialize the application
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', async () => {
+// Initialize the application with error handling
+async function initializeApp() {
+    try {
         // Initialize i18n first
         if (window.i18n) {
             await window.i18n.init();
         }
-        new DrawingBoard();
-    });
+        
+        // Create the application instance
+        window.drawingBoard = new DrawingBoard();
+        
+        // Add visibility change handler for performance optimization
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // Page is hidden - reduce activity
+                console.log('Aboard: Page hidden, reducing activity');
+            } else {
+                // Page is visible - resume normal activity
+                console.log('Aboard: Page visible, resuming normal activity');
+            }
+        });
+        
+        console.log('Aboard: Application initialized successfully');
+    } catch (error) {
+        console.error('Aboard: Failed to initialize application:', error);
+        
+        // Show user-friendly error message
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            text-align: center;
+            z-index: 10000;
+            max-width: 400px;
+        `;
+        errorDiv.innerHTML = `
+            <h2 style="margin-bottom: 16px; color: #333;">⚠️ 加载失败</h2>
+            <p style="color: #666; margin-bottom: 16px;">应用程序加载时遇到问题。请尝试刷新页面。</p>
+            <button onclick="location.reload()" style="
+                background: #007AFF;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 14px;
+            ">刷新页面</button>
+        `;
+        document.body.appendChild(errorDiv);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
     // If DOM is already loaded, initialize immediately
-    (async () => {
-        if (window.i18n) {
-            await window.i18n.init();
-        }
-        new DrawingBoard();
-    })();
+    initializeApp();
 }

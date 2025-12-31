@@ -520,5 +520,21 @@
         "thursday": "Thursday",
         "friday": "Friday",
         "saturday": "Saturday"
+    },
+    "shortcuts": {
+        "title": "⌨️ Keyboard Shortcuts",
+        "general": "General",
+        "canvas": "Canvas",
+        "touch": "Touch Gestures",
+        "undo": "Undo",
+        "redo": "Redo",
+        "closePanel": "Close Panel",
+        "fullscreen": "Fullscreen",
+        "showHelp": "Show This Help",
+        "zoom": "Zoom Canvas",
+        "zoomInOut": "Zoom In/Out",
+        "panCanvas": "Pan Canvas",
+        "pinchZoom": "Zoom Canvas",
+        "twoFingerPan": "Pan Canvas"
     }
 }

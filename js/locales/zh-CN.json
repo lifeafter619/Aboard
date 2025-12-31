@@ -543,5 +543,21 @@
         "thursday": "星期四",
         "friday": "星期五",
         "saturday": "星期六"
+    },
+    "shortcuts": {
+        "title": "⌨️ 键盘快捷键",
+        "general": "通用",
+        "canvas": "画布",
+        "touch": "触控手势",
+        "undo": "撤销",
+        "redo": "重做",
+        "closePanel": "关闭面板",
+        "fullscreen": "全屏",
+        "showHelp": "显示此帮助",
+        "zoom": "缩放画布",
+        "zoomInOut": "放大/缩小",
+        "panCanvas": "平移画布",
+        "pinchZoom": "缩放画布",
+        "twoFingerPan": "平移画布"
     }
 }

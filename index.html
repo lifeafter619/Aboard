@@ -2,19 +2,47 @@
 <html lang="zh-CN" data-i18n-title="app.title">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#007AFF">
+    <meta name="description" content="Aboard - A simple and elegant web whiteboard for teaching and presentations">
+    
+    <!-- Performance: DNS Prefetch and Preconnect -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    
+    <!-- Performance: Preload critical CSS -->
+    <link rel="preload" href="css/style.css" as="style">
+    
     <title>Aboard - 简约白板</title>
+    
+    <!-- Critical CSS first -->
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/modules/time-display.css">
-    <link rel="stylesheet" href="css/modules/feature-area.css">
-    <link rel="stylesheet" href="css/modules/scoreboard.css">
-    <link rel="stylesheet" href="css/modules/random-picker.css">
-    <link rel="stylesheet" href="css/modules/export.css">
-    <link rel="stylesheet" href="css/modules/timer.css">
-    <link rel="stylesheet" href="css/modules/teaching-tools.css">
-    <link rel="stylesheet" href="css/modules/shape.css">
-    <link rel="stylesheet" href="css/modules/line-style-modal.css">
+    
+    <!-- Module CSS - loaded async for non-blocking -->
+    <link rel="stylesheet" href="css/modules/time-display.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/modules/feature-area.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/modules/scoreboard.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/modules/random-picker.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/modules/export.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/modules/timer.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/modules/teaching-tools.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/modules/shape.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="css/modules/line-style-modal.css" media="print" onload="this.media='all'">
+    
+    <!-- Fallback for browsers without JS -->
+    <noscript>
+        <link rel="stylesheet" href="css/modules/time-display.css">
+        <link rel="stylesheet" href="css/modules/feature-area.css">
+        <link rel="stylesheet" href="css/modules/scoreboard.css">
+        <link rel="stylesheet" href="css/modules/random-picker.css">
+        <link rel="stylesheet" href="css/modules/export.css">
+        <link rel="stylesheet" href="css/modules/timer.css">
+        <link rel="stylesheet" href="css/modules/teaching-tools.css">
+        <link rel="stylesheet" href="css/modules/shape.css">
+        <link rel="stylesheet" href="css/modules/line-style-modal.css">
+    </noscript>
 </head>
 <body>
     <!-- Zoom controls in top right corner -->
@@ -974,30 +1002,96 @@
         </div>
     </div>
 
+    <!-- Keyboard Shortcuts Help Modal -->
+    <div id="shortcuts-modal" class="modal" role="dialog" aria-labelledby="shortcuts-title" aria-modal="true">
+        <div class="modal-content shortcuts-modal-content">
+            <div class="modal-header">
+                <h2 id="shortcuts-title" data-i18n="shortcuts.title">⌨️ 键盘快捷键</h2>
+                <button id="shortcuts-close-btn" class="modal-close-btn" aria-label="Close">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body shortcuts-body">
+                <div class="shortcuts-group">
+                    <h3 data-i18n="shortcuts.general">通用</h3>
+                    <div class="shortcut-item">
+                        <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Z</kbd></span>
+                        <span class="shortcut-desc" data-i18n="shortcuts.undo">撤销</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>Y</kbd></span>
+                        <span class="shortcut-desc" data-i18n="shortcuts.redo">重做</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="shortcut-keys"><kbd>Esc</kbd></span>
+                        <span class="shortcut-desc" data-i18n="shortcuts.closePanel">关闭面板</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="shortcut-keys"><kbd>F11</kbd></span>
+                        <span class="shortcut-desc" data-i18n="shortcuts.fullscreen">全屏</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="shortcut-keys"><kbd>?</kbd></span>
+                        <span class="shortcut-desc" data-i18n="shortcuts.showHelp">显示此帮助</span>
+                    </div>
+                </div>
+                <div class="shortcuts-group">
+                    <h3 data-i18n="shortcuts.canvas">画布</h3>
+                    <div class="shortcut-item">
+                        <span class="shortcut-keys"><kbd>Ctrl</kbd> + <kbd>滚轮</kbd></span>
+                        <span class="shortcut-desc" data-i18n="shortcuts.zoom">缩放画布</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="shortcut-keys"><kbd>+</kbd> / <kbd>-</kbd></span>
+                        <span class="shortcut-desc" data-i18n="shortcuts.zoomInOut">放大/缩小</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="shortcut-keys"><kbd>Shift</kbd> + 拖动</span>
+                        <span class="shortcut-desc" data-i18n="shortcuts.panCanvas">平移画布</span>
+                    </div>
+                </div>
+                <div class="shortcuts-group">
+                    <h3 data-i18n="shortcuts.touch">触控手势</h3>
+                    <div class="shortcut-item">
+                        <span class="shortcut-keys">双指捏合</span>
+                        <span class="shortcut-desc" data-i18n="shortcuts.pinchZoom">缩放画布</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="shortcut-keys">双指拖动</span>
+                        <span class="shortcut-desc" data-i18n="shortcuts.twoFingerPan">平移画布</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bottom toolbar -->
-    <div id="toolbar">
-        <button id="undo-btn" class="tool-btn" data-tool="undo">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <div id="toolbar" role="toolbar" aria-label="Drawing tools">
+        <button id="undo-btn" class="tool-btn" data-tool="undo" aria-label="Undo (Ctrl+Z)" title="Undo (Ctrl+Z)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M3 7v6h6"></path>
                 <path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"></path>
             </svg>
             <span>撤销</span>
         </button>
-        <button id="redo-btn" class="tool-btn" data-tool="redo">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="redo-btn" class="tool-btn" data-tool="redo" aria-label="Redo (Ctrl+Y)" title="Redo (Ctrl+Y)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M21 7v6h-6"></path>
                 <path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"></path>
             </svg>
             <span>重做</span>
         </button>
-        <button id="select-btn" class="tool-btn" data-tool="select">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="select-btn" class="tool-btn" data-tool="select" aria-label="Select tool" title="Select">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path>
             </svg>
             <span data-i18n="toolbar.select">选择</span>
         </button>
-        <button id="pen-btn" class="tool-btn active" data-tool="pen">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="pen-btn" class="tool-btn active" data-tool="pen" aria-label="Pen tool" title="Pen" aria-pressed="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
                 <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
                 <path d="M2 2l7.586 7.586"></path>
@@ -1005,8 +1099,8 @@
             </svg>
             <span data-i18n="toolbar.pen">笔</span>
         </button>
-        <button id="pan-btn" class="tool-btn" data-tool="pan">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="pan-btn" class="tool-btn" data-tool="pan" aria-label="Pan/Move tool" title="Move canvas">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
                 <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
                 <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
@@ -1014,46 +1108,46 @@
             </svg>
             <span data-i18n="toolbar.move">移动</span>
         </button>
-        <button id="eraser-btn" class="tool-btn" data-tool="eraser">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="eraser-btn" class="tool-btn" data-tool="eraser" aria-label="Eraser tool" title="Eraser">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path d="M20 20H7L3 16 12 7 17 12"></path>
                 <path d="M7 20l5-5"></path>
             </svg>
             <span data-i18n="toolbar.eraser">橡皮</span>
         </button>
-        <button id="clear-btn" class="tool-btn" data-tool="clear">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="clear-btn" class="tool-btn" data-tool="clear" aria-label="Clear canvas" title="Clear canvas">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <polyline points="3 6 5 6 21 6"></polyline>
                 <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
             </svg>
             <span data-i18n="toolbar.clear">清空</span>
         </button>
-        <button id="background-btn" class="tool-btn" data-tool="background">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="background-btn" class="tool-btn" data-tool="background" aria-label="Background settings" title="Background">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                 <circle cx="8.5" cy="8.5" r="1.5"></circle>
                 <polyline points="21 15 16 10 5 21"></polyline>
             </svg>
             <span data-i18n="toolbar.background">背景</span>
         </button>
-        <button id="insert-image-btn" class="tool-btn" data-tool="insert-image">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="insert-image-btn" class="tool-btn" data-tool="insert-image" aria-label="Insert image" title="Insert image">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                 <circle cx="8.5" cy="8.5" r="1.5"></circle>
                 <polyline points="21 15 16 10 5 21"></polyline>
             </svg>
             <span data-i18n="features.insertImage">图片</span>
         </button>
-        <button id="more-btn" class="tool-btn" data-tool="more">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="more-btn" class="tool-btn" data-tool="more" aria-label="More tools" title="More features">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <circle cx="12" cy="12" r="1"></circle>
                 <circle cx="12" cy="5" r="1"></circle>
                 <circle cx="12" cy="19" r="1"></circle>
             </svg>
             <span>更多</span>
         </button>
-        <button id="settings-btn" class="tool-btn" data-tool="settings">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="settings-btn" class="tool-btn" data-tool="settings" aria-label="Settings" title="Settings">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <circle cx="12" cy="12" r="3"></circle>
                 <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"></path>
             </svg>
@@ -1463,27 +1557,29 @@
         </div>
     </div>
 
-    <script src="js/drawing.js"></script>
-    <script src="js/history.js"></script>
-    <script src="js/background.js"></script>
-    <script src="js/image-controls.js"></script>
-    <script src="js/stroke-controls.js"></script>
-    <script src="js/collapsible.js"></script>
-    <script src="js/time-display.js"></script>
-    <script src="js/modules/scoreboard.js"></script>
-    <script src="js/modules/random-picker.js"></script>
-    <script src="js/modules/time-display-controls.js"></script>
-    <script src="js/modules/time-display-settings.js"></script>
-    <script src="js/modules/timer.js"></script>
-    <script src="js/modules/edge-drawing.js"></script>
-    <script src="js/modules/teaching-tools.js"></script>
-    <script src="js/modules/shape-drawing.js"></script>
-    <script src="js/modules/image-annotation.js"></script>
-    <script src="js/modules/line-style-modal.js"></script>
-    <script src="js/settings.js"></script>
-    <script src="js/announcement.js"></script>
-    <script src="js/export.js"></script>
-    <script src="js/modules/i18n.js"></script>
-    <script src="js/main.js"></script>
+    <!-- JavaScript: Core modules first, then features -->
+    <!-- Using defer for non-blocking loading while maintaining execution order -->
+    <script src="js/drawing.js" defer></script>
+    <script src="js/history.js" defer></script>
+    <script src="js/background.js" defer></script>
+    <script src="js/image-controls.js" defer></script>
+    <script src="js/stroke-controls.js" defer></script>
+    <script src="js/collapsible.js" defer></script>
+    <script src="js/time-display.js" defer></script>
+    <script src="js/modules/scoreboard.js" defer></script>
+    <script src="js/modules/random-picker.js" defer></script>
+    <script src="js/modules/time-display-controls.js" defer></script>
+    <script src="js/modules/time-display-settings.js" defer></script>
+    <script src="js/modules/timer.js" defer></script>
+    <script src="js/modules/edge-drawing.js" defer></script>
+    <script src="js/modules/teaching-tools.js" defer></script>
+    <script src="js/modules/shape-drawing.js" defer></script>
+    <script src="js/modules/image-annotation.js" defer></script>
+    <script src="js/modules/line-style-modal.js" defer></script>
+    <script src="js/settings.js" defer></script>
+    <script src="js/announcement.js" defer></script>
+    <script src="js/export.js" defer></script>
+    <script src="js/modules/i18n.js" defer></script>
+    <script src="js/main.js" defer></script>
 </body>
 </html>

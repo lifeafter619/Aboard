@@ -8,6 +8,7 @@
     --bg-color: #ffffff;
     --bg-secondary: #f5f5f7;
     --bg-tertiary: #f0f0f0;
+    --bg-canvas: #f5f5f5;
 
     /* Text colors */
     --text-primary: #333333;
@@ -34,6 +35,266 @@
     /* Transitions */
     --transition-fast: 0.2s ease;
     --transition-normal: 0.3s ease;
+    
+    /* Color scheme indicator */
+    color-scheme: light dark;
+}
+
+/* Dark mode support using prefers-color-scheme */
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* Main colors - slightly adjusted for dark mode */
+        --primary-color: #0a84ff;
+        --primary-hover: #409cff;
+        --primary-active: #0066cc;
+
+        /* Neutral colors - dark backgrounds */
+        --bg-color: #1c1c1e;
+        --bg-secondary: #2c2c2e;
+        --bg-tertiary: #3a3a3c;
+        --bg-canvas: #000000;
+
+        /* Text colors - light text for dark backgrounds */
+        --text-primary: #f5f5f7;
+        --text-secondary: #a1a1a6;
+        --text-tertiary: #636366;
+
+        /* Border colors */
+        --border-color: #3a3a3c;
+        --border-hover: #4a4a4c;
+
+        /* Shadows - more subtle in dark mode */
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+        --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+        --shadow-floating: 0 4px 20px rgba(0, 0, 0, 0.6);
+    }
+    
+    body {
+        background-color: var(--bg-canvas);
+    }
+    
+    /* Override specific elements for dark mode */
+    #toolbar {
+        background-color: rgba(44, 44, 46, 0.95) !important;
+    }
+    
+    .tool-btn {
+        color: var(--text-secondary);
+    }
+    
+    .tool-btn:hover {
+        background-color: var(--bg-tertiary) !important;
+        color: var(--text-primary);
+    }
+    
+    .tool-btn.active {
+        background-color: var(--primary-color) !important;
+        color: #ffffff !important;
+    }
+    
+    .tool-btn.active svg {
+        stroke: #ffffff;
+    }
+    
+    .history-btn {
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+    
+    .history-btn:hover {
+        background-color: var(--bg-tertiary);
+    }
+    
+    .zoom-input {
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+        border-color: var(--border-color);
+    }
+    
+    .modal-content {
+        background-color: var(--bg-color) !important;
+    }
+    
+    .modal-header {
+        background-color: var(--bg-secondary) !important;
+    }
+    
+    .modal-header h2 {
+        color: var(--text-primary) !important;
+    }
+    
+    .settings-sidebar {
+        background-color: var(--bg-secondary) !important;
+    }
+    
+    .settings-tab-icon.active {
+        background-color: var(--bg-tertiary) !important;
+        color: var(--primary-color) !important;
+    }
+    
+    .settings-content {
+        background-color: var(--bg-color);
+    }
+    
+    .settings-content h3 {
+        color: var(--text-primary);
+    }
+    
+    .settings-group label {
+        color: var(--text-primary);
+    }
+    
+    .settings-hint {
+        color: var(--text-tertiary);
+    }
+    
+    #config-area {
+        background-color: var(--bg-color);
+    }
+    
+    .config-group label {
+        color: var(--text-secondary);
+    }
+    
+    .config-panel {
+        background-color: var(--bg-color) !important;
+    }
+    
+    #feature-area {
+        background-color: var(--bg-color);
+    }
+    
+    #time-display-area {
+        background-color: var(--bg-color);
+    }
+    
+    #pagination-controls {
+        background-color: var(--bg-color);
+    }
+    
+    .page-nav-btn {
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+    
+    .page-nav-btn:hover {
+        background-color: var(--bg-tertiary);
+    }
+    
+    .page-input {
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+        border-color: var(--border-color);
+    }
+    
+    /* Button styles in dark mode */
+    .pattern-option-btn,
+    .pen-type-btn,
+    .eraser-shape-btn,
+    .position-option-btn,
+    .display-option-btn,
+    .canvas-preset-btn,
+    .canvas-mode-btn,
+    .size-option-btn,
+    .feature-btn {
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+        border-color: var(--border-color);
+    }
+    
+    .pattern-option-btn:hover,
+    .pen-type-btn:hover,
+    .eraser-shape-btn:hover,
+    .position-option-btn:hover,
+    .display-option-btn:hover,
+    .canvas-preset-btn:hover,
+    .canvas-mode-btn:hover,
+    .size-option-btn:hover,
+    .feature-btn:hover {
+        background-color: var(--bg-tertiary);
+        border-color: var(--border-hover);
+    }
+    
+    /* Input and select in dark mode */
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+        background-color: var(--bg-secondary) !important;
+        color: var(--text-primary) !important;
+        border-color: var(--border-color) !important;
+    }
+    
+    /* Slider track */
+    .slider {
+        background: var(--bg-tertiary);
+    }
+    
+    /* Confirm and alert modals */
+    .confirm-modal-content,
+    .announcement-modal-content {
+        background-color: var(--bg-color);
+    }
+    
+    .confirm-message {
+        color: var(--text-secondary);
+    }
+    
+    .cancel-btn {
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+    
+    .cancel-btn:hover {
+        background-color: var(--bg-tertiary);
+    }
+    
+    /* Timer and scoreboard widgets */
+    #timer-display,
+    .scoreboard-widget,
+    .random-picker-widget {
+        background-color: var(--bg-color);
+    }
+    
+    /* Scrollbar styling for dark mode */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: var(--bg-secondary);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: var(--bg-tertiary);
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #5a5a5c;
+    }
+}
+
+/* Manual dark mode toggle support (data attribute) */
+[data-theme="dark"] {
+    --primary-color: #0a84ff;
+    --primary-hover: #409cff;
+    --primary-active: #0066cc;
+    --bg-color: #1c1c1e;
+    --bg-secondary: #2c2c2e;
+    --bg-tertiary: #3a3a3c;
+    --bg-canvas: #000000;
+    --text-primary: #f5f5f7;
+    --text-secondary: #a1a1a6;
+    --text-tertiary: #636366;
+    --border-color: #3a3a3c;
+    --border-hover: #4a4a4c;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --shadow-floating: 0 4px 20px rgba(0, 0, 0, 0.6);
 }
 
 /* Base Styles */

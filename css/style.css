@@ -6,6 +6,11 @@
 
 :root {
     --theme-color: #007AFF;
+    /* Safe area insets for notched devices (iPhone X, etc.) */
+    --safe-area-inset-top: env(safe-area-inset-top, 0px);
+    --safe-area-inset-right: env(safe-area-inset-right, 0px);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-inset-left: env(safe-area-inset-left, 0px);
 }
 
 body {
@@ -13,7 +18,10 @@ body {
     overflow: hidden;
     width: 100vw;
     height: 100vh;
+    /* Use dvh for better mobile viewport handling */
+    height: 100dvh;
     background-color: #f5f5f5;
+    background-color: var(--bg-canvas, #f5f5f5);
     /* Improved touch device support */
     touch-action: none;
     -webkit-user-select: none;
@@ -21,6 +29,13 @@ body {
     /* Performance optimization: use GPU acceleration */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Prevent pull-to-refresh on mobile */
+    overscroll-behavior: none;
+    /* Safe area padding for notched devices */
+    padding-top: var(--safe-area-inset-top);
+    padding-bottom: var(--safe-area-inset-bottom);
+    padding-left: var(--safe-area-inset-left);
+    padding-right: var(--safe-area-inset-right);
 }
 
 @import url('modules/shape.css');
@@ -46,6 +61,8 @@ body {
     height: 100%;
     cursor: crosshair;
     z-index: 1;
+    /* Optimize for touch input */
+    touch-action: none;
 }
 
 /* Eraser cursor */
@@ -2282,4 +2299,322 @@ body {
 .time-display-settings-icon-btn:hover {
     background-color: #e0e0e0;
     color: #333;
+}
+
+/* ========================================
+   Keyboard Shortcuts Modal Styles
+   ======================================== */
+
+.shortcuts-modal-content {
+    max-width: 500px;
+    width: 90%;
+}
+
+.shortcuts-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.shortcuts-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.shortcuts-group h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary, #333);
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+.shortcut-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+}
+
+.shortcut-keys {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--text-secondary, #666);
+}
+
+.shortcut-keys kbd {
+    display: inline-block;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+    line-height: 1;
+    color: var(--text-primary, #333);
+    background-color: var(--bg-secondary, #f5f5f7);
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.shortcut-desc {
+    font-size: 13px;
+    color: var(--text-secondary, #666);
+}
+
+/* ========================================
+   Additional Mobile & Tablet Responsive Styles
+   ======================================== */
+
+/* Extra small devices (phones, 480px and down) */
+@media (max-width: 480px) {
+    #toolbar {
+        gap: 4px;
+        padding: 8px 12px;
+        border-radius: 12px;
+        /* Adjust for safe area */
+        bottom: calc(10px + var(--safe-area-inset-bottom, 0px));
+    }
+    
+    .tool-btn {
+        padding: 8px 8px;
+        min-width: 50px;
+        gap: 2px;
+    }
+    
+    .tool-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .tool-btn span {
+        font-size: 9px;
+    }
+    
+    /* Hide less important tools on very small screens */
+    #select-btn {
+        display: none;
+    }
+    
+    #history-controls {
+        top: calc(8px + var(--safe-area-inset-top, 0px));
+        right: 8px;
+        gap: 4px;
+        flex-wrap: wrap;
+        max-width: calc(100vw - 16px);
+    }
+    
+    .history-btn {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .history-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .zoom-input {
+        width: 50px;
+        height: 36px;
+        font-size: 11px;
+    }
+    
+    #config-area {
+        min-width: calc(100vw - 20px);
+        max-width: calc(100vw - 20px);
+        left: 10px;
+        transform: none;
+        bottom: calc(80px + var(--safe-area-inset-bottom, 0px));
+        max-height: 50vh;
+    }
+    
+    #pagination-controls {
+        top: calc(55px + var(--safe-area-inset-top, 0px));
+        right: 8px;
+        padding: 6px 8px;
+    }
+    
+    .page-nav-btn {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .page-input {
+        width: 40px;
+        height: 32px;
+        font-size: 12px;
+    }
+    
+    #page-total {
+        font-size: 12px;
+    }
+    
+    /* Modal adjustments */
+    .modal-content {
+        margin: 10px;
+        max-height: calc(100vh - 20px);
+        overflow-y: auto;
+    }
+    
+    .settings-modal-content {
+        min-width: calc(100vw - 20px);
+        max-width: calc(100vw - 20px);
+        max-height: calc(100vh - 40px);
+    }
+    
+    .settings-sidebar {
+        min-width: 100%;
+        max-height: none;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .settings-tab-icon {
+        padding: 8px 6px;
+        min-width: 60px;
+    }
+    
+    .settings-tab-icon span {
+        font-size: 10px;
+    }
+}
+
+/* Tablet portrait (768px to 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+    #toolbar {
+        gap: 10px;
+        padding: 12px 18px;
+    }
+    
+    .tool-btn {
+        padding: 12px 14px;
+        min-width: 65px;
+    }
+    
+    #config-area {
+        min-width: 340px;
+        max-width: 400px;
+    }
+}
+
+/* Landscape mode on mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    #toolbar {
+        /* Make toolbar vertical on short landscape screens */
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px;
+        right: calc(10px + var(--safe-area-inset-right, 0px));
+        left: auto;
+        bottom: auto;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    
+    .tool-btn {
+        padding: 6px;
+        min-width: auto;
+    }
+    
+    .tool-btn span {
+        display: none;
+    }
+    
+    #history-controls {
+        flex-direction: column;
+        top: 10px;
+        right: auto;
+        left: calc(10px + var(--safe-area-inset-left, 0px));
+    }
+    
+    .zoom-input {
+        width: 48px;
+    }
+    
+    #config-area {
+        max-height: calc(100vh - 40px);
+        bottom: auto;
+        top: 50%;
+        transform: translateY(-50%);
+        left: calc(60px + var(--safe-area-inset-left, 0px));
+    }
+    
+    #pagination-controls {
+        left: calc(10px + var(--safe-area-inset-left, 0px));
+        top: auto;
+        bottom: 10px;
+    }
+}
+
+/* High DPI / Retina display optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .tool-btn,
+    .history-btn,
+    .color-btn,
+    button {
+        /* Ensure crisp rendering on high DPI displays */
+        transform: translateZ(0);
+    }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .tool-btn:hover,
+    .history-btn:hover,
+    .color-btn:hover {
+        transform: none;
+    }
+}
+
+/* Improved focus styles for keyboard navigation */
+:focus-visible {
+    outline: 2px solid var(--theme-color);
+    outline-offset: 2px;
+}
+
+button:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    /* Larger touch targets on touch devices */
+    .tool-btn {
+        min-height: 44px;
+    }
+    
+    .history-btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    .color-btn {
+        min-width: 40px;
+        min-height: 40px;
+    }
+    
+    .page-nav-btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    /* Remove hover effects on touch devices */
+    .tool-btn:hover,
+    .history-btn:hover {
+        transform: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
 }
