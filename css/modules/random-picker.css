@@ -1,0 +1,198 @@
+/* Random Picker Module Styles */
+
+/* Random Picker Widget */
+.random-picker-widget {
+    position: fixed;
+    top: 180px;
+    right: 20px;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    z-index: 950;
+    user-select: none;
+    min-width: 200px;
+    display: none;
+    cursor: move;
+    touch-action: none;
+    will-change: transform, left, top;
+}
+
+.random-picker-widget.show {
+    display: block;
+}
+
+.random-picker-widget.dragging {
+    cursor: grabbing;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.random-picker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    cursor: move;
+}
+
+.random-picker-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #666;
+}
+
+.random-picker-close-btn {
+    padding: 4px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    transition: all 0.2s ease;
+}
+
+.random-picker-close-btn:hover {
+    color: #ff3b30;
+    transform: scale(1.1);
+}
+
+.random-picker-display {
+    font-size: 48px;
+    font-weight: 700;
+    color: #333;
+    text-align: center;
+    margin: 16px 0;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.random-picker-controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.random-picker-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.random-picker-btn:hover {
+    background-color: #f0f0f0;
+    border-color: var(--theme-color);
+}
+
+.random-picker-btn.primary {
+    background-color: var(--theme-color);
+    color: #ffffff;
+    border-color: var(--theme-color);
+}
+
+.random-picker-btn.primary:hover {
+    opacity: 0.9;
+}
+
+/* Settings Modal */
+.random-picker-modal-content {
+    max-width: 400px;
+}
+
+.random-picker-mode-group {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.random-picker-mode-btn {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    text-align: center;
+}
+
+.random-picker-mode-btn.active {
+    background-color: var(--theme-color);
+    color: #ffffff;
+    border-color: var(--theme-color);
+}
+
+.random-picker-input-group {
+    margin-bottom: 16px;
+}
+
+.random-picker-input-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.random-picker-range-inputs {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.random-picker-range-inputs input {
+    flex: 1;
+    padding: 8px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 16px;
+}
+
+.random-picker-textarea {
+    width: 100%;
+    height: 150px;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    resize: vertical;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.random-picker-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    cursor: pointer;
+}
+
+.random-picker-checkbox input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.random-picker-checkbox span {
+    font-size: 14px;
+    color: #666;
+}

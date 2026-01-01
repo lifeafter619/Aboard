@@ -395,7 +395,42 @@ window.translations = {
         title: 'Features',
         moreFeatures: 'More Features',
         time: 'Time',
-        timer: 'Timer'
+        timer: 'Timer',
+        randomPicker: 'Picker',
+        scoreboard: 'Scores'
+    },
+
+    // Random Picker
+    randomPicker: {
+        title: 'Random Picker',
+        settingsTitle: 'Random Picker Settings',
+        mode: 'Mode',
+        numberMode: 'Numbers',
+        nameMode: 'Names',
+        numberRange: 'Number Range',
+        min: 'Min',
+        max: 'Max',
+        names: 'Name List',
+        namesHint: 'Enter names, one per line',
+        allowRepeat: 'Allow Repeats',
+        start: 'Start',
+        stop: 'Stop',
+        settings: 'Settings'
+    },
+
+    // Scoreboard
+    scoreboard: {
+        title: 'Scoreboard',
+        settingsTitle: 'Scoreboard Settings',
+        teamName: 'Team Name',
+        score: 'Score',
+        addTeam: 'Add Team',
+        reset: 'Reset',
+        settings: 'Settings',
+        columnCount: 'Columns',
+        initialScore: 'Initial Score',
+        stepSize: 'Step Size',
+        confirmReset: 'Are you sure you want to reset all scores?'
     },
 
     // Teaching Tools

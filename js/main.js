@@ -30,6 +30,8 @@ class DrawingBoard {
         this.announcementManager = new AnnouncementManager();
         this.exportManager = new ExportManager(this.canvas, this.bgCanvas, this);
         this.teachingToolsManager = new TeachingToolsManager(this.canvas, this.ctx, this.historyManager);
+        this.randomPickerManager = new RandomPickerManager();
+        this.scoreboardManager = new ScoreboardManager();
         
         // Set callback for teaching tools insertion to auto-switch to pen
         this.teachingToolsManager.onToolsInserted = () => {
@@ -412,6 +414,29 @@ class DrawingBoard {
         document.getElementById('more-shape-btn').addEventListener('click', () => this.setTool('shape'));
         document.getElementById('more-teaching-tools-btn').addEventListener('click', () => this.teachingToolsManager.showModal());
         
+        // Random Picker and Scoreboard buttons in More menu
+        document.getElementById('random-picker-feature-btn').addEventListener('click', () => {
+            if (this.randomPickerManager.isVisible) {
+                this.randomPickerManager.hide();
+            } else {
+                this.randomPickerManager.show();
+                // Auto-switch to pen
+                this.closeFeaturePanel();
+                this.switchToPen();
+            }
+        });
+
+        document.getElementById('scoreboard-feature-btn').addEventListener('click', () => {
+            if (this.scoreboardManager.isVisible) {
+                this.scoreboardManager.hide();
+            } else {
+                this.scoreboardManager.show();
+                // Auto-switch to pen
+                this.closeFeaturePanel();
+                this.switchToPen();
+            }
+        });
+
         document.getElementById('config-close-btn').addEventListener('click', () => this.closeConfigPanel());
         document.getElementById('feature-close-btn').addEventListener('click', () => this.closeFeaturePanel());
         

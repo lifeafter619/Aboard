@@ -1,0 +1,238 @@
+/* Scoreboard Module Styles */
+
+/* Scoreboard Widget */
+.scoreboard-widget {
+    position: fixed;
+    top: 180px;
+    right: 20px;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    z-index: 950;
+    user-select: none;
+    min-width: 240px;
+    display: none;
+    cursor: move;
+    touch-action: none;
+    will-change: transform, left, top;
+}
+
+.scoreboard-widget.show {
+    display: block;
+}
+
+.scoreboard-widget.dragging {
+    cursor: grabbing;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.scoreboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    cursor: move;
+}
+
+.scoreboard-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #666;
+}
+
+.scoreboard-controls-top {
+    display: flex;
+    gap: 8px;
+}
+
+.scoreboard-icon-btn {
+    padding: 4px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+}
+
+.scoreboard-icon-btn:hover {
+    color: #333;
+    background-color: #f0f0f0;
+}
+
+.scoreboard-close-btn:hover {
+    color: #ff3b30;
+    background-color: transparent;
+    transform: scale(1.1);
+}
+
+/* Score Grid */
+.scoreboard-grid {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    max-width: 80vw;
+}
+
+.scoreboard-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 80px;
+    background: #f8f9fa;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.scoreboard-team-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+    text-align: center;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.scoreboard-team-name:hover {
+    color: var(--theme-color);
+}
+
+.scoreboard-score {
+    font-size: 32px;
+    font-weight: 700;
+    color: #333;
+    margin: 8px 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.scoreboard-score.negative {
+    color: #ff3b30;
+}
+
+.scoreboard-score-controls {
+    display: flex;
+    gap: 4px;
+    width: 100%;
+}
+
+.scoreboard-score-btn {
+    flex: 1;
+    padding: 6px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.scoreboard-score-btn:hover {
+    background: #f0f0f0;
+    border-color: #ccc;
+    color: #333;
+}
+
+.scoreboard-score-btn.plus:hover {
+    background: #e8f5e9;
+    border-color: #81c784;
+    color: #2e7d32;
+}
+
+.scoreboard-score-btn.minus:hover {
+    background: #ffebee;
+    border-color: #e57373;
+    color: #c62828;
+}
+
+/* Settings Modal */
+.scoreboard-modal-content {
+    max-width: 500px;
+}
+
+.scoreboard-settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #eee;
+}
+
+.scoreboard-settings-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.scoreboard-counter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.scoreboard-counter-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.scoreboard-counter-btn:hover {
+    background: #f0f0f0;
+}
+
+.scoreboard-counter-value {
+    font-size: 16px;
+    font-weight: 600;
+    min-width: 30px;
+    text-align: center;
+}
+
+.scoreboard-teams-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.scoreboard-team-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.scoreboard-team-item input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.scoreboard-team-item .color-indicator {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid #ddd;
+}

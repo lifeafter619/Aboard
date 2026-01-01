@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="css/modules/feature-area.css">
     <link rel="stylesheet" href="css/modules/export.css">
     <link rel="stylesheet" href="css/modules/timer.css">
+    <link rel="stylesheet" href="css/modules/random-picker.css">
+    <link rel="stylesheet" href="css/modules/scoreboard.css">
     <link rel="stylesheet" href="css/modules/teaching-tools.css">
     <link rel="stylesheet" href="css/modules/shape.css">
     <link rel="stylesheet" href="css/modules/line-style-modal.css">
@@ -390,6 +392,20 @@
                         <path d="M12 2v2"></path>
                     </svg>
                     <span data-i18n="features.timer">Timer</span>
+                </button>
+                <button id="random-picker-feature-btn" class="feature-btn" data-i18n-title="features.randomPicker">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M9 21H4v-5"></path>
+                    </svg>
+                    <span data-i18n="features.randomPicker">Picker</span>
+                </button>
+                <button id="scoreboard-feature-btn" class="feature-btn" data-i18n-title="features.scoreboard">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                        <line x1="10" y1="4" x2="10" y2="20"></line>
+                        <line x1="2" y1="10" x2="22" y2="10"></line>
+                    </svg>
+                    <span data-i18n="features.scoreboard">Scores</span>
                 </button>
             </div>
         </div>
@@ -1438,6 +1454,12 @@
         </div>
     </div>
 
+    <!-- Random Picker Widget Container -->
+    <div id="random-picker-widget" class="random-picker-widget"></div>
+
+    <!-- Scoreboard Widget Container -->
+    <div id="scoreboard-widget" class="scoreboard-widget"></div>
+
     <script src="js/drawing.js"></script>
     <script src="js/history.js"></script>
     <script src="js/background.js"></script>
@@ -1448,6 +1470,8 @@
     <script src="js/modules/time-display-controls.js"></script>
     <script src="js/modules/time-display-settings.js"></script>
     <script src="js/modules/timer.js"></script>
+    <script src="js/modules/random-picker.js"></script>
+    <script src="js/modules/scoreboard.js"></script>
     <script src="js/modules/edge-drawing.js"></script>
     <script src="js/modules/teaching-tools.js"></script>
     <script src="js/modules/shape-drawing.js"></script>
