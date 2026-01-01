@@ -25,7 +25,7 @@ class ScoreboardManager {
     createScoreboardElement() {
         const div = document.createElement('div');
         div.id = 'scoreboard-widget';
-        div.className = 'feature-widget hidden';
+        div.className = 'feature-widget hidden'; // Use standard feature-widget class
 
         // Use i18n for initial labels if available, otherwise defaults
         const teamALabel = window.i18n ? window.i18n.t('scoreboard.teamA') : 'Team A';
@@ -79,7 +79,7 @@ class ScoreboardManager {
     }
 
     setupEventListeners() {
-        // Stop propagation to prevent drawing on canvas when interacting with widget
+        // Prevent drawing on canvas when interacting with widget
         this.element.addEventListener('mousedown', (e) => e.stopPropagation());
         this.element.addEventListener('touchstart', (e) => e.stopPropagation());
 
@@ -109,7 +109,7 @@ class ScoreboardManager {
             });
         });
 
-        // Dragging
+        // Dragging logic (consistent with other widgets)
         const header = this.element.querySelector('.widget-header');
 
         const handleStart = (e) => {
@@ -125,8 +125,9 @@ class ScoreboardManager {
             this.dragOffset.x = clientX - rect.left;
             this.dragOffset.y = clientY - rect.top;
 
+            // Critical: stop propagation to prevent drawing
             e.preventDefault();
-            e.stopPropagation(); // Ensure dragging doesn't trigger other document events
+            e.stopPropagation();
         };
 
         const handleMove = (e) => {
@@ -151,7 +152,7 @@ class ScoreboardManager {
 
                 this.element.style.left = `${finalX}px`;
                 this.element.style.top = `${finalY}px`;
-                this.element.style.transform = 'none'; // Clear any centering transform
+                this.element.style.transform = 'none'; // Clear centering transform
             });
         };
 
@@ -195,7 +196,7 @@ class ScoreboardManager {
         this.isVisible = true;
         this.element.classList.remove('hidden');
 
-        // Center on screen if first time showing or reset position
+        // Center on screen if first time showing (no inline style)
         if (!this.element.style.left) {
             this.element.style.left = '50%';
             this.element.style.top = '50%';
@@ -214,18 +215,5 @@ class ScoreboardManager {
         } else {
             this.show();
         }
-    }
-
-    updateLabels() {
-        if (!window.i18n) return;
-
-        const title = this.element.querySelector('.widget-title');
-        if (title) title.textContent = window.i18n.t('scoreboard.title');
-
-        const resetSpan = this.element.querySelector('.reset-btn span');
-        if (resetSpan) resetSpan.textContent = window.i18n.t('common.reset');
-
-        // Only update team names if they haven't been edited (check against default/previous)
-        // Or just let user edit them manually.
     }
 }

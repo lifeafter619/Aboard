@@ -21,7 +21,6 @@ class DrawingBoard {
         this.historyManager = new HistoryManager(this.canvas, this.ctx);
         this.backgroundManager = new BackgroundManager(this.bgCanvas, this.bgCtx);
         this.imageControls = new ImageControls(this.backgroundManager);
-        this.strokeControls = new StrokeControls(this.drawingEngine, this.canvas, this.ctx, this.historyManager);
         this.timeDisplayManager = new TimeDisplayManager(this.settingsManager);
         this.timeDisplayControls = new TimeDisplayControls(this.timeDisplayManager);
         this.timeDisplaySettingsModal = new TimeDisplaySettingsModal(this.timeDisplayManager);
@@ -33,9 +32,6 @@ class DrawingBoard {
         this.exportManager = new ExportManager(this.canvas, this.bgCanvas, this);
         this.teachingToolsManager = new TeachingToolsManager(this.canvas, this.ctx, this.historyManager);
         
-        // Initialize ImageAnnotationManager
-        this.imageAnnotationManager = new ImageAnnotationManager(this.canvas, this.ctx, this.drawingEngine, this.historyManager);
-
         // Set callback for teaching tools insertion to auto-switch to pen
         this.teachingToolsManager.onToolsInserted = () => {
             this.closeFeaturePanel();
@@ -206,30 +202,10 @@ class DrawingBoard {
     }
     
     setupEventListeners() {
-        // Image Annotation Button Event Listener
-        // Assuming there is a button with id "insert-image-btn" in the toolbar or feature area
-        // I will add it to the Shape/Tools menu or as a new feature button.
-        // For now, let's assume it's part of the feature-area or shape config.
-        const insertImageBtn = document.getElementById('insert-image-btn');
-        if (insertImageBtn) {
-            insertImageBtn.addEventListener('click', () => {
-                this.imageAnnotationManager.triggerUpload();
-                this.closeFeaturePanel();
-            });
-        }
-
         // Canvas drawing events - use document-level listeners for continuous drawing
         document.addEventListener('mousedown', (e) => {
             // Skip if clicking on UI elements (except canvas)
             if (e.target && e.target.closest) {
-            // 如果正在编辑笔迹，点击工具栏或属性栏时自动保存
-                if (this.strokeControls.isActive && 
-                    (e.target.closest('#toolbar') || e.target.closest('#config-area'))) {
-                    this.strokeControls.hideControls();
-                    if (this.historyManager) {
-                        this.historyManager.saveState();
-                    }
-                }
                 
                 if (e.target.closest('#toolbar') || 
                     e.target.closest('#config-area') || 
@@ -238,28 +214,7 @@ class DrawingBoard {
                     e.target.closest('#time-display-area') ||
                     e.target.closest('#feature-area') ||
                     e.target.closest('.modal') ||
-                    e.target.closest('.timer-display-widget') ||
-                    e.target.closest('.canvas-image-selection')) {
-                    return;
-                }
-            }
-            
-            // 如果正在编辑笔迹，点击画布其他位置时自动保存并切换到笔模式
-            if (this.strokeControls.isActive) {
-                const rect = this.canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                
-                // Check if clicking inside the stroke controls overlay
-                if (!e.target.closest('#stroke-controls-overlay')) {
-                    // Clicking outside the stroke controls, save and switch to pen
-                    this.strokeControls.hideControls();
-                    if (this.historyManager) {
-                        this.historyManager.saveState();
-                    }
-                    this.setTool('pen', false);
-                    // Continue with pen drawing by calling startDrawing
-                    this.drawingEngine.startDrawing(e);
+                    e.target.closest('.timer-display-widget')) {
                     return;
                 }
             }
@@ -420,7 +375,6 @@ class DrawingBoard {
         document.getElementById('pen-btn').addEventListener('click', () => this.setTool('pen'));
         document.getElementById('pan-btn').addEventListener('click', () => this.setTool('pan'));
         document.getElementById('eraser-btn').addEventListener('click', () => this.setTool('eraser'));
-        document.getElementById('background-btn').addEventListener('click', () => this.setTool('background'));
         document.getElementById('clear-btn').addEventListener('click', () => this.confirmClear());
         document.getElementById('settings-btn').addEventListener('click', () => this.openSettings());
         document.getElementById('more-btn').addEventListener('click', () => this.setTool('more'));
@@ -435,16 +389,12 @@ class DrawingBoard {
         // History buttons
         document.getElementById('undo-btn').addEventListener('click', () => {
             if (this.historyManager.undo()) {
-                // Clear stroke selection as strokes are no longer valid
-                this.drawingEngine.clearStrokes();
                 this.updateUI();
             }
         });
         
         document.getElementById('redo-btn').addEventListener('click', () => {
             if (this.historyManager.redo()) {
-                // Clear stroke selection as strokes are no longer valid
-                this.drawingEngine.clearStrokes();
                 this.updateUI();
             }
         });
@@ -1434,16 +1384,6 @@ class DrawingBoard {
         window.addEventListener('imageConfirmed', () => {
             // Auto-switch to pen tool when user confirms background image
             if (this.drawingEngine.currentTool === 'background') {
-                this.setTool('pen', false);
-            }
-        });
-
-        // Listen for stroke added event (e.g. from ImageAnnotationManager)
-        window.addEventListener('strokeAdded', (e) => {
-            if (this.strokeControls && e.detail && typeof e.detail.index === 'number') {
-                this.strokeControls.showControls(e.detail.index);
-                // Switch to pen tool to ensure we are not in 'insert-image' or other temporary states
-                // But don't show config panel
                 this.setTool('pen', false);
             }
         });
