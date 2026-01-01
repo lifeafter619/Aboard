@@ -56,11 +56,15 @@ class BackgroundManager {
         this.bgCtx.globalAlpha = 1.0;
         
         this.drawBackgroundPattern();
-        
+    }
+
+    saveSettings() {
         localStorage.setItem('backgroundColor', this.backgroundColor);
         localStorage.setItem('backgroundPattern', this.backgroundPattern);
         localStorage.setItem('bgOpacity', this.bgOpacity);
         localStorage.setItem('patternIntensity', this.patternIntensity);
+        localStorage.setItem('patternDensity', this.patternDensity);
+        localStorage.setItem('imageSize', this.imageSize);
     }
     
     drawBackgroundPattern() {
@@ -370,6 +374,7 @@ class BackgroundManager {
     setBackgroundPattern(pattern) {
         this.backgroundPattern = pattern;
         this.drawBackground();
+        this.saveSettings();
     }
     
     setOpacity(opacity) {
@@ -385,7 +390,6 @@ class BackgroundManager {
     
     setPatternDensity(density) {
         this.patternDensity = density;
-        localStorage.setItem('patternDensity', density);
         this.drawBackground();
     }
     
@@ -404,7 +408,6 @@ class BackgroundManager {
     
     setImageSize(size) {
         this.imageSize = size;
-        localStorage.setItem('imageSize', size);
         // If transform exists, update the scale in transform as well
         if (this.imageTransform.width > 0 && this.imageTransform.height > 0) {
             this.imageTransform.scale = size;

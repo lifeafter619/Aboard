@@ -89,10 +89,12 @@ class SettingsManager {
             }
         });
         
-        localStorage.setItem('toolbarSize', this.toolbarSize);
-        
         // Apply responsive text visibility after size update
         this.updateToolbarTextVisibility();
+    }
+
+    saveToolbarSize() {
+        localStorage.setItem('toolbarSize', this.toolbarSize);
     }
     
     updateToolbarTextVisibility() {
@@ -157,6 +159,9 @@ class SettingsManager {
     updateConfigScale() {
         const configArea = document.getElementById('config-area');
         configArea.style.transform = `translateX(-50%) scale(${this.configScale})`;
+    }
+
+    saveConfigScale() {
         localStorage.setItem('configScale', this.configScale);
     }
     

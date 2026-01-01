@@ -1098,7 +1098,7 @@
     <div id="time-display-settings-modal" class="timer-modal">
         <div class="timer-modal-content" style="max-width: 580px; max-height: 85vh; overflow-y: auto;">
             <div class="timer-modal-header">
-                <h2>时间显示设置</h2>
+                <h2 data-i18n="timeDisplay.settingsTitle">时间显示设置</h2>
                 <button id="time-display-settings-close-btn" class="modal-close-btn">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1109,62 +1109,63 @@
             <div class="timer-modal-body">
                 <!-- Display Options -->
                 <div class="timer-input-group">
-                    <label>显示选项</label>
+                    <label data-i18n="timeDisplay.displayOptions">显示选项</label>
                     <div class="button-size-options" style="grid-template-columns: 1fr 1fr 1fr;">
-                        <button class="display-option-btn active" data-td-display-type="both">日期和时间</button>
-                        <button class="display-option-btn" data-td-display-type="date-only">仅日期</button>
-                        <button class="display-option-btn" data-td-display-type="time-only">仅时间</button>
+                        <button class="display-option-btn active" data-td-display-type="both" data-i18n="timeDisplay.dateAndTime">日期和时间</button>
+                        <button class="display-option-btn" data-td-display-type="date-only" data-i18n="timeDisplay.dateOnly">仅日期</button>
+                        <button class="display-option-btn" data-td-display-type="time-only" data-i18n="timeDisplay.timeOnly">仅时间</button>
                     </div>
                 </div>
                 
                 <!-- Timezone -->
                 <div class="timer-input-group">
-                    <label>时区</label>
+                    <label data-i18n="timeDisplay.timezone">时区</label>
                     <select id="td-timezone-select" class="format-select">
-                        <option value="Asia/Shanghai">中国 (UTC+8)</option>
-                        <option value="America/New_York">纽约 (UTC-5/-4)</option>
-                        <option value="America/Los_Angeles">洛杉矶 (UTC-8/-7)</option>
-                        <option value="America/Chicago">芝加哥 (UTC-6/-5)</option>
-                        <option value="Europe/London">伦敦 (UTC+0/+1)</option>
-                        <option value="Europe/Paris">巴黎 (UTC+1/+2)</option>
-                        <option value="Europe/Berlin">柏林 (UTC+1/+2)</option>
-                        <option value="Asia/Tokyo">东京 (UTC+9)</option>
-                        <option value="Asia/Seoul">首尔 (UTC+9)</option>
-                        <option value="Asia/Hong_Kong">香港 (UTC+8)</option>
-                        <option value="Asia/Singapore">新加坡 (UTC+8)</option>
-                        <option value="Asia/Dubai">迪拜 (UTC+4)</option>
-                        <option value="Australia/Sydney">悉尼 (UTC+10/+11)</option>
-                        <option value="Pacific/Auckland">奥克兰 (UTC+12/+13)</option>
-                        <option value="UTC">UTC (协调世界时)</option>
+                        <option value="Asia/Shanghai" data-i18n="timezones.china">中国 (UTC+8)</option>
+                        <option value="America/New_York" data-i18n="timezones.newyork">纽约 (UTC-5/-4)</option>
+                        <option value="America/Los_Angeles" data-i18n="timezones.losangeles">洛杉矶 (UTC-8/-7)</option>
+                        <option value="America/Chicago" data-i18n="timezones.chicago">芝加哥 (UTC-6/-5)</option>
+                        <option value="Europe/London" data-i18n="timezones.london">伦敦 (UTC+0/+1)</option>
+                        <option value="Europe/Paris" data-i18n="timezones.paris">巴黎 (UTC+1/+2)</option>
+                        <option value="Europe/Berlin" data-i18n="timezones.berlin">柏林 (UTC+1/+2)</option>
+                        <option value="Asia/Tokyo" data-i18n="timezones.tokyo">东京 (UTC+9)</option>
+                        <option value="Asia/Seoul" data-i18n="timezones.seoul">首尔 (UTC+9)</option>
+                        <option value="Asia/Hong_Kong" data-i18n="timezones.hongkong">香港 (UTC+8)</option>
+                        <option value="Asia/Singapore" data-i18n="timezones.singapore">新加坡 (UTC+8)</option>
+                        <option value="Asia/Dubai" data-i18n="timezones.dubai">迪拜 (UTC+4)</option>
+                        <option value="Australia/Sydney" data-i18n="timezones.sydney">悉尼 (UTC+10/+11)</option>
+                        <option value="Pacific/Auckland" data-i18n="timezones.auckland">奥克兰 (UTC+12/+13)</option>
+                        <option value="UTC" data-i18n="timezones.utc">UTC (协调世界时)</option>
                     </select>
                 </div>
                 
                 <!-- Time Format -->
                 <div class="timer-input-group">
-                    <label>时间格式</label>
+                    <label data-i18n="timeDisplay.timeFormat">时间格式</label>
                     <select id="td-time-format-select" class="format-select">
-                        <option value="12h">12小时制 (上午/下午)</option>
-                        <option value="24h">24小时制</option>
+                        <option value="12h" data-i18n="settings.time.timeFormat12">12小时制 (上午/下午)</option>
+                        <option value="24h" data-i18n="settings.time.timeFormat24">24小时制</option>
                     </select>
                 </div>
                 
                 <!-- Date Format -->
                 <div class="timer-input-group">
-                    <label>日期格式</label>
+                    <label data-i18n="timeDisplay.dateFormat">日期格式</label>
                     <select id="td-date-format-select" class="format-select">
-                        <option value="yyyy-mm-dd">年-月-日 (2024-01-01)</option>
-                        <option value="mm-dd-yyyy">月-日-年 (01-01-2024)</option>
-                        <option value="dd-mm-yyyy">日-月-年 (01-01-2024)</option>
-                        <option value="chinese">中文 (2024年1月1日)</option>
+                        <option value="yyyy-mm-dd" data-i18n="settings.time.dateFormatYMD">年-月-日 (2024-01-01)</option>
+                        <option value="mm-dd-yyyy" data-i18n="settings.time.dateFormatMDY">月-日-年 (01-01-2024)</option>
+                        <option value="dd-mm-yyyy" data-i18n="settings.time.dateFormatDMY">日-月-年 (01-01-2024)</option>
+                        <option value="chinese" data-i18n="settings.time.dateFormatChinese">中文 (2024年1月1日)</option>
                     </select>
                 </div>
                 
                 <!-- Colors -->
                 <div class="timer-input-group">
-                    <label>颜色设置</label>
+                    <label data-i18n="timeDisplay.colorSettings">颜色设置</label>
                     <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px;">
+                        <!-- Text Color -->
                         <div style="flex: 1; min-width: 200px;">
-                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 8px;">字体颜色</label>
+                            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 8px;" data-i18n="timeDisplay.textColor">字体颜色</label>
                             <div class="color-picker-row">
                                 <div class="color-picker-main" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
                                     <button class="color-btn active" data-td-time-color="#000000" style="background-color: #000000;"></button>
@@ -1178,15 +1179,18 @@
                                 </div>
                             </div>
                             <label class="color-picker-icon-btn" for="td-custom-time-color-picker" style="margin-top: 8px;">
-                                <svg width="24" height="24" viewBox="-0.4 -5 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polygon points="18 2 22 6 12 16 8 16 8 12 18 2" style="position: relative; z-index: 2;"></polygon>
-                                    <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34" style="position: relative; z-index: 2;"></path>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
+                                    <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
                                 </svg>
                                 <input type="color" id="td-custom-time-color-picker" class="custom-color-picker-input" value="#000000">
+                                <span style="font-size: 12px; margin-left: 4px;" data-i18n="timeDisplay.customColor">自定义颜色</span>
                             </label>
                         </div>
+
+                        <!-- Background Color -->
                         <div style="flex: 1; min-width: 200px;">
-                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 8px;">背景颜色</label>
+                            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 8px;" data-i18n="timeDisplay.bgColor">背景颜色</label>
                             <div class="color-picker-row">
                                 <div class="color-picker-main" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
                                     <button class="color-btn" data-td-time-bg-color="transparent" style="background: linear-gradient(135deg, #fff 45%, #f00 45%, #f00 55%, #fff 55%); border: 1px solid #ccc;"></button>
@@ -1201,11 +1205,12 @@
                                 </div>
                             </div>
                             <label class="color-picker-icon-btn" for="td-custom-bg-color-picker" style="margin-top: 8px;">
-                                <svg width="24" height="24" viewBox="-0.4 -5 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polygon points="18 2 22 6 12 16 8 16 8 12 18 2" style="position: relative; z-index: 2;"></polygon>
-                                    <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34" style="position: relative; z-index: 2;"></path>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
+                                    <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
                                 </svg>
                                 <input type="color" id="td-custom-bg-color-picker" class="custom-color-picker-input" value="#ffffff">
+                                <span style="font-size: 12px; margin-left: 4px;" data-i18n="timeDisplay.customColor">自定义颜色</span>
                             </label>
                         </div>
                     </div>
@@ -1213,38 +1218,41 @@
                 
                 <!-- Font Size -->
                 <div class="timer-input-group">
-                    <label>字体大小：当前 <span id="td-time-font-size-value">16</span>px</label>
+                    <label data-i18n="timeDisplay.fontSize">字体大小</label>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <input type="range" id="td-time-font-size-slider" min="12" max="48" value="16" class="slider" style="flex: 1;">
+                        <span id="td-time-font-size-label"><span data-i18n="timeDisplay.fontSizeLabel">字体大小：当前</span> <span id="td-time-font-size-value">16</span>px</span>
                         <input type="number" id="td-time-font-size-input" min="12" max="48" value="16" class="size-input">
                     </div>
                 </div>
                 
                 <!-- Opacity -->
                 <div class="timer-input-group">
-                    <label>透明度：当前 <span id="td-time-opacity-value">100</span>%</label>
+                    <label data-i18n="timeDisplay.opacity">透明度</label>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <input type="range" id="td-time-opacity-slider" min="10" max="100" value="100" class="slider" style="flex: 1;">
+                        <span id="td-time-opacity-label"><span data-i18n="timeDisplay.opacityLabel">透明度：当前</span> <span id="td-time-opacity-value">100</span>%</span>
                         <input type="number" id="td-time-opacity-input" min="10" max="100" value="100" class="size-input">
                     </div>
                 </div>
                 
                 <!-- Fullscreen Mode -->
                 <div class="timer-input-group">
-                    <label>全屏模式</label>
+                    <label data-i18n="timeDisplay.fullscreenMode">全屏模式</label>
                     <div class="button-size-options" style="grid-template-columns: 1fr 1fr 1fr;">
-                        <button class="fullscreen-mode-btn" data-td-mode="disabled">关闭</button>
-                        <button class="fullscreen-mode-btn" data-td-mode="single">单击</button>
-                        <button class="fullscreen-mode-btn active" data-td-mode="double">双击</button>
+                        <button class="fullscreen-mode-btn" data-td-mode="disabled" data-i18n="timeDisplay.fullscreenDisabled">关闭</button>
+                        <button class="fullscreen-mode-btn" data-td-mode="single" data-i18n="timeDisplay.fullscreenSingle">单击</button>
+                        <button class="fullscreen-mode-btn active" data-td-mode="double" data-i18n="timeDisplay.fullscreenDouble">双击</button>
                     </div>
                 </div>
                 
                 <!-- Fullscreen Font Size -->
                 <div class="timer-input-group">
-                    <label>全屏字体大小：当前 <span id="td-time-fullscreen-font-size-value">15</span>%</label>
-                    <p class="settings-hint" style="font-size: 11px; color: #999; margin: 4px 0 8px 0;">调整全屏时间显示的字体大小，范围10%-85%</p>
+                    <label data-i18n="timeDisplay.fullscreenFontSize">全屏字体大小</label>
+                    <p class="settings-hint" style="font-size: 11px; color: #999; margin: 4px 0 8px 0;" data-i18n="timeDisplay.fullscreenSliderLabel">调整全屏时间显示的字体大小，范围10%-85%</p>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <input type="range" id="td-time-fullscreen-font-size-slider" min="10" max="85" value="15" class="slider" style="flex: 1;">
+                        <span id="td-time-fullscreen-font-size-label"><span data-i18n="timeDisplay.fullscreenFontSizeLabel">全屏字体大小：当前</span> <span id="td-time-fullscreen-font-size-value">15</span>%</span>
                         <input type="number" id="td-time-fullscreen-font-size-input" min="10" max="85" value="15" class="size-input">
                     </div>
                 </div>

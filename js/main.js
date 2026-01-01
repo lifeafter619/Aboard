@@ -586,6 +586,7 @@ class DrawingBoard {
         document.querySelectorAll('.color-btn[data-bg-color]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 this.backgroundManager.setBackgroundColor(e.target.dataset.bgColor);
+                this.backgroundManager.saveSettings();
                 document.querySelectorAll('.color-btn[data-bg-color]').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 // Save page background in paginated mode
@@ -604,6 +605,9 @@ class DrawingBoard {
             if (customBgColorPickerBtn) {
                 customBgColorPickerBtn.classList.add('active');
             }
+        });
+        customBgColorPicker.addEventListener('change', () => {
+            this.backgroundManager.saveSettings();
             // Save page background in paginated mode
             if (!this.settingsManager.infiniteCanvas) {
                 this.savePageBackground(this.currentPage);
@@ -684,6 +688,9 @@ class DrawingBoard {
             this.backgroundManager.setImageSize(parseInt(e.target.value) / 100);
             bgImageSizeValue.textContent = e.target.value;
         });
+        bgImageSizeSlider.addEventListener('change', () => {
+            this.backgroundManager.saveSettings();
+        });
         
         // Adjust background image button
         document.getElementById('adjust-bg-image-btn').addEventListener('click', () => {
@@ -703,6 +710,9 @@ class DrawingBoard {
         patternDensitySlider.addEventListener('input', (e) => {
             this.backgroundManager.setPatternDensity(parseInt(e.target.value) / 100);
             patternDensityValue.textContent = e.target.value;
+        });
+        patternDensitySlider.addEventListener('change', () => {
+            this.backgroundManager.saveSettings();
         });
         
         // Sliders
@@ -953,6 +963,9 @@ class DrawingBoard {
             toolbarSizeInput.value = e.target.value;
             this.settingsManager.updateToolbarSize();
         });
+        toolbarSizeSlider.addEventListener('change', () => {
+            this.settingsManager.saveToolbarSize();
+        });
         toolbarSizeInput.addEventListener('input', (e) => {
             const value = Math.max(40, Math.min(80, parseInt(e.target.value) || 40));
             e.target.value = value;
@@ -960,6 +973,9 @@ class DrawingBoard {
             this.settingsManager.toolbarSize = value;
             toolbarSizeValue.textContent = value;
             this.settingsManager.updateToolbarSize();
+        });
+        toolbarSizeInput.addEventListener('change', () => {
+            this.settingsManager.saveToolbarSize();
         });
         
         const configScaleSlider = document.getElementById('config-scale-slider');
@@ -971,6 +987,9 @@ class DrawingBoard {
             configScaleInput.value = e.target.value;
             this.settingsManager.updateConfigScale();
         });
+        configScaleSlider.addEventListener('change', () => {
+            this.settingsManager.saveConfigScale();
+        });
         configScaleInput.addEventListener('input', (e) => {
             const value = Math.max(80, Math.min(120, parseInt(e.target.value) || 100));
             e.target.value = value;
@@ -978,6 +997,9 @@ class DrawingBoard {
             this.settingsManager.configScale = value / 100;
             configScaleValue.textContent = value;
             this.settingsManager.updateConfigScale();
+        });
+        configScaleInput.addEventListener('change', () => {
+            this.settingsManager.saveConfigScale();
         });
         
         // Background opacity and pattern intensity from settings
@@ -989,12 +1011,18 @@ class DrawingBoard {
             bgOpacityValue.textContent = e.target.value;
             bgOpacityInput.value = e.target.value;
         });
+        bgOpacitySlider.addEventListener('change', () => {
+            this.backgroundManager.saveSettings();
+        });
         bgOpacityInput.addEventListener('input', (e) => {
             const value = Math.max(0, Math.min(100, parseInt(e.target.value) || 100));
             e.target.value = value;
             bgOpacitySlider.value = value;
             this.backgroundManager.setOpacity(value / 100);
             bgOpacityValue.textContent = value;
+        });
+        bgOpacityInput.addEventListener('change', () => {
+            this.backgroundManager.saveSettings();
         });
         
         const patternIntensitySlider = document.getElementById('pattern-intensity-slider');
@@ -1005,12 +1033,18 @@ class DrawingBoard {
             patternIntensityValue.textContent = e.target.value;
             patternIntensityInput.value = e.target.value;
         });
+        patternIntensitySlider.addEventListener('change', () => {
+            this.backgroundManager.saveSettings();
+        });
         patternIntensityInput.addEventListener('input', (e) => {
             const value = Math.max(10, Math.min(200, parseInt(e.target.value) || 50));
             e.target.value = value;
             patternIntensitySlider.value = value;
             this.backgroundManager.setPatternIntensity(value / 100);
             patternIntensityValue.textContent = value;
+        });
+        patternIntensityInput.addEventListener('change', () => {
+            this.backgroundManager.saveSettings();
         });
         
         document.querySelectorAll('.position-option-btn').forEach(btn => {
