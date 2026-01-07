@@ -334,7 +334,14 @@ class RandomPickerManager {
 
                     <div id="rp-name-settings">
                         <div class="random-picker-input-group">
-                            <label>${window.i18n.t('randomPicker.namesLabel')}</label>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <label style="margin-bottom: 0;">${window.i18n.t('randomPicker.namesLabel')}</label>
+                                <div style="display: flex; gap: 5px; align-items: center;">
+                                    <input type="text" id="rp-import-column" value="姓名" placeholder="列名" style="width: 60px; padding: 2px 5px; font-size: 12px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <label for="rp-import-file" class="random-picker-btn-small" style="cursor: pointer; padding: 2px 8px; background: #eee; border-radius: 4px; font-size: 12px;">导入</label>
+                                    <input type="file" id="rp-import-file" accept=".xlsx,.xls,.csv" style="display: none;">
+                                </div>
+                            </div>
                             <textarea id="rp-names-input" class="random-picker-textarea" placeholder="${window.i18n.t('randomPicker.namesPlaceholder')}"></textarea>
                         </div>
                         <label class="random-picker-checkbox">
@@ -387,6 +394,60 @@ class RandomPickerManager {
         document.getElementById('rp-save-btn').addEventListener('click', () => {
             this.saveSettings();
         });
+
+        // Import handler
+        document.getElementById('rp-import-file').addEventListener('change', (e) => {
+            this.handleFileImport(e);
+        });
+    }
+
+    handleFileImport(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const data = new Uint8Array(e.target.result);
+            if (typeof XLSX === 'undefined') {
+                alert('Excel library not loaded');
+                return;
+            }
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); // Array of arrays
+
+            if (json.length === 0) return;
+
+            // Find column index
+            const headerRow = json[0];
+            const colName = document.getElementById('rp-import-column').value.trim() || '姓名';
+            const colIndex = headerRow.indexOf(colName);
+
+            if (colIndex === -1) {
+                alert(`未找到列名 "${colName}"`);
+                return;
+            }
+
+            // Extract names
+            const names = [];
+            for (let i = 1; i < json.length; i++) {
+                const row = json[i];
+                if (row[colIndex]) {
+                    names.push(row[colIndex]);
+                }
+            }
+
+            if (names.length > 0) {
+                document.getElementById('rp-names-input').value = names.join('\n');
+            } else {
+                alert('列中没有数据');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+
+        // Reset file input
+        e.target.value = '';
     }
 
     create() {

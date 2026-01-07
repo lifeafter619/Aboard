@@ -198,19 +198,23 @@ class InsertImageManager {
         let height = this.currentImage.height;
         const aspectRatio = width / height;
 
-        // Limit initial size
-        const maxWidth = viewportWidth * 0.5;
-        const maxHeight = viewportHeight * 0.5;
+        // Limit initial size - FORCE smaller size (approx half viewport)
+        // User requested "must be smaller than canvas, about half size"
+        const targetWidth = viewportWidth * 0.5;
+        const targetHeight = viewportHeight * 0.5;
 
-        if (width > maxWidth) {
-            width = maxWidth;
-            height = width / aspectRatio;
-        }
+        // Calculate scale to fit target box
+        const scaleW = targetWidth / width;
+        const scaleH = targetHeight / height;
 
-        if (height > maxHeight) {
-            height = maxHeight;
-            width = height * aspectRatio;
-        }
+        // Use the smaller scale to fit entirely within the 50% box
+        // Also ensure it doesn't upscale if the image is tiny?
+        // Request says "insert size ... only half big", implies expected size is substantial but not full screen.
+        // We will scale it to fit the 50% box.
+        const scale = Math.min(scaleW, scaleH);
+
+        width = width * scale;
+        height = height * scale;
 
         this.imageSize = { width, height };
 
@@ -349,6 +353,9 @@ class InsertImageManager {
         this.controlBox.style.width = `${screenWidth}px`;
         this.controlBox.style.height = `${screenHeight}px`;
         this.controlBox.style.transform = `rotate(${this.imageRotation}deg)`;
+
+        // Ensure box-sizing is border-box
+        this.controlBox.style.boxSizing = 'border-box';
 
         // Set background image of the box to show preview
         this.controlBox.style.backgroundImage = `url(${this.currentImage.src})`;

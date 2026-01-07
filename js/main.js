@@ -254,20 +254,21 @@ class DrawingBoard {
             }
             
             // Check if clicking on coordinate origin point (in background or pan mode)
-            // In pan mode, require double-click to select coordinate origin
+            // Allow dragging in background mode or if close enough in pan mode (single press and hold)
             if (this.backgroundManager.backgroundPattern === 'coordinate') {
                 const rect = this.bgCanvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
                 
-                if (this.backgroundManager.isPointNearCoordinateOrigin(x, y)) {
-                    if (this.drawingEngine.currentTool === 'background') {
-                        // In background mode, single click to drag
+                // Increase threshold for easier touch interaction
+                if (this.backgroundManager.isPointNearCoordinateOrigin(x, y, 30)) {
+                    // Allow dragging in background mode or pan mode directly
+                    if (this.drawingEngine.currentTool === 'background' || this.drawingEngine.currentTool === 'pan') {
                         this.isDraggingCoordinateOrigin = true;
                         this.coordinateOriginDragStart = { x: e.clientX, y: e.clientY };
+                        this.canvas.style.cursor = 'move';
                         return;
                     }
-                    // In pan mode, we'll handle this in dblclick event
                 }
             }
             
@@ -728,24 +729,6 @@ class DrawingBoard {
             patternDensityValue.textContent = e.target.value;
         });
 
-        // Move Coordinate Origin Button
-        const moveOriginBtn = document.getElementById('move-origin-btn');
-        if (moveOriginBtn) {
-            moveOriginBtn.addEventListener('click', (e) => {
-                // Switch to background tool
-                this.setTool('background');
-
-                // Set flag to allow dragging
-                this.isDraggingCoordinateOrigin = true;
-
-                // Initialize drag start position to current mouse position
-                // This enables "sticky drag" mode where the origin follows the mouse
-                this.coordinateOriginDragStart = { x: e.clientX, y: e.clientY };
-
-                // Change cursor to indicate dragging
-                this.canvas.style.cursor = 'move';
-            });
-        }
         
         // Sliders
         const penSizeSlider = document.getElementById('pen-size-slider');

@@ -207,12 +207,16 @@ class ImageControls {
         const actualHeight = this.imageSize.height * canvasScale;
         
         // Apply transformations to control box to match image exactly
+        // Use transform-origin center to match the image rotation
         this.controlBox.style.left = `${actualX}px`;
         this.controlBox.style.top = `${actualY}px`;
         this.controlBox.style.width = `${actualWidth}px`;
         this.controlBox.style.height = `${actualHeight}px`;
         this.controlBox.style.transform = `rotate(${this.imageRotation}deg) scale(${this.imageScale})`;
         
+        // Ensure box-sizing is border-box to fit edges exactly
+        this.controlBox.style.boxSizing = 'border-box';
+
         // Update background image with current transformations
         this.applyImageTransform();
     }
