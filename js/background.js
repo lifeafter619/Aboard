@@ -27,7 +27,8 @@ class BackgroundManager {
             width: 0,
             height: 0,
             rotation: 0,
-            scale: 1.0
+            scale: 1.0,
+            flipX: false
         };
         
         // Load saved transform if exists
@@ -207,7 +208,9 @@ class BackgroundManager {
                 containerElement.style.height = `${this.imageTransform.height}px`;
 
                 containerElement.style.transformOrigin = 'center center';
-                containerElement.style.transform = `rotate(${this.imageTransform.rotation}deg) scale(${this.imageTransform.scale})`;
+                const scaleX = this.imageTransform.flipX ? -1 : 1;
+
+                containerElement.style.transform = `rotate(${this.imageTransform.rotation}deg) scale(${this.imageTransform.scale * scaleX}, ${this.imageTransform.scale})`;
             } else {
                 // Fallback centering logic
                 if (imgElement.naturalWidth) {
@@ -561,7 +564,8 @@ class BackgroundManager {
                     width: 0, // Resetting width/height forces ImageControls to recalculate
                     height: 0,
                     rotation: 0,
-                    scale: 1.0
+                    scale: 1.0,
+                    flipX: false
                 };
 
                 this.backgroundPattern = 'image';

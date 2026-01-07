@@ -18,6 +18,7 @@ class ImageControls {
         this.imageSize = { width: 0, height: 0 };
         this.imageRotation = 0;
         this.imageScale = 1.0;
+        this.imageFlipX = false;
         
         // Drag state
         this.dragStartPos = { x: 0, y: 0 };
@@ -60,8 +61,15 @@ class ImageControls {
                         </svg>
                     </div>
                     
-                    <!-- Control toolbar with only confirm button -->
+                    <!-- Control toolbar -->
                     <div class="image-controls-toolbar">
+                        <!-- Flip button -->
+                        <button id="image-flip-btn" class="image-control-btn" title="水平翻转">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M7.5 4v16M2 8l4-4 4 4M22 8l-4-4-4 4M16.5 4v16"/>
+                            </svg>
+                        </button>
+
                         <button id="image-done-btn" class="image-control-btn image-done-btn" title="确定">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <polyline points="20 6 9 17 4 12"></polyline>
@@ -123,7 +131,11 @@ class ImageControls {
             this.stopRotate();
         });
         
-        // Toolbar button - only confirm button
+        // Toolbar buttons
+        document.getElementById('image-flip-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.flipImage();
+        });
         document.getElementById('image-done-btn').addEventListener('click', () => this.confirmImage());
     }
     
@@ -139,10 +151,12 @@ class ImageControls {
         // Initialize with image data
         const canvas = this.backgroundManager.bgCanvas;
         const rect = canvas.getBoundingClientRect();
+        // Get scale to calculate canvas dimensions
+        const canvasScale = this.getCanvasScale();
         
         // Store original dimensions
-        const originalWidth = imageData.width || rect.width * 0.6;
-        const originalHeight = imageData.height || rect.height * 0.6;
+        const originalWidth = imageData.width || (rect.width / canvasScale) * 0.6;
+        const originalHeight = imageData.height || (rect.height / canvasScale) * 0.6;
         
         // Check if there's an existing transform from backgroundManager
         const existingTransform = this.backgroundManager.imageTransform;
@@ -156,14 +170,36 @@ class ImageControls {
             this.imagePosition.y = existingTransform.y;
             this.imageRotation = existingTransform.rotation || 0;
             this.imageScale = existingTransform.scale || 1.0;
+            this.imageFlipX = existingTransform.flipX || false;
         } else {
             // Center the image initially (first time showing controls)
-            this.imageSize.width = originalWidth;
-            this.imageSize.height = originalHeight;
-            this.imagePosition.x = (rect.width - this.imageSize.width) / 2;
-            this.imagePosition.y = (rect.height - this.imageSize.height) / 2;
+            // Limit initial size to max 50% of canvas width/height
+            const canvasWidth = rect.width / canvasScale;
+            const canvasHeight = rect.height / canvasScale;
+            const maxWidth = canvasWidth * 0.5;
+            const maxHeight = canvasHeight * 0.5;
+
+            let width = originalWidth;
+            let height = originalHeight;
+            const aspectRatio = width / height;
+
+            if (width > maxWidth) {
+                width = maxWidth;
+                height = width / aspectRatio;
+            }
+
+            if (height > maxHeight) {
+                height = maxHeight;
+                width = height * aspectRatio;
+            }
+
+            this.imageSize.width = width;
+            this.imageSize.height = height;
+            this.imagePosition.x = (canvasWidth - this.imageSize.width) / 2; // Position in center of view
+            this.imagePosition.y = (canvasHeight - this.imageSize.height) / 2;
             this.imageRotation = 0;
             this.imageScale = 1.0;
+            this.imageFlipX = false;
         }
         
         this.originalWidth = originalWidth;
@@ -211,12 +247,20 @@ class ImageControls {
         this.controlBox.style.top = `${actualY}px`;
         this.controlBox.style.width = `${actualWidth}px`;
         this.controlBox.style.height = `${actualHeight}px`;
-        this.controlBox.style.transform = `rotate(${this.imageRotation}deg) scale(${this.imageScale})`;
+
+        // Apply flip via scaleX component in transform
+        const scaleX = this.imageFlipX ? -1 : 1;
+        this.controlBox.style.transform = `rotate(${this.imageRotation}deg) scale(${this.imageScale * scaleX}, ${this.imageScale})`;
         
         // Update background image with current transformations
         this.applyImageTransform();
     }
     
+    flipImage() {
+        this.imageFlipX = !this.imageFlipX;
+        this.updateControlBox();
+    }
+
     applyImageTransform() {
         // Send transform data to background manager
         this.backgroundManager.updateImageTransform({
@@ -225,7 +269,8 @@ class ImageControls {
             width: this.imageSize.width,
             height: this.imageSize.height,
             rotation: this.imageRotation,
-            scale: this.imageScale
+            scale: this.imageScale,
+            flipX: this.imageFlipX
         });
     }
     
