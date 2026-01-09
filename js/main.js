@@ -369,6 +369,22 @@ class DrawingBoard {
                 }
                 this.handlePinchStart(e);
             } else if (e.touches.length === 1 && !this.hasTwoFingers) {
+                // Check if dragging coordinate origin in background mode
+                if (this.drawingEngine.currentTool === 'background' &&
+                    this.backgroundManager.backgroundPattern === 'coordinate') {
+                    const rect = this.bgCanvas.getBoundingClientRect();
+                    const x = e.touches[0].clientX - rect.left;
+                    const y = e.touches[0].clientY - rect.top;
+
+                    if (this.backgroundManager.isPointNearCoordinateOrigin(x, y)) {
+                        this.isDraggingCoordinateOrigin = true;
+                        this.coordinateOriginDragStart = {
+                            x: e.touches[0].clientX,
+                            y: e.touches[0].clientY
+                        };
+                        return;
+                    }
+                }
                 this.drawingEngine.startDrawing(e.touches[0]);
             }
         }, { passive: false });
@@ -734,16 +750,6 @@ class DrawingBoard {
             moveOriginBtn.addEventListener('click', (e) => {
                 // Switch to background tool
                 this.setTool('background');
-
-                // Set flag to allow dragging
-                this.isDraggingCoordinateOrigin = true;
-
-                // Initialize drag start position to current mouse position
-                // This enables "sticky drag" mode where the origin follows the mouse
-                this.coordinateOriginDragStart = { x: e.clientX, y: e.clientY };
-
-                // Change cursor to indicate dragging
-                this.canvas.style.cursor = 'move';
             });
         }
         

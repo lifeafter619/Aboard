@@ -27,13 +27,20 @@ class BackgroundManager {
             width: 0,
             height: 0,
             rotation: 0,
-            scale: 1.0
+            scaleX: 1.0,
+            scaleY: 1.0
         };
         
         // Load saved transform if exists
         const savedTransform = localStorage.getItem('imageTransform');
         if (savedTransform) {
-            this.imageTransform = JSON.parse(savedTransform);
+            const loaded = JSON.parse(savedTransform);
+            // Migrate legacy scale to scaleX/scaleY
+            if (loaded.scale !== undefined && loaded.scaleX === undefined) {
+                loaded.scaleX = loaded.scale;
+                loaded.scaleY = loaded.scale;
+            }
+            this.imageTransform = loaded;
         }
         
         // Load saved image if exists
@@ -207,12 +214,33 @@ class BackgroundManager {
                 containerElement.style.height = `${this.imageTransform.height}px`;
 
                 containerElement.style.transformOrigin = 'center center';
-                containerElement.style.transform = `rotate(${this.imageTransform.rotation}deg) scale(${this.imageTransform.scale})`;
+                const sx = this.imageTransform.scaleX !== undefined ? this.imageTransform.scaleX : (this.imageTransform.scale || 1.0);
+                const sy = this.imageTransform.scaleY !== undefined ? this.imageTransform.scaleY : (this.imageTransform.scale || 1.0);
+                containerElement.style.transform = `rotate(${this.imageTransform.rotation}deg) scale(${sx}, ${sy})`;
             } else {
                 // Fallback centering logic
                 if (imgElement.naturalWidth) {
-                    const scaledWidth = imgElement.naturalWidth * this.imageSize;
-                    const scaledHeight = imgElement.naturalHeight * this.imageSize;
+                    // Calculate size constraint: max 50% of canvas
+                    const maxWidth = canvasWidth * 0.5;
+                    const maxHeight = canvasHeight * 0.5;
+                    let scaledWidth = imgElement.naturalWidth;
+                    let scaledHeight = imgElement.naturalHeight;
+
+                    // Apply constraint preserving aspect ratio
+                    const ratio = scaledWidth / scaledHeight;
+                    if (scaledWidth > maxWidth) {
+                        scaledWidth = maxWidth;
+                        scaledHeight = scaledWidth / ratio;
+                    }
+                    if (scaledHeight > maxHeight) {
+                        scaledHeight = maxHeight;
+                        scaledWidth = scaledHeight * ratio;
+                    }
+
+                    // Apply user preference size factor
+                    scaledWidth *= this.imageSize;
+                    scaledHeight *= this.imageSize;
+
                     const x = (canvasWidth - scaledWidth) / 2;
                     const y = (canvasHeight - scaledHeight) / 2;
 
@@ -601,7 +629,13 @@ class BackgroundManager {
         localStorage.setItem('imageSize', size);
         // If transform exists, update the scale in transform as well
         if (this.imageTransform.width > 0 && this.imageTransform.height > 0) {
-            this.imageTransform.scale = size;
+            // Preserve flip state if exists, otherwise assume 1.0 * size
+            const currentSignX = Math.sign(this.imageTransform.scaleX || 1);
+            const currentSignY = Math.sign(this.imageTransform.scaleY || 1);
+
+            this.imageTransform.scaleX = size * currentSignX;
+            this.imageTransform.scaleY = size * currentSignY;
+
             localStorage.setItem('imageTransform', JSON.stringify(this.imageTransform));
         }
         if (this.backgroundPattern === 'image') {

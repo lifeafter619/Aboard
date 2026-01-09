@@ -15,6 +15,7 @@ class InsertImageManager {
         this.imageSize = { width: 0, height: 0 };
         this.imageRotation = 0;
         this.imageScale = 1.0;
+        this.imageFlip = { x: 1, y: 1 };
 
         // Constants
         this.MIN_IMAGE_SIZE = 20;
@@ -72,6 +73,13 @@ class InsertImageManager {
 
                     <!-- Control toolbar -->
                     <div class="image-controls-toolbar">
+                        <button id="insert-image-flip-h-btn" class="image-control-btn" title="水平翻转">
+                            <img src="img/icons/flip-horizontal.svg" width="24" height="24" />
+                        </button>
+                        <button id="insert-image-flip-v-btn" class="image-control-btn" title="垂直翻转">
+                            <img src="img/icons/flip-vertical.svg" width="24" height="24" />
+                        </button>
+                        <div class="toolbar-separator" style="width: 1px; height: 24px; background: #eee; margin: 0 4px;"></div>
                         <button id="insert-image-cancel-btn" class="image-control-btn image-cancel-btn" title="Cancel">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -164,8 +172,26 @@ class InsertImageManager {
         document.addEventListener('touchend', handleEnd);
 
         // Buttons
+        document.getElementById('insert-image-flip-h-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.flipHorizontal();
+        });
+        document.getElementById('insert-image-flip-v-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.flipVertical();
+        });
         document.getElementById('insert-image-confirm-btn').addEventListener('click', () => this.confirmImage());
         document.getElementById('insert-image-cancel-btn').addEventListener('click', () => this.cancelImage());
+    }
+
+    flipHorizontal() {
+        this.imageFlip.x = -this.imageFlip.x;
+        this.updateControlBox();
+    }
+
+    flipVertical() {
+        this.imageFlip.y = -this.imageFlip.y;
+        this.updateControlBox();
     }
 
     triggerSelect() {
@@ -199,8 +225,12 @@ class InsertImageManager {
         const aspectRatio = width / height;
 
         // Limit initial size
-        const maxWidth = viewportWidth * 0.5;
-        const maxHeight = viewportHeight * 0.5;
+        // Use canvas size if available, otherwise viewport
+        const canvasWidth = this.canvas.width / window.devicePixelRatio;
+        const canvasHeight = this.canvas.height / window.devicePixelRatio;
+
+        const maxWidth = (canvasWidth || viewportWidth) * 0.5;
+        const maxHeight = (canvasHeight || viewportHeight) * 0.5;
 
         if (width > maxWidth) {
             width = maxWidth;
@@ -348,7 +378,9 @@ class InsertImageManager {
         this.controlBox.style.top = `${screenY}px`;
         this.controlBox.style.width = `${screenWidth}px`;
         this.controlBox.style.height = `${screenHeight}px`;
-        this.controlBox.style.transform = `rotate(${this.imageRotation}deg)`;
+
+        // Apply rotation and flip to the preview box
+        this.controlBox.style.transform = `rotate(${this.imageRotation}deg) scale(${this.imageFlip.x}, ${this.imageFlip.y})`;
 
         // Set background image of the box to show preview
         this.controlBox.style.backgroundImage = `url(${this.currentImage.src})`;
@@ -370,6 +402,7 @@ class InsertImageManager {
 
         this.ctx.translate(centerX, centerY);
         this.ctx.rotate(this.imageRotation * Math.PI / 180);
+        this.ctx.scale(this.imageFlip.x, this.imageFlip.y);
 
         // Draw image centered at (0,0)
         this.ctx.drawImage(

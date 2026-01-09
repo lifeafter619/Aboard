@@ -18,6 +18,7 @@ class ImageControls {
         this.imageSize = { width: 0, height: 0 };
         this.imageRotation = 0;
         this.imageScale = 1.0;
+        this.imageFlip = { x: 1, y: 1 };
         
         // Drag state
         this.dragStartPos = { x: 0, y: 0 };
@@ -62,6 +63,13 @@ class ImageControls {
                     
                     <!-- Control toolbar with only confirm button -->
                     <div class="image-controls-toolbar">
+                        <button id="image-flip-h-btn" class="image-control-btn" title="水平翻转">
+                            <img src="img/icons/flip-horizontal.svg" width="24" height="24" />
+                        </button>
+                        <button id="image-flip-v-btn" class="image-control-btn" title="垂直翻转">
+                            <img src="img/icons/flip-vertical.svg" width="24" height="24" />
+                        </button>
+                        <div class="toolbar-separator" style="width: 1px; height: 24px; background: #eee; margin: 0 4px;"></div>
                         <button id="image-done-btn" class="image-control-btn image-done-btn" title="确定">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <polyline points="20 6 9 17 4 12"></polyline>
@@ -123,10 +131,28 @@ class ImageControls {
             this.stopRotate();
         });
         
-        // Toolbar button - only confirm button
+        // Toolbar buttons
+        document.getElementById('image-flip-h-btn').addEventListener('click', (e) => {
+             e.stopPropagation();
+             this.flipHorizontal();
+        });
+        document.getElementById('image-flip-v-btn').addEventListener('click', (e) => {
+             e.stopPropagation();
+             this.flipVertical();
+        });
         document.getElementById('image-done-btn').addEventListener('click', () => this.confirmImage());
     }
     
+    flipHorizontal() {
+        this.imageFlip.x = -this.imageFlip.x;
+        this.updateControlBox();
+    }
+
+    flipVertical() {
+        this.imageFlip.y = -this.imageFlip.y;
+        this.updateControlBox();
+    }
+
     showControls(imageData) {
         // Don't show controls if image has been confirmed
         if (this.isConfirmed) {
@@ -155,7 +181,14 @@ class ImageControls {
             this.imagePosition.x = existingTransform.x;
             this.imagePosition.y = existingTransform.y;
             this.imageRotation = existingTransform.rotation || 0;
-            this.imageScale = existingTransform.scale || 1.0;
+            // Handle new separate scales logic, fallback to unified scale
+            const sx = existingTransform.scaleX !== undefined ? existingTransform.scaleX : (existingTransform.scale || 1.0);
+            const sy = existingTransform.scaleY !== undefined ? existingTransform.scaleY : (existingTransform.scale || 1.0);
+
+            // Derive absolute scale and flip state from signed scales
+            this.imageScale = Math.abs(sx); // Assuming uniform absolute scale for now or taking X
+            this.imageFlip.x = Math.sign(sx);
+            this.imageFlip.y = Math.sign(sy);
         } else {
             // Center the image initially (first time showing controls)
             this.imageSize.width = originalWidth;
@@ -164,6 +197,7 @@ class ImageControls {
             this.imagePosition.y = (rect.height - this.imageSize.height) / 2;
             this.imageRotation = 0;
             this.imageScale = 1.0;
+            this.imageFlip = { x: 1, y: 1 };
         }
         
         this.originalWidth = originalWidth;
@@ -211,7 +245,10 @@ class ImageControls {
         this.controlBox.style.top = `${actualY}px`;
         this.controlBox.style.width = `${actualWidth}px`;
         this.controlBox.style.height = `${actualHeight}px`;
-        this.controlBox.style.transform = `rotate(${this.imageRotation}deg) scale(${this.imageScale})`;
+
+        // Note: We apply the flip to the control box too so dragging handles flip intuitively
+        // (e.g. dragging left handle on flipped image works as expected)
+        this.controlBox.style.transform = `rotate(${this.imageRotation}deg) scale(${this.imageScale * this.imageFlip.x}, ${this.imageScale * this.imageFlip.y})`;
         
         // Update background image with current transformations
         this.applyImageTransform();
@@ -225,7 +262,8 @@ class ImageControls {
             width: this.imageSize.width,
             height: this.imageSize.height,
             rotation: this.imageRotation,
-            scale: this.imageScale
+            scaleX: this.imageScale * this.imageFlip.x,
+            scaleY: this.imageScale * this.imageFlip.y
         });
     }
     
@@ -373,6 +411,7 @@ class ImageControls {
         // Reset to original size and angle
         this.imageRotation = 0;
         this.imageScale = 1.0;
+        this.imageFlip = { x: 1, y: 1 };
         
         // Reset to original dimensions (stored when image was first shown)
         this.imageSize.width = this.originalWidth || this.imageSize.width;
@@ -418,6 +457,7 @@ class ImageControls {
         this.imagePosition.y = (actualHeight - this.imageSize.height) / 2;
         this.imageRotation = 0;
         this.imageScale = 1.0;
+        this.imageFlip = { x: 1, y: 1 };
         
         this.updateControlBox();
     }
@@ -429,7 +469,8 @@ class ImageControls {
             width: this.imageSize.width,
             height: this.imageSize.height,
             rotation: this.imageRotation,
-            scale: this.imageScale
+            scaleX: this.imageScale * this.imageFlip.x,
+            scaleY: this.imageScale * this.imageFlip.y
         };
     }
 }
