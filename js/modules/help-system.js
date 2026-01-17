@@ -133,7 +133,8 @@ class HelpSystem {
         const btn = document.createElement('button');
         btn.className = 'help-btn';
         btn.innerHTML = '?';
-        btn.style.cssText = 'width:24px;height:24px;border-radius:50%;border:1px solid #ddd;background:#f5f5f5;color:#666;font-size:14px;cursor:pointer;margin-left:8px;display:inline-flex;align-items:center;justify-content:center;transition:all 0.2s;';
+        // Added margin-right: 32px to prevent overlap with the close button
+        btn.style.cssText = 'width:24px;height:24px;border-radius:50%;border:1px solid #ddd;background:#f5f5f5;color:#666;font-size:14px;cursor:pointer;margin-left:8px;margin-right:32px;display:inline-flex;align-items:center;justify-content:center;transition:all 0.2s;';
         btn.title = window.i18n.t('common.help') || 'Help';
 
         btn.onmouseover = () => {

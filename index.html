@@ -657,6 +657,13 @@
                     <!-- Canvas settings -->
                     <div id="canvas-settings" class="settings-tab-content">
                         <h3 data-i18n="settings.canvas.title">画布设置</h3>
+                        <div class="settings-group">
+                            <label data-i18n="settings.canvas.mode">画布模式</label>
+                            <div class="button-size-options-2">
+                                <button class="canvas-mode-btn active" data-mode="paged" data-i18n="settings.canvas.modePaged">分页模式</button>
+                                <button class="canvas-mode-btn" data-mode="infinite" data-i18n="settings.canvas.modeInfinite">无限白板</button>
+                            </div>
+                        </div>
                         <div class="settings-group" id="canvas-size-settings">
                             <label data-i18n="settings.canvas.size">画布尺寸</label>
                             <p class="settings-hint" data-i18n="settings.canvas.sizeHint">选择预设尺寸或自定义画布比例和大小</p>
@@ -1548,6 +1555,7 @@
     <script src="js/libs/xlsx.full.min.js"></script>
     <script src="js/modules/browser-check.js"></script>
     <script src="js/modules/help-system.js"></script>
+    <script src="js/modules/infinite-canvas-manager.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>

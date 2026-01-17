@@ -59,8 +59,28 @@ class DrawingEngine {
         };
         this.isPanning = false;
         this.lastPanPoint = null;
+
+        // Shape renderer (injected)
+        this.shapeRenderer = null;
+
+        // Coordinate mapper (injected for infinite canvas)
+        this.coordinateMapper = null;
     }
     
+    /**
+     * Set the shape renderer (ShapeDrawingManager)
+     */
+    setShapeRenderer(renderer) {
+        this.shapeRenderer = renderer;
+    }
+
+    /**
+     * Set coordinate mapper function (screen -> world)
+     */
+    setCoordinateMapper(mapper) {
+        this.coordinateMapper = mapper;
+    }
+
     /**
      * Set the edge drawing manager for snapping to teaching tool edges
      */
@@ -90,19 +110,35 @@ class DrawingEngine {
     
     getPosition(e) {
         const rect = this.canvas.getBoundingClientRect();
-        // Adjust for canvas scale (CSS transform)
-        const scaleX = this.canvas.offsetWidth / rect.width;
-        const scaleY = this.canvas.offsetHeight / rect.height;
         
-        // Calculate position relative to canvas
-        let x = (e.clientX - rect.left) * scaleX;
-        let y = (e.clientY - rect.top) * scaleY;
+        // Standard Paged Mode logic (Screen/Canvas Pixel Coords)
+        if (!this.coordinateMapper) {
+            // Adjust for canvas scale (CSS transform)
+            const scaleX = this.canvas.offsetWidth / rect.width;
+            const scaleY = this.canvas.offsetHeight / rect.height;
+
+            // Calculate position relative to canvas
+            let x = (e.clientX - rect.left) * scaleX;
+            let y = (e.clientY - rect.top) * scaleY;
+
+            // Clamp to canvas bounds to prevent drawing outside
+            x = Math.max(0, Math.min(x, this.canvas.offsetWidth));
+            y = Math.max(0, Math.min(y, this.canvas.offsetHeight));
+
+            return { x, y };
+        }
         
-        // Clamp to canvas bounds to prevent drawing outside
-        x = Math.max(0, Math.min(x, this.canvas.offsetWidth));
-        y = Math.max(0, Math.min(y, this.canvas.offsetHeight));
+        // Infinite Mode logic (Screen -> World)
+        // coordinateMapper takes clientX, clientY and returns world {x, y}
+        // It should handle offset relative to canvas logic internally if needed,
+        // but typically mapped from raw client coordinates.
+        // Or we pass relative coordinates?
+        // Let's pass clientX/Y relative to canvas rect to be safe/consistent?
+        // But getPosition typically starts with relative coords.
+        // InfiniteCanvasManager.getWorldPosition takes (screenX, screenY).
+        // Let's pass e.clientX - rect.left, e.clientY - rect.top.
         
-        return { x, y };
+        return this.coordinateMapper(e.clientX - rect.left, e.clientY - rect.top);
     }
     
     applyLineStyle() {
@@ -812,7 +848,129 @@ class DrawingEngine {
         return true;
     }
     
+    redrawAll() {
+        if (!this.strokes) return;
+        for (const stroke of this.strokes) {
+            this.redrawStroke(stroke);
+        }
+
+        // Draw current stroke in progress
+        if (this.isDrawing && this.points.length > 0) {
+            // Construct a temporary stroke object
+            const tempStroke = {
+                points: this.points,
+                color: this.currentColor,
+                size: this.penSize,
+                penType: this.penType,
+                tool: this.currentTool,
+                // Shape drawing logic handles preview separately via ShapeDrawingManager.draw()
+                // which draws to preview canvas (screen coords) or main canvas?
+                // ShapeDrawingManager handles its own preview.
+                // BUT in Infinite Mode, main canvas is cleared.
+                // ShapeDrawingManager uses a separate preview canvas overlay?
+                // Yes, previewCanvas.
+                // Is previewCanvas transformed?
+                // InfiniteCanvasManager resets transforms on container.
+                // ShapeDrawingManager.syncPreviewCanvas handles sizing.
+                // If ShapeDrawingManager uses screen coords for preview, it should be fine IF the preview canvas is on top.
+                // However, DrawingEngine handles PEN tools.
+            };
+
+            // Don't redraw shape tool current stroke here, handled by ShapeDrawingManager preview
+            if (this.currentTool !== 'shape') {
+                this.redrawStroke(tempStroke);
+            }
+        }
+    }
+
     redrawStroke(stroke) {
+        // Handle shape strokes
+        if (stroke.type === 'shape' && this.shapeRenderer) {
+            this.ctx.save();
+
+            // Configure context
+            this.ctx.strokeStyle = stroke.color;
+            this.ctx.fillStyle = 'transparent'; // Shapes currently don't support fill in this app
+            this.ctx.lineCap = 'round';
+            this.ctx.lineJoin = 'round';
+
+            // Calculate line width logic same as in ShapeDrawingManager
+            let lineWidth = stroke.size;
+            switch(stroke.penType) {
+                case 'pencil':
+                    this.ctx.globalAlpha = 0.7;
+                    break;
+                case 'ballpoint':
+                    this.ctx.globalAlpha = 0.9;
+                    break;
+                case 'fountain':
+                    this.ctx.globalAlpha = 1.0;
+                    break;
+                case 'brush':
+                    this.ctx.globalAlpha = 0.85;
+                    lineWidth = stroke.size * 1.5;
+                    break;
+                case 'normal':
+                default:
+                    this.ctx.globalAlpha = 1.0;
+                    break;
+            }
+            this.ctx.lineWidth = lineWidth;
+
+            // Apply style to renderer temporarily
+            const prevLineStyle = this.shapeRenderer.lineStyle;
+            const prevDashDensity = this.shapeRenderer.dashDensity;
+            const prevWaveDensity = this.shapeRenderer.waveDensity;
+            const prevMultiLineCount = this.shapeRenderer.multiLineCount;
+            const prevMultiLineSpacing = this.shapeRenderer.multiLineSpacing;
+            const prevArrowSize = this.shapeRenderer.arrowSize;
+
+            if (stroke.style) {
+                this.shapeRenderer.lineStyle = stroke.style.lineStyle;
+                this.shapeRenderer.dashDensity = stroke.style.dashDensity;
+                this.shapeRenderer.waveDensity = stroke.style.waveDensity;
+                this.shapeRenderer.multiLineCount = stroke.style.multiLineCount;
+                this.shapeRenderer.multiLineSpacing = stroke.style.multiLineSpacing;
+                this.shapeRenderer.arrowSize = stroke.style.arrowSize;
+            }
+
+            // Apply line style to context (dashed/dotted)
+            this.shapeRenderer.applyLineStyle(this.ctx);
+
+            // Draw based on shape type
+            switch(stroke.shapeType) {
+                case 'line':
+                    this.shapeRenderer.drawLineWithStyle(this.ctx, stroke.start, stroke.end);
+                    break;
+                case 'arrow':
+                    this.shapeRenderer.drawArrowLine(this.ctx, stroke.start, stroke.end, false);
+                    break;
+                case 'doubleArrow':
+                    this.shapeRenderer.drawArrowLine(this.ctx, stroke.start, stroke.end, true);
+                    break;
+                case 'rectangle':
+                    this.shapeRenderer.drawRectangleWithStyle(this.ctx, stroke.start, stroke.end);
+                    break;
+                case 'circle':
+                    this.shapeRenderer.drawCircleWithStyle(this.ctx, stroke.start, stroke.end);
+                    break;
+                case 'ellipse':
+                    this.shapeRenderer.drawEllipseWithStyle(this.ctx, stroke.start, stroke.end);
+                    break;
+            }
+
+            // Restore renderer state
+            this.shapeRenderer.lineStyle = prevLineStyle;
+            this.shapeRenderer.dashDensity = prevDashDensity;
+            this.shapeRenderer.waveDensity = prevWaveDensity;
+            this.shapeRenderer.multiLineCount = prevMultiLineCount;
+            this.shapeRenderer.multiLineSpacing = prevMultiLineSpacing;
+            this.shapeRenderer.arrowSize = prevArrowSize;
+
+            this.ctx.restore();
+            return;
+        }
+
         this.ctx.save();
         
         // Set up drawing context based on stroke properties

@@ -237,6 +237,9 @@ class ShapeDrawingManager {
         if (this.startPoint && this.endPoint) {
             this.drawFinalShape();
             
+            // Save vector stroke for infinite canvas
+            this.saveShapeAsStroke();
+
             // Save to history
             if (this.historyManager) {
                 this.historyManager.saveState();
@@ -366,6 +369,30 @@ class ShapeDrawingManager {
         this.previewCtx.setLineDash([]);
     }
     
+    saveShapeAsStroke() {
+        if (!this.startPoint || !this.endPoint || !this.drawingEngine) return;
+
+        const stroke = {
+            type: 'shape',
+            shapeType: this.currentShape,
+            start: { ...this.startPoint },
+            end: { ...this.endPoint },
+            color: this.drawingEngine.currentColor,
+            size: this.drawingEngine.penSize,
+            penType: this.drawingEngine.penType,
+            style: {
+                lineStyle: this.lineStyle,
+                dashDensity: this.dashDensity,
+                waveDensity: this.waveDensity,
+                multiLineCount: this.multiLineCount,
+                multiLineSpacing: this.multiLineSpacing,
+                arrowSize: this.arrowSize
+            }
+        };
+
+        this.drawingEngine.strokes.push(stroke);
+    }
+
     drawFinalShape() {
         this.setupDrawingContext(this.ctx, false);
         

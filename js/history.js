@@ -8,15 +8,35 @@ class HistoryManager {
         this.history = [];
         this.historyStep = -1;
         this.maxHistory = 50;
+        this.drawingEngine = null;
+        this.settingsManager = null;
+    }
+
+    setDependencies(drawingEngine, settingsManager) {
+        this.drawingEngine = drawingEngine;
+        this.settingsManager = settingsManager;
     }
     
     saveState() {
         // Remove any states after current step
         this.history = this.history.slice(0, this.historyStep + 1);
         
-        // Save current canvas state
-        const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        this.history.push(imageData);
+        let state;
+        if (this.settingsManager && this.settingsManager.infiniteCanvas) {
+            // Vector mode: Save deep copy of strokes
+            if (this.drawingEngine) {
+                const strokes = JSON.parse(JSON.stringify(this.drawingEngine.strokes));
+                state = { type: 'vector', data: strokes };
+            } else {
+                return; // Cannot save vector state without drawingEngine
+            }
+        } else {
+            // Pixel mode
+            const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+            state = { type: 'pixel', data: imageData };
+        }
+
+        this.history.push(state);
         this.historyStep++;
         
         // Limit history size
@@ -46,8 +66,22 @@ class HistoryManager {
     
     restoreState() {
         if (this.historyStep >= 0 && this.historyStep < this.history.length) {
-            const imageData = this.history[this.historyStep];
-            this.ctx.putImageData(imageData, 0, 0);
+            const state = this.history[this.historyStep];
+
+            if (state && state.type === 'vector') {
+                // Vector restore
+                if (this.drawingEngine) {
+                    this.drawingEngine.strokes = JSON.parse(JSON.stringify(state.data));
+                    // If not in infinite rendering loop (e.g. paused), we might need to force render?
+                    // But usually infinite mode implies active loop.
+                }
+            } else if (state && state.type === 'pixel') {
+                // Pixel restore
+                this.ctx.putImageData(state.data, 0, 0);
+            } else if (state) {
+                // Legacy or direct ImageData (fallback)
+                this.ctx.putImageData(state, 0, 0);
+            }
         }
     }
     

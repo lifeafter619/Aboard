@@ -19,6 +19,9 @@ class DrawingBoard {
         this.settingsManager = new SettingsManager();
         this.drawingEngine = new DrawingEngine(this.canvas, this.ctx);
         this.historyManager = new HistoryManager(this.canvas, this.ctx);
+        // Inject dependencies for vector history
+        this.historyManager.setDependencies(this.drawingEngine, this.settingsManager);
+
         this.backgroundManager = new BackgroundManager(this.bgCanvas, this.bgCtx);
         this.imageControls = new ImageControls(this.backgroundManager);
         this.strokeControls = new StrokeControls(this.drawingEngine, this.canvas, this.ctx, this.historyManager);
@@ -42,6 +45,13 @@ class DrawingBoard {
         
         // Initialize shape drawing manager
         this.shapeDrawingManager = new ShapeDrawingManager(this.canvas, this.ctx, this.drawingEngine, this.historyManager);
+        this.drawingEngine.setShapeRenderer(this.shapeDrawingManager);
+
+        // Initialize Infinite Canvas Manager
+        this.infiniteCanvasManager = new InfiniteCanvasManager(
+            this.canvas, this.ctx, this.bgCanvas, this.bgCtx,
+            this.drawingEngine, this.backgroundManager, this.historyManager, this.settingsManager
+        );
         
         // Initialize line style modal for both pen and shape tools
         this.lineStyleModal = new LineStyleModal(this.drawingEngine, this.shapeDrawingManager);
@@ -141,6 +151,20 @@ class DrawingBoard {
         // Listen for fullscreen changes
         document.addEventListener('fullscreenchange', () => this.handleFullscreenChange());
         
+        // Listen for canvas mode changes
+        window.addEventListener('canvasModeChanged', (e) => {
+            if (e.detail.infinite) {
+                this.enableInfiniteCanvas();
+            } else {
+                this.disableInfiniteCanvas();
+            }
+        });
+
+        // Initial mode check
+        if (this.settingsManager.infiniteCanvas) {
+            this.enableInfiniteCanvas();
+        }
+
         // Add refresh warning to prevent accidental content loss
         window.addEventListener('beforeunload', (e) => {
             // Show warning message when user tries to refresh or close the page
@@ -2290,8 +2314,35 @@ class DrawingBoard {
         return Math.min(scaleX, scaleY, 1); // Don't scale up beyond 100%
     }
     
+    enableInfiniteCanvas() {
+        this.infiniteCanvasManager.activate();
+
+        // Set coordinate mapper for world coordinates
+        this.drawingEngine.setCoordinateMapper((x, y) => {
+            return this.infiniteCanvasManager.getWorldPosition(x, y);
+        });
+
+        this.updateUI();
+    }
+
+    disableInfiniteCanvas() {
+        this.infiniteCanvasManager.deactivate();
+        this.drawingEngine.setCoordinateMapper(null);
+
+        // Restore paged layout
+        this.applyCanvasSize();
+        this.centerCanvas();
+        this.updateUI();
+
+        // If we have vector strokes, redraw them onto the fixed canvas
+        this.drawingEngine.redrawAll();
+        // Save this state as pixels for history
+        this.historyManager.saveState();
+    }
+
     applyCanvasSize() {
-        // Always use pagination mode now
+        if (this.settingsManager.infiniteCanvas) return; // Skip if in infinite mode
+
         const width = this.settingsManager.canvasWidth;
         const height = this.settingsManager.canvasHeight;
         const dpr = window.devicePixelRatio || 1;

@@ -8,7 +8,7 @@ class SettingsManager {
         this.controlPosition = localStorage.getItem('controlPosition') || 'top-right';
         this.edgeSnapEnabled = localStorage.getItem('edgeSnapEnabled') !== 'false';
         this.touchZoomEnabled = localStorage.getItem('touchZoomEnabled') !== 'false';
-        this.infiniteCanvas = false; // Always use pagination mode
+        this.infiniteCanvas = localStorage.getItem('infiniteCanvas') === 'true';
         this.showZoomControls = localStorage.getItem('showZoomControls') !== 'false';
         this.showFullscreenBtn = localStorage.getItem('showFullscreenBtn') !== 'false';
         this.patternPreferences = this.loadPatternPreferences();
@@ -207,7 +207,12 @@ class SettingsManager {
         document.getElementById('touch-zoom-checkbox').checked = this.touchZoomEnabled;
         document.getElementById('show-zoom-controls-checkbox').checked = this.showZoomControls;
         
-        // Canvas is always in pagination mode now
+        // Load canvas mode
+        const canvasMode = this.infiniteCanvas ? 'infinite' : 'paged';
+        document.querySelectorAll('.canvas-mode-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === canvasMode);
+        });
+        this.setCanvasMode(canvasMode, false); // false = don't trigger reload yet
         
         // Load canvas size settings
         document.getElementById('canvas-width-input').value = this.canvasWidth;
@@ -236,7 +241,23 @@ class SettingsManager {
         this.initLanguageSelector();
     }
     
-    // Canvas mode is removed - always use pagination
+    setCanvasMode(mode, reload = true) {
+        this.infiniteCanvas = (mode === 'infinite');
+        localStorage.setItem('infiniteCanvas', this.infiniteCanvas);
+
+        // Show/hide canvas size settings based on mode
+        const sizeSettings = document.getElementById('canvas-size-settings');
+        if (sizeSettings) {
+            sizeSettings.style.display = this.infiniteCanvas ? 'none' : 'block';
+        }
+
+        // Trigger event for main app to handle mode switch
+        if (reload) {
+            window.dispatchEvent(new CustomEvent('canvasModeChanged', {
+                detail: { infinite: this.infiniteCanvas }
+            }));
+        }
+    }
     
     setCanvasPreset(preset) {
         this.canvasPreset = preset;

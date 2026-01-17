@@ -274,6 +274,8 @@ window.translations = {
         canvas: {
             title: '画布设置',
             mode: '画布模式',
+            modePaged: '分页模式',
+            modeInfinite: '无限白板',
             modeHint: '选择画布的显示模式',
             size: '画布尺寸',
             sizeHint: '选择预设尺寸或自定义画布比例和大小',

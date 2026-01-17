@@ -274,6 +274,8 @@ window.translations = {
         canvas: {
             title: 'Canvas Settings',
             mode: 'Canvas Mode',
+            modePaged: 'Paged Mode',
+            modeInfinite: 'Infinite Canvas',
             modeHint: 'Choose canvas display mode',
             size: 'Canvas Size',
             sizeHint: 'Choose preset size or custom size/ratio',
