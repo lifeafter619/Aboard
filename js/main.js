@@ -1345,7 +1345,15 @@ class DrawingBoard {
             this.settingsManager.setGlobalFont(e.target.value);
         });
         
-        // Canvas mode buttons removed - pagination is always active
+        // Canvas mode buttons
+        document.querySelectorAll('.canvas-mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const mode = e.target.dataset.mode;
+                this.settingsManager.setCanvasMode(mode);
+                document.querySelectorAll('.canvas-mode-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
         
         // Canvas preset buttons
         document.querySelectorAll('.canvas-preset-btn').forEach(btn => {
