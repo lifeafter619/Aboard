@@ -376,12 +376,15 @@ window.translations = {
             textColor: 'テキスト色',
             bgColor: '背景色',
             fontSize: 'フォントサイズ',
+            fontSizeLabel: 'フォントサイズ：現在',
             opacity: '不透明度',
+            opacityLabel: '不透明度：現在',
             fullscreenMode: 'フルスクリーンモード',
             fullscreenDisabled: '無効',
             fullscreenSingle: 'シングルクリック',
             fullscreenDouble: 'ダブルクリック',
             fullscreenFontSize: 'フルスクリーンフォントサイズ',
+            fullscreenFontSizeLabel: 'フルスクリーンフォントサイズ：現在',
             fullscreenFontSizeHint: 'フルスクリーン時刻表示のフォントサイズを調整、範囲10%-85%',
             customColor: 'カスタムカラー'
         }

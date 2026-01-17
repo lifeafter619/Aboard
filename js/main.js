@@ -82,6 +82,15 @@ class DrawingBoard {
         this.lastPinchCenter = null;
         this.hasTwoFingers = false;
         
+        // Active pointers tracking for multi-touch gesture detection
+        // Maps pointerId to { x, y, pointerType } for tracking touch and pen inputs
+        // Used to detect pinch gestures when using stylus/pen + finger combinations
+        this.activePointers = new Map();
+        
+        // Canvas scale limits
+        this.MIN_CANVAS_SCALE = 0.5;
+        this.MAX_CANVAS_SCALE = 5.0;
+        
         // Touch gesture state
         this.lastTapTime = 0;
         this.lastTapPos = null;
@@ -221,9 +230,27 @@ class DrawingBoard {
     
     setupEventListeners() {
         // Canvas drawing events - use Pointer Events for unified Mouse/Touch/Pen support
+        // Track all pointers for multi-touch gesture detection (pinch zoom)
         document.addEventListener('pointerdown', (e) => {
+            // Track all touch and pen pointers for multi-touch gesture detection
+            if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+                this.activePointers.set(e.pointerId, {
+                    x: e.clientX,
+                    y: e.clientY,
+                    pointerType: e.pointerType
+                });
+                
+                // Check for multi-touch pinch gesture (2+ pointers)
+                if (this.activePointers.size >= 2) {
+                    this.handlePointerPinchStart();
+                }
+            }
+            
             // Ignore multi-touch secondary pointers for drawing (allow pinch zoom to handle them)
             if (!e.isPrimary) return;
+            
+            // If pinching, don't start drawing
+            if (this.isPinching) return;
 
             // Skip if clicking on UI elements (except canvas)
             if (e.target && e.target.closest) {
@@ -322,6 +349,21 @@ class DrawingBoard {
         });
         
         document.addEventListener('pointermove', (e) => {
+            // Update pointer position for multi-touch gesture tracking
+            if ((e.pointerType === 'touch' || e.pointerType === 'pen') && this.activePointers.has(e.pointerId)) {
+                this.activePointers.set(e.pointerId, {
+                    x: e.clientX,
+                    y: e.clientY,
+                    pointerType: e.pointerType
+                });
+                
+                // Handle pinch gesture if we have 2+ pointers
+                if (this.isPinching && this.activePointers.size >= 2) {
+                    this.handlePointerPinchMove();
+                    return; // Don't continue with normal drawing during pinch
+                }
+            }
+            
             // Ignore multi-touch secondary pointers
             if (!e.isPrimary) return;
 
@@ -363,10 +405,32 @@ class DrawingBoard {
         });
         
         document.addEventListener('pointerup', (e) => {
+            // Remove pointer from tracking
+            if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+                this.activePointers.delete(e.pointerId);
+                
+                // End pinch if we no longer have 2+ pointers
+                if (this.isPinching && this.activePointers.size < 2) {
+                    this.handlePointerPinchEnd();
+                }
+            }
+            
             if (!e.isPrimary) return;
             this.stopDraggingCoordinateOrigin();
             this.handleDrawingComplete();
             this.drawingEngine.stopPanning();
+        });
+        
+        document.addEventListener('pointercancel', (e) => {
+            // Remove pointer from tracking on cancel
+            if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+                this.activePointers.delete(e.pointerId);
+                
+                // End pinch if we no longer have 2+ pointers
+                if (this.isPinching && this.activePointers.size < 2) {
+                    this.handlePointerPinchEnd();
+                }
+            }
         });
         
         // Double-click handler for coordinate origin selection in pan mode
@@ -2934,6 +2998,114 @@ class DrawingBoard {
         return {
             x: (touch1.clientX + touch2.clientX) / 2,
             y: (touch1.clientY + touch2.clientY) / 2
+        };
+    }
+    
+    // Pointer Events-based pinch gesture handlers
+    // These work with stylus/pen + finger combinations and pure touch inputs
+    handlePointerPinchStart() {
+        if (!this.settingsManager.touchZoomEnabled) return;
+        
+        // Get the first two pointers
+        const pointers = Array.from(this.activePointers.values());
+        if (pointers.length < 2) return;
+        
+        this.isPinching = true;
+        this.hasTwoFingers = true;
+        
+        // If we were drawing, stop and discard the current stroke
+        if (this.drawingEngine.isDrawing) {
+            this.discardCurrentStroke();
+        }
+        
+        // If we were panning, stop it
+        if (this.drawingEngine.isPanning) {
+            this.drawingEngine.stopPanning();
+        }
+        
+        // Calculate initial pinch distance and center
+        const p1 = pointers[0];
+        const p2 = pointers[1];
+        this.lastPinchDistance = this.getPointerDistance(p1, p2);
+        this.lastPinchCenter = this.getPointerCenter(p1, p2);
+    }
+    
+    handlePointerPinchMove() {
+        if (!this.isPinching) return;
+        
+        const pointers = Array.from(this.activePointers.values());
+        if (pointers.length < 2) return;
+        
+        const p1 = pointers[0];
+        const p2 = pointers[1];
+        const currentDistance = this.getPointerDistance(p1, p2);
+        const currentCenter = this.getPointerCenter(p1, p2);
+        
+        if (this.lastPinchDistance > 0 && this.lastPinchCenter) {
+            // Calculate zoom ratio
+            const scaleRatio = currentDistance / this.lastPinchDistance;
+            
+            // Calculate new scale with limits
+            const currentScale = this.drawingEngine.canvasScale;
+            let newScale = currentScale * scaleRatio;
+            newScale = Math.max(this.MIN_CANVAS_SCALE, Math.min(this.MAX_CANVAS_SCALE, newScale));
+            
+            // Recalculate effective scale ratio after clamping
+            const effectiveScaleRatio = newScale / currentScale;
+            
+            this.drawingEngine.canvasScale = newScale;
+            this.updateZoomUI();
+            
+            // Adjust pan offset to zoom towards the pinch center
+            const screenCenterX = window.innerWidth / 2;
+            const screenCenterY = window.innerHeight / 2;
+            const visualCenterX = screenCenterX + this.drawingEngine.panOffset.x;
+            const visualCenterY = screenCenterY + this.drawingEngine.panOffset.y;
+            
+            const offsetX = this.lastPinchCenter.x - visualCenterX;
+            const offsetY = this.lastPinchCenter.y - visualCenterY;
+            
+            // 1. Zoom effect (keeping lastPinchCenter fixed relative to canvas content)
+            let newPanX = this.drawingEngine.panOffset.x + offsetX * (1 - effectiveScaleRatio);
+            let newPanY = this.drawingEngine.panOffset.y + offsetY * (1 - effectiveScaleRatio);
+            
+            // 2. Pan effect (moving content with fingers)
+            newPanX += (currentCenter.x - this.lastPinchCenter.x);
+            newPanY += (currentCenter.y - this.lastPinchCenter.y);
+            
+            this.drawingEngine.panOffset.x = newPanX;
+            this.drawingEngine.panOffset.y = newPanY;
+            
+            // Apply zoom (false = don't update config-area scale)
+            this.applyZoom(false);
+        }
+        
+        this.lastPinchDistance = currentDistance;
+        this.lastPinchCenter = currentCenter;
+    }
+    
+    handlePointerPinchEnd() {
+        this.isPinching = false;
+        this.hasTwoFingers = false;
+        this.lastPinchDistance = 0;
+        this.lastPinchCenter = null;
+        
+        // Save state after pinch ends
+        localStorage.setItem('canvasScale', this.drawingEngine.canvasScale);
+        localStorage.setItem('panOffsetX', this.drawingEngine.panOffset.x);
+        localStorage.setItem('panOffsetY', this.drawingEngine.panOffset.y);
+    }
+    
+    getPointerDistance(p1, p2) {
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+    
+    getPointerCenter(p1, p2) {
+        return {
+            x: (p1.x + p2.x) / 2,
+            y: (p1.y + p2.y) / 2
         };
     }
     

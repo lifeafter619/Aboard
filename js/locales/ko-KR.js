@@ -376,12 +376,15 @@ window.translations = {
             textColor: '텍스트 색상',
             bgColor: '배경색',
             fontSize: '글꼴 크기',
+            fontSizeLabel: '글꼴 크기: 현재',
             opacity: '불투명도',
+            opacityLabel: '불투명도: 현재',
             fullscreenMode: '전체 화면 모드',
             fullscreenDisabled: '비활성화',
             fullscreenSingle: '한 번 클릭',
             fullscreenDouble: '두 번 클릭',
             fullscreenFontSize: '전체 화면 글꼴 크기',
+            fullscreenFontSizeLabel: '전체화면 글꼴 크기: 현재',
             fullscreenFontSizeHint: '전체 화면 시간 표시 글꼴 크기 조정, 범위 10%-85%',
             customColor: '사용자 정의 색상'
         }
