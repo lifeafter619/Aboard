@@ -163,7 +163,8 @@ window.translations = {
         preferenceHint: 'Choose patterns shown in properties bar',
         upload: 'Upload',
         moveCoordinateOrigin: 'Move Origin',
-        moveCoordinateOriginHint: 'Click and drag on canvas to move coordinate origin'
+        moveCoordinateOriginHint: 'Click and drag on canvas to move coordinate origin',
+        infiniteModeNoImage: 'Infinite Canvas mode does not support background images.'
     },
 
     // Image Controls
@@ -585,7 +586,9 @@ window.translations = {
     export: {
         selectAtLeastOnePage: 'Please select at least one page to export',
         paginationRequired: 'Currently in Infinite Canvas mode. Please enable Pagination Mode in Settings to use this feature.',
-        noPages: 'No pages to export.'
+        noPages: 'No pages to export.',
+        exporting: 'Exporting...',
+        infiniteExportTip: 'Infinite Canvas mode will export the rectangular area containing all content.'
     },
 
     // Timezone names

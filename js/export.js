@@ -223,6 +223,13 @@ class ExportManager {
         const filename = document.getElementById('export-filename').value || 'aboard-export';
         const quality = parseInt(document.getElementById('export-quality-slider').value) / 100;
         
+        // Handle Infinite Canvas Export
+        if (this.drawingBoard && this.drawingBoard.settingsManager.infiniteCanvas) {
+            this.exportInfiniteCanvas(filename, format, quality);
+            this.closeModal();
+            return;
+        }
+
         if (scope === 'current') {
             // Export current page
             this.exportSinglePage(filename, format, quality);
@@ -238,6 +245,90 @@ class ExportManager {
         }
         
         this.closeModal();
+    }
+
+    exportInfiniteCanvas(filename, format, quality) {
+        if (!this.drawingBoard || !this.drawingBoard.drawingEngine) return;
+
+        // Notify user
+        const originalText = document.getElementById('export-confirm-btn').innerHTML;
+        document.getElementById('export-confirm-btn').innerHTML = window.i18n.t('export.exporting');
+        document.getElementById('export-confirm-btn').disabled = true;
+
+        // Use setTimeout to allow UI to update
+        setTimeout(() => {
+            const bounds = this.drawingBoard.drawingEngine.getBounds();
+
+            if (!bounds) {
+                // If no content, export visible screen? Or empty?
+                // Just export visible screen for now, similar to default behavior if empty.
+                // But better to alert or export visible.
+                // Let's fallback to exportSinglePage logic but without background scaling issues.
+                // Or just an empty canvas with background.
+                this.exportSinglePage(filename, format, quality); // Fallback
+                return;
+            }
+
+            const padding = 50;
+            const width = bounds.width + padding * 2;
+            const height = bounds.height + padding * 2;
+            const minX = bounds.minX - padding;
+            const minY = bounds.minY - padding;
+
+            // Create temp canvas
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+            const ctx = tempCanvas.getContext('2d');
+
+            // 1. Draw Background
+            // renderInfinite expects offsetX/Y to be world coordinates or screen?
+            // In renderInfinite logic:
+            // const startX = -offsetX / scale;
+            // The offsetX is the translation applied to the context.
+            // Here we want (minX, minY) in world space to map to (0,0) on canvas.
+            // So we translate by (-minX, -minY).
+            // offsetX = -minX, offsetY = -minY. scale = 1.
+
+            if (this.drawingBoard.backgroundManager) {
+                this.drawingBoard.backgroundManager.renderInfinite(ctx, 1, -minX, -minY, width, height);
+            } else {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, width, height);
+            }
+
+            // 2. Draw Strokes
+            // Translate context to map world coordinates to canvas
+            ctx.save();
+            ctx.translate(-minX, -minY);
+
+            // We need to fetch all strokes. drawingEngine has them.
+            // But HistoryManager stores them in vector mode?
+            // DrawingEngine.strokes IS the current state in infinite mode.
+            this.drawingBoard.drawingEngine.drawStrokes(ctx, this.drawingBoard.drawingEngine.strokes);
+
+            ctx.restore();
+
+            // 3. Export
+            let dataURL;
+            if (format === 'jpeg') {
+                dataURL = tempCanvas.toDataURL('image/jpeg', quality);
+            } else {
+                dataURL = tempCanvas.toDataURL('image/png');
+            }
+
+            const link = document.createElement('a');
+            link.download = `${filename}.${format}`;
+            link.href = dataURL;
+            link.click();
+
+            // Restore UI
+            const btn = document.getElementById('export-confirm-btn');
+            if (btn) {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }, 100);
     }
     
     exportSinglePage(filename, format, quality) {

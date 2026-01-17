@@ -884,6 +884,14 @@ class DrawingEngine {
     }
 
     redrawStroke(stroke) {
+        // Use destination-out for eraser strokes
+        if (stroke.tool === 'eraser') {
+            this.ctx.globalCompositeOperation = 'destination-out';
+            this.ctx.strokeStyle = 'rgba(0,0,0,1)'; // Color doesn't matter for erase
+        } else {
+            this.ctx.globalCompositeOperation = 'source-over';
+        }
+
         // Handle shape strokes
         if (stroke.type === 'shape' && this.shapeRenderer) {
             this.ctx.save();
@@ -1019,5 +1027,73 @@ class DrawingEngine {
     clearStrokes() {
         this.strokes = [];
         this.selectedStrokeIndex = null;
+    }
+
+    getBounds() {
+        if (!this.strokes || this.strokes.length === 0) return null;
+
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+
+        this.strokes.forEach(stroke => {
+            if (stroke.type === 'shape') {
+                // Handle shape bounds
+                // Start and end points
+                minX = Math.min(minX, stroke.start.x, stroke.end.x);
+                minY = Math.min(minY, stroke.start.y, stroke.end.y);
+                maxX = Math.max(maxX, stroke.start.x, stroke.end.x);
+                maxY = Math.max(maxY, stroke.start.y, stroke.end.y);
+
+                // Add padding for stroke width/arrow heads
+                const padding = (stroke.size || 5) * 2 + (stroke.style && stroke.style.arrowSize ? stroke.style.arrowSize : 0);
+                minX -= padding;
+                minY -= padding;
+                maxX += padding;
+                maxY += padding;
+            } else if (stroke.points) {
+                // Handle regular strokes
+                stroke.points.forEach(p => {
+                    minX = Math.min(minX, p.x);
+                    minY = Math.min(minY, p.y);
+                    maxX = Math.max(maxX, p.x);
+                    maxY = Math.max(maxY, p.y);
+                });
+                // Add padding for stroke width
+                const padding = (stroke.size || 5);
+                minX -= padding;
+                minY -= padding;
+                maxX += padding;
+                maxY += padding;
+            }
+        });
+
+        if (minX === Infinity) return null;
+
+        return {
+            minX, minY, maxX, maxY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
+    }
+
+    drawStrokes(ctx, strokes) {
+        if (!strokes) return;
+
+        // Save current context to restore later if needed,
+        // but typically the caller manages context state.
+        // We need to override this.ctx temporarily or modify redrawStroke to accept context?
+        // redrawStroke currently uses this.ctx.
+        // Let's modify redrawStroke to accept an optional context.
+
+        const originalCtx = this.ctx;
+        this.ctx = ctx;
+
+        for (const stroke of strokes) {
+            this.redrawStroke(stroke);
+        }
+
+        this.ctx = originalCtx;
     }
 }

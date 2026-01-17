@@ -839,6 +839,13 @@ class DrawingBoard {
         
         // Background image upload
         document.getElementById('bg-image-upload').addEventListener('change', (e) => {
+            // Check if infinite canvas is enabled
+            if (this.settingsManager.infiniteCanvas) {
+                alert(window.i18n.t('background.infiniteModeNoImage'));
+                e.target.value = ''; // Reset file input
+                return;
+            }
+
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
@@ -2482,7 +2489,9 @@ class DrawingBoard {
 
     zoomIn() {
         const currentScale = this.drawingEngine.canvasScale;
-        const newScale = Math.min(currentScale + 0.1, 5.0);
+        const maxScale = this.settingsManager.infiniteCanvas ? 1000.0 : 5.0;
+        const newScale = Math.min(currentScale + 0.1, maxScale);
+
         this.drawingEngine.canvasScale = newScale;
         this.updateZoomUI();
         this.applyZoom(false); // Don't update config-area scale on zoom
@@ -2491,7 +2500,9 @@ class DrawingBoard {
     
     zoomOut() {
         const currentScale = this.drawingEngine.canvasScale;
-        const newScale = Math.max(currentScale - 0.1, 0.5);
+        const minScale = this.settingsManager.infiniteCanvas ? 0.01 : 0.5;
+        const newScale = Math.max(currentScale - 0.1, minScale);
+
         this.drawingEngine.canvasScale = newScale;
         this.updateZoomUI();
         this.applyZoom(false); // Don't update config-area scale on zoom
@@ -2504,7 +2515,12 @@ class DrawingBoard {
             this.updateZoomUI();
             return;
         }
-        percent = Math.max(50, Math.min(500, percent));
+
+        // Use wider limits for infinite canvas
+        const minPercent = this.settingsManager.infiniteCanvas ? 1 : 50;
+        const maxPercent = this.settingsManager.infiniteCanvas ? 100000 : 500;
+
+        percent = Math.max(minPercent, Math.min(maxPercent, percent));
         const newScale = percent / 100;
         this.drawingEngine.canvasScale = newScale;
         this.updateZoomUI();
@@ -2674,11 +2690,15 @@ class DrawingBoard {
                 
                 // Calculate new scale
                 const delta = e.deltaY;
+
+                const minScale = this.settingsManager.infiniteCanvas ? 0.01 : 0.5;
+                const maxScale = this.settingsManager.infiniteCanvas ? 1000.0 : 5.0;
+
                 let newScale;
                 if (delta < 0) {
-                    newScale = Math.min(oldScale + 0.1, 5.0);
+                    newScale = Math.min(oldScale + 0.1, maxScale);
                 } else {
-                    newScale = Math.max(oldScale - 0.1, 0.5);
+                    newScale = Math.max(oldScale - 0.1, minScale);
                 }
                 
                 // Calculate scale ratio
@@ -3107,7 +3127,10 @@ class DrawingBoard {
             // Calculate new scale with limits
             const currentScale = this.drawingEngine.canvasScale;
             let newScale = currentScale * scaleRatio;
-            newScale = Math.max(this.MIN_CANVAS_SCALE, Math.min(this.MAX_CANVAS_SCALE, newScale));
+
+            const minScale = this.settingsManager.infiniteCanvas ? 0.01 : this.MIN_CANVAS_SCALE;
+            const maxScale = this.settingsManager.infiniteCanvas ? 1000.0 : this.MAX_CANVAS_SCALE;
+            newScale = Math.max(minScale, Math.min(maxScale, newScale));
             
             // Recalculate effective scale ratio after clamping
             const effectiveScaleRatio = newScale / currentScale;

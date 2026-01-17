@@ -84,6 +84,240 @@ class BackgroundManager {
         // Performance optimization: Avoid synchronous localStorage writes in draw loop
         // These are now handled in setters
     }
+
+    renderInfinite(ctx, scale, offsetX, offsetY, width, height) {
+        // Clear background
+        ctx.fillStyle = this.backgroundColor;
+        ctx.fillRect(0, 0, width, height);
+
+        // If blank, just return
+        if (this.backgroundPattern === 'blank') return;
+        if (this.backgroundPattern === 'image') return; // Image handled via DOM, not canvas drawing
+
+        const dpr = window.devicePixelRatio || 1;
+
+        // Adjust spacing for scale
+        // Pattern needs to be drawn with offset and scale
+        // Standard drawPattern functions iterate from 0 to width/height using fixed spacing
+        // We can use ctx transform to handle this?
+        // drawBackgroundPattern uses loops: for (let x = spacing; x < width; x += spacing)
+        // If we set transform: ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+        // And then draw a huge pattern? No, that's inefficient.
+        // We want to draw pattern lines that are visible in the view.
+
+        // Simpler approach:
+        // Use ctx.save()
+        // ctx.translate(offsetX, offsetY)
+        // ctx.scale(scale, scale)
+        // Then draw pattern covering the visible area in logical coordinates
+        // Visible area in logical coords:
+        // left = -offsetX / scale
+        // top = -offsetY / scale
+        // right = (width - offsetX) / scale
+        // bottom = (height - offsetY) / scale
+
+        // BUT `drawDotsPattern` etc. are hardcoded to draw from 0 to canvas.width
+        // I should refactor `drawBackgroundPattern` to accept bounds or context transform.
+        // Or simpler: Just implement logic here for infinite patterns
+
+        ctx.save();
+        ctx.beginPath();
+        // Set clipping region? No need if we just draw what's needed.
+
+        // We can reuse existing draw functions if we trick them?
+        // No, existing functions assume 0,0 origin.
+
+        // Let's implement specific infinite drawing for patterns
+        // We need to calculate start x/y based on offset so the grid stays fixed in world
+
+        const patternColor = this.getPatternColor();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.lineWidth = 0.5 * dpr; // Scale line width? usually grid lines stay thin or scale?
+        // Usually grid lines scale with zoom in infinite canvas.
+
+        // Let's use transform to make it easy
+        ctx.translate(offsetX, offsetY);
+        ctx.scale(scale, scale);
+
+        // Calculate logical bounds to draw
+        const startX = -offsetX / scale;
+        const startY = -offsetY / scale;
+        const endX = (width - offsetX) / scale;
+        const endY = (height - offsetY) / scale;
+
+        // Expand bounds slightly to ensure coverage
+        const buffer = 100;
+
+        switch(this.backgroundPattern) {
+            case 'dots':
+                this.drawInfiniteDots(ctx, startX, startY, endX, endY, dpr, patternColor);
+                break;
+            case 'grid':
+                this.drawInfiniteGrid(ctx, startX, startY, endX, endY, dpr, patternColor);
+                break;
+            case 'coordinate':
+                this.drawInfiniteCoordinate(ctx, startX, startY, endX, endY, dpr, patternColor);
+                break;
+            // Other patterns (tianzige, lines, staff) might be complex to adapt quickly,
+            // fallback to grid or implement later if needed.
+            // For now, support dots, grid, coordinate which are most common for infinite.
+            case 'english-lines':
+                this.drawInfiniteEnglishLines(ctx, startX, startY, endX, endY, dpr, patternColor);
+                break;
+             case 'lines': // lines is english-lines? No, 'lines' key in locales is 'Lines'.
+                // Check getPatternPreferences in settings.js: 'english-lines', 'music-staff'.
+                // Wait, background.js `drawBackgroundPattern` switch has 'english-lines'.
+                // There is no simple 'lines' case in `drawBackgroundPattern`?
+                // Ah, `drawEnglishLinesPattern` is there.
+                // Let's stick to core ones.
+        }
+
+        ctx.restore();
+    }
+
+    drawInfiniteDots(ctx, startX, startY, endX, endY, dpr, patternColor) {
+        const baseSpacing = 20 * dpr; // Use dpr for consistent base size
+        const spacing = baseSpacing / this.patternDensity;
+        ctx.fillStyle = patternColor;
+
+        // Align start to spacing grid
+        const firstX = Math.floor(startX / spacing) * spacing;
+        const firstY = Math.floor(startY / spacing) * spacing;
+
+        for (let x = firstX; x < endX; x += spacing) {
+            for (let y = firstY; y < endY; y += spacing) {
+                ctx.beginPath();
+                ctx.arc(x, y, 1 * dpr, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
+    drawInfiniteGrid(ctx, startX, startY, endX, endY, dpr, patternColor) {
+        const baseSpacing = 20 * dpr;
+        const spacing = baseSpacing / this.patternDensity;
+        ctx.strokeStyle = patternColor;
+        ctx.lineWidth = 0.5 * dpr; // Line width scales with zoom if we are inside scaled context
+        // If we want constant screen line width, we should divide by scale.
+        // But usually grid gets thicker as you zoom in.
+
+        const firstX = Math.floor(startX / spacing) * spacing;
+        const firstY = Math.floor(startY / spacing) * spacing;
+
+        ctx.beginPath();
+        for (let x = firstX; x < endX; x += spacing) {
+            ctx.moveTo(x, startY);
+            ctx.lineTo(x, endY);
+        }
+        for (let y = firstY; y < endY; y += spacing) {
+            ctx.moveTo(startX, y);
+            ctx.lineTo(endX, y);
+        }
+        ctx.stroke();
+    }
+
+    drawInfiniteEnglishLines(ctx, startX, startY, endX, endY, dpr, patternColor) {
+        const baseLineHeight = 60 * dpr;
+        const lineHeight = baseLineHeight / this.patternDensity;
+
+        const firstY = Math.floor(startY / lineHeight) * lineHeight;
+
+        for (let y = firstY; y < endY; y += lineHeight) {
+            ctx.strokeStyle = patternColor;
+            ctx.lineWidth = 1 * dpr;
+            ctx.beginPath();
+            ctx.moveTo(startX, y);
+            ctx.lineTo(endX, y);
+            ctx.stroke();
+
+            ctx.lineWidth = 0.5 * dpr;
+            ctx.setLineDash([5 * dpr, 5 * dpr]);
+            ctx.beginPath();
+            ctx.moveTo(startX, y + lineHeight / 4);
+            ctx.lineTo(endX, y + lineHeight / 4);
+            ctx.stroke();
+
+            ctx.setLineDash([]);
+            ctx.strokeStyle = this.isLightBackground() ? 'rgba(255, 0, 0, 0.3)' : 'rgba(255, 100, 100, 0.5)';
+            ctx.lineWidth = 1 * dpr;
+            ctx.beginPath();
+            ctx.moveTo(startX, y + lineHeight / 2);
+            ctx.lineTo(endX, y + lineHeight / 2);
+            ctx.stroke();
+
+            ctx.strokeStyle = patternColor;
+            ctx.lineWidth = 0.5 * dpr;
+            ctx.setLineDash([5 * dpr, 5 * dpr]);
+            ctx.beginPath();
+            ctx.moveTo(startX, y + 3 * lineHeight / 4);
+            ctx.lineTo(endX, y + 3 * lineHeight / 4);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+    }
+
+    drawInfiniteCoordinate(ctx, startX, startY, endX, endY, dpr, patternColor) {
+        // Coordinate origin is relative to canvas center in standard mode.
+        // In infinite mode, let's assume origin is at (0,0) world coords + user offset.
+        // this.coordinateOriginX/Y stores user offset.
+        const originX = this.coordinateOriginX * dpr;
+        const originY = this.coordinateOriginY * dpr;
+
+        const baseGridSize = 20 * dpr;
+        const gridSize = baseGridSize / this.patternDensity;
+
+        ctx.strokeStyle = this.isLightBackground() ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 0.5 * dpr;
+
+        const firstX = Math.floor((startX - originX) / gridSize) * gridSize + originX;
+        const firstY = Math.floor((startY - originY) / gridSize) * gridSize + originY;
+
+        ctx.beginPath();
+        for (let x = firstX; x < endX; x += gridSize) {
+            ctx.moveTo(x, startY);
+            ctx.lineTo(x, endY);
+        }
+        for (let y = firstY; y < endY; y += gridSize) {
+            ctx.moveTo(startX, y);
+            ctx.lineTo(endX, y);
+        }
+        ctx.stroke();
+
+        // Axes
+        ctx.strokeStyle = patternColor;
+        ctx.lineWidth = 2 * dpr;
+
+        // X-axis
+        if (originY >= startY && originY <= endY) {
+            ctx.beginPath();
+            ctx.moveTo(startX, originY);
+            ctx.lineTo(endX, originY);
+            ctx.stroke();
+
+            // Arrow
+            const arrowSize = 10 * dpr;
+            // Only draw arrow if visible on right side? Or always draw at end of visible area?
+            // Infinite axis has no end. Let's not draw arrows for infinite axis or draw at screen edge?
+            // Standard implementation draws at canvas width.
+            // Let's skip arrows for infinite view for now to keep it simple and performant.
+        }
+
+        // Y-axis
+        if (originX >= startX && originX <= endX) {
+            ctx.beginPath();
+            ctx.moveTo(originX, startY);
+            ctx.lineTo(originX, endY);
+            ctx.stroke();
+        }
+
+        // Origin point
+        if (originX >= startX && originX <= endX && originY >= startY && originY <= endY) {
+            ctx.fillStyle = patternColor;
+            ctx.beginPath();
+            ctx.arc(originX, originY, 5 * dpr, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
     
     drawBackgroundPattern() {
         if (this.backgroundPattern === 'blank') return;

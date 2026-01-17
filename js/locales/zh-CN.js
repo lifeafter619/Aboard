@@ -163,7 +163,8 @@ window.translations = {
         preferenceHint: '选择在属性栏中显示的图案',
         upload: '上传',
         moveCoordinateOrigin: '移动坐标原点',
-        moveCoordinateOriginHint: '点击按钮后，可在画布上拖动移动坐标原点'
+        moveCoordinateOriginHint: '点击按钮后，可在画布上拖动移动坐标原点',
+        infiniteModeNoImage: '无限白板模式不支持上传背景图片。'
     },
 
     // Image Controls
