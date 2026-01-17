@@ -273,10 +273,11 @@ window.translations = {
         canvas: {
             title: '畫布設置',
             mode: '畫布模式',
-            modeHint: '選擇畫布的顯示模式',
+            modeHint: '選擇畫布模式：無限畫布没有邊界，分頁模式支持多頁管理',
             size: '畫布尺寸',
             sizeHint: '選擇预设尺寸或自定义畫布比例和大小',
             infiniteCanvas: '無限畫布',
+            paginationMode: '分頁模式',
             pagination: '分頁模式',
             presets: {
                 a4Portrait: 'A4 竖向',

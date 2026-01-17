@@ -8,7 +8,7 @@ class SettingsManager {
         this.controlPosition = localStorage.getItem('controlPosition') || 'top-right';
         this.edgeSnapEnabled = localStorage.getItem('edgeSnapEnabled') !== 'false';
         this.touchZoomEnabled = localStorage.getItem('touchZoomEnabled') !== 'false';
-        this.infiniteCanvas = false; // Always use pagination mode
+        this.infiniteCanvas = localStorage.getItem('infiniteCanvas') === 'true'; // Default to pagination mode
         this.showZoomControls = localStorage.getItem('showZoomControls') !== 'false';
         this.showFullscreenBtn = localStorage.getItem('showFullscreenBtn') !== 'false';
         this.patternPreferences = this.loadPatternPreferences();
@@ -207,7 +207,21 @@ class SettingsManager {
         document.getElementById('touch-zoom-checkbox').checked = this.touchZoomEnabled;
         document.getElementById('show-zoom-controls-checkbox').checked = this.showZoomControls;
         
-        // Canvas is always in pagination mode now
+        // Load canvas mode setting
+        const canvasModeCheckbox = document.getElementById('infinite-canvas-checkbox');
+        if (canvasModeCheckbox) {
+            canvasModeCheckbox.checked = this.infiniteCanvas;
+        }
+        // Update canvas mode buttons
+        document.querySelectorAll('.canvas-mode-btn').forEach(btn => {
+            const mode = btn.dataset.mode;
+            btn.classList.toggle('active', 
+                (mode === 'infinite' && this.infiniteCanvas) || 
+                (mode === 'pagination' && !this.infiniteCanvas)
+            );
+        });
+        // Update canvas size settings visibility based on mode
+        this.updateCanvasSizeVisibility();
         
         // Load canvas size settings
         document.getElementById('canvas-width-input').value = this.canvasWidth;
@@ -236,7 +250,48 @@ class SettingsManager {
         this.initLanguageSelector();
     }
     
-    // Canvas mode is removed - always use pagination
+    // Set canvas mode (infinite or pagination)
+    setCanvasMode(isInfinite) {
+        this.infiniteCanvas = isInfinite;
+        localStorage.setItem('infiniteCanvas', isInfinite.toString());
+        
+        // Update button states
+        document.querySelectorAll('.canvas-mode-btn').forEach(btn => {
+            const mode = btn.dataset.mode;
+            btn.classList.toggle('active', 
+                (mode === 'infinite' && isInfinite) || 
+                (mode === 'pagination' && !isInfinite)
+            );
+        });
+        
+        // Update checkbox if exists
+        const checkbox = document.getElementById('infinite-canvas-checkbox');
+        if (checkbox) {
+            checkbox.checked = isInfinite;
+        }
+        
+        // Update canvas size settings visibility
+        this.updateCanvasSizeVisibility();
+        
+        // Update pagination controls visibility
+        const paginationControls = document.getElementById('pagination-controls');
+        if (paginationControls) {
+            if (isInfinite) {
+                paginationControls.classList.remove('show');
+            } else {
+                paginationControls.classList.add('show');
+            }
+        }
+    }
+    
+    // Update canvas size settings visibility based on mode
+    updateCanvasSizeVisibility() {
+        const canvasSizeSettings = document.getElementById('canvas-size-settings');
+        if (canvasSizeSettings) {
+            // Show canvas size settings only in pagination mode
+            canvasSizeSettings.style.display = this.infiniteCanvas ? 'none' : 'block';
+        }
+    }
     
     setCanvasPreset(preset) {
         this.canvasPreset = preset;

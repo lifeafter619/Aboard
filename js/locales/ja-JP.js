@@ -268,10 +268,11 @@ window.translations = {
         canvas: {
             title: 'キャンバス設定',
             mode: 'キャンバスモード',
-            modeHint: 'キャンバス表示モードを選択',
+            modeHint: 'キャンバスモードを選択します：無限キャンバスは境界がなく、ページ分割モードは複数ページの管理をサポート',
             size: 'キャンバスサイズ',
             sizeHint: 'プリセットサイズを選択するか、キャンバスをカスタマイズ',
             infiniteCanvas: '無限キャンバス',
+            paginationMode: 'ページ分割モード',
             pagination: 'ページモード',
             presets: {
                 a4Portrait: 'A4 縦向き',

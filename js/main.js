@@ -131,6 +131,18 @@ class DrawingBoard {
         }
         
         this.initializeCanvasView(); // Initialize canvas view (80% scale, centered)
+        
+        // Apply correct canvas mode based on settings
+        if (this.settingsManager.infiniteCanvas) {
+            this.enableInfiniteCanvas();
+        } else {
+            // Pagination mode - ensure controls are visible
+            const paginationControls = document.getElementById('pagination-controls');
+            if (paginationControls) {
+                paginationControls.classList.add('show');
+            }
+        }
+        
         this.updateZoomUI();
         this.applyZoom(false); // Don't update config-area scale on refresh
         this.updateZoomControlsVisibility();
@@ -1321,7 +1333,20 @@ class DrawingBoard {
             this.settingsManager.setGlobalFont(e.target.value);
         });
         
-        // Canvas mode buttons removed - pagination is always active
+        // Canvas mode buttons
+        document.querySelectorAll('.canvas-mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const mode = e.target.dataset.mode;
+                const isInfinite = mode === 'infinite';
+                this.settingsManager.setCanvasMode(isInfinite);
+                // Apply canvas changes
+                if (isInfinite) {
+                    this.enableInfiniteCanvas();
+                } else {
+                    this.enablePaginationMode();
+                }
+            });
+        });
         
         // Canvas preset buttons
         document.querySelectorAll('.canvas-preset-btn').forEach(btn => {
@@ -2349,6 +2374,86 @@ class DrawingBoard {
             this.ctx.putImageData(imageData, 0, 0);
         }
         
+        this.backgroundManager.drawBackground();
+    }
+    
+    // Enable infinite canvas mode
+    enableInfiniteCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Use viewport size for canvas in infinite mode
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        
+        // Set canvas size to viewport
+        this.canvas.width = width * dpr;
+        this.canvas.height = height * dpr;
+        this.canvas.style.width = width + 'px';
+        this.canvas.style.height = height + 'px';
+        
+        this.bgCanvas.width = width * dpr;
+        this.bgCanvas.height = height * dpr;
+        this.bgCanvas.style.width = width + 'px';
+        this.bgCanvas.style.height = height + 'px';
+        
+        // Position canvases at origin
+        if (this.transformLayer) {
+            this.transformLayer.style.position = 'absolute';
+            this.transformLayer.style.left = '0';
+            this.transformLayer.style.top = '0';
+            this.transformLayer.style.width = '100%';
+            this.transformLayer.style.height = '100%';
+            this.transformLayer.style.transform = 'none';
+            
+            this.canvas.style.position = 'absolute';
+            this.canvas.style.left = '0';
+            this.canvas.style.top = '0';
+            this.canvas.style.transform = 'none';
+            
+            this.bgCanvas.style.position = 'absolute';
+            this.bgCanvas.style.left = '0';
+            this.bgCanvas.style.top = '0';
+            this.bgCanvas.style.transform = 'none';
+        }
+        
+        // Re-apply DPR scaling
+        this.ctx.scale(dpr, dpr);
+        this.bgCtx.scale(dpr, dpr);
+        
+        // Reset zoom and pan for infinite mode
+        this.drawingEngine.canvasScale = 1.0;
+        this.drawingEngine.panOffset = { x: 0, y: 0 };
+        this.canvasFitScale = 1.0;
+        
+        // Hide pagination controls
+        const paginationControls = document.getElementById('pagination-controls');
+        if (paginationControls) {
+            paginationControls.classList.remove('show');
+        }
+        
+        // Update zoom UI
+        this.updateZoomUI();
+        this.applyZoom(false);
+        this.backgroundManager.drawBackground();
+    }
+    
+    // Enable pagination mode
+    enablePaginationMode() {
+        // Apply the current canvas size settings
+        this.applyCanvasSize();
+        
+        // Show pagination controls
+        const paginationControls = document.getElementById('pagination-controls');
+        if (paginationControls) {
+            paginationControls.classList.add('show');
+        }
+        
+        // Recalculate fit scale
+        this.canvasFitScale = this.calculateCanvasFitScale();
+        
+        // Update zoom UI
+        this.updateZoomUI();
+        this.applyZoom(false);
         this.backgroundManager.drawBackground();
     }
     

@@ -259,10 +259,11 @@ window.translations = {
         canvas: {
             title: 'Paramètres du canevas',
             mode: 'Mode canevas',
-            modeHint: 'Choisir le mode d\'affichage du canevas',
+            modeHint: 'Choisir le mode du canevas: Canevas infini n\'a pas de limites, Mode pagination supporte la gestion multi-pages',
             size: 'Taille du canevas',
             sizeHint: 'Choisir des tailles prédéfinies ou personnaliser le canevas',
             infiniteCanvas: 'Canevas infini',
+            paginationMode: 'Mode pagination',
             pagination: 'Mode pagination',
             presets: {
                 a4Portrait: 'A4 Portrait',

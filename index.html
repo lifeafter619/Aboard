@@ -657,6 +657,14 @@
                     <!-- Canvas settings -->
                     <div id="canvas-settings" class="settings-tab-content">
                         <h3 data-i18n="settings.canvas.title">画布设置</h3>
+                        <div class="settings-group">
+                            <label data-i18n="settings.canvas.mode">画布模式</label>
+                            <p class="settings-hint" data-i18n="settings.canvas.modeHint">选择画布模式：无限画布没有边界，分页模式支持多页管理</p>
+                            <div class="button-size-options canvas-mode-options">
+                                <button class="canvas-mode-btn" data-mode="infinite" data-i18n="settings.canvas.infiniteCanvas">无限画布</button>
+                                <button class="canvas-mode-btn active" data-mode="pagination" data-i18n="settings.canvas.paginationMode">分页模式</button>
+                            </div>
+                        </div>
                         <div class="settings-group" id="canvas-size-settings">
                             <label data-i18n="settings.canvas.size">画布尺寸</label>
                             <p class="settings-hint" data-i18n="settings.canvas.sizeHint">选择预设尺寸或自定义画布比例和大小</p>

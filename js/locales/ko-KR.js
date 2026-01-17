@@ -268,10 +268,11 @@ window.translations = {
         canvas: {
             title: '캔버스 설정',
             mode: '캔버스 모드',
-            modeHint: '캔버스 표시 모드 선택',
+            modeHint: '캔버스 모드를 선택합니다: 무한 캔버스는 경계가 없으며, 페이지 모드는 다중 페이지 관리를 지원',
             size: '캔버스 크기',
             sizeHint: '사전 설정 크기를 선택하거나 캔버스 사용자 정의',
             infiniteCanvas: '무한 캔버스',
+            paginationMode: '페이지 모드',
             pagination: '페이지 모드',
             presets: {
                 a4Portrait: 'A4 세로',

@@ -259,10 +259,11 @@ window.translations = {
         canvas: {
             title: 'Configuración del lienzo',
             mode: 'Modo de lienzo',
-            modeHint: 'Elegir el modo de visualización del lienzo',
+            modeHint: 'Elegir el modo del lienzo: Lienzo infinito no tiene límites, Modo de paginación admite la gestión de múltiples páginas',
             size: 'Tamaño del lienzo',
             sizeHint: 'Elegir tamaños preestablecidos o personalizar el lienzo',
             infiniteCanvas: 'Lienzo infinito',
+            paginationMode: 'Modo de paginación',
             pagination: 'Modo de paginación',
             presets: {
                 a4Portrait: 'A4 Vertical',

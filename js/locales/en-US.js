@@ -274,10 +274,11 @@ window.translations = {
         canvas: {
             title: 'Canvas Settings',
             mode: 'Canvas Mode',
-            modeHint: 'Choose canvas display mode',
+            modeHint: 'Choose canvas mode: Infinite Canvas has no boundaries, Pagination Mode supports multi-page management',
             size: 'Canvas Size',
             sizeHint: 'Choose preset size or custom size/ratio',
             infiniteCanvas: 'Infinite Canvas',
+            paginationMode: 'Pagination Mode',
             pagination: 'Pagination Mode',
             presets: {
                 a4Portrait: 'A4 Portrait',

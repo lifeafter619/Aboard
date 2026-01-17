@@ -38,6 +38,9 @@ class HelpSystem {
                         label.style.alignItems = 'center';
                         label.style.justifyContent = 'space-between';
                         label.style.width = '100%';
+                        // Add padding-right to prevent overlap with close button
+                        // Close button is 28px wide + 8px from right edge = 36px
+                        label.style.paddingRight = '40px';
                         label.appendChild(btn);
                     }
                 }

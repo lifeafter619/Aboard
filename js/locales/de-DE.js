@@ -261,10 +261,11 @@ window.translations = {
         canvas: {
             title: 'Leinwandeinstellungen',
             mode: 'Leinwandmodus',
-            modeHint: 'Wählen Sie den Leinwand-Anzeigemodus',
+            modeHint: 'Wählen Sie den Leinwand-Modus: Unendliche Leinwand hat keine Grenzen, Seitenmodus unterstützt die Verwaltung mehrerer Seiten',
             size: 'Leinwandgröße',
             sizeHint: 'Wählen Sie voreingestellte Größen oder passen Sie die Leinwand an',
             infiniteCanvas: 'Unendliche Leinwand',
+            paginationMode: 'Seitenmodus',
             pagination: 'Seitenmodus',
             presets: {
                 a4Portrait: 'A4 Hochformat',
