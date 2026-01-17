@@ -8,7 +8,8 @@ class SettingsManager {
         this.controlPosition = localStorage.getItem('controlPosition') || 'top-right';
         this.edgeSnapEnabled = localStorage.getItem('edgeSnapEnabled') !== 'false';
         this.touchZoomEnabled = localStorage.getItem('touchZoomEnabled') !== 'false';
-        this.infiniteCanvas = false; // Always use pagination mode
+        this.canvasMode = localStorage.getItem('canvasMode') || 'standard';
+        this.infiniteCanvas = false; // Deprecated flag, kept for compatibility if needed
         this.showZoomControls = localStorage.getItem('showZoomControls') !== 'false';
         this.showFullscreenBtn = localStorage.getItem('showFullscreenBtn') !== 'false';
         this.patternPreferences = this.loadPatternPreferences();
@@ -37,6 +38,15 @@ class SettingsManager {
         };
     }
     
+    get isInfiniteMode() {
+        return this.canvasMode === 'infinite';
+    }
+
+    setCanvasMode(mode) {
+        this.canvasMode = mode;
+        localStorage.setItem('canvasMode', mode);
+    }
+
     getPatternPreferences() {
         return this.patternPreferences;
     }
@@ -207,7 +217,16 @@ class SettingsManager {
         document.getElementById('touch-zoom-checkbox').checked = this.touchZoomEnabled;
         document.getElementById('show-zoom-controls-checkbox').checked = this.showZoomControls;
         
-        // Canvas is always in pagination mode now
+        // Canvas mode settings
+        document.querySelectorAll('.canvas-mode-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === this.canvasMode);
+        });
+
+        // Show/hide canvas size settings based on mode
+        const canvasSizeSettings = document.getElementById('canvas-size-settings');
+        if (canvasSizeSettings) {
+            canvasSizeSettings.style.display = this.isInfiniteMode ? 'none' : 'block';
+        }
         
         // Load canvas size settings
         document.getElementById('canvas-width-input').value = this.canvasWidth;

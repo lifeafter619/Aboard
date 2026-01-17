@@ -4,6 +4,11 @@
  */
 
 window.translations = {
+    // Messages
+    messages: {
+        switchingModeWarning: '切换模式将清空当前画布。是否继续？'
+    },
+
     // Common
     common: {
         confirm: '确定',
@@ -275,6 +280,8 @@ window.translations = {
             title: '画布设置',
             mode: '画布模式',
             modeHint: '选择画布的显示模式',
+            modeStandard: '标准 (分页)',
+            modeInfinite: '无限 (白板)',
             size: '画布尺寸',
             sizeHint: '选择预设尺寸或自定义画布比例和大小',
             infiniteCanvas: '无限画布',

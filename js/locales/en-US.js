@@ -4,6 +4,11 @@
  */
 
 window.translations = {
+    // Messages
+    messages: {
+        switchingModeWarning: 'Switching modes will clear the current canvas. Continue?'
+    },
+
     // Common
     common: {
         confirm: 'Confirm',
@@ -275,6 +280,8 @@ window.translations = {
             title: 'Canvas Settings',
             mode: 'Canvas Mode',
             modeHint: 'Choose canvas display mode',
+            modeStandard: 'Standard (Pages)',
+            modeInfinite: 'Infinite (Whiteboard)',
             size: 'Canvas Size',
             sizeHint: 'Choose preset size or custom size/ratio',
             infiniteCanvas: 'Infinite Canvas',

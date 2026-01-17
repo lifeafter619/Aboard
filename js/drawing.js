@@ -47,6 +47,7 @@ class DrawingEngine {
         
         // Stroke storage for selection
         this.strokes = [];
+        this.images = []; // Image storage for infinite canvas
         this.selectedStrokeIndex = null;
         this.SELECTION_THRESHOLD = 10; // Distance threshold for stroke selection
         this.COPY_OFFSET = 20; // Offset for copied strokes
@@ -59,8 +60,19 @@ class DrawingEngine {
         };
         this.isPanning = false;
         this.lastPanPoint = null;
+
+        this.infiniteMode = false;
+        this.backgroundManager = null; // Reference for rendering infinite grid
     }
     
+    setInfiniteMode(enabled) {
+        this.infiniteMode = enabled;
+    }
+
+    setBackgroundManager(bgManager) {
+        this.backgroundManager = bgManager;
+    }
+
     /**
      * Set the edge drawing manager for snapping to teaching tool edges
      */
@@ -90,19 +102,34 @@ class DrawingEngine {
     
     getPosition(e) {
         const rect = this.canvas.getBoundingClientRect();
-        // Adjust for canvas scale (CSS transform)
-        const scaleX = this.canvas.offsetWidth / rect.width;
-        const scaleY = this.canvas.offsetHeight / rect.height;
         
-        // Calculate position relative to canvas
-        let x = (e.clientX - rect.left) * scaleX;
-        let y = (e.clientY - rect.top) * scaleY;
-        
-        // Clamp to canvas bounds to prevent drawing outside
-        x = Math.max(0, Math.min(x, this.canvas.offsetWidth));
-        y = Math.max(0, Math.min(y, this.canvas.offsetHeight));
-        
-        return { x, y };
+        if (this.infiniteMode) {
+            // World coordinate calculation for infinite mode
+            // Screen -> Canvas (1:1 usually) -> World (apply zoom and pan)
+            const localX = e.clientX - rect.left;
+            const localY = e.clientY - rect.top;
+
+            // World = (Local / Zoom) - Pan
+            // Note: Pan is applied as translation, so we subtract it to get coord
+            const x = (localX / this.canvasScale) - this.panOffset.x;
+            const y = (localY / this.canvasScale) - this.panOffset.y;
+
+            return { x, y };
+        } else {
+            // Adjust for canvas scale (CSS transform)
+            const scaleX = this.canvas.offsetWidth / rect.width;
+            const scaleY = this.canvas.offsetHeight / rect.height;
+
+            // Calculate position relative to canvas
+            let x = (e.clientX - rect.left) * scaleX;
+            let y = (e.clientY - rect.top) * scaleY;
+
+            // Clamp to canvas bounds to prevent drawing outside
+            x = Math.max(0, Math.min(x, this.canvas.offsetWidth));
+            y = Math.max(0, Math.min(y, this.canvas.offsetHeight));
+
+            return { x, y };
+        }
     }
     
     applyLineStyle() {
@@ -198,6 +225,22 @@ class DrawingEngine {
     startDrawing(e) {
         this.isDrawing = true;
         let pos = this.getPosition(e);
+
+        if (this.infiniteMode && this.currentTool === 'eraser') {
+            // In infinite mode, eraser acts as stroke deleter/manipulator
+            // We handle this in draw() or separate handler, but basic eraser drawing is disabled
+            // Visual feedback is handled by cursor
+            // We can delete stroke immediately on click
+            const strokeIndex = this.findStrokeAtPoint(pos.x, pos.y);
+            if (strokeIndex !== null) {
+                this.selectStroke(strokeIndex);
+                this.deleteSelectedStroke();
+                if (this.backgroundManager) {
+                    this.render(this.backgroundManager);
+                }
+            }
+            return;
+        }
         
         // Reset accumulated distance for dashed line drawing
         this.accumulatedDistance = 0;
@@ -228,6 +271,21 @@ class DrawingEngine {
         this.points = [pos];
         this.lastPoint = pos;
         
+        if (this.infiniteMode) {
+             this.render(this.backgroundManager);
+             // We need to render the current stroke on top
+             // But startDrawing has already set up the context?
+             // render() resets context transform!
+             // So we must setupDrawingContext AGAIN after render()
+             this.setupDrawingContext();
+             // And apply transform for the current stroke being drawn
+             // Wait, setupDrawingContext sets properties.
+             // We need to setTransform for the context to World Coordinates
+             this.ctx.setTransform(this.canvasScale, 0, 0, this.canvasScale,
+                                 this.panOffset.x * this.canvasScale,
+                                 this.panOffset.y * this.canvasScale);
+        }
+
         this.setupDrawingContext();
         
         // For dashed/dotted lines, draw initial dot
@@ -245,8 +303,21 @@ class DrawingEngine {
     
     draw(e) {
         if (!this.isDrawing) return;
-        
+
         let pos = this.getPosition(e);
+
+        if (this.infiniteMode && this.currentTool === 'eraser') {
+            // Eraser dragging in infinite mode (continuous deletion)
+            const strokeIndex = this.findStrokeAtPoint(pos.x, pos.y);
+            if (strokeIndex !== null) {
+                this.selectStroke(strokeIndex);
+                this.deleteSelectedStroke();
+                if (this.backgroundManager) {
+                    this.render(this.backgroundManager);
+                }
+            }
+            return;
+        }
         
         // Check for edge snapping when pen tool is active
         if (this.currentTool === 'pen' && this.edgeDrawingManager) {
@@ -271,6 +342,14 @@ class DrawingEngine {
         
         this.points.push(pos);
         
+        // In Infinite Mode, we must clear and redraw everything to handle the live stroke
+        // because we are in a transformed context, but standard 'draw' methods assume cumulative drawing
+        // Actually, if we set the transform correctly in startDrawing/render, we can just draw the new segment
+        // provided we don't clear the canvas every frame *unless* we are panning.
+        // BUT, if we want to support "Infinite" feeling, we should probably stick to cumulative drawing
+        // for performance, and only re-render on pan/zoom/end.
+        // So, assuming startDrawing set the transform, we just draw.
+
         if (this.points.length >= 2) {
             const lastIndex = this.points.length - 1;
             const prevPoint = this.points[lastIndex - 1];
@@ -329,6 +408,71 @@ class DrawingEngine {
         } else {
             this.lastPoint = pos;
         }
+    }
+
+    render(bgManager) {
+        if (!this.infiniteMode) return;
+
+        // Clear canvas (in screen coordinates)
+        this.ctx.save();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.restore();
+
+        // Render Background (Infinite Grid)
+        if (bgManager) {
+            bgManager.renderInfinite(this.canvasScale, this.panOffset.x, this.panOffset.y);
+        }
+
+        // Setup Transform
+        this.ctx.save();
+        this.ctx.setTransform(this.canvasScale, 0, 0, this.canvasScale,
+                            this.panOffset.x * this.canvasScale,
+                            this.panOffset.y * this.canvasScale);
+
+        // Render Images
+        if (this.images) {
+            this.images.forEach(imgData => {
+                this.ctx.save();
+                // Move to center of image
+                const centerX = imgData.x + imgData.width / 2;
+                const centerY = imgData.y + imgData.height / 2;
+                this.ctx.translate(centerX, centerY);
+                this.ctx.rotate(imgData.rotation * Math.PI / 180);
+                const flipX = imgData.flipHorizontal ? -1 : 1;
+                const flipY = imgData.flipVertical ? -1 : 1;
+                this.ctx.scale(flipX, flipY);
+
+                // Draw image
+                // We need the actual image element. storing src data URL is fine
+                // But creating new Image() every frame is bad.
+                // We should cache Image objects.
+                // For now, assuming imgData has .imgObject if loaded, or we try to load it.
+                // MVP: If imgObject exists, draw it.
+                if (imgData.imgObject) {
+                    this.ctx.drawImage(imgData.imgObject,
+                        -imgData.width / 2, -imgData.height / 2,
+                        imgData.width, imgData.height);
+                } else if (imgData.src) {
+                    // Load it (once)
+                    const img = new Image();
+                    img.src = imgData.src;
+                    img.onload = () => {
+                        imgData.imgObject = img;
+                        if (this.backgroundManager) this.render(this.backgroundManager);
+                    };
+                    // Don't draw yet
+                }
+                this.ctx.restore();
+            });
+        }
+
+        // Render Strokes
+        this.strokes.forEach(stroke => {
+            this.redrawStroke(stroke);
+        });
+
+        this.ctx.restore();
     }
     
     /**
@@ -613,6 +757,10 @@ class DrawingEngine {
         
         // Reduce pan sensitivity with a damping factor
         const dampingFactor = 0.5; // Lower value = less sensitive
+
+        // For Infinite Mode, we want 1:1 panning feel usually, or consistent with zoom
+        // If we use canvasScale here, it normalizes speed across zoom levels
+
         const dx = (e.clientX - this.lastPanPoint.x) / this.canvasScale * dampingFactor;
         const dy = (e.clientY - this.lastPanPoint.y) / this.canvasScale * dampingFactor;
         
@@ -623,6 +771,10 @@ class DrawingEngine {
         
         localStorage.setItem('panOffsetX', this.panOffset.x);
         localStorage.setItem('panOffsetY', this.panOffset.y);
+
+        if (this.infiniteMode && this.backgroundManager) {
+            this.render(this.backgroundManager);
+        }
     }
     
     stopPanning() {
@@ -860,6 +1012,7 @@ class DrawingEngine {
     
     clearStrokes() {
         this.strokes = [];
+        this.images = [];
         this.selectedStrokeIndex = null;
     }
 }

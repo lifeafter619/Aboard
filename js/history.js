@@ -8,15 +8,33 @@ class HistoryManager {
         this.history = [];
         this.historyStep = -1;
         this.maxHistory = 50;
+        this.settingsManager = null;
+        this.drawingEngine = null;
+    }
+
+    setDependencies(settingsManager, drawingEngine) {
+        this.settingsManager = settingsManager;
+        this.drawingEngine = drawingEngine;
     }
     
     saveState() {
         // Remove any states after current step
         this.history = this.history.slice(0, this.historyStep + 1);
         
-        // Save current canvas state
-        const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        this.history.push(imageData);
+        if (this.settingsManager && this.settingsManager.isInfiniteMode && this.drawingEngine) {
+            // Save vector state for infinite mode
+            const state = {
+                type: 'vector',
+                strokes: JSON.parse(JSON.stringify(this.drawingEngine.strokes)),
+                images: JSON.parse(JSON.stringify(this.drawingEngine.images))
+            };
+            this.history.push(state);
+        } else {
+            // Save current canvas state (pixel)
+            const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+            this.history.push(imageData);
+        }
+
         this.historyStep++;
         
         // Limit history size
@@ -46,8 +64,19 @@ class HistoryManager {
     
     restoreState() {
         if (this.historyStep >= 0 && this.historyStep < this.history.length) {
-            const imageData = this.history[this.historyStep];
-            this.ctx.putImageData(imageData, 0, 0);
+            const state = this.history[this.historyStep];
+
+            if (state.type === 'vector' && this.drawingEngine) {
+                // Restore vector state
+                this.drawingEngine.strokes = JSON.parse(JSON.stringify(state.strokes));
+                this.drawingEngine.images = JSON.parse(JSON.stringify(state.images));
+                if (this.drawingEngine.backgroundManager) {
+                    this.drawingEngine.render(this.drawingEngine.backgroundManager);
+                }
+            } else if (state instanceof ImageData) {
+                // Restore pixel state
+                this.ctx.putImageData(state, 0, 0);
+            }
         }
     }
     

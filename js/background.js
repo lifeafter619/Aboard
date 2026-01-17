@@ -60,63 +60,149 @@ class BackgroundManager {
         // Handle background image visibility
         this.updateBackgroundImageElement();
 
-        // If using image pattern, we might want to make canvas background transparent or specific color
-        // If the user wants opacity control over the background COLOR when image is behind:
-        // Current logic: Image replaces background color? Or sits on top?
-        // If image is an element behind canvas (or z-indexed), we need transparency.
-        // But we put image element behind background canvas?
-        // Let's assume we want: Background Color -> Image Element -> Background Pattern (Grid)
-        // But `drawBackground` fills color first.
-        // If pattern is 'image', we should NOT fill opaque color if we want to see the image element (if it's behind).
-        // However, we decided to put image element ON TOP of bgCanvas (or handled via DOM).
-
-        // If pattern is 'image', we handle it via DOM element.
-        // We still fill background color on bgCanvas as a base layer?
-        // If image is transparent (e.g. PNG), we see background color.
-
         this.bgCtx.globalAlpha = this.bgOpacity;
         this.bgCtx.fillStyle = this.backgroundColor;
         this.bgCtx.fillRect(0, 0, this.bgCanvas.width, this.bgCanvas.height);
         this.bgCtx.globalAlpha = 1.0;
-        
+
         this.drawBackgroundPattern();
+    }
+
+    renderInfinite(scale, panX, panY) {
+        // Clear screen (in screen coords)
+        this.bgCtx.setTransform(1, 0, 0, 1, 0, 0);
+        this.bgCtx.clearRect(0, 0, this.bgCanvas.width, this.bgCanvas.height);
+
+        // Fill Background Color (Screen Space)
+        this.bgCtx.globalAlpha = this.bgOpacity;
+        this.bgCtx.fillStyle = this.backgroundColor;
+        this.bgCtx.fillRect(0, 0, this.bgCanvas.width, this.bgCanvas.height);
+        this.bgCtx.globalAlpha = 1.0;
+
+        // Calculate visible bounds in World Coordinates
+        const visibleBounds = {
+            minX: -panX / scale,
+            minY: -panY / scale,
+            maxX: (this.bgCanvas.width / scale) - panX / scale, // Assuming 1:1 pixel mapping for bgCanvas.width
+            maxY: (this.bgCanvas.height / scale) - panY / scale
+        };
+        // Note: bgCanvas.width is physical pixels? No, it's logical pixels * dpr.
+        // But ctx commands usually use logical pixels if we didn't scale context?
+        // Wait, main.js does `bgCtx.scale(dpr, dpr)`.
+        // If we reset transform to Identity (1,0,0,1,0,0), we lose DPR scaling.
+        // So we must handle DPR.
         
-        // Performance optimization: Avoid synchronous localStorage writes in draw loop
-        // These are now handled in setters
+        const dpr = window.devicePixelRatio || 1;
+        // Re-apply DPR scaling combined with World Transform
+        // Transform = Scale(dpr) * Scale(zoom) * Translate(pan)?
+        // No, Screen = (World * Zoom + Pan) * DPR.
+        // So setTransform(Zoom*DPR, 0, 0, Zoom*DPR, PanX*DPR, PanY*DPR).
+
+        // Let's rely on panX/panY being in Logical Pixels (CSS pixels).
+        // bgCanvas.width is Physical Pixels.
+        // visibleBounds calculations should be in Logical World Units.
+        // ScreenLogicalWidth = bgCanvas.width / dpr.
+
+        visibleBounds.maxX = (this.bgCanvas.width / dpr / scale) - (panX / scale);
+        visibleBounds.maxY = (this.bgCanvas.height / dpr / scale) - (panY / scale);
+        visibleBounds.minX = -panX / scale;
+        visibleBounds.minY = -panY / scale;
+
+        // Apply Transform
+        this.bgCtx.setTransform(scale * dpr, 0, 0, scale * dpr, panX * dpr, panY * dpr);
+
+        this.drawBackgroundPattern(visibleBounds);
+        
+        // Restore to default (DPR scaled) for safety?
+        // Actually main.js usually sets scale(dpr, dpr).
+        this.bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     
-    drawBackgroundPattern() {
+    drawBackgroundPattern(bounds = null) {
         if (this.backgroundPattern === 'blank') return;
         
         if (this.backgroundPattern === 'image') {
             // Handled by updateBackgroundImageElement
+            // But in Infinite Mode, updateBackgroundImageElement (DOM) might not work well
+            // if we are just moving the DOM container.
+            // InfiniteCanvasManager usually handles rendering via render().
+            // But BackgroundManager handles background image via DOM.
+            // If main.js calls updateBackgroundImageElement, it relies on CSS transform of parent.
+            // If Infinite Mode disables parent transform, we need to update DOM element manually?
+            // Yes.
             return;
         }
         
         this.bgCtx.save();
         this.bgCtx.globalCompositeOperation = 'source-over';
         
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = 1; // Since we handled DPR in transform, drawing functions should assume 1 unit = 1 logical pixel
+        // Wait, existing functions multiply by DPR!
+        // `const baseSpacing = 20 * dpr;`
+        // If I use setTransform with DPR, then drawing 20*dpr results in 20*dpr*dpr physical pixels!
+        // I need to normalize.
+        // If I pass dpr=1 to functions, they draw 20 units. With transform scale*dpr, it becomes 20*scale*dpr physical.
+        // This seems correct for Infinite Mode (Zoomable).
+
+        // However, for Standard Mode, `drawBackground` calls `drawBackgroundPattern` with `dpr = window.devicePixelRatio`.
+        // And `drawBackground` does NOT set transform (it uses the one set in main.js resizeCanvas: scale(dpr, dpr)).
+        // So existing functions expect to be called with `dpr` scaling factor if the context is already scaled by dpr?
+        // No, if context is scaled by DPR, drawing "1" results in "1*DPR" physical pixels.
+        // The functions use `20 * dpr`. This implies they want 20 physical pixels?
+        // Let's check `drawDotsPattern`.
+        // `ctx.arc(x, y, 1 * dpr...)`.
+        // If context is scaled by DPR, `1 * dpr` -> `1 * dpr * dpr` pixels. That's huge.
+        // Let's check `main.js`.
+        // `this.bgCtx.scale(dpr, dpr);`
+        // So `drawBackground` runs in a scaled context.
+        // `drawDotsPattern` uses `dpr`.
+        // So dots are drawn at `20 * dpr` logical coordinates? No, that would be `20 * dpr * dpr` physical.
+        // Maybe I misunderstood `dpr` usage in this codebase.
+        // If `scale(dpr, dpr)` is applied, drawing `10` means 10 logical pixels.
+        // Why multiply by `dpr` inside the functions?
+        // Maybe to keep line width consistent in physical pixels? `lineWidth = 0.5 * dpr`.
+        // If scale is applied, `lineWidth = 0.5` -> `0.5 * dpr` physical.
+        // If they assume `lineWidth = 0.5 * dpr`, then result is `0.5 * dpr * dpr` physical?
+        // Unless `dpr` passed to functions is 1?
+        // `const dpr = window.devicePixelRatio || 1;` in `drawBackgroundPattern`.
+        // It passes actual DPR.
+
+        // Okay, so the existing code seems to double-apply DPR if context is scaled?
+        // Or maybe `drawBackground` restores context? No.
+        // Let's assume the existing code is correct for Standard Mode.
+
+        // For Infinite Mode `renderInfinite`, I set transform `scale * dpr`.
+        // So if I want to match Standard Mode behavior, I should pass `dpr` as well.
+
+        const dprPassed = window.devicePixelRatio || 1;
         const patternColor = this.getPatternColor();
         
+        // Define bounds if not provided
+        const drawBounds = bounds || {
+            minX: 0,
+            maxX: this.bgCanvas.width / dprPassed, // Logical width
+            minY: 0,
+            maxY: this.bgCanvas.height / dprPassed
+        };
+
         switch(this.backgroundPattern) {
             case 'dots':
-                this.drawDotsPattern(dpr, patternColor);
+                this.drawDotsPattern(dprPassed, patternColor, drawBounds);
                 break;
             case 'grid':
-                this.drawGridPattern(dpr, patternColor);
+                this.drawGridPattern(dprPassed, patternColor, drawBounds);
                 break;
             case 'tianzige':
-                this.drawTianzigePattern(dpr, patternColor);
+                this.drawTianzigePattern(dprPassed, patternColor, drawBounds);
                 break;
             case 'english-lines':
-                this.drawEnglishLinesPattern(dpr, patternColor);
+                this.drawEnglishLinesPattern(dprPassed, patternColor, drawBounds);
                 break;
             case 'music-staff':
-                this.drawMusicStaffPattern(dpr, patternColor);
+                this.drawMusicStaffPattern(dprPassed, patternColor, drawBounds);
                 break;
             case 'coordinate':
-                this.drawCoordinatePattern(dpr, patternColor);
+                this.drawCoordinatePattern(dprPassed, patternColor, drawBounds);
                 break;
         }
         
@@ -310,13 +396,17 @@ class BackgroundManager {
         // If we change from N to 0, we need to stop counting/stopping.
     }
 
-    drawDotsPattern(dpr, patternColor) {
+    drawDotsPattern(dpr, patternColor, bounds) {
         const baseSpacing = 20 * dpr;
         const spacing = baseSpacing / this.patternDensity;
         this.bgCtx.fillStyle = patternColor;
         
-        for (let x = spacing; x < this.bgCanvas.width; x += spacing) {
-            for (let y = spacing; y < this.bgCanvas.height; y += spacing) {
+        // Align to grid
+        const startX = Math.floor(bounds.minX / spacing) * spacing;
+        const startY = Math.floor(bounds.minY / spacing) * spacing;
+
+        for (let x = startX; x < bounds.maxX; x += spacing) {
+            for (let y = startY; y < bounds.maxY; y += spacing) {
                 this.bgCtx.beginPath();
                 this.bgCtx.arc(x, y, 1 * dpr, 0, Math.PI * 2);
                 this.bgCtx.fill();
@@ -324,34 +414,40 @@ class BackgroundManager {
         }
     }
     
-    drawGridPattern(dpr, patternColor) {
+    drawGridPattern(dpr, patternColor, bounds) {
         const baseSpacing = 20 * dpr;
         const spacing = baseSpacing / this.patternDensity;
         this.bgCtx.strokeStyle = patternColor;
         this.bgCtx.lineWidth = 0.5 * dpr;
         
-        for (let x = spacing; x < this.bgCanvas.width; x += spacing) {
+        const startX = Math.floor(bounds.minX / spacing) * spacing;
+        const startY = Math.floor(bounds.minY / spacing) * spacing;
+
+        for (let x = startX; x < bounds.maxX; x += spacing) {
             this.bgCtx.beginPath();
-            this.bgCtx.moveTo(x, 0);
-            this.bgCtx.lineTo(x, this.bgCanvas.height);
+            this.bgCtx.moveTo(x, bounds.minY);
+            this.bgCtx.lineTo(x, bounds.maxY);
             this.bgCtx.stroke();
         }
         
-        for (let y = spacing; y < this.bgCanvas.height; y += spacing) {
+        for (let y = startY; y < bounds.maxY; y += spacing) {
             this.bgCtx.beginPath();
-            this.bgCtx.moveTo(0, y);
-            this.bgCtx.lineTo(this.bgCanvas.width, y);
+            this.bgCtx.moveTo(bounds.minX, y);
+            this.bgCtx.lineTo(bounds.maxX, y);
             this.bgCtx.stroke();
         }
     }
     
-    drawTianzigePattern(dpr, patternColor) {
+    drawTianzigePattern(dpr, patternColor, bounds) {
         const baseCellSize = 60 * dpr;
         const cellSize = baseCellSize / this.patternDensity;
         this.bgCtx.strokeStyle = patternColor;
         
-        for (let x = 0; x < this.bgCanvas.width; x += cellSize) {
-            for (let y = 0; y < this.bgCanvas.height; y += cellSize) {
+        const startX = Math.floor(bounds.minX / cellSize) * cellSize;
+        const startY = Math.floor(bounds.minY / cellSize) * cellSize;
+
+        for (let x = startX; x < bounds.maxX; x += cellSize) {
+            for (let y = startY; y < bounds.maxY; y += cellSize) {
                 this.bgCtx.lineWidth = 2 * dpr;
                 this.bgCtx.strokeRect(x, y, cellSize, cellSize);
                 
@@ -379,63 +475,69 @@ class BackgroundManager {
         }
     }
     
-    drawEnglishLinesPattern(dpr, patternColor) {
+    drawEnglishLinesPattern(dpr, patternColor, bounds) {
         const baseLineHeight = 60 * dpr;
         const lineHeight = baseLineHeight / this.patternDensity;
         
-        for (let y = lineHeight; y < this.bgCanvas.height; y += lineHeight) {
+        const startY = Math.floor(bounds.minY / lineHeight) * lineHeight;
+
+        for (let y = startY; y < bounds.maxY; y += lineHeight) {
             this.bgCtx.strokeStyle = patternColor;
             this.bgCtx.lineWidth = 1 * dpr;
             this.bgCtx.beginPath();
-            this.bgCtx.moveTo(0, y);
-            this.bgCtx.lineTo(this.bgCanvas.width, y);
+            this.bgCtx.moveTo(bounds.minX, y);
+            this.bgCtx.lineTo(bounds.maxX, y);
             this.bgCtx.stroke();
             
             this.bgCtx.lineWidth = 0.5 * dpr;
             this.bgCtx.setLineDash([5 * dpr, 5 * dpr]);
             this.bgCtx.beginPath();
-            this.bgCtx.moveTo(0, y + lineHeight / 4);
-            this.bgCtx.lineTo(this.bgCanvas.width, y + lineHeight / 4);
+            this.bgCtx.moveTo(bounds.minX, y + lineHeight / 4);
+            this.bgCtx.lineTo(bounds.maxX, y + lineHeight / 4);
             this.bgCtx.stroke();
             
             this.bgCtx.setLineDash([]);
             this.bgCtx.strokeStyle = this.isLightBackground() ? 'rgba(255, 0, 0, 0.3)' : 'rgba(255, 100, 100, 0.5)';
             this.bgCtx.lineWidth = 1 * dpr;
             this.bgCtx.beginPath();
-            this.bgCtx.moveTo(0, y + lineHeight / 2);
-            this.bgCtx.lineTo(this.bgCanvas.width, y + lineHeight / 2);
+            this.bgCtx.moveTo(bounds.minX, y + lineHeight / 2);
+            this.bgCtx.lineTo(bounds.maxX, y + lineHeight / 2);
             this.bgCtx.stroke();
             
             this.bgCtx.strokeStyle = patternColor;
             this.bgCtx.lineWidth = 0.5 * dpr;
             this.bgCtx.setLineDash([5 * dpr, 5 * dpr]);
             this.bgCtx.beginPath();
-            this.bgCtx.moveTo(0, y + 3 * lineHeight / 4);
-            this.bgCtx.lineTo(this.bgCanvas.width, y + 3 * lineHeight / 4);
+            this.bgCtx.moveTo(bounds.minX, y + 3 * lineHeight / 4);
+            this.bgCtx.lineTo(bounds.maxX, y + 3 * lineHeight / 4);
             this.bgCtx.stroke();
             this.bgCtx.setLineDash([]);
         }
     }
     
-    drawMusicStaffPattern(dpr, patternColor) {
+    drawMusicStaffPattern(dpr, patternColor, bounds) {
         const baseStaffHeight = 80 * dpr;
         const staffHeight = baseStaffHeight / this.patternDensity;
         const lineSpacing = staffHeight / 4;
         this.bgCtx.strokeStyle = patternColor;
         this.bgCtx.lineWidth = 1 * dpr;
         
-        for (let startY = staffHeight; startY < this.bgCanvas.height; startY += staffHeight * 2) {
+        // Align to staff blocks (height * 2)
+        const blockHeight = staffHeight * 2;
+        const startY = Math.floor(bounds.minY / blockHeight) * blockHeight + staffHeight; // Offset by staffHeight
+
+        for (let baseY = startY; baseY < bounds.maxY; baseY += blockHeight) {
             for (let i = 0; i < 5; i++) {
-                const y = startY + i * lineSpacing;
+                const y = baseY + i * lineSpacing;
                 this.bgCtx.beginPath();
-                this.bgCtx.moveTo(0, y);
-                this.bgCtx.lineTo(this.bgCanvas.width, y);
+                this.bgCtx.moveTo(bounds.minX, y);
+                this.bgCtx.lineTo(bounds.maxX, y);
                 this.bgCtx.stroke();
             }
         }
     }
     
-    drawCoordinatePattern(dpr, patternColor) {
+    drawCoordinatePattern(dpr, patternColor, bounds) {
         // Coordinate system center is always at the exact center of the canvas
         // The origin offset is applied relative to this center
         const centerX = (this.bgCanvas.width / 2) + (this.coordinateOriginX * dpr);
@@ -447,17 +549,21 @@ class BackgroundManager {
         this.bgCtx.lineWidth = 0.5 * dpr;
         
         // Draw grid lines
-        for (let x = centerX % gridSize; x < this.bgCanvas.width; x += gridSize) {
+        // Align to grid based on center
+        const startX = Math.floor((bounds.minX - centerX) / gridSize) * gridSize + centerX;
+        const startY = Math.floor((bounds.minY - centerY) / gridSize) * gridSize + centerY;
+
+        for (let x = startX; x < bounds.maxX; x += gridSize) {
             this.bgCtx.beginPath();
-            this.bgCtx.moveTo(x, 0);
-            this.bgCtx.lineTo(x, this.bgCanvas.height);
+            this.bgCtx.moveTo(x, bounds.minY);
+            this.bgCtx.lineTo(x, bounds.maxY);
             this.bgCtx.stroke();
         }
         
-        for (let y = centerY % gridSize; y < this.bgCanvas.height; y += gridSize) {
+        for (let y = startY; y < bounds.maxY; y += gridSize) {
             this.bgCtx.beginPath();
-            this.bgCtx.moveTo(0, y);
-            this.bgCtx.lineTo(this.bgCanvas.width, y);
+            this.bgCtx.moveTo(bounds.minX, y);
+            this.bgCtx.lineTo(bounds.maxX, y);
             this.bgCtx.stroke();
         }
         
@@ -467,30 +573,37 @@ class BackgroundManager {
         
         // X-axis
         this.bgCtx.beginPath();
-        this.bgCtx.moveTo(0, centerY);
-        this.bgCtx.lineTo(this.bgCanvas.width, centerY);
+        this.bgCtx.moveTo(bounds.minX, centerY);
+        this.bgCtx.lineTo(bounds.maxX, centerY);
         this.bgCtx.stroke();
         
         // Y-axis
         this.bgCtx.beginPath();
-        this.bgCtx.moveTo(centerX, 0);
-        this.bgCtx.lineTo(centerX, this.bgCanvas.height);
+        this.bgCtx.moveTo(centerX, bounds.minY);
+        this.bgCtx.lineTo(centerX, bounds.maxY);
         this.bgCtx.stroke();
         
         // Draw arrow on X-axis
         const arrowSize = 10 * dpr;
         
+        // Only draw arrows if visible? Or just draw them at ends of bounds?
+        // Standard behavior is at canvas edge.
+        // Infinite Canvas: Axes extend forever.
+        // Maybe draw arrows at visible edge?
+        // Let's draw arrows at visible edge.
+
         this.bgCtx.beginPath();
-        this.bgCtx.moveTo(this.bgCanvas.width - arrowSize, centerY - arrowSize / 2);
-        this.bgCtx.lineTo(this.bgCanvas.width, centerY);
-        this.bgCtx.lineTo(this.bgCanvas.width - arrowSize, centerY + arrowSize / 2);
+        this.bgCtx.moveTo(bounds.maxX - arrowSize, centerY - arrowSize / 2);
+        this.bgCtx.lineTo(bounds.maxX, centerY);
+        this.bgCtx.lineTo(bounds.maxX - arrowSize, centerY + arrowSize / 2);
         this.bgCtx.stroke();
         
         // Draw arrow on Y-axis
         this.bgCtx.beginPath();
-        this.bgCtx.moveTo(centerX - arrowSize / 2, arrowSize);
-        this.bgCtx.lineTo(centerX, 0);
-        this.bgCtx.lineTo(centerX + arrowSize / 2, arrowSize);
+        this.bgCtx.moveTo(centerX - arrowSize / 2, bounds.minY + arrowSize); // Arrow points up (minY) or down?
+        // Canvas Y is 0 at top. Arrow usually at top.
+        this.bgCtx.lineTo(centerX, bounds.minY);
+        this.bgCtx.lineTo(centerX + arrowSize / 2, bounds.minY + arrowSize);
         this.bgCtx.stroke();
         
         // Draw draggable origin point

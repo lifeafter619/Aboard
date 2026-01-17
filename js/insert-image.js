@@ -432,33 +432,62 @@ class InsertImageManager {
     confirmImage() {
         if (!this.currentImage) return;
 
-        this.ctx.save();
+        if (this.drawingEngine.infiniteMode) {
+            // In infinite mode, store image as object in vector list
+            const imgData = {
+                src: this.currentImage.src,
+                x: this.imagePosition.x,
+                y: this.imagePosition.y,
+                width: this.imageSize.width,
+                height: this.imageSize.height,
+                rotation: this.imageRotation,
+                flipHorizontal: this.flipHorizontal,
+                flipVertical: this.flipVertical,
+                imgObject: this.currentImage // Cache the loaded image object
+            };
 
-        // Move to center of image to rotate
-        const centerX = this.imagePosition.x + this.imageSize.width / 2;
-        const centerY = this.imagePosition.y + this.imageSize.height / 2;
+            this.drawingEngine.images.push(imgData);
 
-        this.ctx.translate(centerX, centerY);
-        this.ctx.rotate(this.imageRotation * Math.PI / 180);
+            // Trigger render
+            if (this.drawingEngine.backgroundManager) {
+                this.drawingEngine.render(this.drawingEngine.backgroundManager);
+            }
 
-        // Apply flip
-        const flipScaleX = this.flipHorizontal ? -1 : 1;
-        const flipScaleY = this.flipVertical ? -1 : 1;
-        this.ctx.scale(flipScaleX, flipScaleY);
+            // Save state (via history manager if it handles infinite mode, or direct?)
+            // HistoryManager needs to know we changed something.
+            // InfiniteCanvasManager usually saves state on change?
+            // Currently HistoryManager.saveState() handles pixels OR vectors (planned modification).
+            this.historyManager.saveState();
 
-        // Draw image centered at (0,0)
-        this.ctx.drawImage(
-            this.currentImage,
-            -this.imageSize.width / 2,
-            -this.imageSize.height / 2,
-            this.imageSize.width,
-            this.imageSize.height
-        );
+        } else {
+            this.ctx.save();
 
-        this.ctx.restore();
+            // Move to center of image to rotate
+            const centerX = this.imagePosition.x + this.imageSize.width / 2;
+            const centerY = this.imagePosition.y + this.imageSize.height / 2;
 
-        // Save history
-        this.historyManager.saveState();
+            this.ctx.translate(centerX, centerY);
+            this.ctx.rotate(this.imageRotation * Math.PI / 180);
+
+            // Apply flip
+            const flipScaleX = this.flipHorizontal ? -1 : 1;
+            const flipScaleY = this.flipVertical ? -1 : 1;
+            this.ctx.scale(flipScaleX, flipScaleY);
+
+            // Draw image centered at (0,0)
+            this.ctx.drawImage(
+                this.currentImage,
+                -this.imageSize.width / 2,
+                -this.imageSize.height / 2,
+                this.imageSize.width,
+                this.imageSize.height
+            );
+
+            this.ctx.restore();
+
+            // Save history
+            this.historyManager.saveState();
+        }
 
         this.close();
     }

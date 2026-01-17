@@ -61,6 +61,9 @@ class DrawingBoard {
         // Transform layer
         this.transformLayer = document.getElementById('transform-layer');
 
+        // Infinite Canvas Manager
+        this.infiniteCanvasManager = new InfiniteCanvasManager(this.drawingEngine, this.historyManager);
+
         // Pagination
         this.currentPage = 1;
         this.pages = [];
@@ -106,24 +109,42 @@ class DrawingBoard {
         // Connect edge drawing manager to drawing engine
         this.drawingEngine.setEdgeDrawingManager(this.edgeDrawingManager);
         
+        // Initialize dependencies
+        this.historyManager.setDependencies(this.settingsManager, this.drawingEngine);
+        this.drawingEngine.setBackgroundManager(this.backgroundManager);
+
         // Initialize
         this.resizeCanvas();
         this.setupEventListeners();
         this.settingsManager.loadSettings();
+
+        // Initialize Canvas Mode
+        this.initializeCanvasMode();
+
         this.backgroundManager.drawBackground();
         this.updateUI();
-        this.historyManager.saveState();
         
-        // Initialize pages array for pagination mode (always on)
-        if (this.pages.length === 0) {
-            this.pages.push(this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height));
-            this.currentPage = 1;
+        if (!this.settingsManager.isInfiniteMode) {
+            this.historyManager.saveState();
+
+            // Initialize pages array for pagination mode (always on)
+            if (this.pages.length === 0) {
+                this.pages.push(this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height));
+                this.currentPage = 1;
+                this.updatePaginationUI();
+            }
+
+            this.initializeCanvasView(); // Initialize canvas view (80% scale, centered)
+            this.applyZoom(false); // Don't update config-area scale on refresh
+        } else {
+            // Infinite mode initialization
+            this.drawingEngine.setInfiniteMode(true);
             this.updatePaginationUI();
+            // Render initial state
+            this.drawingEngine.render(this.backgroundManager);
         }
         
-        this.initializeCanvasView(); // Initialize canvas view (80% scale, centered)
         this.updateZoomUI();
-        this.applyZoom(false); // Don't update config-area scale on refresh
         this.updateZoomControlsVisibility();
         this.updateFullscreenBtnVisibility();
         this.updatePatternGrid();
@@ -1259,6 +1280,16 @@ class DrawingBoard {
         
         // Canvas mode buttons removed - pagination is always active
         
+        // Canvas mode buttons
+        document.querySelectorAll('.canvas-mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const mode = e.target.dataset.mode;
+                this.setCanvasMode(mode);
+                // UI update is handled in setCanvasMode -> loadSettings
+            });
+        });
+
+
         // Canvas preset buttons
         document.querySelectorAll('.canvas-preset-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -2208,8 +2239,70 @@ class DrawingBoard {
         paginationControls.classList.add('show');
     }
     
+    initializeCanvasMode() {
+        if (this.settingsManager.isInfiniteMode) {
+            this.drawingEngine.setInfiniteMode(true);
+            this.transformLayer.style.transform = 'none'; // Reset any transforms
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+            this.bgCanvas.width = window.innerWidth;
+            this.bgCanvas.height = window.innerHeight;
+        } else {
+            this.drawingEngine.setInfiniteMode(false);
+        }
+    }
+
+    setCanvasMode(mode) {
+        if (this.settingsManager.canvasMode === mode) return;
+
+        // Show confirmation if canvas is not empty
+        if (confirm(window.i18n ? window.i18n.t('messages.switchingModeWarning') : 'Switching modes will clear the current canvas. Continue?')) {
+            this.settingsManager.setCanvasMode(mode);
+            this.drawingEngine.clearCanvas(); // Clear existing content
+
+            // Reset to page 1 for the new mode
+            if (mode === 'infinite') {
+                this.infiniteCanvasManager.currentPage = 1;
+                // Force reload of state or reset
+                this.infiniteCanvasManager.loadState();
+                if (this.infiniteCanvasManager.pages.length === 0) this.infiniteCanvasManager.addPage();
+                else this.infiniteCanvasManager.loadPage(1);
+            } else {
+                this.currentPage = 1;
+                // Reset standard pages (or reload if we supported persistence for them)
+                // Standard mode persistence is less robust in this MVP implementation
+                this.pages = [];
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.pages.push(this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height));
+            }
+
+            // Re-initialize view
+            this.resizeCanvas(); // Will trigger initializeCanvasMode inside if refactored, or we call it
+            this.initializeCanvasMode();
+
+            if (mode === 'infinite') {
+                this.drawingEngine.render(this.backgroundManager);
+            } else {
+                this.initializeCanvasView();
+            }
+
+            this.updatePaginationUI();
+            this.updateZoomUI();
+
+            // Reload settings to update UI toggle
+            this.settingsManager.loadSettings();
+        } else {
+            // Revert UI toggle if cancelled (handled by UI listener usually)
+            // But here we are setting mode programmatically usually?
+            // If called from UI click, we need to revert the radio button/select
+            this.settingsManager.loadSettings(); // Reloads UI to previous state
+        }
+    }
+
     // Calculate the scale needed to fit canvas within viewport with margins
     calculateCanvasFitScale() {
+        if (this.settingsManager.isInfiniteMode) return 1.0;
+
         const width = this.settingsManager.canvasWidth;
         const height = this.settingsManager.canvasHeight;
         const viewportWidth = window.innerWidth;
@@ -2227,6 +2320,11 @@ class DrawingBoard {
     }
     
     applyCanvasSize() {
+        if (this.settingsManager.isInfiniteMode) {
+            this.resizeCanvas(); // Just fill window
+            return;
+        }
+
         // Always use pagination mode now
         const width = this.settingsManager.canvasWidth;
         const height = this.settingsManager.canvasHeight;
@@ -2235,8 +2333,12 @@ class DrawingBoard {
         // Save current content
         const oldWidth = this.canvas.width;
         const oldHeight = this.canvas.height;
-        const imageData = this.historyManager.historyStep >= 0 ? 
-            this.ctx.getImageData(0, 0, oldWidth, oldHeight) : null;
+        let imageData = null;
+        try {
+             if (this.historyManager.historyStep >= 0 && !this.settingsManager.isInfiniteMode) {
+                 imageData = this.ctx.getImageData(0, 0, oldWidth, oldHeight);
+             }
+        } catch(e) { console.warn("Cannot save image data during resize", e); }
         
         // Set canvas size and CSS size
         this.canvas.width = width * dpr;
@@ -2390,6 +2492,30 @@ class DrawingBoard {
     }
     
     applyZoom(updateConfigScale = true) {
+        if (this.settingsManager.isInfiniteMode) {
+            // In infinite mode, we redraw instead of using CSS transform on the layer
+            // Reset transform layer to Identity (or fixed center?)
+            // Actually, we want the canvas to just fill the screen.
+            if (this.transformLayer) {
+                this.transformLayer.style.transform = 'none';
+                this.transformLayer.style.left = '0';
+                this.transformLayer.style.top = '0';
+                this.transformLayer.style.width = '100%';
+                this.transformLayer.style.height = '100%';
+            }
+
+            this.drawingEngine.render(this.backgroundManager);
+
+            // Update teaching tools scale factor - Infinite mode might need special handling for tools
+            this.teachingToolsManager.canvasScaleFactor = this.drawingEngine.canvasScale;
+            this.teachingToolsManager.redrawTools();
+
+            if (updateConfigScale) {
+                this.updateConfigAreaScale();
+            }
+            return;
+        }
+
         // Use stored fit scale instead of recalculating to preserve user's pan/zoom state
         const finalScale = this.canvasFitScale * this.drawingEngine.canvasScale;
         
@@ -2596,6 +2722,13 @@ class DrawingBoard {
     
     // Pagination methods
     addPage() {
+        if (this.settingsManager.isInfiniteMode) {
+            this.infiniteCanvasManager.addPage();
+            this.drawingEngine.render(this.backgroundManager);
+            this.updatePaginationUI();
+            return;
+        }
+
         // Always in pagination mode, no need to check
         
         // Save current page
@@ -2612,6 +2745,14 @@ class DrawingBoard {
         this.updatePaginationUI();
     }
     prevPage() {
+        if (this.settingsManager.isInfiniteMode) {
+            if (this.infiniteCanvasManager.prevPage()) {
+                this.drawingEngine.render(this.backgroundManager);
+                this.updatePaginationUI();
+            }
+            return;
+        }
+
         if (this.currentPage <= 1) return;
         
         // Save current page and background
@@ -2625,6 +2766,13 @@ class DrawingBoard {
     }
     
     nextPage() {
+        if (this.settingsManager.isInfiniteMode) {
+            this.infiniteCanvasManager.nextPage();
+            this.drawingEngine.render(this.backgroundManager);
+            this.updatePaginationUI();
+            return;
+        }
+
         // Save current page and background
         this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         this.savePageBackground(this.currentPage);
@@ -2642,6 +2790,13 @@ class DrawingBoard {
     }
     
     nextOrAddPage() {
+        if (this.settingsManager.isInfiniteMode) {
+            this.infiniteCanvasManager.nextPage();
+            this.drawingEngine.render(this.backgroundManager);
+            this.updatePaginationUI();
+            return;
+        }
+
         // Save current page and background
         this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         this.savePageBackground(this.currentPage);
@@ -2663,6 +2818,14 @@ class DrawingBoard {
     }
     
     goToPage(pageNumber) {
+        if (this.settingsManager.isInfiniteMode) {
+            if (this.infiniteCanvasManager.goToPage(pageNumber)) {
+                this.drawingEngine.render(this.backgroundManager);
+                this.updatePaginationUI();
+            }
+            return;
+        }
+
         if (pageNumber < 1 || pageNumber === this.currentPage) {
             this.updatePaginationUI();
             return;
@@ -2774,18 +2937,28 @@ class DrawingBoard {
     }
     
     updatePaginationUI() {
-        document.getElementById('page-input').value = this.currentPage;
-        document.getElementById('page-total').textContent = `/ ${this.pages.length}`;
+        let currentPage, totalPages;
+
+        if (this.settingsManager.isInfiniteMode) {
+            currentPage = this.infiniteCanvasManager.currentPage;
+            totalPages = this.infiniteCanvasManager.pages.length;
+        } else {
+            currentPage = this.currentPage;
+            totalPages = this.pages.length;
+        }
+
+        document.getElementById('page-input').value = currentPage;
+        document.getElementById('page-total').textContent = `/ ${totalPages}`;
         
         const prevBtn = document.getElementById('prev-page-btn');
         const nextOrAddBtn = document.getElementById('next-or-add-page-btn');
         
-        prevBtn.disabled = this.currentPage <= 1;
+        prevBtn.disabled = currentPage <= 1;
         nextOrAddBtn.disabled = false;
         
         // Update button icon and title based on whether we're on the last page
         // Also show "+" icon when there's only one page total
-        if (this.currentPage >= this.pages.length || this.pages.length === 1) {
+        if (currentPage >= totalPages || totalPages === 1) {
             // Show add icon
             nextOrAddBtn.innerHTML = `
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2938,6 +3111,12 @@ class DrawingBoard {
     }
     
     applyPanTransform() {
+        if (this.settingsManager.isInfiniteMode) {
+            // Infinite mode uses render loop, not CSS transform
+            // render() is called by pan() in DrawingEngine
+            return;
+        }
+
         // Apply pan offset using CSS transform for better performance
         const panX = this.drawingEngine.panOffset.x;
         const panY = this.drawingEngine.panOffset.y;
@@ -2945,20 +3124,14 @@ class DrawingBoard {
         const finalScale = this.canvasFitScale * this.drawingEngine.canvasScale;
         
         if (this.transformLayer) {
-            if (!this.settingsManager.infiniteCanvas) {
-                // In paginated mode, center canvas using position and translate
-                this.transformLayer.style.position = 'absolute';
-                this.transformLayer.style.left = '50%';
-                this.transformLayer.style.top = '50%';
+            // In paginated mode, center canvas using position and translate
+            this.transformLayer.style.position = 'absolute';
+            this.transformLayer.style.left = '50%';
+            this.transformLayer.style.top = '50%';
 
-                // Combine translate and scale
-                const transform = `translate(-50%, -50%) translate(${panX}px, ${panY}px) scale(${finalScale})`;
-                this.transformLayer.style.transform = transform;
-            } else {
-                // In infinite mode, combine translate and scale
-                const transform = `translate(${panX}px, ${panY}px) scale(${finalScale})`;
-                this.transformLayer.style.transform = transform;
-            }
+            // Combine translate and scale
+            const transform = `translate(-50%, -50%) translate(${panX}px, ${panY}px) scale(${finalScale})`;
+            this.transformLayer.style.transform = transform;
             
             // Ensure children don't have conflicting transforms
             this.canvas.style.transform = 'none';
