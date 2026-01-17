@@ -391,8 +391,10 @@ window.translations = {
             textColor: 'Text Color',
             bgColor: 'Background Color',
             fontSize: 'Font Size',
+            fontSizeLabel: 'Font Size: Current',
             fontSizeHint: 'Adjust font size for time display',
             opacity: 'Opacity',
+            opacityLabel: 'Opacity: Current',
             opacityHint: 'Adjust opacity for time display',
             fullscreenMode: 'Fullscreen Mode',
             fullscreenModeHint: 'Choose how to trigger fullscreen time display',
@@ -400,6 +402,7 @@ window.translations = {
             fullscreenSingle: 'Single Click',
             fullscreenDouble: 'Double Click',
             fullscreenFontSize: 'Fullscreen Font Size',
+            fullscreenFontSizeLabel: 'Fullscreen Font Size: Current',
             fullscreenFontSizeHint: 'Adjust fullscreen font size (10%-85%)',
             customColor: 'Custom Color',
             displayOptions: 'Display Options'

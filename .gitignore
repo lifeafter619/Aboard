@@ -1,1 +1,21 @@
 node_modules/
+
+# Development artifacts
+*.log
+server.log
+
+# Backup files
+*.backup
+*-old.js
+
+# Verification files (development only)
+verify_*.py
+verification_*.png
+
+# Test artifacts
+test-results/
+*.test.gif
+
+# OS files
+.DS_Store
+Thumbs.db

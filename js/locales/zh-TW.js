@@ -389,8 +389,10 @@ window.translations = {
             textColor: '字体顏色',
             bgColor: '背景顏色',
             fontSize: '字体大小',
+            fontSizeLabel: '字體大小：當前',
             fontSizeHint: '調整時間顯示的字体大小',
             opacity: '透明度',
+            opacityLabel: '透明度：當前',
             opacityHint: '調整時間顯示的透明度',
             fullscreenMode: '全螢幕模式',
             fullscreenModeHint: '選擇如何触发時間全螢幕顯示',
@@ -398,6 +400,7 @@ window.translations = {
             fullscreenSingle: '單擊',
             fullscreenDouble: '雙擊',
             fullscreenFontSize: '全螢幕字体大小',
+            fullscreenFontSizeLabel: '全屏字體大小：當前',
             fullscreenFontSizeHint: '調整全螢幕時間顯示的字体大小，范围10%-85%',
             customColor: '自定义顏色',
             displayOptions: '顯示選項'

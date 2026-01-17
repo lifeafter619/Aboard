@@ -50,13 +50,16 @@ graph LR
 ```
 
 ## 最近更新 (Recent Updates)
+- **触控手势增强**：使用 Pointer Events API 实现更可靠的双指捏合缩放，支持触控笔+手指组合手势，兼容各种触控设备。
+- **项目清理**：移除了开发过程中的临时文件和备份文件，更新了 .gitignore 配置。
 - **形状预览优化**：修复了形状绘制时预览线条比实际线条细的问题，实现了所见即所得。
 - **插入图片修复**：修复了插入图片功能无法正常显示编辑框的严重Bug。
-- **箭头设置增强**：将“粗细”标签统一为“线条粗细”，增加了箭头大小的上限（100px），并实现了箭头大小不小于线条粗细的动态约束。
+- **箭头设置增强**：将粗细标签统一为线条粗细，增加了箭头大小的上限（100px），并实现了箭头大小不小于线条粗细的动态约束。
 - **点名器升级**：新增 Excel/CSV 表格导入功能，支持自定义姓名列读取。
 - **帮助系统**：在各个设置面板中增加了帮助按钮，支持丰富的文本格式（加粗、下划线、颜色、字号）。
 - **兼容性优化**：全面升级为 Pointer Events，提升 Windows 触控设备和安卓大屏的兼容性与流畅度。
 - **触控优化**：新增双指捏合缩放画布功能（可在设置中开启/关闭），双击画布智能缩放，优化了触控操作的响应速度。
+
 
 ### 📖 帮助文档格式说明
 在帮助内容文件中（`js/locales/help/*.js`），您可以使用以下类似 Markdown 的语法来丰富显示效果：
@@ -333,6 +336,7 @@ php -S localhost:8080
 Aboard/
 ├── index.html              # 主HTML文件
 ├── LICENSE                 # MIT许可证文件
+├── package.json            # 项目配置文件
 ├── announcements.json      # 公告内容配置
 ├── css/
 │   ├── style.css          # 主样式表
@@ -343,8 +347,12 @@ Aboard/
 │       ├── feature-area.css # 功能区样式
 │       ├── teaching-tools.css # 教具功能样式
 │       ├── shape.css      # 形状工具样式
-│       └── line-style-modal.css # 线条样式设置弹窗样式
+│       ├── line-style-modal.css # 线条样式设置弹窗样式
+│       ├── random-picker.css # 点名器样式
+│       ├── scoreboard.css # 计分板样式
+│       └── insert-image.css # 插入图片样式
 ├── js/
+│   ├── main.js            # 主应用入口
 │   ├── drawing.js         # 绘图引擎模块
 │   ├── history.js         # 历史记录管理模块
 │   ├── background.js      # 背景管理模块
@@ -359,6 +367,8 @@ Aboard/
 │   ├── collapsible.js     # 可折叠面板模块
 │   ├── shape-insertion.js # 形状插入模块
 │   ├── text-insertion.js  # 文本插入模块
+│   ├── libs/              # 第三方库
+│   │   └── xlsx.full.min.js # Excel文件处理库
 │   ├── locales/           # 国际化语言文件
 │   │   ├── zh-CN.js       # 简体中文
 │   │   ├── zh-TW.js       # 繁体中文
@@ -367,19 +377,25 @@ Aboard/
 │   │   ├── ko-KR.js       # 韩语
 │   │   ├── fr-FR.js       # 法语
 │   │   ├── de-DE.js       # 德语
-│   │   └── es-ES.js       # 西班牙语
-│   ├── modules/
-│   │   ├── timer.js       # 计时器模块
-│   │   ├── time-display-controls.js # 时间显示控制
-│   │   ├── time-display-settings.js # 时间显示设置
-│   │   ├── edge-drawing.js # 边缘绘制模块（沿教具边缘画线）
-│   │   ├── teaching-tools.js # 教具功能模块
-│   │   ├── shape-drawing.js # 形状绘制模块（支持直线、矩形、圆形）
-│   │   ├── random-picker.js # 点名器模块
-│   │   ├── scoreboard.js  # 计分板模块
-│   │   ├── line-style-modal.js # 线条样式设置弹窗模块
-│   │   └── i18n.js        # 国际化核心模块
-│   └── main.js            # 主应用入口
+│   │   ├── es-ES.js       # 西班牙语
+│   │   └── help/          # 帮助内容翻译
+│   │       ├── zh-CN.js   # 简体中文帮助
+│   │       └── en-US.js   # 英文帮助
+│   └── modules/           # 功能模块
+│       ├── timer.js       # 计时器模块
+│       ├── time-display-controls.js # 时间显示控制
+│       ├── time-display-settings.js # 时间显示设置
+│       ├── edge-drawing.js # 边缘绘制模块（沿教具边缘画线）
+│       ├── teaching-tools.js # 教具功能模块
+│       ├── shape-drawing.js # 形状绘制模块（支持直线、矩形、圆形）
+│       ├── random-picker.js # 点名器模块
+│       ├── scoreboard.js  # 计分板模块
+│       ├── line-style-modal.js # 线条样式设置弹窗模块
+│       ├── i18n.js        # 国际化核心模块
+│       ├── help-system.js # 帮助系统模块
+│       ├── browser-check.js # 浏览器兼容性检查
+│       ├── gif-manager.js # GIF动图管理模块
+│       └── libgif.js      # GIF解析库
 ├── img/                    # 图片资源目录
 │   ├── ruler_1.png        # 直尺样式1
 │   ├── ruler_2.png        # 直尺样式2
@@ -394,6 +410,9 @@ Aboard/
 │   ├── gentle-alarm.MP3   # 柔和提示音
 │   ├── digital-beep.MP3   # 数字提示音
 │   └── README.md          # 音频文件说明
+├── tests/                  # 测试文件夹
+│   └── manual/            # 手动测试
+│       └── verify_architecture.spec.js
 └── README.md              # 项目文档（简体中文）
 ```
 
