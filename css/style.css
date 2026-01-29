@@ -6,6 +6,7 @@
 
 :root {
     --theme-color: #007AFF;
+    --touch-target-size: 44px;
 }
 
 body {
@@ -34,8 +35,8 @@ button, a, input[type="button"], input[type="submit"] {
 
 /* Minimum touch target size for primary navigation buttons (44x44px recommended by WCAG) */
 .tool-btn, .history-btn, .feature-btn, .timer-action-btn, .timer-control-btn {
-    min-height: 44px;
-    min-width: 44px;
+    min-height: var(--touch-target-size);
+    min-width: var(--touch-target-size);
 }
 
 /* Canvas */
@@ -2439,4 +2440,278 @@ button, a, input[type="button"], input[type="submit"] {
 /* Smooth transform transition for double-tap zoom */
 .smooth-transform {
     transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ============================================
+   Additional Responsive & Touch Improvements
+   ============================================ */
+
+/* Extra small screens (phones in portrait) */
+@media (max-width: 480px) {
+    #toolbar {
+        gap: 4px;
+        padding: 8px 12px;
+        max-width: calc(100vw - 20px);
+        overflow-x: auto;
+        flex-wrap: nowrap;
+    }
+    
+    #toolbar .tool-btn {
+        padding: 8px 10px;
+        min-width: 50px;
+        flex-shrink: 0;
+    }
+    
+    #toolbar .tool-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    #toolbar .tool-btn span {
+        font-size: 9px;
+    }
+    
+    #config-area {
+        min-width: auto;
+        width: calc(100vw - 20px);
+        max-width: none;
+        padding: 10px 12px;
+        bottom: 80px;
+        left: 10px;
+        right: 10px;
+        transform: none;
+    }
+    
+    .config-panel.active {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .color-btn {
+        width: 26px;
+        height: 26px;
+    }
+    
+    .color-picker-icon-btn {
+        width: 30px;
+        height: 30px;
+    }
+    
+    #history-controls {
+        top: 8px;
+        right: 8px;
+        gap: 4px;
+        flex-wrap: wrap;
+        max-width: 180px;
+    }
+    
+    .history-btn {
+        width: 36px;
+        height: 36px;
+        min-height: var(--touch-target-size);
+        min-width: var(--touch-target-size);
+        padding: 4px;
+    }
+    
+    .zoom-input {
+        width: 50px;
+        height: 36px;
+        font-size: 10px;
+        min-height: var(--touch-target-size);
+    }
+    
+    /* Make sliders wider for easier touch */
+    .slider,
+    .slider-compact {
+        width: 100%;
+        min-width: 100px;
+        height: 8px;
+    }
+    
+    .slider::-webkit-slider-thumb,
+    .slider-compact::-webkit-slider-thumb {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .slider::-moz-range-thumb,
+    .slider-compact::-moz-range-thumb {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .pen-type-grid,
+    .shape-type-grid,
+    .button-size-options {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+    
+    .pen-type-btn,
+    .shape-type-btn {
+        padding: 8px 6px;
+        font-size: 11px;
+    }
+}
+
+/* Landscape orientation on phones */
+@media (max-height: 500px) and (orientation: landscape) {
+    #toolbar {
+        bottom: 10px;
+        padding: 6px 12px;
+        gap: 6px;
+    }
+    
+    #toolbar .tool-btn {
+        padding: 6px 10px;
+        min-width: 50px;
+    }
+    
+    #toolbar .tool-btn span {
+        display: none;
+    }
+    
+    #config-area {
+        bottom: 60px;
+        max-height: calc(100vh - 80px);
+        overflow-y: auto;
+    }
+    
+    #history-controls {
+        top: 5px;
+        right: 5px;
+    }
+}
+
+/* Touch device specific improvements */
+@media (hover: none) and (pointer: coarse) {
+    /* Larger touch targets on touch devices */
+    button, 
+    .color-btn,
+    .pen-type-btn,
+    .shape-type-btn,
+    .feature-btn,
+    .config-close-btn,
+    .sound-preset-btn,
+    [role="button"] {
+        min-height: var(--touch-target-size);
+        min-width: var(--touch-target-size);
+    }
+    
+    /* Prevent zoom on double-tap for buttons */
+    button,
+    input,
+    select,
+    textarea {
+        touch-action: manipulation;
+    }
+    
+    /* Increase spacing between interactive elements */
+    .color-picker,
+    .color-picker-row,
+    .color-picker-main {
+        gap: 8px;
+    }
+    
+    .button-size-options {
+        gap: 8px;
+    }
+    
+    /* Reset hover states for touch devices - these effects don't apply well to touch */
+    .tool-btn:hover,
+    .history-btn:hover,
+    .color-btn:hover,
+    .feature-btn:hover {
+        transform: none;
+        box-shadow: none;
+    }
+    
+    /* Add active state feedback for touch */
+    .tool-btn:active,
+    .history-btn:active,
+    .color-btn:active,
+    .feature-btn:active {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+    
+    /* Slider improvements for touch */
+    .slider,
+    .slider-compact {
+        height: 10px;
+    }
+    
+    .slider::-webkit-slider-thumb,
+    .slider-compact::-webkit-slider-thumb {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .slider::-moz-range-thumb,
+    .slider-compact::-moz-range-thumb {
+        width: 28px;
+        height: 28px;
+    }
+}
+
+/* High DPI / Retina displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    /* Use subpixel rendering for sharper text */
+    body {
+        -webkit-font-smoothing: subpixel-antialiased;
+    }
+    
+    /* Sharper borders */
+    .selection-box,
+    .resize-handle {
+        border-width: 1px;
+    }
+}
+
+/* Wide screens (ultra-wide monitors) */
+@media (min-width: 2560px) {
+    #config-area {
+        min-width: 400px;
+        max-width: 900px;
+    }
+    
+    #toolbar {
+        gap: 16px;
+        padding: 16px 28px;
+    }
+    
+    .tool-btn {
+        padding: 16px 22px;
+        min-width: 85px;
+    }
+    
+    .history-btn {
+        width: 56px;
+        height: 56px;
+    }
+    
+    .zoom-input {
+        width: 80px;
+        height: 56px;
+        font-size: 16px;
+    }
+}
+
+/* Safe area insets for notched devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+    #toolbar {
+        padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    }
+    
+    #history-controls {
+        top: calc(20px + env(safe-area-inset-top));
+        right: calc(20px + env(safe-area-inset-right));
+    }
+    
+    @media (max-width: 768px) {
+        #history-controls {
+            top: calc(10px + env(safe-area-inset-top));
+            right: calc(10px + env(safe-area-inset-right));
+        }
+    }
 }

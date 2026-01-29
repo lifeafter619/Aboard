@@ -342,3 +342,30 @@
     from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+
+/* Time Display Responsive Styles */
+@media (max-width: 480px) {
+    #time-display-widget {
+        min-width: auto;
+        width: auto;
+        padding: 8px 12px;
+    }
+    
+    .time-display-main {
+        font-size: 28px;
+    }
+    
+    .time-display-date {
+        font-size: 11px;
+    }
+}
+
+/* Touch device improvements */
+@media (hover: none) and (pointer: coarse) {
+    .time-display-btn,
+    .time-display-close-btn {
+        min-height: var(--touch-target-size);
+        min-width: var(--touch-target-size);
+    }
+}

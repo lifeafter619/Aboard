@@ -227,3 +227,33 @@
     font-size: 14px;
     color: #333;
 }
+
+
+/* Random Picker Responsive Styles */
+@media (max-width: 480px) {
+    #random-picker-modal .modal-content {
+        width: 95%;
+        max-height: 85vh;
+    }
+    
+    #random-picker-modal .modal-header {
+        padding: 16px 18px;
+    }
+    
+    #random-picker-modal .modal-body {
+        padding: 16px 18px;
+    }
+    
+    .picker-result {
+        font-size: 48px;
+    }
+}
+
+/* Touch device improvements */
+@media (hover: none) and (pointer: coarse) {
+    .picker-btn,
+    .picker-action-btn {
+        min-height: var(--touch-target-size);
+        min-width: var(--touch-target-size);
+    }
+}

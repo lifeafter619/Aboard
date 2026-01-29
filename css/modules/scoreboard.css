@@ -207,3 +207,36 @@
     font-weight: 500;
     color: #333;
 }
+
+
+/* Scoreboard Responsive Styles */
+@media (max-width: 480px) {
+    #scoreboard-modal .modal-content {
+        width: 95%;
+        max-height: 85vh;
+    }
+    
+    #scoreboard-modal .modal-header {
+        padding: 16px 18px;
+    }
+    
+    #scoreboard-modal .modal-body {
+        padding: 16px 18px;
+    }
+    
+    .score-item {
+        padding: 8px 12px;
+    }
+    
+    .score-value {
+        font-size: 24px;
+    }
+}
+
+/* Touch device improvements */
+@media (hover: none) and (pointer: coarse) {
+    .score-btn {
+        min-height: var(--touch-target-size);
+        min-width: var(--touch-target-size);
+    }
+}

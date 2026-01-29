@@ -1121,3 +1121,80 @@
     color: #333;
     border-color: #ccc;
 }
+
+
+/* Timer Responsive Styles */
+@media (max-width: 480px) {
+    .timer-modal-content {
+        width: 95%;
+        max-height: 85vh;
+    }
+    
+    .timer-modal-header {
+        padding: 16px 18px 10px;
+    }
+    
+    .timer-modal-header h2 {
+        font-size: 18px;
+    }
+    
+    .timer-modal-body {
+        padding: 16px 18px;
+    }
+    
+    .timer-input-row {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .timer-input-group {
+        min-width: 60px;
+    }
+    
+    .timer-input-group input {
+        width: 50px;
+        font-size: 24px;
+    }
+    
+    .timer-display-time {
+        font-size: 28px;
+    }
+    
+    #timer-display {
+        min-width: 160px;
+    }
+    
+    .timer-control-btn {
+        padding: 8px 12px;
+        min-height: var(--touch-target-size);
+        min-width: var(--touch-target-size);
+    }
+    
+    .sound-presets-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+    
+    .sound-preset-btn {
+        padding: 10px 8px;
+        font-size: 11px;
+        min-height: var(--touch-target-size);
+    }
+}
+
+/* Touch device improvements for timer */
+@media (hover: none) and (pointer: coarse) {
+    .timer-input-group input {
+        font-size: 32px;
+        min-height: 48px;
+    }
+    
+    .timer-control-btn {
+        min-height: var(--touch-target-size);
+        min-width: var(--touch-target-size);
+    }
+    
+    .sound-preset-btn {
+        min-height: var(--touch-target-size);
+    }
+}

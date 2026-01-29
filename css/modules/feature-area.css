@@ -92,3 +92,43 @@
     text-align: center;
     line-height: 1.2;
 }
+
+
+/* Feature Area Responsive Styles */
+@media (max-width: 480px) {
+    #feature-area {
+        min-width: auto;
+        width: calc(100vw - 20px);
+        max-width: 200px;
+        padding: 10px 12px;
+    }
+    
+    .more-features-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+    
+    .feature-btn {
+        padding: 6px 4px;
+        font-size: 9px;
+        min-height: 50px;
+        min-width: 50px;
+    }
+    
+    .feature-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+/* Touch device improvements */
+@media (hover: none) and (pointer: coarse) {
+    .feature-btn {
+        min-height: 56px;
+        min-width: 56px;
+    }
+    
+    .feature-btn:active {
+        transform: scale(0.95);
+    }
+}
