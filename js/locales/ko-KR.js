@@ -1,6 +1,6 @@
 /**
  * Korean (South Korea) - 한국어
- * Language file for Aboard application
+ * Language file for 智慧教学交互白板系统 application
  */
 
 window.translations = {
@@ -31,8 +31,8 @@ window.translations = {
 
     // App Title
     app: {
-        title: 'Aboard - 미니멀 화이트보드',
-        name: 'Aboard'
+        title: '智慧教学交互白板系统',
+        name: '智慧教学交互白板系统'
     },
 
     // Toolbar
@@ -410,9 +410,9 @@ window.translations = {
         },
         announcement: {
             title: '공지사항',
-            welcome: 'Aboard에 오신 것을 환영합니다!',
+            welcome: '智慧教学交互白板系统에 오신 것을 환영합니다!',
             content: [
-                'Aboard 화이트보드 애플리케이션에 오신 것을 환영합니다!',
+                '智慧教学交互白板系统 화이트보드 애플리케이션에 오신 것을 환영합니다!',
                 '',
                 '사용 팁:',
                 '• 하단의 툴바를 클릭하여 다양한 그리기 도구 선택',
@@ -426,9 +426,9 @@ window.translations = {
             ]
         },
         about: {
-            title: 'Aboard 정보',
+            title: '智慧教学交互白板系统',
             projectIntro: '프로젝트 소개',
-            description1: 'Aboard는 교육 및 프레젠테이션을 위해 설계된 미니멀리스트 웹 화이트보드 애플리케이션입니다.',
+            description1: '智慧教学交互白板系统는 교육 및 프레젠테이션을 위해 설계된 미니멀리스트 웹 화이트보드 애플리케이션입니다.',
             description2: '부드러운 그리기 경험과 풍부한 배경 옵션을 제공합니다.',
             mainFeatures: '주요 기능',
             features: {
@@ -653,8 +653,8 @@ window.translations = {
 
     // Welcome Dialog
     welcome: {
-        title: 'Aboard에 오신 것을 환영합니다',
-        content: `Aboard 화이트보드 애플리케이션에 오신 것을 환영합니다!
+        title: '智慧教学交互白板系统',
+        content: `智慧教学交互白板系统 화이트보드 애플리케이션에 오신 것을 환영합니다!
 
 사용 팁:
 • 하단 도구 모음을 클릭하여 다양한 그리기 도구 선택

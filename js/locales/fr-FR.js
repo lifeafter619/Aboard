@@ -1,6 +1,6 @@
 /**
  * French (France) - Français
- * Language file for Aboard application
+ * Language file for 智慧教学交互白板系统 application
  */
 
 window.translations = {
@@ -31,8 +31,8 @@ window.translations = {
 
     // App Title
     app: {
-        title: 'Aboard - Tableau Blanc Minimaliste',
-        name: 'Aboard'
+        title: '智慧教学交互白板系统',
+        name: '智慧教学交互白板系统'
     },
 
     // Toolbar
@@ -406,9 +406,9 @@ window.translations = {
         },
         announcement: {
             title: 'Annonce',
-            welcome: 'Bienvenue sur Aboard!',
+            welcome: 'Bienvenue sur 智慧教学交互白板系统!',
             content: [
-                'Bienvenue dans l\'application de tableau blanc Aboard!',
+                'Bienvenue dans l\'application de tableau blanc 智慧教学交互白板系统!',
                 '',
                 'Conseils d\'utilisation:',
                 '• Cliquez sur la barre d\'outils en bas pour sélectionner différents outils de dessin',
@@ -422,9 +422,9 @@ window.translations = {
             ]
         },
         about: {
-            title: 'À propos d\'Aboard',
+            title: 'À propos d\'智慧教学交互白板系统',
             projectIntro: 'Introduction du projet',
-            description1: 'Aboard est une application de tableau blanc web minimaliste conçue pour l\'enseignement et les présentations.',
+            description1: '智慧教学交互白板系统 est une application de tableau blanc web minimaliste conçue pour l\'enseignement et les présentations.',
             description2: 'Elle offre une expérience de dessin fluide et des options d\'arrière-plan riches.',
             mainFeatures: 'Caractéristiques principales',
             features: {
@@ -483,9 +483,9 @@ window.translations = {
             customColor: 'Couleur personnalisée'
         },
         about: {
-            title: 'À propos d\'Aboard',
+            title: 'À propos d\'智慧教学交互白板系统',
             version: 'Version',
-            description: 'Aboard est une application de tableau blanc minimaliste mais puissante, conçue pour le travail créatif et la prise de notes efficace.',
+            description: '智慧教学交互白板系统 est une application de tableau blanc minimaliste mais puissante, conçue pour le travail créatif et la prise de notes efficace.',
             features: 'Fonctionnalités principales',
             feature1: 'Expérience de dessin fluide',
             feature2: 'Types de stylo riches',
@@ -658,8 +658,8 @@ window.translations = {
 
     // Welcome Dialog
     welcome: {
-        title: 'Bienvenue sur Aboard',
-        content: `Bienvenue sur l'application de tableau blanc Aboard !
+        title: 'Bienvenue sur 智慧教学交互白板系统',
+        content: `Bienvenue sur l'application de tableau blanc 智慧教学交互白板系统 !
 
 Conseils d'utilisation :
 • Cliquez sur la barre d'outils en bas pour sélectionner différents outils de dessin

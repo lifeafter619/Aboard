@@ -1,6 +1,6 @@
 /**
  * Spanish (Spain) - Español
- * Language file for Aboard application
+ * Language file for 智慧教学交互白板系统 application
  */
 
 window.translations = {
@@ -31,8 +31,8 @@ window.translations = {
 
     // App Title
     app: {
-        title: 'Aboard - Pizarra Minimalista',
-        name: 'Aboard'
+        title: '智慧教学交互白板系统',
+        name: '智慧教学交互白板系统'
     },
 
     // Toolbar
@@ -406,9 +406,9 @@ window.translations = {
         },
         announcement: {
             title: 'Anuncio',
-            welcome: '¡Bienvenido a Aboard!',
+            welcome: '¡Bienvenido a 智慧教学交互白板系统!',
             content: [
-                '¡Bienvenido a la aplicación de pizarra Aboard!',
+                '¡Bienvenido a la aplicación de pizarra 智慧教学交互白板系统!',
                 '',
                 'Consejos de uso:',
                 '• Haga clic en la barra de herramientas en la parte inferior para seleccionar diferentes herramientas de dibujo',
@@ -422,9 +422,9 @@ window.translations = {
             ]
         },
         about: {
-            title: 'Acerca de Aboard',
+            title: 'Acerca de 智慧教学交互白板系统',
             projectIntro: 'Introducción del proyecto',
-            description1: 'Aboard es una aplicación de pizarra web minimalista diseñada para enseñanza y presentaciones.',
+            description1: '智慧教学交互白板系统 es una aplicación de pizarra web minimalista diseñada para enseñanza y presentaciones.',
             description2: 'Proporciona una experiencia de dibujo fluida y opciones de fondo ricas.',
             mainFeatures: 'Características principales',
             features: {
@@ -483,9 +483,9 @@ window.translations = {
             customColor: 'Color personalizado'
         },
         about: {
-            title: 'Acerca de Aboard',
+            title: 'Acerca de 智慧教学交互白板系统',
             version: 'Versión',
-            description: 'Aboard es una aplicación de pizarra minimalista pero potente, diseñada para trabajo creativo y toma de notas eficiente.',
+            description: '智慧教学交互白板系统 es una aplicación de pizarra minimalista pero potente, diseñada para trabajo creativo y toma de notas eficiente.',
             features: 'Características principales',
             feature1: 'Experiencia de dibujo suave',
             feature2: 'Tipos de bolígrafo variados',
@@ -658,8 +658,8 @@ window.translations = {
 
     // Welcome Dialog
     welcome: {
-        title: 'Bienvenido a Aboard',
-        content: `¡Bienvenido a la aplicación de pizarra Aboard!
+        title: 'Bienvenido a 智慧教学交互白板系统',
+        content: `¡Bienvenido a la aplicación de pizarra 智慧教学交互白板系统!
 
 Consejos de uso:
 • Haga clic en la barra de herramientas en la parte inferior para seleccionar diferentes herramientas de dibujo

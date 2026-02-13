@@ -1,6 +1,6 @@
 /**
  * Japanese (Japan) - 日本語
- * Language file for Aboard application
+ * Language file for 智慧教学交互白板系统 application
  */
 
 window.translations = {
@@ -31,8 +31,8 @@ window.translations = {
 
     // App Title
     app: {
-        title: 'Aboard - ミニマリストホワイトボード',
-        name: 'Aboard'
+        title: '智慧教学交互白板系统',
+        name: '智慧教学交互白板系统'
     },
 
     // Toolbar
@@ -410,9 +410,9 @@ window.translations = {
         },
         announcement: {
             title: 'お知らせ',
-            welcome: 'Aboardへようこそ！',
+            welcome: '智慧教学交互白板系统へようこそ！',
             content: [
-                'Aboardホワイトボードアプリケーションへようこそ！',
+                '智慧教学交互白板系统ホワイトボードアプリケーションへようこそ！',
                 '',
                 '使い方のヒント：',
                 '• 下部のツールバーをクリックして、さまざまな描画ツールを選択',
@@ -426,9 +426,9 @@ window.translations = {
             ]
         },
         about: {
-            title: 'Aboardについて',
+            title: '智慧教学交互白板系统',
             projectIntro: 'プロジェクト紹介',
-            description1: 'Aboardは、教育とプレゼンテーション用に設計されたミニマリストWebホワイトボードアプリケーションです。',
+            description1: '智慧教学交互白板系统は、教育とプレゼンテーション用に設計されたミニマリストWebホワイトボードアプリケーションです。',
             description2: 'スムーズな描画体験と豊富な背景オプションを提供します。',
             mainFeatures: '主な機能',
             features: {
@@ -653,8 +653,8 @@ window.translations = {
 
     // Welcome Dialog
     welcome: {
-        title: 'Aboardへようこそ',
-        content: `Aboardホワイトボードアプリケーションへようこそ！
+        title: '智慧教学交互白板系统',
+        content: `智慧教学交互白板系统ホワイトボードアプリケーションへようこそ！
 
 使用のヒント：
 • 下部のツールバーをクリックして、さまざまな描画ツールを選択

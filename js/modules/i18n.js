@@ -1,6 +1,6 @@
 /**
  * Internationalization (i18n) Module
- * Provides multi-language support for the Aboard application
+ * Provides multi-language support for the 智慧教学交互白板系统 application
  * 
  * Supported Languages:
  * - zh-CN: Chinese (Simplified)
@@ -503,7 +503,7 @@ class I18n {
             '显示设置': 'settings.display.title',
             '画布设置': 'settings.canvas.title',
             '背景设置': 'settings.background.title',
-            '关于 Aboard': 'settings.about.title',
+            '关于 智慧教学交互白板系统': 'settings.about.title',
             '公告': 'settings.announcement.title',
             '更多设置': 'settings.more.title'
         };
@@ -1137,7 +1137,7 @@ class I18n {
         if (aboutTitle) {
             const text = aboutTitle.textContent.trim();
             // Translate if it's Chinese OR if already translated (for refresh)
-            if (text === '关于 Aboard' || text === 'About Aboard') {
+            if (text === '关于 智慧教学交互白板系统' || text === 'About 智慧教学交互白板系统') {
                 const translation = this.t('settings.about.title');
                 if (translation !== 'settings.about.title' && translation !== text) {
                     aboutTitle.textContent = translation;

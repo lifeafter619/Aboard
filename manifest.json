@@ -1,6 +1,6 @@
 {
-  "name": "Aboard - 简约白板",
-  "short_name": "Aboard",
+  "name": "智慧教学交互白板系统",
+  "short_name": "智慧教学交互白板系统",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
