@@ -1,6 +1,6 @@
 /**
  * English (US) - English
- * Language file for Aboard application
+ * Language file for 智慧教学交互白板系统 application
  */
 
 window.translations = {
@@ -36,8 +36,8 @@ window.translations = {
 
     // App Title
     app: {
-        title: 'Aboard - Simple Whiteboard',
-        name: 'Aboard'
+        title: '智慧教学交互白板系统',
+        name: '智慧教学交互白板系统'
     },
 
     // Toolbar
@@ -440,9 +440,9 @@ window.translations = {
         },
         announcement: {
             title: 'Announcements',
-            welcome: 'Welcome to Aboard!',
+            welcome: 'Welcome to 智慧教学交互白板系统!',
             content: [
-            '**Welcome to Aboard Whiteboard Application!**',
+            '**Welcome to 智慧教学交互白板系统 Whiteboard Application!**',
                 '',
             '[color=#007AFF]Tips:[/color]',
                 '• Click bottom toolbar to select different tools',
@@ -453,16 +453,16 @@ window.translations = {
                 '• Supports both touch and mouse interactions',
                 '',
             '[color=#007AFF]Links:[/color]',
-                '• GitHub Project: https://github.com/lifeafter619/Aboard',
+                '• GitHub Project: https://github.com/lifeafter619',
                 '• Author Blog: https://66619.eu.org',
                 '',
-            '[size=16px]**Enjoy using Aboard!**[/size]'
+            '[size=16px]**Enjoy using 智慧教学交互白板系统!**[/size]'
             ]
         },
         about: {
-            title: 'About Aboard',
+            title: 'About 智慧教学交互白板系统',
             projectIntro: 'Project Introduction',
-            description1: 'Aboard is a simple web whiteboard application designed for teaching and presentations.',
+            description1: '智慧教学交互白板系统 is a simple web whiteboard application designed for teaching and presentations.',
             description2: 'It provides smooth drawing experience and rich background options to let your creativity flow.',
             mainFeatures: 'Main Features',
             features: {
@@ -741,8 +741,8 @@ window.translations = {
 
     // Welcome Dialog
     welcome: {
-        title: 'Welcome to Aboard',
-        content: `Welcome to Aboard Whiteboard Application!
+        title: 'Welcome to 智慧教学交互白板系统',
+        content: `Welcome to 智慧教学交互白板系统 Whiteboard Application!
 
 Tips:
 • Click bottom toolbar to select different tools
@@ -752,7 +752,7 @@ Tips:
 • Switch between Infinite Canvas or Pagination Mode in Settings
 • Supports both touch and mouse interactions
 
-Enjoy using Aboard!`,
+Enjoy using 智慧教学交互白板系统!`,
         confirm: 'OK',
         noShowAgain: 'Don\'t show again'
     },

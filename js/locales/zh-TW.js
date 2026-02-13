@@ -1,6 +1,6 @@
 /**
  * Chinese (Traditional) - 中文繁體
- * Language file for Aboard application
+ * Language file for 智慧教学交互白板系统 application
  */
 
 window.translations = {
@@ -33,8 +33,8 @@ window.translations = {
 
     // App Title
     app: {
-        title: 'Aboard - 簡約白板',
-        name: 'Aboard'
+        title: '智慧教学交互白板系统',
+        name: '智慧教学交互白板系统'
     },
 
     // Toolbar
@@ -436,9 +436,9 @@ window.translations = {
         },
         announcement: {
             title: '公告',
-            welcome: '歡迎使用 Aboard！',
+            welcome: '歡迎使用 智慧教学交互白板系统！',
             content: [
-                '歡迎使用 Aboard 白板套用！',
+                '歡迎使用 智慧教学交互白板系统 白板套用！',
                 '',
                 '使用提示：',
                 '• 點擊底部工具欄選擇不同工具進行繪畫',
@@ -449,16 +449,16 @@ window.translations = {
                 '• 支持觸控和滑鼠操作',
                 '',
                 '鏈接：',
-                '• GitHub 項目：https://github.com/lifeafter619/Aboard',
+                '• GitHub 項目：https://github.com/lifeafter619',
                 '• 作者博客：https://66619.eu.org',
                 '',
                 '祝您使用愉快！'
             ]
         },
         about: {
-            title: '關於 Aboard',
+            title: '關於 智慧教学交互白板系统',
             projectIntro: '項目簡介',
-            description1: 'Aboard 是一個簡約的網頁白板套用，專為教學和演示設計。',
+            description1: '智慧教学交互白板系统 是一個簡約的網頁白板套用，專為教學和演示設計。',
             description2: '它提供了流暢的繪圖體驗和豐富的背景選項，讓您的創意自由展現。',
             mainFeatures: '主要功能',
             features: {
@@ -723,8 +723,8 @@ window.translations = {
 
     // Welcome Dialog
     welcome: {
-        title: '歡迎使用 Aboard',
-        content: `歡迎使用 Aboard 白板套用！
+        title: '歡迎使用 智慧教学交互白板系统',
+        content: `歡迎使用 智慧教学交互白板系统 白板套用！
 
 使用提示：
 • 點擊底部工具欄選擇不同工具進行繪畫

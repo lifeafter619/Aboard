@@ -1,6 +1,6 @@
 /**
  * German (Germany) - Deutsch
- * Language file for Aboard application
+ * Language file for 智慧教学交互白板系统 application
  */
 
 window.translations = {
@@ -31,8 +31,8 @@ window.translations = {
 
     // App Title
     app: {
-        title: 'Aboard - Minimalistisches Whiteboard',
-        name: 'Aboard'
+        title: '智慧教学交互白板系统',
+        name: '智慧教学交互白板系统'
     },
 
     // Toolbar
@@ -409,9 +409,9 @@ window.translations = {
         },
         announcement: {
             title: 'Ankündigung',
-            welcome: 'Willkommen bei Aboard!',
+            welcome: 'Willkommen bei 智慧教学交互白板系统!',
             content: [
-                'Willkommen bei der Aboard Whiteboard-Anwendung!',
+                'Willkommen bei der 智慧教学交互白板系统 Whiteboard-Anwendung!',
                 '',
                 'Nutzungstipps:',
                 '• Klicken Sie auf die Symbolleiste unten, um verschiedene Zeichenwerkzeuge auszuwählen',
@@ -425,9 +425,9 @@ window.translations = {
             ]
         },
         about: {
-            title: 'Über Aboard',
+            title: 'Über 智慧教学交互白板系统',
             projectIntro: 'Projekteinführung',
-            description1: 'Aboard ist eine minimalistische Web-Whiteboard-Anwendung für Lehre und Präsentationen.',
+            description1: '智慧教学交互白板系统 ist eine minimalistische Web-Whiteboard-Anwendung für Lehre und Präsentationen.',
             description2: 'Es bietet ein reibungsloses Zeichenerlebnis und reichhaltige Hintergrundoptionen.',
             mainFeatures: 'Hauptfunktionen',
             features: {
@@ -491,9 +491,9 @@ window.translations = {
             customColor: 'Benutzerdefinierte Farbe'
         },
         about: {
-            title: 'Über Aboard',
+            title: 'Über 智慧教学交互白板系统',
             version: 'Version',
-            description: 'Aboard ist eine minimalistische, aber leistungsstarke Whiteboard-Anwendung, die für kreative Arbeit und effiziente Notizen entwickelt wurde.',
+            description: '智慧教学交互白板系统 ist eine minimalistische, aber leistungsstarke Whiteboard-Anwendung, die für kreative Arbeit und effiziente Notizen entwickelt wurde.',
             features: 'Hauptfunktionen',
             feature1: 'Reibungslose Zeichenerfahrung',
             feature2: 'Vielfältige Stifttypen',
@@ -671,8 +671,8 @@ window.translations = {
 
     // Welcome Dialog
     welcome: {
-        title: 'Willkommen bei Aboard',
-        content: `Willkommen bei der Aboard Whiteboard-Anwendung!
+        title: 'Willkommen bei 智慧教学交互白板系统',
+        content: `Willkommen bei der 智慧教学交互白板系统 Whiteboard-Anwendung!
 
 Verwendungstipps:
 • Klicken Sie auf die Symbolleiste unten, um verschiedene Zeichenwerkzeuge auszuwählen
