@@ -426,7 +426,7 @@ window.translations = {
             ]
         },
         about: {
-            title: '智慧教学交互白板系统',
+            title: '智慧教学交互白板系统 정보',
             projectIntro: '프로젝트 소개',
             description1: '智慧教学交互白板系统는 교육 및 프레젠테이션을 위해 설계된 미니멀리스트 웹 화이트보드 애플리케이션입니다.',
             description2: '부드러운 그리기 경험과 풍부한 배경 옵션을 제공합니다.',
@@ -653,7 +653,7 @@ window.translations = {
 
     // Welcome Dialog
     welcome: {
-        title: '智慧教学交互白板系统',
+        title: '智慧教学交互白板系统에 오신 것을 환영합니다',
         content: `智慧教学交互白板系统 화이트보드 애플리케이션에 오신 것을 환영합니다!
 
 사용 팁:

@@ -426,7 +426,7 @@ window.translations = {
             ]
         },
         about: {
-            title: '智慧教学交互白板系统',
+            title: '智慧教学交互白板系统について',
             projectIntro: 'プロジェクト紹介',
             description1: '智慧教学交互白板系统は、教育とプレゼンテーション用に設計されたミニマリストWebホワイトボードアプリケーションです。',
             description2: 'スムーズな描画体験と豊富な背景オプションを提供します。',
@@ -653,7 +653,7 @@ window.translations = {
 
     // Welcome Dialog
     welcome: {
-        title: '智慧教学交互白板系统',
+        title: '智慧教学交互白板系统へようこそ',
         content: `智慧教学交互白板系统ホワイトボードアプリケーションへようこそ！
 
 使用のヒント：
