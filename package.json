@@ -2,6 +2,8 @@
   "name": "aboard",
   "version": "1.0.0",
   "description": "一个简约的web白板，更适合老师体质",
+  "author": "lifeafter619",
+  "license": "MIT",
   "scripts": {
     "start": "npx serve -l 8080"
   },

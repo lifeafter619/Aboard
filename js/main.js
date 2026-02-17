@@ -1,3 +1,5 @@
+// Aboard（智慧教学交互白板系统）
+// Copyright (c) 2025 lifeafter619. Licensed under MIT.
 // Main Application Class
 // Integrates all modules and handles user interactions
 const DEFAULT_MIN_FIT_SCALE = 0.1;

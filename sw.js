@@ -1,3 +1,5 @@
+// Aboard（智慧教学交互白板系统）
+// Copyright (c) 2025 lifeafter619. Licensed under MIT.
 const CACHE_NAME = 'aboard-v1';
 const urlsToCache = [
   './',
