@@ -450,7 +450,11 @@ window.translations = {
             title: 'Más configuraciones',
             description: 'Para la configuración de visualización de hora, haga clic en el área de hora en la esquina inferior derecha',
             showTimeDisplay: 'Mostrar hora y fecha',
-            showTimeDisplayHint: 'Mostrar la hora y fecha actuales en la esquina superior derecha'
+            showTimeDisplayHint: 'Mostrar la hora y fecha actuales en la esquina superior derecha',
+            localDataLabel: 'Datos locales',
+            localDataHint: 'Borrar caché local, contenido del lienzo y configuración, y restaurar el estado de la primera carga',
+            clearLocalDataButton: 'Borrar caché local',
+            clearLocalDataConfirm: 'Esto borrará la caché local, el contenido del lienzo y la configuración, y restaurará el estado de la primera carga. ¿Continuar?'
         },
         time: {
             title: 'Configuración de visualización de hora',

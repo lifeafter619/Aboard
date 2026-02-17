@@ -487,7 +487,11 @@ window.translations = {
         more: {
             title: 'More Settings',
             showTimeDisplay: 'Show Date & Time',
-            showTimeDisplayHint: 'Display current date and time in top-right corner'
+            showTimeDisplayHint: 'Display current date and time in top-right corner',
+            localDataLabel: 'Local Data',
+            localDataHint: 'Clear local cache, canvas data, and settings, then restore first-load state',
+            clearLocalDataButton: 'Clear Local Cache',
+            clearLocalDataConfirm: 'This will clear local cache, canvas data, and settings, then restore first-load state. Continue?'
         },
         time: {
             title: 'Time Display Settings',

@@ -454,7 +454,11 @@ window.translations = {
             title: 'その他の設定',
             description: '時刻表示の設定は右下の時刻エリアをクリックしてください',
             showTimeDisplay: '時刻と日付を表示',
-            showTimeDisplayHint: '右上隅に現在の時刻と日付を表示'
+            showTimeDisplayHint: '右上隅に現在の時刻と日付を表示',
+            localDataLabel: 'ローカルデータ',
+            localDataHint: 'ローカルキャッシュ、キャンバス内容、設定を消去し、初回読み込み状態に戻します',
+            clearLocalDataButton: 'ローカルキャッシュを消去',
+            clearLocalDataConfirm: 'ローカルキャッシュ、キャンバス内容、設定を消去し、初回読み込み状態に戻します。続行しますか？'
         },
         time: {
             title: '時刻表示設定',

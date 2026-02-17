@@ -489,7 +489,11 @@ window.translations = {
         more: {
             title: '更多设置',
             showTimeDisplay: '显示时间和日期',
-            showTimeDisplayHint: '在右上角显示当前时间和日期'
+            showTimeDisplayHint: '在右上角显示当前时间和日期',
+            localDataLabel: '本地数据',
+            localDataHint: '清空本地缓存、画布内容和设置，并恢复首次加载状态',
+            clearLocalDataButton: '清空本地缓存',
+            clearLocalDataConfirm: '此操作会清空本地缓存、画布内容和设置，并恢复为首次加载状态。确定继续吗？'
         },
         time: {
             title: '时间显示设置',

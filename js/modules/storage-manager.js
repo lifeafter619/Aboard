@@ -113,6 +113,13 @@ class StorageManager {
         });
     }
 
+    closeDB() {
+        if (this.db) {
+            this.db.close();
+            this.db = null;
+        }
+    }
+
     // Helper: Convert ImageData to Blob
     static async imageDataToBlob(imageData) {
         if (!imageData) return null;

@@ -1679,6 +1679,18 @@ class DrawingBoard {
             input.click();
         });
 
+        const clearLocalCacheBtn = document.getElementById('clear-local-cache-btn');
+        if (clearLocalCacheBtn) {
+            clearLocalCacheBtn.addEventListener('click', async () => {
+                const confirmMessage = window.i18n
+                    ? window.i18n.t('settings.more.clearLocalDataConfirm')
+                    : 'This will clear local cache, canvas data, and settings, then restore first-load state. Continue?';
+                if (!window.confirm(confirmMessage)) return;
+                await this.clearAllLocalData();
+                window.location.reload();
+            });
+        }
+
         // Diff Modal Actions
         document.getElementById('config-diff-cancel-btn').addEventListener('click', () => {
             document.getElementById('config-diff-modal').classList.remove('show');
@@ -4468,6 +4480,7 @@ class DrawingBoard {
     
     // Save session data to IndexedDB via StorageManager
     async saveSession() {
+        if (this.isClearingLocalData) return;
         try {
             // Save current page to pages array first
             if (this.currentPage > 0 && this.currentPage <= this.pages.length) {
@@ -4725,6 +4738,41 @@ class DrawingBoard {
             localStorage.removeItem('savedCurrentPage');
         } catch (e) {
             console.warn('Failed to clear session:', e);
+        }
+    }
+
+    async clearAllLocalData() {
+        this.isClearingLocalData = true;
+        try {
+            if (this.saveTimeout) clearTimeout(this.saveTimeout);
+            await this.clearSessionData();
+            this.storageManager?.closeDB();
+
+            const dbName = this.storageManager?.dbName;
+            if ('indexedDB' in window && dbName) {
+                await new Promise((resolve) => {
+                    const request = indexedDB.deleteDatabase(dbName);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => {
+                        console.warn('Failed to delete IndexedDB:', request.error);
+                        resolve();
+                    };
+                    request.onblocked = () => {
+                        console.warn('IndexedDB deletion blocked');
+                        resolve();
+                    };
+                });
+            }
+
+            localStorage.clear();
+            sessionStorage.clear();
+
+            if ('caches' in window) {
+                const cacheKeys = await caches.keys();
+                await Promise.all(cacheKeys.map(key => caches.delete(key)));
+            }
+        } finally {
+            this.isClearingLocalData = false;
         }
     }
 }

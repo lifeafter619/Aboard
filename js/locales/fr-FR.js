@@ -450,7 +450,11 @@ window.translations = {
             title: 'Plus de paramètres',
             description: 'Pour les paramètres d\'affichage de l\'heure, cliquez sur la zone de l\'heure en bas à droite',
             showTimeDisplay: 'Afficher l\'heure et la date',
-            showTimeDisplayHint: 'Afficher l\'heure et la date actuelles dans le coin supérieur droit'
+            showTimeDisplayHint: 'Afficher l\'heure et la date actuelles dans le coin supérieur droit',
+            localDataLabel: 'Données locales',
+            localDataHint: 'Effacer le cache local, le contenu du canvas et les paramètres, puis restaurer l\'état du premier chargement',
+            clearLocalDataButton: 'Effacer le cache local',
+            clearLocalDataConfirm: 'Cela effacera le cache local, le contenu du canvas et les paramètres, puis restaurera l\'état du premier chargement. Continuer ?'
         },
         time: {
             title: 'Paramètres d\'affichage de l\'heure',

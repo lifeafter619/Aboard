@@ -454,7 +454,11 @@ window.translations = {
             title: '추가 설정',
             description: '시간 표시 설정은 오른쪽 하단 시간 영역을 클릭하세요',
             showTimeDisplay: '시간 및 날짜 표시',
-            showTimeDisplayHint: '오른쪽 상단에 현재 시간 및 날짜 표시'
+            showTimeDisplayHint: '오른쪽 상단에 현재 시간 및 날짜 표시',
+            localDataLabel: '로컬 데이터',
+            localDataHint: '로컬 캐시, 캔버스 내용, 설정을 지우고 최초 로드 상태로 복원합니다',
+            clearLocalDataButton: '로컬 캐시 지우기',
+            clearLocalDataConfirm: '로컬 캐시, 캔버스 내용, 설정을 모두 지우고 최초 로드 상태로 복원합니다. 계속하시겠습니까?'
         },
         time: {
             title: '시간 표시 설정',

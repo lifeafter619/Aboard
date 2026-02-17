@@ -453,7 +453,11 @@ window.translations = {
             title: 'Weitere Einstellungen',
             description: 'Für Zeitanzeigeeinstellungen klicken Sie auf den Zeitbereich unten rechts',
             showTimeDisplay: 'Zeit und Datum anzeigen',
-            showTimeDisplayHint: 'Aktuelle Zeit und Datum in der oberen rechten Ecke anzeigen'
+            showTimeDisplayHint: 'Aktuelle Zeit und Datum in der oberen rechten Ecke anzeigen',
+            localDataLabel: 'Lokale Daten',
+            localDataHint: 'Lokalen Cache, Canvas-Inhalte und Einstellungen löschen und den Erstladezustand wiederherstellen',
+            clearLocalDataButton: 'Lokalen Cache löschen',
+            clearLocalDataConfirm: 'Dadurch werden lokaler Cache, Canvas-Inhalte und Einstellungen gelöscht und der Erstladezustand wiederhergestellt. Fortfahren?'
         },
         time: {
             title: 'Zeitanzeigeeinstellungen',

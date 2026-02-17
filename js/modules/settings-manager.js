@@ -589,7 +589,8 @@ class SettingsManager {
                 pagination: localStorage.getItem('controlShowPagination') !== 'false',
                 time: localStorage.getItem('controlShowTime') !== 'false',
                 fullscreen: localStorage.getItem('controlShowFullscreen') !== 'false',
-                download: localStorage.getItem('controlShowDownload') !== 'false'
+                import: localStorage.getItem('controlShowImport') !== 'false',
+                export: localStorage.getItem('controlShowExport') !== 'false'
             }
         };
     }
@@ -767,7 +768,8 @@ class SettingsManager {
             localStorage.setItem('controlShowPagination', newSettings.controlSettings.pagination);
             localStorage.setItem('controlShowTime', newSettings.controlSettings.time);
             localStorage.setItem('controlShowFullscreen', newSettings.controlSettings.fullscreen);
-            localStorage.setItem('controlShowDownload', newSettings.controlSettings.download);
+            localStorage.setItem('controlShowImport', newSettings.controlSettings.import);
+            localStorage.setItem('controlShowExport', newSettings.controlSettings.export);
         }
 
         // Apply changes visually

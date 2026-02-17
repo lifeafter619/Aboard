@@ -484,7 +484,11 @@ window.translations = {
             title: '更多設定',
             description: '時間顯示相關設定請點擊右下角時間區域進入設定界面',
             showTimeDisplay: '顯示時間和日期',
-            showTimeDisplayHint: '在右上角顯示目前時間和日期'
+            showTimeDisplayHint: '在右上角顯示目前時間和日期',
+            localDataLabel: '本地資料',
+            localDataHint: '清空本地快取、畫布內容和設定，並恢復首次載入狀態',
+            clearLocalDataButton: '清空本地快取',
+            clearLocalDataConfirm: '此操作會清空本地快取、畫布內容和設定，並恢復為首次載入狀態。確定繼續嗎？'
         },
         time: {
             title: '時間顯示設定',
