@@ -422,7 +422,7 @@ class I18n {
             'image': 'background.upload'
         };
         
-        document.querySelectorAll('.pattern-option-btn').forEach(btn => {
+        document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(btn => {
             const pattern = btn.getAttribute('data-pattern');
             if (pattern && patterns[pattern]) {
                 // For image button, keep the icon and translate the text in span

@@ -897,7 +897,7 @@ class DrawingBoard {
         });
         
         // Background pattern buttons
-        document.querySelectorAll('.pattern-option-btn').forEach(btn => {
+        document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 // Use currentTarget to ensure we get the data from the button, not its children
                 const pattern = e.currentTarget.dataset.pattern;
@@ -905,7 +905,7 @@ class DrawingBoard {
                     document.getElementById('bg-image-upload').click();
                 } else {
                     this.backgroundManager.setBackgroundPattern(pattern);
-                    document.querySelectorAll('.pattern-option-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(b => b.classList.remove('active'));
                     e.currentTarget.classList.add('active');
                     document.getElementById('image-size-group').style.display = 'none';
                     
@@ -945,7 +945,7 @@ class DrawingBoard {
                     this.imageControls.resetConfirmation();
                     
                     await this.backgroundManager.setBackgroundImage(imageData);
-                    document.querySelectorAll('.pattern-option-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(b => b.classList.remove('active'));
                     document.querySelector('.pattern-option-btn[data-pattern="image"]').classList.add('active');
                     document.getElementById('image-size-group').style.display = 'flex';
                     // Hide pattern density when image is uploaded
@@ -4113,7 +4113,7 @@ class DrawingBoard {
         });
         
         // Update pattern buttons
-        document.querySelectorAll('.pattern-option-btn').forEach(btn => {
+        document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(btn => {
             if (btn.dataset.pattern === this.backgroundManager.backgroundPattern) {
                 btn.classList.add('active');
             } else {
@@ -4511,7 +4511,7 @@ class DrawingBoard {
             btn.textContent = image.name;
             btn.addEventListener('click', () => {
                 this.backgroundManager.setBackgroundImage(image.data);
-                document.querySelectorAll('.pattern-option-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 document.getElementById('image-size-group').style.display = 'flex';
                 document.getElementById('pattern-density-group').style.display = 'none';
