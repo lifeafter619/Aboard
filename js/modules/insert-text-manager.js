@@ -1179,7 +1179,10 @@ class InsertTextManager {
         return fontFamily.split(',')
             .map(part => part.trim())
             .filter(Boolean)
-            .map(part => (/^["'].*["']$/.test(part) || !/\s/.test(part) ? part : `"${part}"`))
+            .map(part => {
+                const normalized = part.replace(/^["']|["']$/g, '').trim();
+                return !/\s/.test(normalized) ? normalized : `"${normalized}"`;
+            })
             .join(', ');
     }
     

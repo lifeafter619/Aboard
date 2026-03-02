@@ -1084,12 +1084,12 @@
                             </div>
                         </div>
                         <div class="settings-group">
-                            <label>缓存清理</label>
-                            <p class="settings-hint">可查看缓存占用并按类别清理（清理前会二次确认）</p>
+                            <label data-i18n="settings.more.cacheCleanupLabel">缓存清理</label>
+                            <p class="settings-hint" data-i18n="settings.more.cacheCleanupHint">可查看缓存占用并按类别清理（清理前会二次确认）</p>
                             <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
-                                <label class="checkbox-label"><input type="checkbox" id="clear-settings-cache-checkbox"><span>清除设置项缓存（<span id="settings-cache-size">计算中...</span>）</span></label>
-                                <label class="checkbox-label"><input type="checkbox" id="clear-canvas-cache-checkbox"><span>清除画布缓存（<span id="canvas-cache-size">计算中...</span>）</span></label>
-                                <label class="checkbox-label"><input type="checkbox" id="clear-other-cache-checkbox"><span>清除其他缓存（<span id="other-cache-size">计算中...</span>）</span></label>
+                                <label class="checkbox-label"><input type="checkbox" id="clear-settings-cache-checkbox"><span><span data-i18n="settings.more.clearSettingsCache">清除设置项缓存</span>（<span id="settings-cache-size" data-i18n="settings.more.cacheSizeCalculating">计算中...</span>）</span></label>
+                                <label class="checkbox-label"><input type="checkbox" id="clear-canvas-cache-checkbox"><span><span data-i18n="settings.more.clearCanvasCache">清除画布缓存</span>（<span id="canvas-cache-size" data-i18n="settings.more.cacheSizeCalculating">计算中...</span>）</span></label>
+                                <label class="checkbox-label"><input type="checkbox" id="clear-other-cache-checkbox"><span><span data-i18n="settings.more.clearOtherCache">清除其他缓存</span>（<span id="other-cache-size" data-i18n="settings.more.cacheSizeCalculating">计算中...</span>）</span></label>
                             </div>
                             <div class="button-size-options button-size-options-2">
                                 <button id="clear-local-cache-btn" class="pattern-option-btn" style="display: flex; align-items: center; justify-content: center; gap: 5px;">
@@ -1098,15 +1098,15 @@
                                         <path d="M8 6V4h8v2"></path>
                                         <path d="M19 6l-1 14H6L5 6"></path>
                                     </svg>
-                                    <span>清理所选缓存</span>
+                                    <span data-i18n="settings.more.clearSelectedCache">清理所选缓存</span>
                                 </button>
                             </div>
                         </div>
                         <div class="settings-group">
-                            <label>更多功能面板行为</label>
+                            <label data-i18n="settings.more.morePanelBehaviorLabel">更多功能面板行为</label>
                             <label class="checkbox-label">
                                 <input type="checkbox" id="keep-more-panel-open-checkbox">
-                                <span>点击“更多”中的功能按钮后默认不关闭“更多”框</span>
+                                <span data-i18n="settings.more.keepMorePanelOpenHint">点击“更多”中的功能按钮后默认不关闭“更多”框</span>
                             </label>
                         </div>
                     </div>

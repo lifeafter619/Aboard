@@ -4,6 +4,8 @@ const DEFAULT_MIN_FIT_SCALE = 0.1;
 const DEFAULT_TARGET_COVERAGE = 0.7;
 const DEFAULT_MIN_DEFAULT_SCALE = 0.9;
 const TOOL_CONFIG_PANEL_GAP = 8;
+const MIN_EDGE_UNSNAP_DISTANCE = 90;
+const EDGE_UNSNAP_BUFFER = 20;
 
 class DrawingBoard {
     constructor() {
@@ -1688,15 +1690,21 @@ class DrawingBoard {
                     other: document.getElementById('clear-other-cache-checkbox')?.checked
                 };
                 if (!options.settings && !options.canvas && !options.other) {
-                    alert('请先选择要清理的缓存类型');
+                    const selectMsg = window.i18n ? window.i18n.t('settings.more.selectCacheType') : 'Please select at least one cache type.';
+                    alert(selectMsg);
                     return;
                 }
                 const sizes = await this.getCacheSizeSummary();
                 const selectedSummary = [];
-                if (options.settings) selectedSummary.push(`设置项缓存：${this.formatBytes(sizes.settings)}`);
-                if (options.canvas) selectedSummary.push(`画布缓存：${this.formatBytes(sizes.canvas)}`);
-                if (options.other) selectedSummary.push(`其他缓存：${this.formatBytes(sizes.other)}`);
-                const confirmMessage = `将清理以下缓存：\n${selectedSummary.join('\n')}\n\n确定继续吗？`;
+                const settingsLabel = window.i18n ? window.i18n.t('settings.more.clearSettingsCache') : 'Settings Cache';
+                const canvasLabel = window.i18n ? window.i18n.t('settings.more.clearCanvasCache') : 'Canvas Cache';
+                const otherLabel = window.i18n ? window.i18n.t('settings.more.clearOtherCache') : 'Other Cache';
+                if (options.settings) selectedSummary.push(`${settingsLabel}: ${this.formatBytes(sizes.settings)}`);
+                if (options.canvas) selectedSummary.push(`${canvasLabel}: ${this.formatBytes(sizes.canvas)}`);
+                if (options.other) selectedSummary.push(`${otherLabel}: ${this.formatBytes(sizes.other)}`);
+                const confirmTitle = window.i18n ? window.i18n.t('settings.more.confirmClearSelectedCache') : 'The following cache will be cleared:';
+                const confirmSuffix = window.i18n ? window.i18n.t('settings.more.clearLocalDataConfirmSuffix') : 'Continue?';
+                const confirmMessage = `${confirmTitle}\n${selectedSummary.join('\n')}\n\n${confirmSuffix}`;
                 if (!window.confirm(confirmMessage)) return;
                 await this.clearSelectedCache(options);
                 await this.updateCacheSizeDisplay();
@@ -2331,9 +2339,9 @@ class DrawingBoard {
                     // If vertical, we need a larger hysteresis zone
                     // Calculate based on the difference between horizontal and vertical widths
                     // Formula ensures unsnap threshold is further than snap threshold
-                    // Width difference + buffer to avoid flicker loop
+                    // Width difference + small buffer to avoid flicker loop while keeping drag-out distance short
                     const widthDiff = Math.max(0, this.draggedElementWidth - currentWidth);
-                    effectiveSnapDistance = Math.max(90, edgeSnapDistance + widthDiff + 20);
+                    effectiveSnapDistance = Math.max(MIN_EDGE_UNSNAP_DISTANCE, edgeSnapDistance + widthDiff + EDGE_UNSNAP_BUFFER);
                 }
                 
                 // Check for left edge snap first
@@ -4786,7 +4794,7 @@ class DrawingBoard {
         return { settingsKeys, canvasKeys };
     }
 
-    getEntrySize(key, value) {
+    getStorageEntrySize(key, value) {
         return new Blob([`${key}${value || ''}`]).size;
     }
 
@@ -4805,7 +4813,7 @@ class DrawingBoard {
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             const val = localStorage.getItem(key);
-            const size = this.getEntrySize(key, val);
+            const size = this.getStorageEntrySize(key, val);
             if (settingsKeys.has(key)) summary.settings += size;
             else if (canvasKeys.has(key)) summary.canvas += size;
             else summary.other += size;
@@ -4814,7 +4822,7 @@ class DrawingBoard {
         for (let i = 0; i < sessionStorage.length; i++) {
             const key = sessionStorage.key(i);
             const val = sessionStorage.getItem(key);
-            const size = this.getEntrySize(key, val);
+            const size = this.getStorageEntrySize(key, val);
             if (settingsKeys.has(key)) summary.settings += size;
             else if (canvasKeys.has(key)) summary.canvas += size;
             else summary.other += size;
