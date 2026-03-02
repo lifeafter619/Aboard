@@ -277,6 +277,8 @@ npm start
 
 然后在浏览器访问 `http://localhost:8080`
 
+> `npm start` 会启动项目内置 Node 服务，并提供 `/api/version` 接口（读取 `version.txt`）。
+
 #### 使用 Python（无需安装额外依赖）
 
 ```bash
@@ -294,6 +296,8 @@ npx serve -l 8080
 # 使用 PHP
 php -S localhost:8080
 ```
+
+> 注意：使用 `npx serve` 或 `python3 -m http.server` 时不会提供 `/api/version`，仅适用于纯静态预览。
 
 ## 📖 使用指南
 
@@ -357,6 +361,7 @@ php -S localhost:8080
 
 ```
 Aboard/
+├── server.js               # 本地开发服务（含 /api/version）
 ├── index.html              # 主HTML文件
 ├── LICENSE                 # MIT许可证文件
 ├── package.json            # 项目配置文件

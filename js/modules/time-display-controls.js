@@ -51,12 +51,6 @@ class TimeDisplayControls {
             });
         }
 
-        const helpBtn = document.getElementById('time-display-area-help-btn');
-        if (helpBtn) {
-            helpBtn.addEventListener('click', () => {
-                window.drawingBoard?.helpSystem?.showHelp('help.features.timeDisplay');
-            });
-        }
     }
     
     toggleTimeDisplayArea() {

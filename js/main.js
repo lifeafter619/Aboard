@@ -118,6 +118,8 @@ class DrawingBoard {
         this.NORMAL_MAX_SCALE = 5.0;
         this.UNLIMITED_MAX_SCALE = 500.0;
         this.MAX_CANVAS_SCALE = this.settingsManager.unlimitedZoom ? this.UNLIMITED_MAX_SCALE : this.NORMAL_MAX_SCALE;
+        this.dynamicRenderScale = 1;
+        this.qualityUpdateTimer = null;
         
         // Touch gesture state
         this.lastTapTime = 0;
@@ -248,7 +250,7 @@ class DrawingBoard {
         // Get window dimensions for canvas sizing
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = this.getRenderPixelRatio();
         
         const oldWidth = this.canvas.width;
         const oldHeight = this.canvas.height;
@@ -1187,9 +1189,10 @@ class DrawingBoard {
         // Eraser shape buttons
         document.querySelectorAll('.eraser-shape-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.drawingEngine.setEraserShape(e.target.dataset.eraserShape);
+                const targetBtn = e.currentTarget;
+                this.drawingEngine.setEraserShape(targetBtn.dataset.eraserShape);
                 document.querySelectorAll('.eraser-shape-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+                targetBtn.classList.add('active');
                 // Update cursor shape
                 this.updateEraserCursorShape();
             });
@@ -3027,6 +3030,10 @@ class DrawingBoard {
             document.getElementById('eraser-btn').classList.add('active');
             document.getElementById('eraser-config').classList.add('active');
             this.canvas.style.cursor = 'pointer';
+            const currentShape = this.drawingEngine.eraserShape === 'rectangle' ? 'rectangle' : 'circle';
+            document.querySelectorAll('.eraser-shape-btn').forEach((btn) => {
+                btn.classList.toggle('active', btn.dataset.eraserShape === currentShape);
+            });
             // Sync eraser size display with current value
             const eraserSizeSlider = document.getElementById('eraser-size-slider');
             const eraserSizeValue = document.getElementById('eraser-size-value');
@@ -3075,12 +3082,69 @@ class DrawingBoard {
         const scaleY = availableHeight / height;
         return Math.min(scaleX, scaleY, 1); // Don't scale up beyond 100%
     }
+
+    getRenderPixelRatio() {
+        const baseDpr = window.devicePixelRatio || 1;
+        return baseDpr * this.dynamicRenderScale;
+    }
+
+    getTargetRenderScale() {
+        if (!this.settingsManager.unlimitedZoom) {
+            return 1;
+        }
+        const scale = this.drawingEngine?.canvasScale || 1;
+        return Math.min(4, Math.max(1, Math.sqrt(scale)));
+    }
+
+    scheduleRenderQualityUpdate() {
+        const targetScale = this.getTargetRenderScale();
+        if (Math.abs(targetScale - this.dynamicRenderScale) < 0.15) return;
+        if (this.qualityUpdateTimer) {
+            clearTimeout(this.qualityUpdateTimer);
+        }
+        this.qualityUpdateTimer = setTimeout(() => {
+            this.applyRenderQualityScale(targetScale);
+        }, 120);
+    }
+
+    applyRenderQualityScale(scale) {
+        if (Math.abs(scale - this.dynamicRenderScale) < 0.05) return;
+
+        const width = parseFloat(this.canvas.style.width) || this.settingsManager.canvasWidth;
+        const height = parseFloat(this.canvas.style.height) || this.settingsManager.canvasHeight;
+
+        const oldCanvas = document.createElement('canvas');
+        oldCanvas.width = this.canvas.width;
+        oldCanvas.height = this.canvas.height;
+        oldCanvas.getContext('2d').drawImage(this.canvas, 0, 0);
+
+        this.dynamicRenderScale = scale;
+        const dpr = this.getRenderPixelRatio();
+
+        this.canvas.width = width * dpr;
+        this.canvas.height = height * dpr;
+        this.canvas.style.width = width + 'px';
+        this.canvas.style.height = height + 'px';
+
+        this.bgCanvas.width = width * dpr;
+        this.bgCanvas.height = height * dpr;
+        this.bgCanvas.style.width = width + 'px';
+        this.bgCanvas.style.height = height + 'px';
+
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.bgCtx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.scale(dpr, dpr);
+        this.bgCtx.scale(dpr, dpr);
+
+        this.ctx.drawImage(oldCanvas, 0, 0, oldCanvas.width, oldCanvas.height, 0, 0, this.canvas.width, this.canvas.height);
+        this.backgroundManager.drawBackground();
+    }
     
     applyCanvasSize() {
         // Always use pagination mode now
         const width = this.settingsManager.canvasWidth;
         const height = this.settingsManager.canvasHeight;
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = this.getRenderPixelRatio();
         
         // Save current content
         const oldWidth = this.canvas.width;
@@ -3258,6 +3322,8 @@ class DrawingBoard {
             this.canvas.style.transform = 'none';
             this.bgCanvas.style.transform = 'none';
         }
+
+        this.scheduleRenderQualityUpdate();
         
         // Update teaching tools scale factor
         this.teachingToolsManager.canvasScaleFactor = finalScale;
@@ -3304,6 +3370,7 @@ class DrawingBoard {
             this.MAX_CANVAS_SCALE = this.UNLIMITED_MAX_SCALE;
         } else {
             this.MAX_CANVAS_SCALE = this.NORMAL_MAX_SCALE;
+            this.applyRenderQualityScale(1);
             // If current scale exceeds new max, reset to max
             if (this.drawingEngine.canvasScale > this.MAX_CANVAS_SCALE) {
                 this.drawingEngine.canvasScale = this.MAX_CANVAS_SCALE;

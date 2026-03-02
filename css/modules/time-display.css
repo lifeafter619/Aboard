@@ -99,6 +99,14 @@
     color: #333;
 }
 
+#time-display-area-help-btn.feature-help-btn {
+    position: static;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 2px solid #ddd;
+}
+
 /* Time Display Widget */
 #time-display {
     position: fixed;

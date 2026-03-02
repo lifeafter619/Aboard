@@ -1,5 +1,6 @@
 // Timeout for resolving manual update checks (milliseconds).
 const UPDATE_CHECK_TIMEOUT = 1200;
+const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 
 class PWAManager {
     constructor() {
@@ -36,7 +37,8 @@ class PWAManager {
                 'updateLater': '稍后',
                 'checkUpdate': '检查更新',
                 'checking': '正在检查更新...',
-                'latest': '已是最新版本'
+                'latest': '已是最新版本',
+                'versionUpdateFound': '检测到新版本：{latest}（当前：{current}），请刷新更新。'
             },
             'zh-TW': {
                 'statusTitle': '應用狀態',
@@ -53,7 +55,8 @@ class PWAManager {
                 'updateLater': '稍後',
                 'checkUpdate': '檢查更新',
                 'checking': '正在檢查更新...',
-                'latest': '已是最新版本'
+                'latest': '已是最新版本',
+                'versionUpdateFound': '檢測到新版本：{latest}（當前：{current}），請重新整理更新。'
             },
             'en-US': {
                 'statusTitle': 'App Status',
@@ -70,7 +73,8 @@ class PWAManager {
                 'updateLater': 'Later',
                 'checkUpdate': 'Check for Updates',
                 'checking': 'Checking for updates...',
-                'latest': 'You are on the latest version'
+                'latest': 'You are on the latest version',
+                'versionUpdateFound': 'New version detected: {latest} (current: {current}). Please refresh to update.'
             },
             'ja-JP': {
                 'statusTitle': 'アプリの状態',
@@ -87,7 +91,8 @@ class PWAManager {
                 'updateLater': '後で',
                 'checkUpdate': 'アップデートを確認',
                 'checking': 'アップデートを確認中...',
-                'latest': '最新バージョンです'
+                'latest': '最新バージョンです',
+                'versionUpdateFound': '新しいバージョンがあります：{latest}（現在：{current}）。更新のため再読み込みしてください。'
             },
             'ko-KR': {
                 'statusTitle': '앱 상태',
@@ -104,7 +109,8 @@ class PWAManager {
                 'updateLater': '나중에',
                 'checkUpdate': '업데이트 확인',
                 'checking': '업데이트 확인 중...',
-                'latest': '최신 버전입니다'
+                'latest': '최신 버전입니다',
+                'versionUpdateFound': '새 버전 감지: {latest} (현재: {current}). 새로고침하여 업데이트하세요.'
             },
             'fr-FR': {
                 'statusTitle': 'État de l\'application',
@@ -121,7 +127,8 @@ class PWAManager {
                 'updateLater': 'Plus tard',
                 'checkUpdate': 'Vérifier les mises à jour',
                 'checking': 'Vérification des mises à jour...',
-                'latest': 'Vous utilisez la dernière version'
+                'latest': 'Vous utilisez la dernière version',
+                'versionUpdateFound': 'Nouvelle version détectée : {latest} (actuelle : {current}). Veuillez actualiser pour mettre à jour.'
             },
             'de-DE': {
                 'statusTitle': 'App-Status',
@@ -138,7 +145,8 @@ class PWAManager {
                 'updateLater': 'Später',
                 'checkUpdate': 'Nach Updates suchen',
                 'checking': 'Suche nach Updates...',
-                'latest': 'Sie haben die neueste Version'
+                'latest': 'Sie haben die neueste Version',
+                'versionUpdateFound': 'Neue Version erkannt: {latest} (aktuell: {current}). Bitte zum Aktualisieren neu laden.'
             },
             'es-ES': {
                 'statusTitle': 'Estado de la aplicación',
@@ -155,7 +163,8 @@ class PWAManager {
                 'updateLater': 'Más tarde',
                 'checkUpdate': 'Buscar actualizaciones',
                 'checking': 'Buscando actualizaciones...',
-                'latest': 'Tienes la última versión'
+                'latest': 'Tienes la última versión',
+                'versionUpdateFound': 'Nueva versión detectada: {latest} (actual: {current}). Actualiza recargando la página.'
             }
         };
         // Fallback for other languages to English
@@ -210,7 +219,7 @@ class PWAManager {
     }
 
     loadVersion() {
-        fetch('version.txt')
+        return fetch('version.txt', { cache: 'no-store' })
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`Failed to load version.txt: ${response.status}`);
@@ -221,19 +230,44 @@ class PWAManager {
                 const version = text.trim();
                 if (!version) {
                     console.warn('Empty version in version.txt.');
-                    return;
+                    return null;
                 }
-                const semverPattern = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
-                if (!semverPattern.test(version)) {
+                if (!SEMVER_PATTERN.test(version)) {
                     console.warn('Invalid version format in version.txt:', version);
-                    return;
+                    return null;
                 }
                 this.version = version;
                 this.updateVersionDisplays();
+                return version;
             })
             .catch(error => {
                 console.warn('Failed to load version.txt:', error);
+                return null;
             });
+    }
+
+    compareVersions(versionA, versionB) {
+        const parse = (version) => String(version || '').split(/[.-]/).slice(0, 3).map(v => parseInt(v, 10) || 0);
+        const a = parse(versionA);
+        const b = parse(versionB);
+        for (let i = 0; i < 3; i++) {
+            if (a[i] > b[i]) return 1;
+            if (a[i] < b[i]) return -1;
+        }
+        return 0;
+    }
+
+    async fetchVersionFromApi() {
+        try {
+            const response = await fetch('/api/version', { cache: 'no-store' });
+            if (!response.ok) return null;
+            const data = await response.json();
+            const version = typeof data?.version === 'string' ? data.version.trim() : '';
+            return SEMVER_PATTERN.test(version) ? version : null;
+        } catch (error) {
+            console.warn('Failed to fetch /api/version:', error);
+            return null;
+        }
     }
 
     registerServiceWorker() {
@@ -614,11 +648,7 @@ class PWAManager {
         this.hideInstallButtons();
     }
 
-    checkForUpdates(manual = false) {
-        if (!('serviceWorker' in navigator)) {
-            return;
-        }
-
+    async checkForUpdates(manual = false) {
         if (!navigator.onLine) {
             if (manual) {
                 this.showOfflineNotification();
@@ -639,9 +669,28 @@ class PWAManager {
             }
         };
 
+        const localVersion = this.version || await this.loadVersion();
+        const latestVersion = await this.fetchVersionFromApi();
+        const hasRemoteNewVersion = !!(localVersion && latestVersion && this.compareVersions(latestVersion, localVersion) > 0);
+
+        if (manual && hasRemoteNewVersion && window.drawingBoard?.settingsManager?.toastManager) {
+            const message = this.getTranslation('versionUpdateFound')
+                .replace('{latest}', latestVersion)
+                .replace('{current}', localVersion);
+            window.drawingBoard.settingsManager.toastManager.show(message, 'warning');
+        }
+
+        if (!('serviceWorker' in navigator)) {
+            if (manual && !hasRemoteNewVersion && window.drawingBoard?.settingsManager?.toastManager) {
+                window.drawingBoard.settingsManager.toastManager.show(this.getTranslation('latest'), 'success');
+            }
+            finishCheck();
+            return;
+        }
+
         navigator.serviceWorker.getRegistration().then(reg => {
             if (!reg) {
-                if (manual && window.drawingBoard?.settingsManager?.toastManager) {
+                if (manual && !hasRemoteNewVersion && window.drawingBoard?.settingsManager?.toastManager) {
                     window.drawingBoard.settingsManager.toastManager.show(this.getTranslation('latest'), 'success');
                 }
                 finishCheck();
@@ -688,7 +737,7 @@ class PWAManager {
             reg.update()
                 .then(async () => {
                     const hasUpdate = await updateDetectionPromise;
-                    if (manual && !hasUpdate && !reg.waiting && window.drawingBoard?.settingsManager?.toastManager) {
+                    if (manual && !hasUpdate && !reg.waiting && !hasRemoteNewVersion && window.drawingBoard?.settingsManager?.toastManager) {
                         window.drawingBoard.settingsManager.toastManager.show(this.getTranslation('latest'), 'success');
                     }
                     finishCheck();

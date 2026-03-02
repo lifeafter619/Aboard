@@ -17,11 +17,24 @@ class HelpSystem {
             'time-display-settings-modal': 'help.features.timeDisplay',
             'insert-text-modal': 'help.features.insertText'
         };
+
+        this.featureHelpMap = {
+            'more-shape-btn': 'help.features.shape',
+            'more-teaching-tools-btn': 'help.features.teachingTools',
+            'time-display-feature-btn': 'help.features.timeDisplay',
+            'timer-feature-btn': 'help.features.timer',
+            'random-picker-feature-btn': 'help.features.randomPicker',
+            'scoreboard-feature-btn': 'help.features.scoreboard',
+            'insert-image-feature-btn': 'help.features.insertImage',
+            'insert-text-feature-btn': 'help.features.insertText'
+        };
     }
 
     init() {
         // Inject help buttons into config panels
         this.injectHelpButtons();
+        this.injectFeatureHelpButtons();
+        this.bindDataHelpButtons();
 
         // Listen for dynamic modals
         this.observeModals();
@@ -50,6 +63,55 @@ class HelpSystem {
                     }
                 }
             }
+        });
+    }
+
+    injectFeatureHelpButtons() {
+        Object.entries(this.featureHelpMap).forEach(([elementId, helpKey]) => {
+            const featureBtn = document.getElementById(elementId);
+            if (!featureBtn || featureBtn.querySelector('.feature-help-btn')) return;
+
+            const helpBtn = document.createElement('span');
+            helpBtn.className = 'feature-help-btn';
+            helpBtn.setAttribute('role', 'button');
+            helpBtn.setAttribute('tabindex', '0');
+            helpBtn.title = window.i18n?.t('common.help') || 'Help';
+            helpBtn.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
+                    <line x1="12" y1="17" x2="12" y2="17"></line>
+                </svg>
+            `;
+
+            const showFeatureHelp = (event) => {
+                event.stopPropagation();
+                event.preventDefault();
+                this.showHelp(helpKey);
+            };
+
+            helpBtn.addEventListener('click', showFeatureHelp);
+            helpBtn.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    showFeatureHelp(event);
+                }
+            });
+
+            featureBtn.appendChild(helpBtn);
+        });
+    }
+
+    bindDataHelpButtons() {
+        document.querySelectorAll('[data-help-key]').forEach((btn) => {
+            if (btn.dataset.helpBound === 'true') return;
+            btn.dataset.helpBound = 'true';
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const helpKey = btn.dataset.helpKey;
+                if (helpKey) {
+                    this.showHelp(helpKey);
+                }
+            });
         });
     }
 
