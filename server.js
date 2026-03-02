@@ -37,7 +37,7 @@ function sendJson(res, statusCode, payload) {
 }
 
 function serveStatic(reqPath, res) {
-    let safePath = decodeURIComponent(reqPath);
+    let safePath = reqPath;
     if (safePath === '/') {
         safePath = '/index.html';
     }

@@ -247,13 +247,26 @@ class PWAManager {
     }
 
     compareVersions(versionA, versionB) {
-        const parse = (version) => String(version || '').split(/[.-]/).slice(0, 3).map(v => parseInt(v, 10) || 0);
-        const a = parse(versionA);
-        const b = parse(versionB);
+        const parseVersion = (version) => {
+            if (!SEMVER_PATTERN.test(String(version || '').trim())) {
+                return null;
+            }
+            const [base, pre = ''] = String(version || '').split('-', 2);
+            const numbers = base.split('.').slice(0, 3).map(v => parseInt(v, 10) || 0);
+            return { numbers, pre };
+        };
+        const a = parseVersion(versionA);
+        const b = parseVersion(versionB);
+        if (!a && !b) return 0;
+        if (!a) return -1;
+        if (!b) return 1;
         for (let i = 0; i < 3; i++) {
-            if (a[i] > b[i]) return 1;
-            if (a[i] < b[i]) return -1;
+            if (a.numbers[i] > b.numbers[i]) return 1;
+            if (a.numbers[i] < b.numbers[i]) return -1;
         }
+        if (!a.pre && b.pre) return 1;
+        if (a.pre && !b.pre) return -1;
+        if (a.pre && b.pre) return a.pre.localeCompare(b.pre);
         return 0;
     }
 
@@ -671,9 +684,9 @@ class PWAManager {
 
         const localVersion = this.version || await this.loadVersion();
         const latestVersion = await this.fetchVersionFromApi();
-        const hasRemoteNewVersion = !!(localVersion && latestVersion && this.compareVersions(latestVersion, localVersion) > 0);
+        const hasNewerVersion = !!(localVersion && latestVersion && this.compareVersions(latestVersion, localVersion) > 0);
 
-        if (manual && hasRemoteNewVersion && window.drawingBoard?.settingsManager?.toastManager) {
+        if (manual && hasNewerVersion && window.drawingBoard?.settingsManager?.toastManager) {
             const message = this.getTranslation('versionUpdateFound')
                 .replace('{latest}', latestVersion)
                 .replace('{current}', localVersion);
@@ -681,7 +694,7 @@ class PWAManager {
         }
 
         if (!('serviceWorker' in navigator)) {
-            if (manual && !hasRemoteNewVersion && window.drawingBoard?.settingsManager?.toastManager) {
+            if (manual && !hasNewerVersion && window.drawingBoard?.settingsManager?.toastManager) {
                 window.drawingBoard.settingsManager.toastManager.show(this.getTranslation('latest'), 'success');
             }
             finishCheck();
@@ -690,7 +703,7 @@ class PWAManager {
 
         navigator.serviceWorker.getRegistration().then(reg => {
             if (!reg) {
-                if (manual && !hasRemoteNewVersion && window.drawingBoard?.settingsManager?.toastManager) {
+                if (manual && !hasNewerVersion && window.drawingBoard?.settingsManager?.toastManager) {
                     window.drawingBoard.settingsManager.toastManager.show(this.getTranslation('latest'), 'success');
                 }
                 finishCheck();
@@ -737,7 +750,7 @@ class PWAManager {
             reg.update()
                 .then(async () => {
                     const hasUpdate = await updateDetectionPromise;
-                    if (manual && !hasUpdate && !reg.waiting && !hasRemoteNewVersion && window.drawingBoard?.settingsManager?.toastManager) {
+                    if (manual && !hasUpdate && !reg.waiting && !hasNewerVersion && window.drawingBoard?.settingsManager?.toastManager) {
                         window.drawingBoard.settingsManager.toastManager.show(this.getTranslation('latest'), 'success');
                     }
                     finishCheck();

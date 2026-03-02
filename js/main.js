@@ -7,6 +7,11 @@ const TOOL_CONFIG_PANEL_GAP = 8;
 const MIN_EDGE_UNSNAP_DISTANCE = 90;
 const EDGE_UNSNAP_BUFFER = 20;
 const MAX_FEATURE_WIDGET_ZINDEX = 20000;
+const QUALITY_UPDATE_DEBOUNCE_MS = 120;
+const MIN_DYNAMIC_RENDER_SCALE = 1;
+const MAX_DYNAMIC_RENDER_SCALE = 4;
+const RENDER_SCALE_SCHEDULE_THRESHOLD = 0.15;
+const RENDER_SCALE_APPLY_THRESHOLD = 0.05;
 
 class DrawingBoard {
     constructor() {
@@ -3090,25 +3095,25 @@ class DrawingBoard {
 
     getTargetRenderScale() {
         if (!this.settingsManager.unlimitedZoom) {
-            return 1;
+            return MIN_DYNAMIC_RENDER_SCALE;
         }
         const scale = this.drawingEngine?.canvasScale || 1;
-        return Math.min(4, Math.max(1, Math.sqrt(scale)));
+        return Math.min(MAX_DYNAMIC_RENDER_SCALE, Math.max(MIN_DYNAMIC_RENDER_SCALE, Math.sqrt(scale)));
     }
 
     scheduleRenderQualityUpdate() {
         const targetScale = this.getTargetRenderScale();
-        if (Math.abs(targetScale - this.dynamicRenderScale) < 0.15) return;
+        if (Math.abs(targetScale - this.dynamicRenderScale) < RENDER_SCALE_SCHEDULE_THRESHOLD) return;
         if (this.qualityUpdateTimer) {
             clearTimeout(this.qualityUpdateTimer);
         }
         this.qualityUpdateTimer = setTimeout(() => {
             this.applyRenderQualityScale(targetScale);
-        }, 120);
+        }, QUALITY_UPDATE_DEBOUNCE_MS);
     }
 
     applyRenderQualityScale(scale) {
-        if (Math.abs(scale - this.dynamicRenderScale) < 0.05) return;
+        if (Math.abs(scale - this.dynamicRenderScale) < RENDER_SCALE_APPLY_THRESHOLD) return;
 
         const width = parseFloat(this.canvas.style.width) || this.settingsManager.canvasWidth;
         const height = parseFloat(this.canvas.style.height) || this.settingsManager.canvasHeight;
@@ -3116,7 +3121,9 @@ class DrawingBoard {
         const oldCanvas = document.createElement('canvas');
         oldCanvas.width = this.canvas.width;
         oldCanvas.height = this.canvas.height;
-        oldCanvas.getContext('2d').drawImage(this.canvas, 0, 0);
+        const oldCtx = oldCanvas.getContext('2d');
+        if (!oldCtx) return;
+        oldCtx.drawImage(this.canvas, 0, 0);
 
         this.dynamicRenderScale = scale;
         const dpr = this.getRenderPixelRatio();
@@ -3133,6 +3140,8 @@ class DrawingBoard {
 
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.bgCtx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
         this.ctx.scale(dpr, dpr);
         this.bgCtx.scale(dpr, dpr);
 
