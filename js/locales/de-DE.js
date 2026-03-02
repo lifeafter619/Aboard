@@ -66,6 +66,7 @@ window.translations = {
             ballpoint: 'Kugelschreiber',
             fountain: 'Füllfederhalter',
             brush: 'Pinsel',
+            marker: 'Marker',
             color: 'Farbe',
             colorAndSize: 'Farbe & Größe',
             colorPicker: 'Farbwähler',

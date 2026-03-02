@@ -66,6 +66,7 @@ window.translations = {
             ballpoint: 'Stylo à bille',
             fountain: 'Stylo-plume',
             brush: 'Pinceau',
+            marker: 'Marqueur',
             color: 'Couleur',
             colorAndSize: 'Couleur et taille',
             colorPicker: 'Sélecteur de couleur',

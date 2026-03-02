@@ -68,6 +68,7 @@ window.translations = {
             ballpoint: '圓珠筆',
             fountain: '鋼筆',
             brush: '毛筆',
+            marker: '麥克筆',
             color: '顏色',
             colorAndSize: '顏色與粗細',
             colorPicker: '取色器',

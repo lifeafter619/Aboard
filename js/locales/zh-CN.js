@@ -71,6 +71,7 @@ window.translations = {
             ballpoint: '圆珠笔',
             fountain: '钢笔',
             brush: '毛笔',
+            marker: '马克笔',
             color: '颜色',
             colorAndSize: '颜色与粗细',
             colorPicker: '取色器',

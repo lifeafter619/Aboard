@@ -375,6 +375,7 @@ class InsertTextManager {
             { value: 'serif', label: 'settings.general.fonts.serif' },
             { value: 'monospace', label: 'settings.general.fonts.monospace' },
             { value: 'cursive', label: 'settings.general.fonts.cursive' },
+            { value: '"LXGW WenKai", "霞鹜文楷", "Kaiti SC", serif', label: '霞鹜文楷（LXGW WenKai）' },
             { value: 'Microsoft YaHei', label: 'settings.general.fonts.yahei' },
             { value: 'SimSun', label: 'settings.general.fonts.simsun' },
             { value: 'SimHei', label: 'settings.general.fonts.simhei' },
@@ -395,7 +396,9 @@ class InsertTextManager {
             const option = document.createElement('option');
             option.value = font.value;
             // Use translation if available
-            option.textContent = window.i18n ? window.i18n.t(font.label) : font.value;
+            option.textContent = window.i18n && font.label.startsWith('settings.')
+                ? window.i18n.t(font.label)
+                : font.label;
             select.appendChild(option);
         });
 
@@ -470,6 +473,9 @@ class InsertTextManager {
         const fontSelect = document.getElementById('insert-text-font-select');
         fontSelect.addEventListener('change', (e) => {
             this.textConfig.fontFamily = e.target.value;
+            if (this.isActive) {
+                this.updateOverlay();
+            }
         });
 
         // Font Upload
@@ -861,7 +867,7 @@ class InsertTextManager {
         // Measure text dimensions at base (unscaled) font size so that
         // width/height are consistent with scale multiplication elsewhere.
         this.ctx.save();
-        this.ctx.font = `${fontStyle} ${fontWeight} ${effectiveFontSize}px ${this.textConfig.fontFamily}`;
+        this.ctx.font = `${fontStyle} ${fontWeight} ${effectiveFontSize}px ${this.normalizeFontFamilyForCanvas(this.textConfig.fontFamily)}`;
         this.ctx.textBaseline = 'top';
         
         const lines = this.textConfig.text.split('\n');
@@ -926,7 +932,7 @@ class InsertTextManager {
         const fontSize = textObj.fontSize;
         const fontStyle = textObj.italic ? 'italic' : 'normal';
         const fontWeight = textObj.bold ? 'bold' : 'normal';
-        this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${textObj.fontFamily}`;
+        this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${this.normalizeFontFamilyForCanvas(textObj.fontFamily)}`;
         this.ctx.textBaseline = 'top';
         this.ctx.fillStyle = textObj.color;
         
@@ -1072,7 +1078,7 @@ class InsertTextManager {
         const padding = 4;
         
         this.ctx.save();
-        this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${textObj.fontFamily}`;
+        this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${this.normalizeFontFamilyForCanvas(textObj.fontFamily)}`;
         
         const lines = textObj.text.split('\n');
         const lineHeight = fontSize * 1.2;
@@ -1166,6 +1172,15 @@ class InsertTextManager {
         if (!textObj.decorationStyle) textObj.decorationStyle = 'solid';
         if (!textObj.decorationColor) textObj.decorationColor = textObj.color || '#000000';
         if (!textObj.decorationWidth) textObj.decorationWidth = this.DEFAULT_DECORATION_WIDTH;
+    }
+
+    normalizeFontFamilyForCanvas(fontFamily) {
+        if (!fontFamily || typeof fontFamily !== 'string') return 'sans-serif';
+        return fontFamily.split(',')
+            .map(part => part.trim())
+            .filter(Boolean)
+            .map(part => (/^["'].*["']$/.test(part) || !/\s/.test(part) ? part : `"${part}"`))
+            .join(', ');
     }
     
     // Get all text objects (for serialization)

@@ -66,6 +66,7 @@ window.translations = {
             ballpoint: '볼펜',
             fountain: '만년필',
             brush: '붓',
+            marker: '마커',
             color: '색상',
             colorAndSize: '색상 및 크기',
             colorPicker: '색상 선택기',

@@ -21,6 +21,7 @@ class SettingsManager {
         this.showImportExportBtn = localStorage.getItem('showImportExportBtn') !== 'false';
         this.showFullscreenBtn = localStorage.getItem('showFullscreenBtn') !== 'false';
         this.showToolbarText = localStorage.getItem('showToolbarText') !== 'false'; // Default true
+        this.keepMorePanelOpen = localStorage.getItem('keepMorePanelOpen') !== 'false';
         this.patternPreferences = this.loadPatternPreferences();
         this.canvasWidth = parseInt(localStorage.getItem('canvasWidth')) || 1920;
         this.canvasHeight = parseInt(localStorage.getItem('canvasHeight')) || 1080;
@@ -421,6 +422,10 @@ class SettingsManager {
         if (showToolbarTextCheckbox) {
             showToolbarTextCheckbox.checked = this.showToolbarText;
         }
+        const keepMorePanelOpenCheckbox = document.getElementById('keep-more-panel-open-checkbox');
+        if (keepMorePanelOpenCheckbox) {
+            keepMorePanelOpenCheckbox.checked = this.keepMorePanelOpen;
+        }
         this.updateToolbarTextVisibility();
         
         // Canvas is always in pagination mode now
@@ -574,6 +579,7 @@ class SettingsManager {
             showZoomControls: this.showZoomControls,
             showImportExportBtn: this.showImportExportBtn,
             showFullscreenBtn: this.showFullscreenBtn,
+            keepMorePanelOpen: this.keepMorePanelOpen,
             patternPreferences: this.patternPreferences,
             canvasWidth: this.canvasWidth,
             canvasHeight: this.canvasHeight,
@@ -741,7 +747,7 @@ class SettingsManager {
     applySettings(newSettings) {
         const keys = [
             'toolbarSize', 'configScale', 'controlPosition', 'edgeSnapEnabled',
-            'touchZoomEnabled', 'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn',
+            'touchZoomEnabled', 'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn', 'keepMorePanelOpen',
             'canvasWidth', 'canvasHeight', 'canvasPreset', 'themeColor', 'globalFont',
             'patternPreferences'
         ];

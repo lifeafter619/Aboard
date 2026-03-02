@@ -375,7 +375,8 @@ class I18n {
             'pencil': 'tools.pen.pencil',
             'ballpoint': 'tools.pen.ballpoint',
             'fountain': 'tools.pen.fountain',
-            'brush': 'tools.pen.brush'
+            'brush': 'tools.pen.brush',
+            'marker': 'tools.pen.marker'
         };
         
         document.querySelectorAll('.pen-type-btn').forEach(btn => {

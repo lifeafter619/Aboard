@@ -71,6 +71,7 @@ window.translations = {
             ballpoint: 'Ballpoint',
             fountain: 'Fountain',
             brush: 'Brush',
+            marker: 'Marker',
             color: 'Color',
             colorAndSize: 'Color & Size',
             colorPicker: 'Color Picker',

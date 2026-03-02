@@ -66,6 +66,7 @@ window.translations = {
             ballpoint: 'Bolígrafo de bola',
             fountain: 'Pluma estilográfica',
             brush: 'Pincel',
+            marker: 'Marcador',
             color: 'Color',
             colorAndSize: 'Color y tamaño',
             colorPicker: 'Selector de color',

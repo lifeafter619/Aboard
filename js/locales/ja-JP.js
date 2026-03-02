@@ -66,6 +66,7 @@ window.translations = {
             ballpoint: 'ボールペン',
             fountain: '万年筆',
             brush: 'ブラシ',
+            marker: 'マーカー',
             color: '色',
             colorAndSize: '色とサイズ',
             colorPicker: 'カラーピッカー',

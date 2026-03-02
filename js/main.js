@@ -49,7 +49,7 @@ class DrawingBoard {
             background: 'background-btn',
             select: 'select-btn',
             // Shape tool is launched from the More menu button.
-            shape: 'more-btn'
+            shape: 'more-shape-btn'
         };
         
         // Set callback for teaching tools insertion to auto-switch to pen
@@ -1254,7 +1254,7 @@ class DrawingBoard {
                     timeDisplayControls.style.display = 'none';
                     timeDisplayFeatureBtn.classList.remove('active');
                     // Auto-switch to pen tool after closing time display settings
-                    this.closeFeaturePanel();
+                    this.handleMoreFeaturePanelAfterAction();
                     this.switchToPen();
                 } else {
                     timeDisplayControls.style.display = 'flex';
@@ -1275,7 +1275,7 @@ class DrawingBoard {
                     this.timerManager = new TimerManager();
                 }
                 this.timerManager.showSettingsModal();
-                this.closeFeaturePanel();
+                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
@@ -1287,7 +1287,7 @@ class DrawingBoard {
                     this.insertTextManager = new InsertTextManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
                 }
                 this.insertTextManager.trigger();
-                this.closeFeaturePanel();
+                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
@@ -1299,7 +1299,7 @@ class DrawingBoard {
                     this.randomPickerManager = new RandomPickerManager();
                 }
                 this.randomPickerManager.create();
-                this.closeFeaturePanel();
+                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
@@ -1311,7 +1311,7 @@ class DrawingBoard {
                     this.scoreboardManager = new ScoreboardManager();
                 }
                 this.scoreboardManager.create();
-                this.closeFeaturePanel();
+                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
@@ -1323,7 +1323,7 @@ class DrawingBoard {
                     this.insertImageManager = new InsertImageManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
                 }
                 this.insertImageManager.triggerSelect();
-                this.closeFeaturePanel();
+                this.handleMoreFeaturePanelAfterAction();
             });
         }
         
@@ -1682,12 +1682,32 @@ class DrawingBoard {
         const clearLocalCacheBtn = document.getElementById('clear-local-cache-btn');
         if (clearLocalCacheBtn) {
             clearLocalCacheBtn.addEventListener('click', async () => {
-                const confirmMessage = window.i18n
-                    ? window.i18n.t('settings.more.clearLocalDataConfirm')
-                    : 'This will clear local cache, canvas data, and settings, then restore first-load state. Continue?';
+                const options = {
+                    settings: document.getElementById('clear-settings-cache-checkbox')?.checked,
+                    canvas: document.getElementById('clear-canvas-cache-checkbox')?.checked,
+                    other: document.getElementById('clear-other-cache-checkbox')?.checked
+                };
+                if (!options.settings && !options.canvas && !options.other) {
+                    alert('请先选择要清理的缓存类型');
+                    return;
+                }
+                const sizes = await this.getCacheSizeSummary();
+                const selectedSummary = [];
+                if (options.settings) selectedSummary.push(`设置项缓存：${this.formatBytes(sizes.settings)}`);
+                if (options.canvas) selectedSummary.push(`画布缓存：${this.formatBytes(sizes.canvas)}`);
+                if (options.other) selectedSummary.push(`其他缓存：${this.formatBytes(sizes.other)}`);
+                const confirmMessage = `将清理以下缓存：\n${selectedSummary.join('\n')}\n\n确定继续吗？`;
                 if (!window.confirm(confirmMessage)) return;
-                await this.clearAllLocalData();
-                window.location.reload();
+                await this.clearSelectedCache(options);
+                await this.updateCacheSizeDisplay();
+            });
+        }
+
+        const keepMorePanelOpenCheckbox = document.getElementById('keep-more-panel-open-checkbox');
+        if (keepMorePanelOpenCheckbox) {
+            keepMorePanelOpenCheckbox.addEventListener('change', (e) => {
+                this.settingsManager.keepMorePanelOpen = e.target.checked;
+                localStorage.setItem('keepMorePanelOpen', e.target.checked);
             });
         }
 
@@ -2313,7 +2333,7 @@ class DrawingBoard {
                     // Formula ensures unsnap threshold is further than snap threshold
                     // Width difference + buffer to avoid flicker loop
                     const widthDiff = Math.max(0, this.draggedElementWidth - currentWidth);
-                    effectiveSnapDistance = Math.max(300, edgeSnapDistance + widthDiff + 50);
+                    effectiveSnapDistance = Math.max(90, edgeSnapDistance + widthDiff + 20);
                 }
                 
                 // Check for left edge snap first
@@ -2634,9 +2654,16 @@ class DrawingBoard {
     closeFeaturePanel() {
         document.getElementById('feature-area').classList.remove('show');
     }
+
+    handleMoreFeaturePanelAfterAction() {
+        if (!this.settingsManager.keepMorePanelOpen) {
+            this.closeFeaturePanel();
+        }
+    }
     
     openSettings() {
         document.getElementById('settings-modal').classList.add('show');
+        this.updateCacheSizeDisplay();
         
         // Update time display settings UI with current values (elements may not exist if removed from Settings > More)
         const timeDisplayCheckbox = document.getElementById('show-time-display-checkbox');
@@ -4738,6 +4765,145 @@ class DrawingBoard {
             localStorage.removeItem('savedCurrentPage');
         } catch (e) {
             console.warn('Failed to clear session:', e);
+        }
+    }
+
+    getCacheKeyGroups() {
+        const settingsKeys = new Set([
+            'toolbarSize', 'configScale', 'controlPosition', 'edgeSnapEnabled', 'touchZoomEnabled',
+            'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn',
+            'showToolbarText', 'keepMorePanelOpen', 'canvasWidth', 'canvasHeight', 'canvasPreset',
+            'themeColor', 'globalFont', 'language', 'patternPreferences', 'toolbarOrder',
+            'toolbarVisibility', 'controlShowZoom', 'controlShowPagination', 'controlShowTime',
+            'controlShowFullscreen', 'controlShowImport', 'controlShowExport', 'penType',
+            'penLineStyle', 'penDashDensity', 'penMultiLineCount', 'penMultiLineSpacing',
+            'eraserShape', 'lineStyle'
+        ]);
+        const canvasKeys = new Set([
+            'savedCanvasData', 'savedBgCanvasData', 'savedCanvasTimestamp',
+            'savedCurrentPage', 'pageBackgrounds', 'canvasScale', 'panOffsetX', 'panOffsetY'
+        ]);
+        return { settingsKeys, canvasKeys };
+    }
+
+    getEntrySize(key, value) {
+        return new Blob([`${key}${value || ''}`]).size;
+    }
+
+    formatBytes(bytes) {
+        if (!bytes || bytes <= 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB'];
+        const idx = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+        const val = bytes / Math.pow(1024, idx);
+        return `${val.toFixed(val >= 10 || idx === 0 ? 0 : 1)} ${units[idx]}`;
+    }
+
+    async getCacheSizeSummary() {
+        const { settingsKeys, canvasKeys } = this.getCacheKeyGroups();
+        const summary = { settings: 0, canvas: 0, other: 0 };
+
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            const val = localStorage.getItem(key);
+            const size = this.getEntrySize(key, val);
+            if (settingsKeys.has(key)) summary.settings += size;
+            else if (canvasKeys.has(key)) summary.canvas += size;
+            else summary.other += size;
+        }
+
+        for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            const val = sessionStorage.getItem(key);
+            const size = this.getEntrySize(key, val);
+            if (settingsKeys.has(key)) summary.settings += size;
+            else if (canvasKeys.has(key)) summary.canvas += size;
+            else summary.other += size;
+        }
+
+        try {
+            const session = await this.storageManager.loadSession();
+            if (session) {
+                summary.canvas += new Blob([JSON.stringify(session)]).size;
+            }
+        } catch (e) {
+            console.warn('Failed to estimate IndexedDB size:', e);
+        }
+
+        if ('caches' in window) {
+            try {
+                const cacheKeys = await caches.keys();
+                for (const cacheName of cacheKeys) {
+                    const cache = await caches.open(cacheName);
+                    const requests = await cache.keys();
+                    for (const request of requests) {
+                        const response = await cache.match(request);
+                        const blob = response ? await response.clone().blob() : null;
+                        summary.other += blob ? blob.size : 0;
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to estimate Cache Storage size:', e);
+            }
+        }
+
+        return summary;
+    }
+
+    async updateCacheSizeDisplay() {
+        const settingsSizeEl = document.getElementById('settings-cache-size');
+        const canvasSizeEl = document.getElementById('canvas-cache-size');
+        const otherSizeEl = document.getElementById('other-cache-size');
+        if (!settingsSizeEl || !canvasSizeEl || !otherSizeEl) return;
+        const summary = await this.getCacheSizeSummary();
+        settingsSizeEl.textContent = this.formatBytes(summary.settings);
+        canvasSizeEl.textContent = this.formatBytes(summary.canvas);
+        otherSizeEl.textContent = this.formatBytes(summary.other);
+    }
+
+    async clearSelectedCache(options) {
+        const { settingsKeys, canvasKeys } = this.getCacheKeyGroups();
+
+        if (options.canvas) {
+            await this.clearSessionData();
+            canvasKeys.forEach(key => {
+                localStorage.removeItem(key);
+                sessionStorage.removeItem(key);
+            });
+        }
+
+        if (options.settings) {
+            settingsKeys.forEach(key => {
+                localStorage.removeItem(key);
+                sessionStorage.removeItem(key);
+            });
+        }
+
+        if (options.other) {
+            const preserved = new Set();
+            if (!options.settings) settingsKeys.forEach(k => preserved.add(k));
+            if (!options.canvas) canvasKeys.forEach(k => preserved.add(k));
+
+            const localKeys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key) localKeys.push(key);
+            }
+            localKeys.forEach(key => {
+                if (!preserved.has(key)) localStorage.removeItem(key);
+            });
+            const sessionKeys = [];
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                if (key) sessionKeys.push(key);
+            }
+            sessionKeys.forEach(key => {
+                if (!preserved.has(key)) sessionStorage.removeItem(key);
+            });
+
+            if ('caches' in window) {
+                const cacheKeys = await caches.keys();
+                await Promise.all(cacheKeys.map(key => caches.delete(key)));
+            }
         }
     }
 
