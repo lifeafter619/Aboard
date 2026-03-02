@@ -50,6 +50,13 @@ class TimeDisplayControls {
                 this.timeDisplayManager.showFullscreen();
             });
         }
+
+        const helpBtn = document.getElementById('time-display-area-help-btn');
+        if (helpBtn) {
+            helpBtn.addEventListener('click', () => {
+                window.drawingBoard?.helpSystem?.showHelp('help.features.timeDisplay');
+            });
+        }
     }
     
     toggleTimeDisplayArea() {
@@ -62,6 +69,7 @@ class TimeDisplayControls {
     
     showTimeDisplayArea() {
         this.timeDisplayArea.classList.add('show');
+        window.drawingBoard?.bringElementToFront(this.timeDisplayArea);
         
         // Position time-display-area above the "小功能" area (feature-area)
         // Fixed: Use proper inset positioning instead of transform for better accuracy

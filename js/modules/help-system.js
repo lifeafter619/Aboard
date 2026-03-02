@@ -13,8 +13,8 @@ class HelpSystem {
             'random-picker-settings-modal': 'help.features.randomPicker',
             'scoreboard-feature-btn': 'help.features.scoreboard',
             'teaching-tools-modal': 'help.features.teachingTools',
+            // time-display-area uses an explicit in-panel help button in time-display-controls.js
             'time-display-settings-modal': 'help.features.timeDisplay',
-            'time-display-area': 'help.features.timeDisplay',
             'insert-text-modal': 'help.features.insertText'
         };
     }
@@ -98,9 +98,6 @@ class HelpSystem {
             if (modal) this.injectIntoModal(modal);
         });
         
-        // Also inject into the time display area (not a modal but a panel)
-        const timeDisplayArea = document.getElementById('time-display-area');
-        if (timeDisplayArea) this.injectIntoPanel(timeDisplayArea);
     }
     
     checkAndInjectModal(modalId) {

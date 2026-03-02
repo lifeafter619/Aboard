@@ -320,6 +320,8 @@ window.translations = {
             },
             edgeSnap: 'Activer l\'alignement des bords',
             edgeSnapHint: 'Aligner automatiquement les panneaux de contrôle sur les bords de l\'écran',
+            morePanelBehaviorLabel: 'Comportement du panneau Plus',
+            keepMorePanelOpenHint: 'Garder le panneau Plus ouvert après clic sur une fonction',
             // Toolbar customization
             toolbarCustomization: 'Personnalisation de la barre d\'outils',
             toolbarCustomizationHint: 'Sélectionnez les outils à afficher, glissez pour réorganiser',

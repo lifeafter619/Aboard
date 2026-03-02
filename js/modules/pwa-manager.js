@@ -1,3 +1,6 @@
+// Timeout for resolving manual update checks (milliseconds).
+const UPDATE_CHECK_TIMEOUT = 1200;
+
 class PWAManager {
     constructor() {
         this.deferredPrompt = null;
@@ -396,7 +399,7 @@ class PWAManager {
             installBtn.style.display = 'none'; // Hidden by default
 
             // Check Update Button
-            const checkUpdateBtn = this.createButton('pwa-check-update-btn', this.getTranslation('checkUpdate'), () => this.checkForUpdates());
+            const checkUpdateBtn = this.createButton('pwa-check-update-btn', this.getTranslation('checkUpdate'), () => this.checkForUpdates(true));
             checkUpdateBtn.style.backgroundColor = 'transparent';
             checkUpdateBtn.style.color = 'var(--theme-color, #007AFF)';
             checkUpdateBtn.style.border = '1px solid var(--theme-color, #007AFF)';
@@ -507,7 +510,7 @@ class PWAManager {
         window.addEventListener('online', () => {
             this.updateOnlineStatus();
             // Check for updates when coming online
-            this.checkForUpdates();
+            this.checkForUpdates(false);
             // Show toast when coming back online
             if (window.drawingBoard && window.drawingBoard.settingsManager && window.drawingBoard.settingsManager.toastManager) {
                 window.drawingBoard.settingsManager.toastManager.show(this.getTranslation('online'), 'success');
@@ -611,19 +614,90 @@ class PWAManager {
         this.hideInstallButtons();
     }
 
-    checkForUpdates() {
+    checkForUpdates(manual = false) {
         if (!('serviceWorker' in navigator)) {
             return;
         }
 
-        navigator.serviceWorker.getRegistration().then(reg => {
-            if (reg) {
-                reg.update().then(() => {
-                    // Check logic is handled by onupdatefound -> showUpdateModal
-                    // For manual checks, we might want to show "No updates" if nothing happens
-                    // But avoiding spamming "No updates" on automatic checks is better.
-                });
+        if (!navigator.onLine) {
+            if (manual) {
+                this.showOfflineNotification();
             }
+            return;
+        }
+
+        const checkUpdateBtn = document.getElementById('pwa-check-update-btn');
+        if (manual && checkUpdateBtn) {
+            checkUpdateBtn.disabled = true;
+            checkUpdateBtn.textContent = this.getTranslation('checking');
+        }
+
+        const finishCheck = () => {
+            if (checkUpdateBtn) {
+                checkUpdateBtn.disabled = false;
+                checkUpdateBtn.textContent = this.getTranslation('checkUpdate');
+            }
+        };
+
+        navigator.serviceWorker.getRegistration().then(reg => {
+            if (!reg) {
+                if (manual && window.drawingBoard?.settingsManager?.toastManager) {
+                    window.drawingBoard.settingsManager.toastManager.show(this.getTranslation('latest'), 'success');
+                }
+                finishCheck();
+                return;
+            }
+
+            if (reg.waiting) {
+                this.showUpdateModal(reg.waiting);
+                finishCheck();
+                return;
+            }
+
+            let updateFound = false;
+            const updateDetectionPromise = new Promise((resolve) => {
+                let resolved = false;
+                const resolveOnce = (value) => {
+                    if (!resolved) {
+                        resolved = true;
+                        resolve(value);
+                    }
+                };
+                const handleInstallingWorker = (worker) => {
+                    if (!worker) {
+                        resolveOnce(false);
+                        return;
+                    }
+                    worker.addEventListener('statechange', () => {
+                        if (worker.state === 'installed') {
+                            resolveOnce(!!navigator.serviceWorker.controller);
+                        } else if (worker.state === 'redundant') {
+                            resolveOnce(false);
+                        }
+                    });
+                };
+                reg.addEventListener('updatefound', () => {
+                    updateFound = true;
+                    handleInstallingWorker(reg.installing);
+                }, { once: true });
+                setTimeout(() => {
+                    resolveOnce(updateFound ? true : !!reg.waiting);
+                }, UPDATE_CHECK_TIMEOUT);
+            });
+
+            reg.update()
+                .then(async () => {
+                    const hasUpdate = await updateDetectionPromise;
+                    if (manual && !hasUpdate && !reg.waiting && window.drawingBoard?.settingsManager?.toastManager) {
+                        window.drawingBoard.settingsManager.toastManager.show(this.getTranslation('latest'), 'success');
+                    }
+                    finishCheck();
+                })
+                .catch(() => {
+                    finishCheck();
+                });
+        }).catch(() => {
+            finishCheck();
         });
     }
 }

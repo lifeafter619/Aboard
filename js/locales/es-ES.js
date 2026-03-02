@@ -320,6 +320,8 @@ window.translations = {
             },
             edgeSnap: 'Habilitar ajuste de borde',
             edgeSnapHint: 'Ajustar automáticamente los paneles de control a los bordes de la pantalla',
+            morePanelBehaviorLabel: 'Comportamiento del panel Más',
+            keepMorePanelOpenHint: 'Mantener abierto el panel Más después de pulsar funciones',
             // Toolbar customization
             toolbarCustomization: 'Personalización de la barra de herramientas',
             toolbarCustomizationHint: 'Seleccione herramientas para mostrar, arrastre para reordenar',

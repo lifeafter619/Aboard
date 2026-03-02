@@ -726,6 +726,7 @@ class SettingsManager {
             'showZoomControls': 'settings.display.showZoomControls',
             'showImportExportBtn': 'settings.display.showImportExportBtn',
             'showFullscreenBtn': 'settings.display.showFullscreenBtn',
+            'keepMorePanelOpen': 'settings.general.morePanelBehaviorLabel',
             'canvasWidth': 'settings.canvas.customSize.width',
             'canvasHeight': 'settings.canvas.customSize.height',
             'canvasPreset': 'settings.canvas.size',

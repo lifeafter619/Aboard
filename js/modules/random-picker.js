@@ -526,7 +526,7 @@ class RandomPickerManager {
                 }
             } catch (e) {
                 console.error(e);
-                alert('Excel import library load failed.');
+                window.appDialog?.showAlert('Excel import library load failed.', 'error');
                 return;
             }
         }
@@ -559,13 +559,13 @@ class RandomPickerManager {
                 if (names.length > 0) {
                     const textarea = document.getElementById('rp-names-input');
                     textarea.value = names.join('\n');
-                    alert(window.i18n.t('randomPicker.importSuccess').replace('{count}', names.length));
+                    window.appDialog?.showAlert(window.i18n.t('randomPicker.importSuccess').replace('{count}', names.length), 'success');
                 } else {
-                    alert(window.i18n.t('randomPicker.importNoData'));
+                    window.appDialog?.showAlert(window.i18n.t('randomPicker.importNoData'), 'warning');
                 }
             } catch (err) {
                 console.error(err);
-                alert(window.i18n.t('randomPicker.importError'));
+                window.appDialog?.showAlert(window.i18n.t('randomPicker.importError'), 'error');
             }
         };
         reader.readAsArrayBuffer(file);

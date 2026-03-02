@@ -1309,6 +1309,13 @@ button, a, input[type="button"], input[type="submit"] {
     font-weight: 500;
 }
 
+.settings-cache-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
 /* Confirm Modal */
 .confirm-modal-content {
     max-width: 400px;

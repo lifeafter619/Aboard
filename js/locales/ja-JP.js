@@ -324,6 +324,8 @@ window.translations = {
             },
             edgeSnap: 'エッジスナップを有効化',
             edgeSnapHint: 'ドラッグ時にコントロールパネルを画面端に自動配置',
+            morePanelBehaviorLabel: 'その他機能パネルの動作',
+            keepMorePanelOpenHint: '機能ボタンを押した後も「その他」パネルを閉じない',
             // Toolbar customization
             toolbarCustomization: 'ツールバーのカスタマイズ',
             toolbarCustomizationHint: 'ツールバーに表示するツールを選択し、ドラッグで順序を変更',

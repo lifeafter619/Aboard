@@ -350,6 +350,10 @@ window.translations = {
             },
             edgeSnap: 'Enable Edge Snap',
             edgeSnapHint: 'Auto-snap panels to screen edges when dragging',
+            touchZoom: 'Touch Zoom',
+            touchZoomHint: 'Allow pinch gesture to zoom canvas',
+            morePanelBehaviorLabel: 'More Panel Behavior',
+            keepMorePanelOpenHint: 'Keep the More panel open after clicking feature buttons',
             // Toolbar customization
             toolbarCustomization: 'Toolbar Customization',
             toolbarCustomizationHint: 'Select tools to display in toolbar, drag to reorder',

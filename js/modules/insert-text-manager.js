@@ -121,7 +121,7 @@ class InsertTextManager {
             if (window.toastManager) {
                 window.toastManager.show(msg, 'error');
             } else {
-                alert(msg);
+                window.appDialog?.showAlert(msg, 'error');
             }
             return;
         }
@@ -134,7 +134,7 @@ class InsertTextManager {
             if (window.toastManager) {
                 window.toastManager.show(msg, 'error');
             } else {
-                alert(msg);
+                window.appDialog?.showAlert(msg, 'error');
             }
             return;
         }

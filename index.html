@@ -423,10 +423,6 @@
 
     <!-- Time Display Area (independent, draggable, with edge snapping) -->
     <div id="time-display-area">
-        <!-- Drag handle for time display area -->
-        <div class="panel-drag-handle" data-i18n-title="common.dragToMove">
-            <span class="drag-handle-dots">⋮⋮</span>
-        </div>
         <!-- Close button for time display area -->
         <button id="time-display-area-close-btn" class="config-close-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -450,6 +446,14 @@
                 </div>
                 <!-- Settings and Fullscreen buttons for time display area -->
                 <div class="time-display-action-buttons">
+                    <button id="time-display-area-help-btn" class="time-display-settings-btn-with-text" data-i18n-title="common.help">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
+                            <line x1="12" y1="17" x2="12" y2="17"></line>
+                        </svg>
+                        <span data-i18n="common.help">帮助</span>
+                    </button>
                     <button id="time-display-area-settings-btn" class="time-display-settings-btn-with-text">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="3"></circle>
@@ -692,6 +696,13 @@
                                 <span data-i18n="settings.general.touchZoom">触控缩放</span>
                             </label>
                             <p class="settings-hint" data-i18n="settings.general.touchZoomHint">允许使用双指捏合手势缩放画布</p>
+                        </div>
+                        <div class="settings-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="keep-more-panel-open-checkbox">
+                                <span data-i18n="settings.general.morePanelBehaviorLabel">更多功能面板行为</span>
+                            </label>
+                            <p class="settings-hint" data-i18n="settings.general.keepMorePanelOpenHint">点击“更多”中的功能按钮后默认不关闭“更多”框</p>
                         </div>
                         
                         <!-- Toolbar customization -->
@@ -1086,7 +1097,7 @@
                         <div class="settings-group">
                             <label data-i18n="settings.more.cacheCleanupLabel">缓存清理</label>
                             <p class="settings-hint" data-i18n="settings.more.cacheCleanupHint">可查看缓存占用并按类别清理（清理前会二次确认）</p>
-                            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
+                            <div class="settings-cache-options">
                                 <label class="checkbox-label"><input type="checkbox" id="clear-settings-cache-checkbox"><span><span data-i18n="settings.more.clearSettingsCache">清除设置项缓存</span>（<span id="settings-cache-size" data-i18n="settings.more.cacheSizeCalculating">计算中...</span>）</span></label>
                                 <label class="checkbox-label"><input type="checkbox" id="clear-canvas-cache-checkbox"><span><span data-i18n="settings.more.clearCanvasCache">清除画布缓存</span>（<span id="canvas-cache-size" data-i18n="settings.more.cacheSizeCalculating">计算中...</span>）</span></label>
                                 <label class="checkbox-label"><input type="checkbox" id="clear-other-cache-checkbox"><span><span data-i18n="settings.more.clearOtherCache">清除其他缓存</span>（<span id="other-cache-size" data-i18n="settings.more.cacheSizeCalculating">计算中...</span>）</span></label>
@@ -1101,13 +1112,6 @@
                                     <span data-i18n="settings.more.clearSelectedCache">清理所选缓存</span>
                                 </button>
                             </div>
-                        </div>
-                        <div class="settings-group">
-                            <label data-i18n="settings.more.morePanelBehaviorLabel">更多功能面板行为</label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="keep-more-panel-open-checkbox">
-                                <span data-i18n="settings.more.keepMorePanelOpenHint">点击“更多”中的功能按钮后默认不关闭“更多”框</span>
-                            </label>
                         </div>
                     </div>
                 </div>
@@ -1919,6 +1923,7 @@
     <script src="js/modules/teaching-tools.js" defer></script>
     <script src="js/modules/shape-drawing.js" defer></script>
     <script src="js/modules/line-style-modal.js" defer></script>
+    <script src="js/modules/dialog-manager.js" defer></script>
     <script src="js/modules/random-picker.js" defer></script>
     <script src="js/modules/scoreboard.js" defer></script>
     <script src="js/modules/settings-manager.js" defer></script>

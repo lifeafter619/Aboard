@@ -6,6 +6,7 @@ const DEFAULT_MIN_DEFAULT_SCALE = 0.9;
 const TOOL_CONFIG_PANEL_GAP = 8;
 const MIN_EDGE_UNSNAP_DISTANCE = 90;
 const EDGE_UNSNAP_BUFFER = 20;
+const MAX_FEATURE_WIDGET_ZINDEX = 20000;
 
 class DrawingBoard {
     constructor() {
@@ -130,6 +131,7 @@ class DrawingBoard {
         this.dragOffset = { x: 0, y: 0 };
         this.draggedElementWidth = 0;
         this.draggedElementHeight = 0;
+        this.featureWidgetZIndex = 1200;
         
         // Coordinate origin dragging state
         this.isDraggingCoordinateOrigin = false;
@@ -1277,6 +1279,7 @@ class DrawingBoard {
                     this.timerManager = new TimerManager();
                 }
                 this.timerManager.showSettingsModal();
+                this.bringElementToFront(document.getElementById('timer-settings-modal'));
                 this.handleMoreFeaturePanelAfterAction();
             });
         }
@@ -1289,6 +1292,7 @@ class DrawingBoard {
                     this.insertTextManager = new InsertTextManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
                 }
                 this.insertTextManager.trigger();
+                this.bringElementToFront(document.getElementById('insert-text-modal'));
                 this.handleMoreFeaturePanelAfterAction();
             });
         }
@@ -1301,6 +1305,7 @@ class DrawingBoard {
                     this.randomPickerManager = new RandomPickerManager();
                 }
                 this.randomPickerManager.create();
+                this.bringLatestElement('.random-picker-widget');
                 this.handleMoreFeaturePanelAfterAction();
             });
         }
@@ -1313,6 +1318,7 @@ class DrawingBoard {
                     this.scoreboardManager = new ScoreboardManager();
                 }
                 this.scoreboardManager.create();
+                this.bringLatestElement('.scoreboard-widget');
                 this.handleMoreFeaturePanelAfterAction();
             });
         }
@@ -1673,7 +1679,7 @@ class DrawingBoard {
                         if (this.settingsManager.toastManager) {
                             this.settingsManager.toastManager.show(errorMsg, 'error');
                         } else {
-                            alert(errorMsg);
+                            window.appDialog?.showAlert(errorMsg, 'error');
                         }
                     }
                 }
@@ -1691,7 +1697,7 @@ class DrawingBoard {
                 };
                 if (!options.settings && !options.canvas && !options.other) {
                     const selectMsg = window.i18n ? window.i18n.t('settings.more.selectCacheType') : 'Please select at least one cache type.';
-                    alert(selectMsg);
+                    window.appDialog?.showAlert(selectMsg, 'warning');
                     return;
                 }
                 const sizes = await this.getCacheSizeSummary();
@@ -1705,7 +1711,8 @@ class DrawingBoard {
                 const confirmTitle = window.i18n ? window.i18n.t('settings.more.confirmClearSelectedCache') : 'The following cache will be cleared:';
                 const confirmSuffix = window.i18n ? window.i18n.t('settings.more.clearLocalDataConfirmSuffix') : 'Continue?';
                 const confirmMessage = `${confirmTitle}\n${selectedSummary.join('\n')}\n\n${confirmSuffix}`;
-                if (!window.confirm(confirmMessage)) return;
+                const confirmed = await window.appDialog?.showConfirm(confirmMessage, confirmTitle);
+                if (!confirmed) return;
                 await this.clearSelectedCache(options);
                 await this.updateCacheSizeDisplay();
             });
@@ -1975,6 +1982,14 @@ class DrawingBoard {
         document.getElementById('confirm-modal').addEventListener('click', (e) => {
             if (e.target.id === 'confirm-modal') {
                 document.getElementById('confirm-modal').classList.remove('show');
+            }
+        });
+
+        document.addEventListener('mousedown', (e) => {
+            if (!(e.target instanceof Element)) return;
+            const floatingPanel = e.target.closest('.feature-widget, .timer-display-widget, #timer-settings-modal, #insert-text-modal, #time-display-area');
+            if (floatingPanel) {
+                this.bringElementToFront(floatingPanel);
             }
         });
     }
@@ -2663,6 +2678,27 @@ class DrawingBoard {
         document.getElementById('feature-area').classList.remove('show');
     }
 
+    bringElementToFront(element) {
+        if (!element) return;
+        if (this.featureWidgetZIndex > MAX_FEATURE_WIDGET_ZINDEX) {
+            const floatingPanels = document.querySelectorAll('.feature-widget, .timer-display-widget, #timer-settings-modal, #insert-text-modal, #time-display-area');
+            this.featureWidgetZIndex = 1200;
+            floatingPanels.forEach(panel => {
+                this.featureWidgetZIndex += 1;
+                panel.style.zIndex = String(this.featureWidgetZIndex);
+            });
+        }
+        this.featureWidgetZIndex += 1;
+        element.style.zIndex = String(this.featureWidgetZIndex);
+    }
+
+    bringLatestElement(selector) {
+        const elements = document.querySelectorAll(selector);
+        if (elements.length > 0) {
+            this.bringElementToFront(elements[elements.length - 1]);
+        }
+    }
+
     handleMoreFeaturePanelAfterAction() {
         if (!this.settingsManager.keepMorePanelOpen) {
             this.closeFeaturePanel();
@@ -2941,7 +2977,7 @@ class DrawingBoard {
                 if (this.settingsManager.toastManager) {
                     this.settingsManager.toastManager.show(successMsg, 'success');
                 } else {
-                    alert(successMsg);
+                    window.appDialog?.showAlert(successMsg, 'success');
                 }
             }
             modal.classList.remove('show');
@@ -4433,7 +4469,7 @@ class DrawingBoard {
             if (this.settingsManager.toastManager) {
                 this.settingsManager.toastManager.show(msg, 'warning');
             } else {
-                alert(msg);
+                window.appDialog?.showAlert(msg, 'warning');
             }
             return;
         }
@@ -4455,7 +4491,7 @@ class DrawingBoard {
             if (this.settingsManager.toastManager) {
                 this.settingsManager.toastManager.show(msg, 'error');
             } else {
-                alert(msg);
+                window.appDialog?.showAlert(msg, 'error');
             }
             this.uploadedImages.pop(); // Remove the image we just added
         }

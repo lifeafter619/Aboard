@@ -324,6 +324,8 @@ window.translations = {
             },
             edgeSnap: '가장자리 스냅 활성화',
             edgeSnapHint: '드래그 시 컨트롤 패널을 화면 가장자리에 자동 정렬',
+            morePanelBehaviorLabel: '더보기 패널 동작',
+            keepMorePanelOpenHint: '기능 버튼 클릭 후에도 더보기 패널 유지',
             // Toolbar customization
             toolbarCustomization: '툴바 사용자 정의',
             toolbarCustomizationHint: '툴바에 표시할 도구를 선택하고 드래그하여 순서 조정',

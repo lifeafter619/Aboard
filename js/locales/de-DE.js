@@ -322,6 +322,8 @@ window.translations = {
             },
             edgeSnap: 'Randausrichtung aktivieren',
             edgeSnapHint: 'Bedienfelder automatisch am Bildschirmrand ausrichten',
+            morePanelBehaviorLabel: 'Verhalten des Mehr-Panels',
+            keepMorePanelOpenHint: 'Mehr-Panel nach Klick auf Funktionsbuttons geöffnet lassen',
             // Toolbar customization
             toolbarCustomization: 'Symbolleisten-Anpassung',
             toolbarCustomizationHint: 'Wählen Sie Werkzeuge für die Symbolleiste, ziehen Sie zum Neuordnen',

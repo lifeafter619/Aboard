@@ -348,6 +348,8 @@ window.translations = {
             edgeSnapHint: '拖動控制面板時自動吸附到屏幕邊緣',
             touchZoom: '觸控縮放',
             touchZoomHint: '允許雙指捏合縮放畫布',
+            morePanelBehaviorLabel: '更多功能面板行為',
+            keepMorePanelOpenHint: '點擊「更多」中的功能按鈕後預設不關閉「更多」框',
             // Toolbar customization
             toolbarCustomization: '工具列自訂',
             toolbarCustomizationHint: '選擇要在工具列中顯示的工具，拖動可調整順序',
