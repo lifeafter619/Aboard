@@ -375,11 +375,11 @@ class InsertTextManager {
             { value: 'serif', label: 'settings.general.fonts.serif' },
             { value: 'monospace', label: 'settings.general.fonts.monospace' },
             { value: 'cursive', label: 'settings.general.fonts.cursive' },
-            { value: 'Noto Sans SC', label: '思源黑体（Noto Sans SC）' },
-            { value: 'Noto Serif SC', label: '思源宋体（Noto Serif SC）' },
-            { value: 'Inter', label: 'Inter' },
-            { value: 'Ma Shan Zheng', label: '马善政毛笔体（Ma Shan Zheng）' },
-            { value: 'Zhi Mang Xing', label: '智盲行书（Zhi Mang Xing）' }
+            { value: 'Noto Sans SC', label: '思源黑体' },
+            { value: 'Noto Serif SC', label: '思源宋体' },
+            { value: 'LXGW WenKai', label: '霞鹜文楷' },
+            { value: 'KaiTi', label: '楷体' },
+            { value: 'STXingkai', label: '华文行楷（手写）' }
         ];
 
         select.innerHTML = '';

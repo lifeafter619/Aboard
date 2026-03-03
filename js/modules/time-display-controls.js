@@ -71,7 +71,7 @@ class TimeDisplayControls {
             const triggerBtn = document.getElementById('time-display-feature-btn');
             if (triggerBtn) {
                 const btnRect = triggerBtn.getBoundingClientRect();
-                const gap = 8;
+                const gap = 16;
                 this.timeDisplayArea.style.left = `${btnRect.left + (btnRect.width / 2)}px`;
                 this.timeDisplayArea.style.top = `${btnRect.top - gap}px`;
                 this.timeDisplayArea.style.right = 'auto';

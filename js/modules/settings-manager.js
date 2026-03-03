@@ -524,7 +524,7 @@ class SettingsManager {
                 fontFamily = '"Courier New", Courier, "Consolas", monospace';
                 break;
             case 'cursive':
-                fontFamily = '"Ma Shan Zheng", "Zhi Mang Xing", "Comic Sans MS", cursive';
+                fontFamily = '"KaiTi", "STKaiti", "DFKai-SB", cursive';
                 break;
             case 'Noto Sans SC':
             case 'Microsoft YaHei':
@@ -536,15 +536,19 @@ class SettingsManager {
             case 'FangSong':
                 fontFamily = '"Noto Serif SC", "Songti SC", "STSong", "SimSun", serif';
                 break;
-            case 'Inter':
-                fontFamily = '"Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+            case 'LXGW WenKai':
+                fontFamily = '"LXGW WenKai", "Kaiti SC", "KaiTi", "STKaiti", cursive';
                 break;
-            case 'Ma Shan Zheng':
             case 'KaiTi':
-                fontFamily = '"Ma Shan Zheng", "KaiTi", "STKaiti", cursive';
+                fontFamily = '"KaiTi", "Kaiti SC", "STKaiti", "DFKai-SB", cursive';
                 break;
+            case 'STXingkai':
+            case 'Ma Shan Zheng':
             case 'Zhi Mang Xing':
-                fontFamily = '"Zhi Mang Xing", "KaiTi", "STKaiti", cursive';
+                fontFamily = '"STXingkai", "KaiTi", "STKaiti", "DFKai-SB", cursive';
+                break;
+            case 'Inter':
+                fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
                 break;
             default:
                 // Check if it's a custom font

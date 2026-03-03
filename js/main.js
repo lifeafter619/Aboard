@@ -2350,6 +2350,7 @@ class DrawingBoard {
             const isConfigArea = this.draggedElement.id === 'config-area';
             const isTimeDisplayArea = this.draggedElement.id === 'time-display-area';
             const isFeatureArea = this.draggedElement.id === 'feature-area';
+            const shouldApplyVerticalLive = !isToolbar && (isConfigArea || isTimeDisplayArea || isFeatureArea);
             
             let snappedToEdge = false;
             let isVertical = false;
@@ -2389,7 +2390,7 @@ class DrawingBoard {
                 // Check for right edge snap
                 else if (x + currentWidth > windowWidth - effectiveSnapDistance) {
                     // When vertical, need to recalculate width
-                    if (isToolbar || isConfigArea || isTimeDisplayArea || isFeatureArea) {
+                    if (shouldApplyVerticalLive) {
                         // Temporarily add vertical class to get correct dimensions
                         this.draggedElement.classList.add('vertical');
                         const tempWidth = this.draggedElement.getBoundingClientRect().width;
@@ -2414,8 +2415,9 @@ class DrawingBoard {
                 }
             }
             
-            // Apply vertical layout for toolbar, config area, time display area, and feature area when snapped to left/right
-            if ((isToolbar || isConfigArea || isTimeDisplayArea || isFeatureArea) && snappedToEdge && isVertical) {
+            // Keep toolbar following cursor while dragging; apply edge orientation after drag end.
+            // For other floating panels, keep existing live vertical/horizontal switching behavior.
+            if (shouldApplyVerticalLive && snappedToEdge && isVertical) {
                 this.draggedElement.classList.add('vertical');
                 // Recalculate position after adding vertical class to account for dimension changes
                 if (snappedRight) {
@@ -2425,7 +2427,7 @@ class DrawingBoard {
                 // Update height after dimension change for vertical layout
                 const newRect = this.draggedElement.getBoundingClientRect();
                 this.draggedElementHeight = newRect.height;
-            } else {
+            } else if (shouldApplyVerticalLive) {
                 this.draggedElement.classList.remove('vertical');
                 // Update dimensions when switching back to horizontal
                 const newRect = this.draggedElement.getBoundingClientRect();
@@ -2462,6 +2464,22 @@ class DrawingBoard {
                 // Mark toolbar as user-positioned to prevent auto-repositioning
                 if (this.draggedElement.id === 'toolbar') {
                     this.draggedElement.classList.add('user-positioned');
+                    if (this.settingsManager.edgeSnapEnabled) {
+                        const rect = this.draggedElement.getBoundingClientRect();
+                        const nearLeftEdge = rect.left <= 12;
+                        const nearRightEdge = (window.innerWidth - rect.right) <= 12;
+                        if (nearLeftEdge || nearRightEdge) {
+                            this.draggedElement.classList.add('vertical');
+                            if (nearLeftEdge) {
+                                this.draggedElement.style.left = '10px';
+                            } else {
+                                const newRect = this.draggedElement.getBoundingClientRect();
+                                this.draggedElement.style.left = `${window.innerWidth - newRect.width - 10}px`;
+                            }
+                        } else {
+                            this.draggedElement.classList.remove('vertical');
+                        }
+                    }
                 }
                 
                 // Mark floating config/feature panels as user-dragged so reopen keeps manual position
@@ -2586,7 +2604,7 @@ class DrawingBoard {
             return;
         }
         const moreBtn = document.getElementById('more-btn');
-        const gap = TOOL_CONFIG_PANEL_GAP;
+        const gap = TOOL_CONFIG_PANEL_GAP + 8;
         const moreBtnRect = moreBtn.getBoundingClientRect();
         
         featureArea.style.left = `${moreBtnRect.left + (moreBtnRect.width / 2)}px`;
