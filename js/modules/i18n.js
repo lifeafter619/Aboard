@@ -920,11 +920,11 @@ class I18n {
             globalFontSelect.options[2].text = this.t('settings.general.fonts.sansSerif');
             globalFontSelect.options[3].text = this.t('settings.general.fonts.monospace');
             globalFontSelect.options[4].text = this.t('settings.general.fonts.cursive');
-            globalFontSelect.options[5].text = this.t('settings.general.fonts.yahei');
-            globalFontSelect.options[6].text = this.t('settings.general.fonts.simsun');
-            globalFontSelect.options[7].text = this.t('settings.general.fonts.simhei');
-            globalFontSelect.options[8].text = this.t('settings.general.fonts.kaiti');
-            globalFontSelect.options[9].text = this.t('settings.general.fonts.fangsong');
+            if (globalFontSelect.options[5]) globalFontSelect.options[5].text = 'Noto Sans SC';
+            if (globalFontSelect.options[6]) globalFontSelect.options[6].text = 'Noto Serif SC';
+            if (globalFontSelect.options[7]) globalFontSelect.options[7].text = 'Inter';
+            if (globalFontSelect.options[8]) globalFontSelect.options[8].text = 'Ma Shan Zheng';
+            if (globalFontSelect.options[9]) globalFontSelect.options[9].text = 'Zhi Mang Xing';
         }
         
         // Translate canvas preset buttons

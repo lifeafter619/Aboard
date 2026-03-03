@@ -375,18 +375,11 @@ class InsertTextManager {
             { value: 'serif', label: 'settings.general.fonts.serif' },
             { value: 'monospace', label: 'settings.general.fonts.monospace' },
             { value: 'cursive', label: 'settings.general.fonts.cursive' },
-            { value: '"LXGW WenKai", "霞鹜文楷", "Kaiti SC", serif', label: '霞鹜文楷（LXGW WenKai）' },
-            { value: 'Microsoft YaHei', label: 'settings.general.fonts.yahei' },
-            { value: 'SimSun', label: 'settings.general.fonts.simsun' },
-            { value: 'SimHei', label: 'settings.general.fonts.simhei' },
-            { value: 'KaiTi', label: 'settings.general.fonts.kaiti' },
-            { value: 'FangSong', label: 'settings.general.fonts.fangsong' },
-            { value: 'Arial', label: 'settings.general.fonts.arial' },
-            { value: 'Times New Roman', label: 'settings.general.fonts.timesNewRoman' },
-            { value: 'Courier New', label: 'settings.general.fonts.courier' },
-            { value: 'Verdana', label: 'settings.general.fonts.verdana' },
-            { value: 'Georgia', label: 'settings.general.fonts.georgia' },
-            { value: 'Impact', label: 'settings.general.fonts.impact' }
+            { value: 'Noto Sans SC', label: '思源黑体（Noto Sans SC）' },
+            { value: 'Noto Serif SC', label: '思源宋体（Noto Serif SC）' },
+            { value: 'Inter', label: 'Inter' },
+            { value: 'Ma Shan Zheng', label: '马善政毛笔体（Ma Shan Zheng）' },
+            { value: 'Zhi Mang Xing', label: '智盲行书（Zhi Mang Xing）' }
         ];
 
         select.innerHTML = '';

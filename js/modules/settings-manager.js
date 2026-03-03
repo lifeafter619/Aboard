@@ -524,22 +524,27 @@ class SettingsManager {
                 fontFamily = '"Courier New", Courier, "Consolas", monospace';
                 break;
             case 'cursive':
-                fontFamily = '"Comic Sans MS", "Apple Chancery", cursive';
+                fontFamily = '"Ma Shan Zheng", "Zhi Mang Xing", "Comic Sans MS", cursive';
                 break;
+            case 'Noto Sans SC':
             case 'Microsoft YaHei':
-                fontFamily = '"Microsoft YaHei", "微软雅黑", Arial, sans-serif';
-                break;
-            case 'SimSun':
-                fontFamily = 'SimSun, "宋体", Georgia, serif';
-                break;
             case 'SimHei':
-                fontFamily = 'SimHei, "黑体", Arial, sans-serif';
+                fontFamily = '"Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif';
                 break;
-            case 'KaiTi':
-                fontFamily = 'KaiTi, "楷体", Georgia, serif';
-                break;
+            case 'Noto Serif SC':
+            case 'SimSun':
             case 'FangSong':
-                fontFamily = 'FangSong, "仿宋", Georgia, serif';
+                fontFamily = '"Noto Serif SC", "Songti SC", "STSong", "SimSun", serif';
+                break;
+            case 'Inter':
+                fontFamily = '"Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+                break;
+            case 'Ma Shan Zheng':
+            case 'KaiTi':
+                fontFamily = '"Ma Shan Zheng", "KaiTi", "STKaiti", cursive';
+                break;
+            case 'Zhi Mang Xing':
+                fontFamily = '"Zhi Mang Xing", "KaiTi", "STKaiti", cursive';
                 break;
             default:
                 // Check if it's a custom font

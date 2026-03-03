@@ -2464,8 +2464,10 @@ class DrawingBoard {
                     this.draggedElement.classList.add('user-positioned');
                 }
                 
-                // Mark config-area as user-dragged to prevent scale reset
-                if (this.draggedElement.id === 'config-area') {
+                // Mark floating config/feature panels as user-dragged so reopen keeps manual position
+                if (this.draggedElement.id === 'config-area' ||
+                    this.draggedElement.id === 'feature-area' ||
+                    this.draggedElement.id === 'time-display-area') {
                     this.draggedElement.dataset.userDragged = 'true';
                 }
 
@@ -2580,16 +2582,18 @@ class DrawingBoard {
     positionFeatureArea() {
         // Position feature-area above the "更多" button
         const featureArea = document.getElementById('feature-area');
+        if (featureArea.dataset.userDragged === 'true') {
+            return;
+        }
         const moreBtn = document.getElementById('more-btn');
-        const toolbar = document.getElementById('toolbar');
-        
+        const gap = TOOL_CONFIG_PANEL_GAP;
         const moreBtnRect = moreBtn.getBoundingClientRect();
-        const toolbarRect = toolbar.getBoundingClientRect();
         
+        featureArea.style.left = `${moreBtnRect.left + (moreBtnRect.width / 2)}px`;
+        featureArea.style.top = `${moreBtnRect.top - gap}px`;
+        featureArea.style.right = 'auto';
         featureArea.style.bottom = 'auto';
-        featureArea.style.left = `${moreBtnRect.left}px`;
-        featureArea.style.top = `${toolbarRect.top - 10}px`;
-        featureArea.style.transform = 'translateY(-100%)';
+        featureArea.style.transform = 'translate(-50%, -100%)';
         requestAnimationFrame(() => {
             this.repositionToolbarsOnResize();
         });
