@@ -593,6 +593,20 @@ button, a, input[type="button"], input[type="submit"] {
     display: flex;
 }
 
+body.overlay-modal-open #config-area,
+body.overlay-modal-open #feature-area,
+body.overlay-modal-open #time-display-area,
+body.overlay-modal-open .feature-widget,
+body.overlay-modal-open .timer-display-widget {
+    pointer-events: none !important;
+}
+
+body.overlay-modal-open .modal.show,
+body.overlay-modal-open .time-fullscreen-modal.show,
+body.overlay-modal-open .timer-fullscreen-modal.show {
+    pointer-events: auto;
+}
+
 .modal-content {
     background-color: #ffffff;
     border-radius: 16px;

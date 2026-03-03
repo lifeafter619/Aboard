@@ -6,12 +6,15 @@ const DEFAULT_MIN_DEFAULT_SCALE = 0.9;
 const TOOL_CONFIG_PANEL_GAP = 8;
 const MIN_EDGE_UNSNAP_DISTANCE = 90;
 const EDGE_UNSNAP_BUFFER = 20;
-const MAX_FEATURE_WIDGET_ZINDEX = 20000;
+// Keep floating feature panels below modal layer (modal starts at 2000 in CSS).
+const MAX_FEATURE_WIDGET_ZINDEX = 1900;
 const QUALITY_UPDATE_DEBOUNCE_MS = 120;
 const MIN_DYNAMIC_RENDER_SCALE = 1;
 const MAX_DYNAMIC_RENDER_SCALE = 4;
 const RENDER_SCALE_SCHEDULE_THRESHOLD = 0.15;
 const RENDER_SCALE_APPLY_THRESHOLD = 0.05;
+const MAX_DYNAMIC_BACKING_DIMENSION = 8192;
+const MAX_DYNAMIC_BACKING_PIXELS = 64 * 1024 * 1024;
 
 class DrawingBoard {
     constructor() {
@@ -166,6 +169,7 @@ class DrawingBoard {
         // Initialize
         this.resizeCanvas();
         this.setupEventListeners();
+        this.setupModalInteractionLock();
         this.settingsManager.loadSettings();
         this.backgroundManager.drawBackground();
         this.updateUI();
@@ -1287,7 +1291,6 @@ class DrawingBoard {
                     this.timerManager = new TimerManager();
                 }
                 this.timerManager.showSettingsModal();
-                this.bringElementToFront(document.getElementById('timer-settings-modal'));
                 this.handleMoreFeaturePanelAfterAction();
             });
         }
@@ -1300,7 +1303,6 @@ class DrawingBoard {
                     this.insertTextManager = new InsertTextManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
                 }
                 this.insertTextManager.trigger();
-                this.bringElementToFront(document.getElementById('insert-text-modal'));
                 this.handleMoreFeaturePanelAfterAction();
             });
         }
@@ -1995,11 +1997,21 @@ class DrawingBoard {
 
         document.addEventListener('mousedown', (e) => {
             if (!(e.target instanceof Element)) return;
-            const floatingPanel = e.target.closest('.feature-widget, .timer-display-widget, #timer-settings-modal, #insert-text-modal, #time-display-area');
+            const floatingPanel = e.target.closest('.feature-widget, .timer-display-widget, #feature-area, #config-area, #time-display-area');
             if (floatingPanel) {
                 this.bringElementToFront(floatingPanel);
             }
         });
+    }
+
+    setupModalInteractionLock() {
+        const updateModalState = () => {
+            const hasBlockingModal = !!document.querySelector('.modal.show, .time-fullscreen-modal.show, .timer-fullscreen-modal.show');
+            document.body.classList.toggle('overlay-modal-open', hasBlockingModal);
+        };
+        const observer = new MutationObserver(updateModalState);
+        observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+        updateModalState();
     }
     
     setupKeyboardShortcuts() {
@@ -2626,6 +2638,7 @@ class DrawingBoard {
                 // Show config panel and position it above toolbar
                 configArea.classList.add('show');
                 this.positionConfigArea();
+                this.bringElementToFront(configArea);
                 // Don't close feature-area when selecting shape - allow multiple panels to be open
                 if (tool !== 'shape') {
                     featureArea.classList.remove('show');
@@ -2643,6 +2656,7 @@ class DrawingBoard {
                 featureArea.classList.add('show');
                 configArea.classList.remove('show');
                 this.positionFeatureArea();
+                this.bringElementToFront(featureArea);
             }
         } else {
             // For other tools (like pan, select), just hide panels
@@ -2689,7 +2703,7 @@ class DrawingBoard {
     bringElementToFront(element) {
         if (!element) return;
         if (this.featureWidgetZIndex > MAX_FEATURE_WIDGET_ZINDEX) {
-            const floatingPanels = document.querySelectorAll('.feature-widget, .timer-display-widget, #timer-settings-modal, #insert-text-modal, #time-display-area');
+            const floatingPanels = document.querySelectorAll('.feature-widget, .timer-display-widget, #feature-area, #config-area, #time-display-area');
             this.featureWidgetZIndex = 1200;
             floatingPanels.forEach(panel => {
                 this.featureWidgetZIndex += 1;
@@ -3098,7 +3112,25 @@ class DrawingBoard {
             return MIN_DYNAMIC_RENDER_SCALE;
         }
         const scale = this.drawingEngine?.canvasScale || 1;
-        return Math.min(MAX_DYNAMIC_RENDER_SCALE, Math.max(MIN_DYNAMIC_RENDER_SCALE, Math.sqrt(scale)));
+        const preferredScale = Math.min(MAX_DYNAMIC_RENDER_SCALE, Math.max(MIN_DYNAMIC_RENDER_SCALE, Math.sqrt(scale)));
+
+        const cssWidth = parseFloat(this.canvas.style.width) || this.settingsManager.canvasWidth;
+        const cssHeight = parseFloat(this.canvas.style.height) || this.settingsManager.canvasHeight;
+        const baseDpr = window.devicePixelRatio || 1;
+
+        // Calculate max safe dynamic scale from backing-dimension and backing-pixel ceilings.
+        const dimLimitScale = Math.min(
+            MAX_DYNAMIC_BACKING_DIMENSION / Math.max(1, cssWidth * baseDpr),
+            MAX_DYNAMIC_BACKING_DIMENSION / Math.max(1, cssHeight * baseDpr)
+        );
+        const pixelLimitScale = Math.sqrt(
+            MAX_DYNAMIC_BACKING_PIXELS / Math.max(1, cssWidth * cssHeight * baseDpr * baseDpr)
+        );
+        const safeScale = Math.min(preferredScale, dimLimitScale, pixelLimitScale);
+        if (!Number.isFinite(safeScale)) {
+            return MIN_DYNAMIC_RENDER_SCALE;
+        }
+        return Math.max(MIN_DYNAMIC_RENDER_SCALE, safeScale);
     }
 
     scheduleRenderQualityUpdate() {
