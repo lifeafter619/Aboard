@@ -29,6 +29,8 @@ class SettingsManager {
         this.themeColor = localStorage.getItem('themeColor') || '#007AFF';
         this.globalFont = localStorage.getItem('globalFont') || 'system';
         this.customFonts = this.loadCustomFonts();
+        this.fontPreferences = this.loadFontPreferences();
+        this.ensureFontPreferencesIntegrity();
 
         // Initialize Toast Manager
         this.toastManager = new ToastManager();
@@ -48,6 +50,84 @@ class SettingsManager {
             }
         }
         return [];
+    }
+
+    getBaseFontOptions() {
+        return [
+            { value: 'system', label: 'settings.general.fonts.system' },
+            { value: 'serif', label: 'settings.general.fonts.serif' },
+            { value: 'sans-serif', label: 'settings.general.fonts.sansSerif' },
+            { value: 'monospace', label: 'settings.general.fonts.monospace' },
+            { value: 'cursive', label: 'settings.general.fonts.cursive' },
+            { value: 'Noto Sans SC', label: 'settings.general.fonts.notoSansSC', fallback: 'Noto Sans SC' },
+            { value: 'Noto Serif SC', label: 'settings.general.fonts.notoSerifSC', fallback: 'Noto Serif SC' },
+            { value: 'LXGW WenKai', label: 'settings.general.fonts.lxgwWenKai', fallback: 'LXGW WenKai' },
+            { value: 'Source Han Sans SC', label: 'settings.general.fonts.sourceHanSansSC', fallback: 'Source Han Sans SC' },
+            { value: 'Source Han Serif SC', label: 'settings.general.fonts.sourceHanSerifSC', fallback: 'Source Han Serif SC' },
+            { value: 'Inter', label: 'settings.general.fonts.inter', fallback: 'Inter' },
+            { value: 'Roboto', label: 'settings.general.fonts.roboto', fallback: 'Roboto' },
+            { value: 'Open Sans', label: 'settings.general.fonts.openSans', fallback: 'Open Sans' },
+            { value: 'Lora', label: 'settings.general.fonts.lora', fallback: 'Lora' },
+            { value: 'JetBrains Mono', label: 'settings.general.fonts.jetBrainsMono', fallback: 'JetBrains Mono' },
+            { value: 'KaiTi', label: 'settings.general.fonts.kaiTi', fallback: 'KaiTi' },
+            { value: 'STXingkai', label: 'settings.general.fonts.stXingkai', fallback: 'STXingkai' }
+        ];
+    }
+
+    getAllFontValues() {
+        const baseValues = this.getBaseFontOptions().map(f => f.value);
+        const customValues = this.customFonts.map(f => f.name);
+        return [...baseValues, ...customValues];
+    }
+
+    loadFontPreferences() {
+        const saved = localStorage.getItem('fontPreferences');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.warn('Failed to load font preferences:', e);
+            }
+        }
+        return { order: [], visibility: {}, aliases: {} };
+    }
+
+    saveFontPreferences() {
+        localStorage.setItem('fontPreferences', JSON.stringify(this.fontPreferences));
+    }
+
+    ensureFontPreferencesIntegrity() {
+        if (!this.fontPreferences || typeof this.fontPreferences !== 'object') {
+            this.fontPreferences = { order: [], visibility: {}, aliases: {} };
+        }
+        this.fontPreferences.order = Array.isArray(this.fontPreferences.order) ? this.fontPreferences.order : [];
+        this.fontPreferences.visibility = this.fontPreferences.visibility || {};
+        this.fontPreferences.aliases = this.fontPreferences.aliases || {};
+
+        const allValues = this.getAllFontValues();
+        this.fontPreferences.order = this.normalizeFontOrder(this.fontPreferences.order, allValues);
+        allValues.forEach(value => {
+            if (!this.fontPreferences.order.includes(value)) {
+                this.fontPreferences.order.push(value);
+            }
+            if (this.fontPreferences.visibility[value] === undefined) {
+                this.fontPreferences.visibility[value] = true;
+            }
+        });
+        this.saveFontPreferences();
+    }
+
+    normalizeFontOrder(order, allValues) {
+        const validOrdered = order.filter(value => allValues.includes(value));
+        const deduped = [];
+        const dedupedSet = new Set();
+        validOrdered.forEach(value => {
+            if (!dedupedSet.has(value)) {
+                dedupedSet.add(value);
+                deduped.push(value);
+            }
+        });
+        return deduped;
     }
     
     // Save custom fonts to localStorage
@@ -118,6 +198,12 @@ class SettingsManager {
                 this.customFonts.push({ name: fontName, data: fontData });
                 this.saveCustomFonts();
                 this.addFontToDocument(fontName, fontData);
+                this.ensureFontPreferencesIntegrity();
+                this.fontPreferences.visibility[fontName] = true;
+                if (!this.fontPreferences.aliases[fontName]) {
+                    this.fontPreferences.aliases[fontName] = fontName;
+                }
+                this.saveFontPreferences();
                 this.populateGlobalFontSelect();
                 
                 // Select the newly uploaded font
@@ -145,27 +231,94 @@ class SettingsManager {
     populateGlobalFontSelect() {
         const select = document.getElementById('global-font-select');
         if (!select) return;
-        
-        // Remove existing custom font optgroup if any
-        const existingOptgroup = select.querySelector('optgroup');
-        if (existingOptgroup) {
-            existingOptgroup.remove();
+
+        const previousValue = select.value || this.globalFont;
+        select.innerHTML = '';
+
+        const visibleFonts = this.getManagedFontOptions().filter(font => font.visible);
+        visibleFonts.forEach(font => {
+            const option = document.createElement('option');
+            option.value = font.value;
+            option.textContent = font.label;
+            select.appendChild(option);
+        });
+
+        const hasPrevious = visibleFonts.some(font => font.value === previousValue);
+        if (hasPrevious) {
+            select.value = previousValue;
+        } else if (visibleFonts.length > 0) {
+            select.value = visibleFonts[0].value;
         }
-        
-        // Add custom fonts if any
-        if (this.customFonts.length > 0) {
-            const optgroup = document.createElement('optgroup');
-            optgroup.label = window.i18n ? window.i18n.t('tools.text.customFonts') : 'Custom Fonts';
-            
-            this.customFonts.forEach(font => {
-                const option = document.createElement('option');
-                option.value = font.name;
-                option.textContent = font.name;
-                optgroup.appendChild(option);
+    }
+
+    getManagedFontOptions() {
+        this.ensureFontPreferencesIntegrity();
+        const baseMap = new Map(this.getBaseFontOptions().map(font => [font.value, font]));
+        const customMap = new Map(this.customFonts.map(font => [font.name, font]));
+
+        return this.fontPreferences.order
+            .filter(value => baseMap.has(value) || customMap.has(value))
+            .map(value => {
+                const base = baseMap.get(value);
+                const custom = customMap.get(value);
+                let rawLabel = this.fontPreferences.aliases[value];
+                if (!rawLabel) {
+                    rawLabel = base ? base.label : value;
+                }
+                let translatedLabel = rawLabel;
+                if (window.i18n && typeof rawLabel === 'string' && rawLabel.startsWith('settings.')) {
+                    let translated = rawLabel;
+                    try {
+                        translated = window.i18n.t(rawLabel);
+                    } catch (e) {
+                        translated = rawLabel;
+                    }
+                    translatedLabel = (translated && translated !== rawLabel)
+                        ? translated
+                        : (base?.fallback || value);
+                }
+                return {
+                    value,
+                    label: translatedLabel,
+                    visible: this.fontPreferences.visibility[value] !== false,
+                    isCustom: Boolean(custom)
+                };
             });
-            
-            select.appendChild(optgroup);
+    }
+
+    setFontVisibility(fontValue, visible) {
+        this.ensureFontPreferencesIntegrity();
+        this.fontPreferences.visibility[fontValue] = visible;
+        this.saveFontPreferences();
+        this.populateGlobalFontSelect();
+    }
+
+    setFontAlias(fontValue, alias) {
+        this.ensureFontPreferencesIntegrity();
+        const finalAlias = alias ? alias.trim() : '';
+        if (finalAlias) {
+            this.fontPreferences.aliases[fontValue] = finalAlias;
+        } else {
+            delete this.fontPreferences.aliases[fontValue];
         }
+        this.saveFontPreferences();
+        this.populateGlobalFontSelect();
+    }
+
+    setFontOrder(order) {
+        this.ensureFontPreferencesIntegrity();
+        const allValues = this.getAllFontValues();
+        const deduped = this.normalizeFontOrder(order, allValues);
+        const dedupedSet = new Set(deduped);
+        allValues.forEach(value => {
+            if (!dedupedSet.has(value)) {
+                dedupedSet.add(value);
+                deduped.push(value);
+            }
+        });
+        this.fontPreferences.order = deduped;
+        this.saveFontPreferences();
+        this.populateGlobalFontSelect();
     }
     
     loadPatternPreferences() {
@@ -451,7 +604,11 @@ class SettingsManager {
         
         // Load global font
         this.applyGlobalFont();
-        document.getElementById('global-font-select').value = this.globalFont;
+        this.populateGlobalFontSelect();
+        const globalFontSelect = document.getElementById('global-font-select');
+        if (globalFontSelect && [...globalFontSelect.options].some(option => option.value === this.globalFont)) {
+            globalFontSelect.value = this.globalFont;
+        }
         
         // Initialize language selector
         this.initLanguageSelector();
@@ -548,7 +705,25 @@ class SettingsManager {
                 fontFamily = '"STXingkai", "KaiTi", "STKaiti", "DFKai-SB", cursive';
                 break;
             case 'Inter':
-                fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+                fontFamily = '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+                break;
+            case 'Roboto':
+                fontFamily = '"Roboto", "Helvetica Neue", Arial, sans-serif';
+                break;
+            case 'Open Sans':
+                fontFamily = '"Open Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
+                break;
+            case 'Lora':
+                fontFamily = '"Lora", "Noto Serif SC", "Songti SC", serif';
+                break;
+            case 'JetBrains Mono':
+                fontFamily = '"JetBrains Mono", "Consolas", "Courier New", monospace';
+                break;
+            case 'Source Han Sans SC':
+                fontFamily = '"Source Han Sans SC", "Noto Sans SC", "Microsoft YaHei", sans-serif';
+                break;
+            case 'Source Han Serif SC':
+                fontFamily = '"Source Han Serif SC", "Noto Serif SC", "Songti SC", serif';
                 break;
             default:
                 // Check if it's a custom font

@@ -370,17 +370,21 @@ class InsertTextManager {
         const select = document.getElementById('insert-text-font-select');
         if (!select) return;
 
-        const fonts = [
-            { value: 'sans-serif', label: 'settings.general.fonts.sansSerif' },
-            { value: 'serif', label: 'settings.general.fonts.serif' },
-            { value: 'monospace', label: 'settings.general.fonts.monospace' },
-            { value: 'cursive', label: 'settings.general.fonts.cursive' },
-            { value: 'Noto Sans SC', label: '思源黑体' },
-            { value: 'Noto Serif SC', label: '思源宋体' },
-            { value: 'LXGW WenKai', label: '霞鹜文楷' },
-            { value: 'KaiTi', label: '楷体' },
-            { value: 'STXingkai', label: '华文行楷（手写）' }
-        ];
+        const settingsManager = window.drawingBoard?.settingsManager;
+        const managedFontOptions = settingsManager && typeof settingsManager.getManagedFontOptions === 'function'
+            ? settingsManager.getManagedFontOptions()
+            : null;
+        const managedFonts = managedFontOptions
+            ? managedFontOptions.filter(font => font.visible).map(font => ({ value: font.value, label: font.label }))
+            : null;
+        const fonts = (managedFonts && managedFonts.length > 0)
+            ? managedFonts
+            : [
+                { value: 'sans-serif', label: 'settings.general.fonts.sansSerif' },
+                { value: 'serif', label: 'settings.general.fonts.serif' },
+                { value: 'monospace', label: 'settings.general.fonts.monospace' },
+                { value: 'cursive', label: 'settings.general.fonts.cursive' }
+            ];
 
         select.innerHTML = '';
         
@@ -395,19 +399,8 @@ class InsertTextManager {
             select.appendChild(option);
         });
 
-        // Add custom fonts if any
-        if (this.customFonts.length > 0) {
-            const optgroup = document.createElement('optgroup');
-            optgroup.label = window.i18n ? window.i18n.t('tools.text.customFonts') : 'Custom Fonts';
-            
-            this.customFonts.forEach(font => {
-                const option = document.createElement('option');
-                option.value = font.name;
-                option.textContent = font.name;
-                optgroup.appendChild(option);
-            });
-            
-            select.appendChild(optgroup);
+        if (window.drawingBoard?.settingsManager?.customFonts) {
+            this.customFonts = window.drawingBoard.settingsManager.customFonts;
         }
     }
 
@@ -476,7 +469,19 @@ class InsertTextManager {
         if (fontUpload) {
             fontUpload.addEventListener('change', (e) => {
                 if (e.target.files && e.target.files[0]) {
-                    this.handleFontUpload(e.target.files[0]);
+                    if (window.drawingBoard?.settingsManager) {
+                        window.drawingBoard.settingsManager.handleFontUpload(e.target.files[0]);
+                        this.customFonts = window.drawingBoard.settingsManager.customFonts;
+                        this.populateFonts();
+                        const select = document.getElementById('insert-text-font-select');
+                        const uploadedName = e.target.files[0].name.replace(/\.[^/.]+$/, '');
+                        if (select && [...select.options].some(opt => opt.value === uploadedName)) {
+                            select.value = uploadedName;
+                            this.textConfig.fontFamily = uploadedName;
+                        }
+                    } else {
+                        this.handleFontUpload(e.target.files[0]);
+                    }
                 }
             });
         }

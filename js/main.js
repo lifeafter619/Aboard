@@ -1521,6 +1521,8 @@ class DrawingBoard {
             globalFontUpload.addEventListener('change', (e) => {
                 if (e.target.files && e.target.files[0]) {
                     this.settingsManager.handleFontUpload(e.target.files[0]);
+                    this.insertTextManager?.populateFonts?.();
+                    this.renderFontManagementList?.();
                 }
             });
         }
@@ -1626,6 +1628,9 @@ class DrawingBoard {
         
         // Toolbar customization handlers
         this.initToolbarCustomization();
+
+        // Font management handlers
+        this.initFontManagement();
         
         // Control button settings handlers
         this.initControlButtonSettings();
@@ -3501,6 +3506,152 @@ class DrawingBoard {
         } else {
             historyControls.style.display = 'none';
         }
+    }
+
+    initFontManagement() {
+        this.renderFontManagementList();
+    }
+
+    renderFontManagementList() {
+        const list = document.getElementById('font-management-list');
+        if (!list || !this.settingsManager?.getManagedFontOptions) return;
+
+        const fonts = this.settingsManager.getManagedFontOptions();
+        list.innerHTML = '';
+
+        fonts.forEach(font => {
+            const item = document.createElement('div');
+            item.className = 'font-management-item';
+            item.dataset.font = font.value;
+            item.draggable = true;
+            const tWithFallback = (key, fallback) => {
+                if (!window.i18n) return fallback;
+                const translated = window.i18n.t(key);
+                return translated && translated !== key ? translated : fallback;
+            };
+            const showLabel = tWithFallback('settings.general.showFont', 'Show font');
+            const renameLabel = tWithFallback('common.edit', 'Edit');
+            const previewLabel = tWithFallback('common.preview', 'Preview');
+            const previewSample = tWithFallback('settings.general.fontPreviewSample', 'Font Preview ABC abc 123');
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = font.visible;
+            checkbox.setAttribute('aria-label', showLabel);
+
+            const dragHandle = document.createElement('span');
+            dragHandle.className = 'drag-handle';
+            dragHandle.textContent = '☰';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'font-display-name';
+            nameSpan.title = font.label;
+            nameSpan.textContent = font.label;
+
+            const editButton = document.createElement('button');
+            editButton.type = 'button';
+            editButton.className = 'font-action-btn edit-btn';
+            editButton.textContent = renameLabel;
+
+            const previewButton = document.createElement('button');
+            previewButton.type = 'button';
+            previewButton.className = 'font-action-btn preview-btn';
+            previewButton.textContent = previewLabel;
+
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'font-preview-sample';
+            const rawFontValue = String(font.value || '');
+            const safeFontFamily = (window.CSS && typeof window.CSS.escape === 'function')
+                ? window.CSS.escape(rawFontValue)
+                : rawFontValue.replace(/[^\w\s\-]/g, '');
+            previewDiv.style.fontFamily = `"${safeFontFamily}", sans-serif`;
+            previewDiv.textContent = previewSample;
+
+            item.appendChild(checkbox);
+            item.appendChild(dragHandle);
+            item.appendChild(nameSpan);
+            item.appendChild(editButton);
+            item.appendChild(previewButton);
+            item.appendChild(previewDiv);
+            list.appendChild(item);
+        });
+
+        let draggedItem = null;
+        list.querySelectorAll('.font-management-item').forEach(item => {
+            item.addEventListener('dragstart', () => {
+                draggedItem = item;
+                item.classList.add('dragging');
+            });
+
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+                draggedItem = null;
+                this.saveFontOrderFromList();
+            });
+
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if (!draggedItem || draggedItem === item) return;
+                const rect = item.getBoundingClientRect();
+                const isBefore = e.clientY < rect.top + rect.height / 2;
+                list.insertBefore(draggedItem, isBefore ? item : item.nextSibling);
+            });
+
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            checkbox?.addEventListener('change', (e) => {
+                this.settingsManager.setFontVisibility(item.dataset.font, e.target.checked);
+                this.insertTextManager?.populateFonts?.();
+            });
+
+            const editBtn = item.querySelector('.edit-btn');
+            editBtn?.addEventListener('click', () => {
+                const nameEl = item.querySelector('.font-display-name');
+                if (!nameEl) return;
+                const current = nameEl.textContent || '';
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'font-alias-input';
+                input.value = current;
+                nameEl.replaceWith(input);
+                input.focus();
+                input.select();
+                let cancelled = false;
+
+                const finishEdit = () => {
+                    if (cancelled) return;
+                    const renamed = input.value.trim();
+                    this.settingsManager.setFontAlias(item.dataset.font, renamed);
+                    this.renderFontManagementList();
+                    this.insertTextManager?.populateFonts?.();
+                };
+                input.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        finishEdit();
+                    } else if (event.key === 'Escape') {
+                        cancelled = true;
+                        input.removeEventListener('blur', finishEdit);
+                        this.renderFontManagementList();
+                    }
+                });
+                input.addEventListener('blur', finishEdit, { once: true });
+            });
+
+            const previewBtn = item.querySelector('.preview-btn');
+            previewBtn?.addEventListener('click', () => {
+                const preview = item.querySelector('.font-preview-sample');
+                if (!preview) return;
+                preview.style.display = preview.style.display === 'block' ? 'none' : 'block';
+            });
+        });
+    }
+
+    saveFontOrderFromList() {
+        const list = document.getElementById('font-management-list');
+        if (!list) return;
+        const order = [...list.querySelectorAll('.font-management-item')].map(item => item.dataset.font);
+        this.settingsManager.setFontOrder(order);
+        this.insertTextManager?.populateFonts?.();
     }
     
     // Initialize toolbar customization

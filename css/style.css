@@ -1209,9 +1209,77 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .pen-type-btn.active {
-    background-color: var(--theme-color);
-    color: #ffffff;
+    background-color: #ffffff;
+    color: #666;
     border-color: var(--theme-color);
+    outline: 2px solid var(--theme-color);
+    outline-offset: 1px;
+}
+
+.font-management-list {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.font-management-item {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto auto;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #e5e5ea;
+    border-radius: 8px;
+    padding: 6px 8px;
+    background: #fff;
+}
+
+.font-management-item .drag-handle {
+    color: #999;
+    cursor: grab;
+    user-select: none;
+}
+
+.font-management-item.dragging {
+    opacity: 0.6;
+}
+
+.font-display-name {
+    font-size: 13px;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.font-action-btn {
+    border: 1px solid #d1d1d6;
+    border-radius: 6px;
+    background: #f7f7fa;
+    color: #333;
+    font-size: 12px;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.font-preview-sample {
+    grid-column: 1 / -1;
+    display: none;
+    font-size: 15px;
+    color: #444;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: #f7f7fa;
+    border: 1px dashed #d1d1d6;
+}
+
+.font-alias-input {
+    border: 1px solid #d1d1d6;
+    border-radius: 6px;
+    height: 28px;
+    font-size: 12px;
+    padding: 2px 6px;
+    grid-column: 3 / 6;
 }
 
 .settings-hint {
