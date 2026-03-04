@@ -411,6 +411,13 @@ class DrawingBoard {
             if (this.drawingEngine.currentTool === 'background' && !this.imageControls.isActive) {
                 this.setTool('pen', false); // Don't show config panel
             }
+
+            if (this.drawingEngine.currentTool === 'more') {
+                const hasActiveMoreFeature = !!document.querySelector('#feature-area .feature-btn.active');
+                if (!hasActiveMoreFeature) {
+                    this.setTool('pan', false);
+                }
+            }
             
             if (e.button === 1 || (e.button === 0 && e.shiftKey) || this.drawingEngine.currentTool === 'pan') {
                 this.drawingEngine.startPanning(e);
@@ -717,7 +724,10 @@ class DrawingBoard {
         
         // Shape and Teaching Tools buttons in More menu
         document.getElementById('more-shape-btn').addEventListener('click', () => this.setTool('shape'));
-        document.getElementById('more-teaching-tools-btn').addEventListener('click', () => this.teachingToolsManager.showModal());
+        document.getElementById('more-teaching-tools-btn').addEventListener('click', () => {
+            this.exitShapeMode();
+            this.teachingToolsManager.showModal();
+        });
         
         document.getElementById('config-close-btn').addEventListener('click', () => this.closeConfigPanel());
         document.getElementById('feature-close-btn').addEventListener('click', () => this.closeFeaturePanel());
@@ -1218,9 +1228,8 @@ class DrawingBoard {
             this.drawingEngine.setEraserSize(parseInt(e.target.value));
             eraserSizeValue.textContent = e.target.value;
             if (this.drawingEngine.currentTool === 'eraser') {
-                const visualEraserSize = this.calculateVisualEraserSize(parseInt(e.target.value));
-                this.eraserCursor.style.width = visualEraserSize + 'px';
-                this.eraserCursor.style.height = visualEraserSize + 'px';
+                this.eraserCursor.style.width = e.target.value + 'px';
+                this.eraserCursor.style.height = e.target.value + 'px';
             }
         });
         
@@ -1269,6 +1278,7 @@ class DrawingBoard {
         
         if (timeDisplayFeatureBtn && timeDisplayControls) {
             timeDisplayFeatureBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 // Toggle the time display controls visibility
                 const isVisible = timeDisplayControls.style.display !== 'none';
                 if (isVisible) {
@@ -1292,6 +1302,7 @@ class DrawingBoard {
         const timerFeatureBtn = document.getElementById('timer-feature-btn');
         if (timerFeatureBtn) {
             timerFeatureBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 if (!this.timerManager) {
                     this.timerManager = new TimerManager();
                 }
@@ -1304,6 +1315,7 @@ class DrawingBoard {
         const insertTextBtn = document.getElementById('insert-text-feature-btn');
         if (insertTextBtn) {
             insertTextBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 if (!this.insertTextManager) {
                     this.insertTextManager = new InsertTextManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
                 }
@@ -1316,6 +1328,7 @@ class DrawingBoard {
         const randomPickerBtn = document.getElementById('random-picker-feature-btn');
         if (randomPickerBtn) {
             randomPickerBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 if (!this.randomPickerManager) {
                     this.randomPickerManager = new RandomPickerManager();
                 }
@@ -1329,6 +1342,7 @@ class DrawingBoard {
         const scoreboardBtn = document.getElementById('scoreboard-feature-btn');
         if (scoreboardBtn) {
             scoreboardBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 if (!this.scoreboardManager) {
                     this.scoreboardManager = new ScoreboardManager();
                 }
@@ -1342,6 +1356,7 @@ class DrawingBoard {
         const insertImageBtn = document.getElementById('insert-image-feature-btn');
         if (insertImageBtn) {
             insertImageBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 if (!this.insertImageManager) {
                     this.insertImageManager = new InsertImageManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
                 }
@@ -2620,6 +2635,13 @@ class DrawingBoard {
         featureArea.style.bottom = 'auto';
         featureArea.style.transform = 'translate(-50%, -100%)';
     }
+
+    exitShapeMode() {
+        if (this.drawingEngine.currentTool !== 'shape') return;
+        this.shapeDrawingManager.stopDrawing();
+        this.drawingEngine.setTool('more');
+        this.updateUI();
+    }
     
     setTool(tool, showConfig = true) {
         const configArea = document.getElementById('config-area');
@@ -2701,7 +2723,9 @@ class DrawingBoard {
         if (this.drawingEngine.stopDrawing()) {
             this.historyManager.saveState();
             this.saveSessionDebounced();
-            this.closeConfigPanel();
+            if (this.drawingEngine.currentTool !== 'eraser') {
+                this.closeConfigPanel();
+            }
             this.closeFeaturePanel();
         }
     }
@@ -2720,6 +2744,7 @@ class DrawingBoard {
     
     closeConfigPanel() {
         document.getElementById('config-area').classList.remove('show');
+        this.exitShapeMode();
     }
     
     closeFeaturePanel() {
@@ -3056,6 +3081,10 @@ class DrawingBoard {
         });
         
         const tool = this.drawingEngine.currentTool;
+        const shapeFeatureBtn = document.getElementById('more-shape-btn');
+        if (shapeFeatureBtn) {
+            shapeFeatureBtn.classList.toggle('active', tool === 'shape');
+        }
         if (tool === 'pen') {
             document.getElementById('pen-btn').classList.add('active');
             document.getElementById('pen-config').classList.add('active');
@@ -4443,24 +4472,12 @@ class DrawingBoard {
         }
     }
     
-    /**
-     * Calculate the visual eraser size by applying the canvas scale
-     * @param {number} eraserSize - The base eraser size in canvas pixels
-     * @returns {number} The visual eraser size in screen pixels
-     */
-    calculateVisualEraserSize(eraserSize) {
-        const finalScale = this.canvasFitScale * this.drawingEngine.canvasScale;
-        return eraserSize * finalScale;
-    }
-    
     updateEraserCursor(e) {
         if (this.drawingEngine.currentTool === 'eraser') {
-            const visualEraserSize = this.calculateVisualEraserSize(this.drawingEngine.eraserSize);
-            
             this.eraserCursor.style.left = e.clientX + 'px';
             this.eraserCursor.style.top = e.clientY + 'px';
-            this.eraserCursor.style.width = visualEraserSize + 'px';
-            this.eraserCursor.style.height = visualEraserSize + 'px';
+            this.eraserCursor.style.width = this.drawingEngine.eraserSize + 'px';
+            this.eraserCursor.style.height = this.drawingEngine.eraserSize + 'px';
         }
     }
     
@@ -4890,6 +4907,7 @@ class DrawingBoard {
 
             const data = {
                 pages: pagesBlobs,
+                pagesRaw: this.pages,
                 settings: settings,
                 canvasWidth: this.canvas.width,
                 canvasHeight: this.canvas.height
@@ -4946,7 +4964,7 @@ class DrawingBoard {
             const sessionData = await this.storageManager.loadSession();
             if (!sessionData) return;
 
-            const { pages, settings } = sessionData;
+            const { pages, pagesRaw, settings } = sessionData;
 
             // Restore settings
             if (settings) {
@@ -5024,7 +5042,9 @@ class DrawingBoard {
             }
 
             // Restore pages
-            if (pages && Array.isArray(pages)) {
+            if (pagesRaw && Array.isArray(pagesRaw) && pagesRaw.length > 0) {
+                this.pages = pagesRaw;
+            } else if (pages && Array.isArray(pages)) {
                 this.pages = await Promise.all(pages.map(blob => StorageManager.blobToImageData(blob)));
             }
 
