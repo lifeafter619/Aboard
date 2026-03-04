@@ -2723,6 +2723,8 @@ class DrawingBoard {
         if (this.drawingEngine.stopDrawing()) {
             this.historyManager.saveState();
             this.saveSessionDebounced();
+            // Keep eraser config open after each erase stroke so users can continuously
+            // fine-tune and erase without repeated reopen operations.
             if (this.drawingEngine.currentTool !== 'eraser') {
                 this.closeConfigPanel();
             }
@@ -4907,6 +4909,8 @@ class DrawingBoard {
 
             const data = {
                 pages: pagesBlobs,
+                // Keep raw ImageData as a recovery fallback when blob decode is unavailable.
+                // Only one session is persisted, so this bounded duplication is acceptable.
                 pagesRaw: this.pages,
                 settings: settings,
                 canvasWidth: this.canvas.width,
