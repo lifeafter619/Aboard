@@ -8,6 +8,7 @@ class HistoryManager {
         this.history = [];
         this.historyStep = -1;
         this.maxHistory = 50;
+        this.onStateChanged = null;
     }
     
     saveState() {
@@ -24,12 +25,19 @@ class HistoryManager {
             this.history.shift();
             this.historyStep--;
         }
+
+        if (typeof this.onStateChanged === 'function') {
+            this.onStateChanged();
+        }
     }
     
     undo() {
         if (this.historyStep > 0) {
             this.historyStep--;
             this.restoreState();
+            if (typeof this.onStateChanged === 'function') {
+                this.onStateChanged();
+            }
             return true;
         }
         return false;
@@ -39,6 +47,9 @@ class HistoryManager {
         if (this.historyStep < this.history.length - 1) {
             this.historyStep++;
             this.restoreState();
+            if (typeof this.onStateChanged === 'function') {
+                this.onStateChanged();
+            }
             return true;
         }
         return false;

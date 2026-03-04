@@ -165,6 +165,11 @@ class DrawingBoard {
                 this.saveSession();
             }, 1000); // 1 second delay
         };
+        // Persist a fresh recovery snapshot whenever history commits change
+        // so refresh-restore covers all tools that write through HistoryManager.
+        this.historyManager.onStateChanged = () => {
+            this.saveSessionDebounced();
+        };
 
         // Initialize
         this.resizeCanvas();
@@ -2597,9 +2602,6 @@ class DrawingBoard {
             configArea.style.transform = `translateX(-50%) scale(${scale})`;
         }
 
-        requestAnimationFrame(() => {
-            this.repositionToolbarsOnResize();
-        });
     }
     
     positionFeatureArea() {
@@ -2617,9 +2619,6 @@ class DrawingBoard {
         featureArea.style.right = 'auto';
         featureArea.style.bottom = 'auto';
         featureArea.style.transform = 'translate(-50%, -100%)';
-        requestAnimationFrame(() => {
-            this.repositionToolbarsOnResize();
-        });
     }
     
     setTool(tool, showConfig = true) {
