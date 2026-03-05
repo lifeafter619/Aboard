@@ -14,6 +14,7 @@ body {
     overflow: hidden;
     width: 100vw;
     height: 100vh;
+    min-height: 100dvh;
     background-color: #f5f5f5;
     /* Improved touch device support */
     touch-action: none;
@@ -24,6 +25,12 @@ body {
     -moz-osx-font-smoothing: grayscale;
     /* Remove tap highlight on touch devices */
     -webkit-tap-highlight-color: transparent;
+}
+
+@supports (height: 100dvh) {
+    body {
+        height: 100dvh;
+    }
 }
 
 /* Global touch device improvements - disable tap highlight on all interactive elements */
@@ -2816,6 +2823,42 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 /* ============================================
    Additional Responsive & Touch Improvements
    ============================================ */
+
+/* Portrait prompt overlay for touch devices */
+#portrait-orientation-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 6000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 18, 24, 0.92);
+    color: #ffffff;
+    padding: 24px;
+    text-align: center;
+}
+
+#portrait-orientation-overlay .overlay-content {
+    max-width: 360px;
+}
+
+#portrait-orientation-overlay .overlay-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+#portrait-orientation-overlay .overlay-tip {
+    font-size: 15px;
+    line-height: 1.6;
+    opacity: 0.92;
+}
+
+@media (orientation: portrait) and (max-width: 1024px) {
+    #portrait-orientation-overlay {
+        display: flex;
+    }
+}
 
 /* Extra small screens (phones in portrait) */
 @media (max-width: 480px) {

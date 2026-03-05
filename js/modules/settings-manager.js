@@ -382,7 +382,14 @@ class SettingsManager {
         // Secondary axis uses smaller padding to keep toolbar compact
         const TOOLBAR_PADDING_SECONDARY_RATIO = 0.6; // Secondary padding = 60% of primary
         
-        const buttonSize = this.toolbarSize;
+        const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+        const shortestSide = Math.min(window.innerWidth, window.innerHeight);
+        const touchMaxButtonSize = shortestSide <= 900
+            ? (window.innerHeight > window.innerWidth ? 46 : 52)
+            : this.toolbarSize;
+        const buttonSize = isTouchDevice
+            ? Math.min(this.toolbarSize, touchMaxButtonSize)
+            : this.toolbarSize;
         const buttonPadding = Math.max(2, buttonSize * BUTTON_PADDING_RATIO);
         const iconSize = buttonSize * ICON_SIZE_RATIO;
         const fontSize = Math.max(6, buttonSize * FONT_SIZE_RATIO);
@@ -401,6 +408,15 @@ class SettingsManager {
             ? `${toolbarPadding}px ${toolbarPaddingSecondary}px` 
             : `${toolbarPaddingSecondary}px ${toolbarPadding}px`;
         toolbar.style.gap = `${toolbarGap}px`;
+        if (isTouchDevice) {
+            toolbar.style.maxWidth = 'calc(100vw - 12px)';
+            toolbar.style.overflowX = isVertical ? 'hidden' : 'auto';
+            toolbar.style.overflowY = isVertical ? 'auto' : 'hidden';
+        } else {
+            toolbar.style.maxWidth = '';
+            toolbar.style.overflowX = '';
+            toolbar.style.overflowY = '';
+        }
         
         buttons.forEach(btn => {
             // Square button with fixed size - set all dimensions to ensure truly square
