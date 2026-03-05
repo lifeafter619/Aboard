@@ -4,6 +4,8 @@ const DEFAULT_MIN_FIT_SCALE = 0.1;
 const DEFAULT_TARGET_COVERAGE = 0.7;
 const DEFAULT_MIN_DEFAULT_SCALE = 0.9;
 const TOOL_CONFIG_PANEL_GAP = 8;
+const EDGE_SNAP_DISTANCE = 30;
+const PANEL_EDGE_MARGIN = 10;
 const MIN_EDGE_UNSNAP_DISTANCE = 90;
 const EDGE_UNSNAP_BUFFER = 20;
 // Keep floating feature panels below modal layer (modal starts at 2000 in CSS).
@@ -2367,7 +2369,7 @@ class DrawingBoard {
             let x = clientX - this.dragOffset.x;
             let y = clientY - this.dragOffset.y;
             
-            const edgeSnapDistance = 30;
+            const edgeSnapDistance = EDGE_SNAP_DISTANCE;
             const edgeSnapHysteresis = 60; // Wider zone to prevent flicker when already snapped
             const windowWidth = window.innerWidth;
             const windowHeight = window.innerHeight;
@@ -2407,7 +2409,7 @@ class DrawingBoard {
                 
                 // Check for left edge snap first
                 if (x < effectiveSnapDistance) {
-                    x = 10;
+                    x = PANEL_EDGE_MARGIN;
                     snappedToEdge = true;
                     isVertical = true;
                     snappedLeft = true;
@@ -2420,9 +2422,9 @@ class DrawingBoard {
                         this.draggedElement.classList.add('vertical');
                         const tempWidth = this.draggedElement.getBoundingClientRect().width;
                         this.draggedElement.classList.remove('vertical');
-                        x = windowWidth - tempWidth - 10;
+                        x = windowWidth - tempWidth - PANEL_EDGE_MARGIN;
                     } else {
-                        x = windowWidth - currentWidth - 10;
+                        x = windowWidth - currentWidth - PANEL_EDGE_MARGIN;
                     }
                     snappedToEdge = true;
                     isVertical = true;
@@ -2430,7 +2432,7 @@ class DrawingBoard {
                 }
                 // Snap to top
                 if (y < edgeSnapDistance) {
-                    y = 10;
+                    y = PANEL_EDGE_MARGIN;
                     snappedToEdge = true;
                 }
                 // Snap to bottom
@@ -2445,9 +2447,9 @@ class DrawingBoard {
                 // Recalculate position after adding vertical class to account for dimension changes
                 if (snappedRight) {
                     const newWidth = this.draggedElement.getBoundingClientRect().width;
-                    x = windowWidth - newWidth - 10;
+                    x = windowWidth - newWidth - PANEL_EDGE_MARGIN;
                 } else if (snappedLeft) {
-                    x = 10;
+                    x = PANEL_EDGE_MARGIN;
                 }
                 // Update height after dimension change for vertical layout
                 const newRect = this.draggedElement.getBoundingClientRect();
@@ -2492,19 +2494,21 @@ class DrawingBoard {
                     this.draggedElement.classList.add('user-positioned');
                     let toolbarLayoutChanged = false;
                     if (this.settingsManager.edgeSnapEnabled) {
-                        const edgeSnapDistance = 30;
                         const rect = this.draggedElement.getBoundingClientRect();
-                        const nearLeftEdge = rect.left <= edgeSnapDistance;
-                        const nearRightEdge = (window.innerWidth - rect.right) <= edgeSnapDistance;
+                        const nearLeftEdge = rect.left <= EDGE_SNAP_DISTANCE;
+                        const nearRightEdge = (window.innerWidth - rect.right) <= EDGE_SNAP_DISTANCE;
                         if (nearLeftEdge || nearRightEdge) {
                             this.draggedElement.classList.add('vertical');
                             toolbarLayoutChanged = true;
                             if (nearLeftEdge) {
-                                this.draggedElement.style.left = '10px';
+                                this.draggedElement.style.left = `${PANEL_EDGE_MARGIN}px`;
                             } else {
                                 const newRect = this.draggedElement.getBoundingClientRect();
-                                this.draggedElement.style.left = `${window.innerWidth - newRect.width - 10}px`;
+                                this.draggedElement.style.left = `${window.innerWidth - newRect.width - PANEL_EDGE_MARGIN}px`;
                             }
+                            const snappedRect = this.draggedElement.getBoundingClientRect();
+                            this.draggedElementWidth = snappedRect.width;
+                            this.draggedElementHeight = snappedRect.height;
                         } else {
                             this.draggedElement.classList.remove('vertical');
                             toolbarLayoutChanged = true;
@@ -4156,10 +4160,10 @@ class DrawingBoard {
     getFullscreenButtonTitle(isExitState) {
         const i18n = window.i18n;
         if (!i18n) {
-            return isExitState ? '退出全屏 (F11)' : '全屏 (F11)';
+            return isExitState ? 'Exit Fullscreen (F11)' : 'Fullscreen (F11)';
         }
         const key = isExitState ? 'toolbar.exitFullscreen' : 'toolbar.fullscreen';
-        const fallback = isExitState ? '退出全屏 (F11)' : '全屏 (F11)';
+        const fallback = isExitState ? 'Exit Fullscreen (F11)' : 'Fullscreen (F11)';
         const translated = i18n.t(key);
         return translated === key ? fallback : translated;
     }

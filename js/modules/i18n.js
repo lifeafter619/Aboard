@@ -155,7 +155,10 @@ class I18n {
         const resolve = (source) => {
             let value = source;
             for (const k of keys) {
-                value = value && value[k];
+                if (value === undefined || value === null) {
+                    return undefined;
+                }
+                value = value[k];
                 if (value === undefined) {
                     return undefined;
                 }
