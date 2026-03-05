@@ -368,6 +368,10 @@ class SettingsManager {
     updateToolbarSize() {
         const toolbar = document.getElementById('toolbar');
         const buttons = toolbar.querySelectorAll('.tool-btn');
+        const TOUCH_SMALL_SCREEN_THRESHOLD = 900;
+        const PORTRAIT_TOUCH_MAX_BUTTON_SIZE = 46;
+        const LANDSCAPE_TOUCH_MAX_BUTTON_SIZE = 52;
+        const TOUCH_TOOLBAR_SAFE_MARGIN = 12;
         
         // Square buttons with dynamic sizing based on toolbarSize
         // All proportions scale with buttonSize for consistent appearance
@@ -384,8 +388,8 @@ class SettingsManager {
         
         const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
         const shortestSide = Math.min(window.innerWidth, window.innerHeight);
-        const touchMaxButtonSize = shortestSide <= 900
-            ? (window.innerHeight > window.innerWidth ? 46 : 52)
+        const touchMaxButtonSize = shortestSide <= TOUCH_SMALL_SCREEN_THRESHOLD
+            ? (window.innerHeight > window.innerWidth ? PORTRAIT_TOUCH_MAX_BUTTON_SIZE : LANDSCAPE_TOUCH_MAX_BUTTON_SIZE)
             : this.toolbarSize;
         const buttonSize = isTouchDevice
             ? Math.min(this.toolbarSize, touchMaxButtonSize)
@@ -409,7 +413,7 @@ class SettingsManager {
             : `${toolbarPaddingSecondary}px ${toolbarPadding}px`;
         toolbar.style.gap = `${toolbarGap}px`;
         if (isTouchDevice) {
-            toolbar.style.maxWidth = 'calc(100vw - 12px)';
+            toolbar.style.maxWidth = `calc(100vw - ${TOUCH_TOOLBAR_SAFE_MARGIN}px)`;
             toolbar.style.overflowX = isVertical ? 'hidden' : 'auto';
             toolbar.style.overflowY = isVertical ? 'auto' : 'hidden';
         } else {

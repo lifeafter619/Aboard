@@ -2854,6 +2854,7 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     opacity: 0.92;
 }
 
+/* 1024px keeps tablet/phone portrait covered, while leaving desktop layouts unaffected. */
 @media (orientation: portrait) and (max-width: 1024px) {
     #portrait-orientation-overlay {
         display: flex;
