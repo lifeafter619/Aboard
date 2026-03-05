@@ -53,6 +53,7 @@ window.translations = {
         zoomOut: 'Alejar (-)',
         zoomIn: 'Acercar (+)',
         fullscreen: 'Pantalla completa (F11)',
+        exitFullscreen: 'Salir de pantalla completa (F11)',
         zoomPlaceholder: 'Nivel de zoom (Introducir porcentaje)'
     },
 

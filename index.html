@@ -305,7 +305,7 @@
         <!-- Background configuration -->
         <div id="background-config" class="config-panel">
             <div class="config-group config-group-compact">
-                <label>背景颜色</label>
+                <label data-i18n="background.color">背景颜色</label>
                 <div class="color-picker-row">
                     <div class="color-picker-main">
                         <button class="color-btn active" data-bg-color="#ffffff" style="background-color: #ffffff; border: 1px solid #ccc;"></button>
@@ -329,7 +329,7 @@
                 </label>
             </div>
             <div class="config-group config-group-compact">
-                <label>背景图案</label>
+                <label data-i18n="background.pattern">背景图案</label>
                 <div class="button-size-options pattern-grid-compact" id="pattern-grid">
                     <button class="pattern-option-btn active" data-pattern="blank">空白</button>
                     <button class="pattern-option-btn" data-pattern="dots">点阵</button>
@@ -344,16 +344,16 @@
                             <polyline points="17 8 12 3 7 8"></polyline>
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
-                        <span class="upload-text">上传</span>
+                        <span class="upload-text" data-i18n="background.upload">上传</span>
                     </button>
                     <input type="file" id="bg-image-upload" accept="image/*" style="display: none;">
                 </div>
                 <div class="compact-sliders">
                     <div class="compact-slider-item" id="pattern-density-group" style="display: none;">
-                        <label>密度：当前 <span id="pattern-density-value">100</span>%</label>
+                        <label><span data-i18n="background.densityLabel">密度：当前</span> <span id="pattern-density-value">100</span>%</label>
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <input type="range" id="pattern-density-slider" min="20" max="300" value="100" class="slider slider-compact" style="flex: 1;">
-                            <button id="move-origin-btn" class="icon-btn" title="移动坐标原点">
+                            <button id="move-origin-btn" class="icon-btn" title="移动坐标原点" data-i18n-title="background.moveCoordinateOrigin">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M12 2v20M2 12h20"></path>
                                     <circle cx="12" cy="12" r="3"></circle>
@@ -362,7 +362,7 @@
                         </div>
                     </div>
                     <div class="compact-slider-item" id="image-size-group" style="display: none;">
-                        <label>大小：当前 <span id="bg-image-size-value">100</span>%</label>
+                        <label><span data-i18n="background.sizeLabel">大小：当前</span> <span id="bg-image-size-value">100</span>%</label>
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <input type="range" id="bg-image-size-slider" min="10" max="200" value="100" class="slider slider-compact" style="flex: 1;">
                             <button id="bg-gif-settings-btn" class="icon-btn" title="GIF设置" style="display: none;">

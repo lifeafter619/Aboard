@@ -58,6 +58,7 @@ window.translations = {
         zoomOut: '缩小 (-)',
         zoomIn: '放大 (+)',
         fullscreen: '全屏 (F11)',
+        exitFullscreen: '退出全屏 (F11)',
         zoomPlaceholder: '缩放比例 (输入百分比)'
     },
 

@@ -16,6 +16,7 @@ class I18n {
     constructor() {
         this.currentLocale = 'zh-CN'; // Default language
         this.translations = {};
+        this.fallbackTranslations = {};
         this.fallbackLocale = 'zh-CN';
         
         // Available languages
@@ -96,20 +97,27 @@ class I18n {
      */
     async loadTranslations() {
         try {
-            const response = await fetch(`js/locales/${this.currentLocale}.js`);
-            if (!response.ok) {
-                console.warn(`Failed to load ${this.currentLocale}, falling back to ${this.fallbackLocale}`);
-                this.currentLocale = this.fallbackLocale;
-                const fallbackResponse = await fetch(`js/locales/${this.fallbackLocale}.js`);
-                const fallbackText = await fallbackResponse.text();
-                eval(fallbackText);
-            } else {
+            const loadLocaleFile = async (locale) => {
+                const response = await fetch(`js/locales/${locale}.js`);
+                if (!response.ok) {
+                    return null;
+                }
                 const text = await response.text();
                 eval(text);
+                return window.translations || null;
+            };
+
+            let localeTranslations = await loadLocaleFile(this.currentLocale);
+            if (!localeTranslations) {
+                console.warn(`Failed to load ${this.currentLocale}, falling back to ${this.fallbackLocale}`);
+                this.currentLocale = this.fallbackLocale;
+                localeTranslations = await loadLocaleFile(this.fallbackLocale);
             }
-            
-            // Translations are now in window.translations
-            this.translations = window.translations || {};
+
+            this.translations = localeTranslations || {};
+            this.fallbackTranslations = this.currentLocale === this.fallbackLocale
+                ? this.translations
+                : (await loadLocaleFile(this.fallbackLocale) || {});
 
             // Load help translations
             try {
@@ -135,6 +143,7 @@ class I18n {
         } catch (error) {
             console.error('Error loading translations:', error);
             this.translations = {};
+            this.fallbackTranslations = {};
         }
     }
 
@@ -143,14 +152,24 @@ class I18n {
      */
     t(key, params = {}) {
         const keys = key.split('.');
-        let value = this.translations;
-        
-        for (const k of keys) {
-            value = value[k];
-            if (value === undefined) {
-                console.warn(`Translation missing for key: ${key}`);
-                return key;
+        const resolve = (source) => {
+            let value = source;
+            for (const k of keys) {
+                value = value && value[k];
+                if (value === undefined) {
+                    return undefined;
+                }
             }
+            return value;
+        };
+
+        let value = resolve(this.translations);
+        if (value === undefined) {
+            value = resolve(this.fallbackTranslations);
+        }
+        if (value === undefined) {
+            console.warn(`Translation missing for key: ${key}`);
+            return key;
         }
         
         // Replace parameters in translation

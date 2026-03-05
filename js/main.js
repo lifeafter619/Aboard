@@ -2375,7 +2375,7 @@ class DrawingBoard {
             const isConfigArea = this.draggedElement.id === 'config-area';
             const isTimeDisplayArea = this.draggedElement.id === 'time-display-area';
             const isFeatureArea = this.draggedElement.id === 'feature-area';
-            const shouldApplyVerticalLive = !isToolbar && (isConfigArea || isTimeDisplayArea || isFeatureArea);
+            const shouldApplyVerticalLive = isToolbar || isConfigArea || isTimeDisplayArea || isFeatureArea;
             
             let snappedToEdge = false;
             let isVertical = false;
@@ -2440,17 +2440,18 @@ class DrawingBoard {
                 }
             }
             
-            // Keep toolbar following cursor while dragging; apply edge orientation after drag end.
-            // For other floating panels, keep existing live vertical/horizontal switching behavior.
             if (shouldApplyVerticalLive && snappedToEdge && isVertical) {
                 this.draggedElement.classList.add('vertical');
                 // Recalculate position after adding vertical class to account for dimension changes
                 if (snappedRight) {
                     const newWidth = this.draggedElement.getBoundingClientRect().width;
                     x = windowWidth - newWidth - 10;
+                } else if (snappedLeft) {
+                    x = 10;
                 }
                 // Update height after dimension change for vertical layout
                 const newRect = this.draggedElement.getBoundingClientRect();
+                this.draggedElementWidth = newRect.width;
                 this.draggedElementHeight = newRect.height;
             } else if (shouldApplyVerticalLive) {
                 this.draggedElement.classList.remove('vertical');
@@ -2490,9 +2491,10 @@ class DrawingBoard {
                 if (this.draggedElement.id === 'toolbar') {
                     this.draggedElement.classList.add('user-positioned');
                     if (this.settingsManager.edgeSnapEnabled) {
+                        const edgeSnapDistance = 30;
                         const rect = this.draggedElement.getBoundingClientRect();
-                        const nearLeftEdge = rect.left <= 12;
-                        const nearRightEdge = (window.innerWidth - rect.right) <= 12;
+                        const nearLeftEdge = rect.left <= edgeSnapDistance;
+                        const nearRightEdge = (window.innerWidth - rect.right) <= edgeSnapDistance;
                         if (nearLeftEdge || nearRightEdge) {
                             this.draggedElement.classList.add('vertical');
                             if (nearLeftEdge) {
@@ -4129,7 +4131,7 @@ class DrawingBoard {
                     <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
                 </svg>
             `;
-            btn.title = '退出全屏 (F11)';
+            btn.title = this.getFullscreenButtonTitle(true);
         } else {
             // Exit fullscreen
             document.exitFullscreen();
@@ -4140,8 +4142,19 @@ class DrawingBoard {
                     <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
                 </svg>
             `;
-            btn.title = '全屏 (F11)';
+            btn.title = this.getFullscreenButtonTitle(false);
         }
+    }
+
+    getFullscreenButtonTitle(isExitState) {
+        const i18n = window.i18n;
+        if (!i18n) {
+            return isExitState ? '退出全屏 (F11)' : '全屏 (F11)';
+        }
+        const key = isExitState ? 'toolbar.exitFullscreen' : 'toolbar.fullscreen';
+        const fallback = isExitState ? '退出全屏 (F11)' : '全屏 (F11)';
+        const translated = i18n.t(key);
+        return translated === key ? fallback : translated;
     }
     
     updatePatternGrid() {
@@ -4168,7 +4181,7 @@ class DrawingBoard {
                     <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
                 </svg>
             `;
-            btn.title = '全屏 (F11)';
+            btn.title = this.getFullscreenButtonTitle(false);
         } else {
             // Entered fullscreen
             btn.innerHTML = `
@@ -4176,7 +4189,7 @@ class DrawingBoard {
                     <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
                 </svg>
             `;
-            btn.title = '退出全屏 (F11)';
+            btn.title = this.getFullscreenButtonTitle(true);
         }
     }
     

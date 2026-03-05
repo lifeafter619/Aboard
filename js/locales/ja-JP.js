@@ -53,6 +53,7 @@ window.translations = {
         zoomOut: 'ズームアウト (-)',
         zoomIn: 'ズームイン (+)',
         fullscreen: 'フルスクリーン (F11)',
+        exitFullscreen: 'フルスクリーンを終了 (F11)',
         zoomPlaceholder: 'ズームレベル (パーセントを入力)'
     },
 

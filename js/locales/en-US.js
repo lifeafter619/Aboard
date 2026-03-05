@@ -50,7 +50,7 @@ window.translations = {
         select: 'Select',
         eraser: 'Eraser',
         clear: 'Clear',
-        background: 'Backgrnd',
+        background: 'Background',
         teachingTools: 'Tools',
         more: 'More',
         settings: 'Settings',
@@ -58,6 +58,7 @@ window.translations = {
         zoomOut: 'Zoom Out (-)',
         zoomIn: 'Zoom In (+)',
         fullscreen: 'Fullscreen (F11)',
+        exitFullscreen: 'Exit Fullscreen (F11)',
         zoomPlaceholder: 'Zoom Level (Enter %)'
     },
 

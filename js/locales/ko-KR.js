@@ -53,6 +53,7 @@ window.translations = {
         zoomOut: '축소 (-)',
         zoomIn: '확대 (+)',
         fullscreen: '전체 화면 (F11)',
+        exitFullscreen: '전체 화면 종료 (F11)',
         zoomPlaceholder: '확대/축소 수준 (백분율 입력)'
     },
 
