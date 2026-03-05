@@ -32,7 +32,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - ミニマリストホワイトボード',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: '画面を回転してください',
+        rotateScreenTip: '縦向きモードが検出されました。レイアウトとツールバーを正しく表示するため、横向きでご利用ください。'
     },
 
     // Toolbar
@@ -258,6 +260,10 @@ window.translations = {
     // Settings
     settings: {
         title: '設定',
+        exportSuccess: '設定のエクスポートに成功しました',
+        importSuccess: '設定をインポートしました',
+        importError: '無効な設定ファイルです',
+        importNoChange: '設定の変更が検出されませんでした',
         tabs: {
             general: '一般',
             display: '表示',

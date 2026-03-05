@@ -37,7 +37,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - Simple Whiteboard',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: 'Please rotate your screen',
+        rotateScreenTip: 'Portrait mode detected. Rotate to landscape for proper layout and full toolbar access.'
     },
 
     // Toolbar

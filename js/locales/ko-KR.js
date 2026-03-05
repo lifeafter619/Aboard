@@ -32,7 +32,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - 미니멀 화이트보드',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: '화면을 회전해 주세요',
+        rotateScreenTip: '세로 모드가 감지되었습니다. 올바른 레이아웃과 전체 도구 모음을 위해 가로 모드로 사용해 주세요.'
     },
 
     // Toolbar
@@ -258,6 +260,10 @@ window.translations = {
     // Settings
     settings: {
         title: '설정',
+        exportSuccess: '설정이 성공적으로 내보내졌습니다',
+        importSuccess: '설정을 성공적으로 가져왔습니다',
+        importError: '잘못된 구성 파일입니다',
+        importNoChange: '설정 변경이 감지되지 않았습니다',
         tabs: {
             general: '일반',
             display: '표시',

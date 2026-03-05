@@ -2413,7 +2413,7 @@ class DrawingBoard {
                     snappedLeft = true;
                 }
                 // Check for right edge snap
-                else if (x + currentWidth > windowWidth - effectiveSnapDistance) {
+                if (!snappedLeft && x + currentWidth > windowWidth - effectiveSnapDistance) {
                     // When vertical, need to recalculate width
                     if (shouldApplyVerticalLive) {
                         // Temporarily add vertical class to get correct dimensions
@@ -2490,6 +2490,7 @@ class DrawingBoard {
                 // Mark toolbar as user-positioned to prevent auto-repositioning
                 if (this.draggedElement.id === 'toolbar') {
                     this.draggedElement.classList.add('user-positioned');
+                    let toolbarLayoutChanged = false;
                     if (this.settingsManager.edgeSnapEnabled) {
                         const edgeSnapDistance = 30;
                         const rect = this.draggedElement.getBoundingClientRect();
@@ -2497,6 +2498,7 @@ class DrawingBoard {
                         const nearRightEdge = (window.innerWidth - rect.right) <= edgeSnapDistance;
                         if (nearLeftEdge || nearRightEdge) {
                             this.draggedElement.classList.add('vertical');
+                            toolbarLayoutChanged = true;
                             if (nearLeftEdge) {
                                 this.draggedElement.style.left = '10px';
                             } else {
@@ -2505,7 +2507,12 @@ class DrawingBoard {
                             }
                         } else {
                             this.draggedElement.classList.remove('vertical');
+                            toolbarLayoutChanged = true;
                         }
+                    }
+                    if (toolbarLayoutChanged) {
+                        this.settingsManager.updateToolbarSize();
+                        this.positionConfigArea();
                     }
                 }
                 

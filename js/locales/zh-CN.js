@@ -37,7 +37,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - 简约白板',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: '请旋转屏幕',
+        rotateScreenTip: '检测到当前为竖屏模式。为获得正常排版与完整工具栏，请横屏使用。'
     },
 
     // Toolbar

@@ -34,7 +34,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - 簡約白板',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: '請旋轉螢幕',
+        rotateScreenTip: '偵測到目前為直向模式。為了正常排版與完整工具列，請以橫向使用。'
     },
 
     // Toolbar

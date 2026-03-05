@@ -821,7 +821,7 @@ class SettingsManager {
         URL.revokeObjectURL(url);
 
         // Use custom Toast instead of alert
-        const successMsg = window.i18n ? window.i18n.t('settings.exportSuccess') : '配置已成功导出！';
+        const successMsg = window.i18n ? window.i18n.t('settings.exportSuccess') : 'Configuration exported successfully';
         this.toastManager.show(successMsg, 'success');
     }
 

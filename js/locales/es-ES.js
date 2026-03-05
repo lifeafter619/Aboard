@@ -32,7 +32,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - Pizarra Minimalista',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: 'Gira la pantalla',
+        rotateScreenTip: 'Se detectó el modo vertical. Para un diseño correcto y la barra de herramientas completa, usa el modo horizontal.'
     },
 
     // Toolbar
@@ -254,6 +256,10 @@ window.translations = {
     // Settings
     settings: {
         title: 'Configuración',
+        exportSuccess: 'Configuración exportada correctamente',
+        importSuccess: 'Configuración importada correctamente',
+        importError: 'Archivo de configuración inválido',
+        importNoChange: 'No se detectaron cambios en la configuración',
         tabs: {
             general: 'General',
             display: 'Pantalla',

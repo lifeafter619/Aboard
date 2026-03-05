@@ -32,7 +32,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - Tableau Blanc Minimaliste',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: 'Veuillez faire pivoter l’écran',
+        rotateScreenTip: 'Le mode portrait est détecté. Pour une mise en page correcte et une barre d’outils complète, passez en paysage.'
     },
 
     // Toolbar
@@ -254,6 +256,10 @@ window.translations = {
     // Settings
     settings: {
         title: 'Paramètres',
+        exportSuccess: 'Configuration exportée avec succès',
+        importSuccess: 'Configuration importée avec succès',
+        importError: 'Fichier de configuration invalide',
+        importNoChange: 'Aucune modification de configuration détectée',
         tabs: {
             general: 'Général',
             display: 'Affichage',

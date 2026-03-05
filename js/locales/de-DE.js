@@ -32,7 +32,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - Minimalistisches Whiteboard',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: 'Bitte Bildschirm drehen',
+        rotateScreenTip: 'Hochformat erkannt. Für korrektes Layout und vollständige Werkzeugleiste bitte ins Querformat wechseln.'
     },
 
     // Toolbar
@@ -256,6 +258,10 @@ window.translations = {
     // Settings
     settings: {
         title: 'Einstellungen',
+        exportSuccess: 'Konfiguration erfolgreich exportiert',
+        importSuccess: 'Konfiguration erfolgreich importiert',
+        importError: 'Ungültige Konfigurationsdatei',
+        importNoChange: 'Keine Konfigurationsänderungen erkannt',
         tabs: {
             general: 'Allgemein',
             display: 'Anzeige',
