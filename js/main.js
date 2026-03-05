@@ -2416,16 +2416,7 @@ class DrawingBoard {
                 }
                 // Check for right edge snap
                 if (!snappedLeft && x + currentWidth > windowWidth - effectiveSnapDistance) {
-                    // When vertical, need to recalculate width
-                    if (shouldApplyVerticalLive) {
-                        // Temporarily add vertical class to get correct dimensions
-                        this.draggedElement.classList.add('vertical');
-                        const tempWidth = this.draggedElement.getBoundingClientRect().width;
-                        this.draggedElement.classList.remove('vertical');
-                        x = windowWidth - tempWidth - PANEL_EDGE_MARGIN;
-                    } else {
-                        x = windowWidth - currentWidth - PANEL_EDGE_MARGIN;
-                    }
+                    x = windowWidth - currentWidth - PANEL_EDGE_MARGIN;
                     snappedToEdge = true;
                     isVertical = true;
                     snappedRight = true;
@@ -2437,7 +2428,7 @@ class DrawingBoard {
                 }
                 // Snap to bottom
                 if (y + currentHeight > windowHeight - edgeSnapDistance) {
-                    y = windowHeight - currentHeight - 10;
+                    y = windowHeight - currentHeight - PANEL_EDGE_MARGIN;
                     snappedToEdge = true;
                 }
             }

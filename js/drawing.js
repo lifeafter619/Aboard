@@ -165,15 +165,14 @@ class DrawingEngine {
         } else if (this.currentTool === 'eraser') {
             this.ctx.globalCompositeOperation = 'destination-out';
             this.ctx.strokeStyle = 'rgba(0,0,0,1)';
-            this.ctx.lineWidth = this.eraserSize;
+            const scaleCompensation = Math.max(0.01, this.canvasScale || 1);
+            this.ctx.lineWidth = this.eraserSize / scaleCompensation;
             this.ctx.globalAlpha = 1.0;
             this.ctx.setLineDash([]); // Always solid for eraser
             
             // Set line cap/join based on eraser shape
-            // Use 'square' for rectangle to match the visual cursor behavior
-            // 'square' extends line by half lineWidth, matching the eraser border edge
             if (this.eraserShape === 'rectangle') {
-                this.ctx.lineCap = 'square';
+                this.ctx.lineCap = 'butt';
                 this.ctx.lineJoin = 'miter';
             } else {
                 this.ctx.lineCap = 'round';
