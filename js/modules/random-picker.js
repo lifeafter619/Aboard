@@ -52,12 +52,21 @@ class RandomPickerInstance {
         div.innerHTML = `
             <div class="random-picker-header">
                 <span class="random-picker-title">${title}</span>
-                <button class="random-picker-close-btn">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
+                <div style="display:flex; gap:6px;">
+                    <button class="random-picker-help-btn" title="${window.i18n.t('common.help')}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
+                            <line x1="12" y1="17" x2="12" y2="17"></line>
+                        </svg>
+                    </button>
+                    <button class="random-picker-close-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
             </div>
             <div class="random-picker-content">
                 <div class="random-picker-result">?</div>
@@ -166,6 +175,7 @@ class RandomPickerInstance {
         // Buttons propagation
         const btns = [
             this.element.querySelector('.random-picker-close-btn'),
+            this.element.querySelector('.random-picker-help-btn'),
             this.element.querySelector('.random-picker-start-btn'),
             this.element.querySelector('.random-picker-settings-btn')
         ];
@@ -180,6 +190,10 @@ class RandomPickerInstance {
         // Close
         this.element.querySelector('.random-picker-close-btn').addEventListener('click', () => {
             this.destroy();
+        });
+
+        this.element.querySelector('.random-picker-help-btn').addEventListener('click', () => {
+            window.drawingBoard?.helpSystem?.showHelp('help.features.randomPicker');
         });
 
         // Start
@@ -526,7 +540,7 @@ class RandomPickerManager {
                 }
             } catch (e) {
                 console.error(e);
-                alert('Excel import library load failed.');
+                window.appDialog?.showAlert('Excel import library load failed.', 'error');
                 return;
             }
         }
@@ -559,13 +573,13 @@ class RandomPickerManager {
                 if (names.length > 0) {
                     const textarea = document.getElementById('rp-names-input');
                     textarea.value = names.join('\n');
-                    alert(window.i18n.t('randomPicker.importSuccess').replace('{count}', names.length));
+                    window.appDialog?.showAlert(window.i18n.t('randomPicker.importSuccess').replace('{count}', names.length), 'success');
                 } else {
-                    alert(window.i18n.t('randomPicker.importNoData'));
+                    window.appDialog?.showAlert(window.i18n.t('randomPicker.importNoData'), 'warning');
                 }
             } catch (err) {
                 console.error(err);
-                alert(window.i18n.t('randomPicker.importError'));
+                window.appDialog?.showAlert(window.i18n.t('randomPicker.importError'), 'error');
             }
         };
         reader.readAsArrayBuffer(file);

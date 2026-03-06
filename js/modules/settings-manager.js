@@ -21,6 +21,7 @@ class SettingsManager {
         this.showImportExportBtn = localStorage.getItem('showImportExportBtn') !== 'false';
         this.showFullscreenBtn = localStorage.getItem('showFullscreenBtn') !== 'false';
         this.showToolbarText = localStorage.getItem('showToolbarText') !== 'false'; // Default true
+        this.keepMorePanelOpen = localStorage.getItem('keepMorePanelOpen') !== 'false';
         this.patternPreferences = this.loadPatternPreferences();
         this.canvasWidth = parseInt(localStorage.getItem('canvasWidth')) || 1920;
         this.canvasHeight = parseInt(localStorage.getItem('canvasHeight')) || 1080;
@@ -28,6 +29,8 @@ class SettingsManager {
         this.themeColor = localStorage.getItem('themeColor') || '#007AFF';
         this.globalFont = localStorage.getItem('globalFont') || 'system';
         this.customFonts = this.loadCustomFonts();
+        this.fontPreferences = this.loadFontPreferences();
+        this.ensureFontPreferencesIntegrity();
 
         // Initialize Toast Manager
         this.toastManager = new ToastManager();
@@ -47,6 +50,84 @@ class SettingsManager {
             }
         }
         return [];
+    }
+
+    getBaseFontOptions() {
+        return [
+            { value: 'system', label: 'settings.general.fonts.system' },
+            { value: 'serif', label: 'settings.general.fonts.serif' },
+            { value: 'sans-serif', label: 'settings.general.fonts.sansSerif' },
+            { value: 'monospace', label: 'settings.general.fonts.monospace' },
+            { value: 'cursive', label: 'settings.general.fonts.cursive' },
+            { value: 'Noto Sans SC', label: 'settings.general.fonts.notoSansSC', fallback: 'Noto Sans SC' },
+            { value: 'Noto Serif SC', label: 'settings.general.fonts.notoSerifSC', fallback: 'Noto Serif SC' },
+            { value: 'LXGW WenKai', label: 'settings.general.fonts.lxgwWenKai', fallback: 'LXGW WenKai' },
+            { value: 'Source Han Sans SC', label: 'settings.general.fonts.sourceHanSansSC', fallback: 'Source Han Sans SC' },
+            { value: 'Source Han Serif SC', label: 'settings.general.fonts.sourceHanSerifSC', fallback: 'Source Han Serif SC' },
+            { value: 'Inter', label: 'settings.general.fonts.inter', fallback: 'Inter' },
+            { value: 'Roboto', label: 'settings.general.fonts.roboto', fallback: 'Roboto' },
+            { value: 'Open Sans', label: 'settings.general.fonts.openSans', fallback: 'Open Sans' },
+            { value: 'Lora', label: 'settings.general.fonts.lora', fallback: 'Lora' },
+            { value: 'JetBrains Mono', label: 'settings.general.fonts.jetBrainsMono', fallback: 'JetBrains Mono' },
+            { value: 'KaiTi', label: 'settings.general.fonts.kaiTi', fallback: 'KaiTi' },
+            { value: 'STXingkai', label: 'settings.general.fonts.stXingkai', fallback: 'STXingkai' }
+        ];
+    }
+
+    getAllFontValues() {
+        const baseValues = this.getBaseFontOptions().map(f => f.value);
+        const customValues = this.customFonts.map(f => f.name);
+        return [...baseValues, ...customValues];
+    }
+
+    loadFontPreferences() {
+        const saved = localStorage.getItem('fontPreferences');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.warn('Failed to load font preferences:', e);
+            }
+        }
+        return { order: [], visibility: {}, aliases: {} };
+    }
+
+    saveFontPreferences() {
+        localStorage.setItem('fontPreferences', JSON.stringify(this.fontPreferences));
+    }
+
+    ensureFontPreferencesIntegrity() {
+        if (!this.fontPreferences || typeof this.fontPreferences !== 'object') {
+            this.fontPreferences = { order: [], visibility: {}, aliases: {} };
+        }
+        this.fontPreferences.order = Array.isArray(this.fontPreferences.order) ? this.fontPreferences.order : [];
+        this.fontPreferences.visibility = this.fontPreferences.visibility || {};
+        this.fontPreferences.aliases = this.fontPreferences.aliases || {};
+
+        const allValues = this.getAllFontValues();
+        this.fontPreferences.order = this.normalizeFontOrder(this.fontPreferences.order, allValues);
+        allValues.forEach(value => {
+            if (!this.fontPreferences.order.includes(value)) {
+                this.fontPreferences.order.push(value);
+            }
+            if (this.fontPreferences.visibility[value] === undefined) {
+                this.fontPreferences.visibility[value] = true;
+            }
+        });
+        this.saveFontPreferences();
+    }
+
+    normalizeFontOrder(order, allValues) {
+        const validOrdered = order.filter(value => allValues.includes(value));
+        const deduped = [];
+        const dedupedSet = new Set();
+        validOrdered.forEach(value => {
+            if (!dedupedSet.has(value)) {
+                dedupedSet.add(value);
+                deduped.push(value);
+            }
+        });
+        return deduped;
     }
     
     // Save custom fonts to localStorage
@@ -117,6 +198,12 @@ class SettingsManager {
                 this.customFonts.push({ name: fontName, data: fontData });
                 this.saveCustomFonts();
                 this.addFontToDocument(fontName, fontData);
+                this.ensureFontPreferencesIntegrity();
+                this.fontPreferences.visibility[fontName] = true;
+                if (!this.fontPreferences.aliases[fontName]) {
+                    this.fontPreferences.aliases[fontName] = fontName;
+                }
+                this.saveFontPreferences();
                 this.populateGlobalFontSelect();
                 
                 // Select the newly uploaded font
@@ -144,27 +231,94 @@ class SettingsManager {
     populateGlobalFontSelect() {
         const select = document.getElementById('global-font-select');
         if (!select) return;
-        
-        // Remove existing custom font optgroup if any
-        const existingOptgroup = select.querySelector('optgroup');
-        if (existingOptgroup) {
-            existingOptgroup.remove();
+
+        const previousValue = select.value || this.globalFont;
+        select.innerHTML = '';
+
+        const visibleFonts = this.getManagedFontOptions().filter(font => font.visible);
+        visibleFonts.forEach(font => {
+            const option = document.createElement('option');
+            option.value = font.value;
+            option.textContent = font.label;
+            select.appendChild(option);
+        });
+
+        const hasPrevious = visibleFonts.some(font => font.value === previousValue);
+        if (hasPrevious) {
+            select.value = previousValue;
+        } else if (visibleFonts.length > 0) {
+            select.value = visibleFonts[0].value;
         }
-        
-        // Add custom fonts if any
-        if (this.customFonts.length > 0) {
-            const optgroup = document.createElement('optgroup');
-            optgroup.label = window.i18n ? window.i18n.t('tools.text.customFonts') : 'Custom Fonts';
-            
-            this.customFonts.forEach(font => {
-                const option = document.createElement('option');
-                option.value = font.name;
-                option.textContent = font.name;
-                optgroup.appendChild(option);
+    }
+
+    getManagedFontOptions() {
+        this.ensureFontPreferencesIntegrity();
+        const baseMap = new Map(this.getBaseFontOptions().map(font => [font.value, font]));
+        const customMap = new Map(this.customFonts.map(font => [font.name, font]));
+
+        return this.fontPreferences.order
+            .filter(value => baseMap.has(value) || customMap.has(value))
+            .map(value => {
+                const base = baseMap.get(value);
+                const custom = customMap.get(value);
+                let rawLabel = this.fontPreferences.aliases[value];
+                if (!rawLabel) {
+                    rawLabel = base ? base.label : value;
+                }
+                let translatedLabel = rawLabel;
+                if (window.i18n && typeof rawLabel === 'string' && rawLabel.startsWith('settings.')) {
+                    let translated = rawLabel;
+                    try {
+                        translated = window.i18n.t(rawLabel);
+                    } catch (e) {
+                        translated = rawLabel;
+                    }
+                    translatedLabel = (translated && translated !== rawLabel)
+                        ? translated
+                        : (base?.fallback || value);
+                }
+                return {
+                    value,
+                    label: translatedLabel,
+                    visible: this.fontPreferences.visibility[value] !== false,
+                    isCustom: Boolean(custom)
+                };
             });
-            
-            select.appendChild(optgroup);
+    }
+
+    setFontVisibility(fontValue, visible) {
+        this.ensureFontPreferencesIntegrity();
+        this.fontPreferences.visibility[fontValue] = visible;
+        this.saveFontPreferences();
+        this.populateGlobalFontSelect();
+    }
+
+    setFontAlias(fontValue, alias) {
+        this.ensureFontPreferencesIntegrity();
+        const finalAlias = alias ? alias.trim() : '';
+        if (finalAlias) {
+            this.fontPreferences.aliases[fontValue] = finalAlias;
+        } else {
+            delete this.fontPreferences.aliases[fontValue];
         }
+        this.saveFontPreferences();
+        this.populateGlobalFontSelect();
+    }
+
+    setFontOrder(order) {
+        this.ensureFontPreferencesIntegrity();
+        const allValues = this.getAllFontValues();
+        const deduped = this.normalizeFontOrder(order, allValues);
+        const dedupedSet = new Set(deduped);
+        allValues.forEach(value => {
+            if (!dedupedSet.has(value)) {
+                dedupedSet.add(value);
+                deduped.push(value);
+            }
+        });
+        this.fontPreferences.order = deduped;
+        this.saveFontPreferences();
+        this.populateGlobalFontSelect();
     }
     
     loadPatternPreferences() {
@@ -214,6 +368,10 @@ class SettingsManager {
     updateToolbarSize() {
         const toolbar = document.getElementById('toolbar');
         const buttons = toolbar.querySelectorAll('.tool-btn');
+        const TOUCH_SMALL_SCREEN_THRESHOLD = 900;
+        const PORTRAIT_TOUCH_MAX_BUTTON_SIZE = 46;
+        const LANDSCAPE_TOUCH_MAX_BUTTON_SIZE = 52;
+        const TOUCH_TOOLBAR_SAFE_MARGIN = 12;
         
         // Square buttons with dynamic sizing based on toolbarSize
         // All proportions scale with buttonSize for consistent appearance
@@ -228,7 +386,14 @@ class SettingsManager {
         // Secondary axis uses smaller padding to keep toolbar compact
         const TOOLBAR_PADDING_SECONDARY_RATIO = 0.6; // Secondary padding = 60% of primary
         
-        const buttonSize = this.toolbarSize;
+        const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+        const shortestSide = Math.min(window.innerWidth, window.innerHeight);
+        const touchMaxButtonSize = shortestSide <= TOUCH_SMALL_SCREEN_THRESHOLD
+            ? (window.innerHeight > window.innerWidth ? PORTRAIT_TOUCH_MAX_BUTTON_SIZE : LANDSCAPE_TOUCH_MAX_BUTTON_SIZE)
+            : this.toolbarSize;
+        const buttonSize = isTouchDevice
+            ? Math.min(this.toolbarSize, touchMaxButtonSize)
+            : this.toolbarSize;
         const buttonPadding = Math.max(2, buttonSize * BUTTON_PADDING_RATIO);
         const iconSize = buttonSize * ICON_SIZE_RATIO;
         const fontSize = Math.max(6, buttonSize * FONT_SIZE_RATIO);
@@ -247,6 +412,15 @@ class SettingsManager {
             ? `${toolbarPadding}px ${toolbarPaddingSecondary}px` 
             : `${toolbarPaddingSecondary}px ${toolbarPadding}px`;
         toolbar.style.gap = `${toolbarGap}px`;
+        if (isTouchDevice) {
+            toolbar.style.maxWidth = `calc(100vw - ${TOUCH_TOOLBAR_SAFE_MARGIN}px)`;
+            toolbar.style.overflowX = isVertical ? 'hidden' : 'auto';
+            toolbar.style.overflowY = isVertical ? 'auto' : 'hidden';
+        } else {
+            toolbar.style.maxWidth = '';
+            toolbar.style.overflowX = '';
+            toolbar.style.overflowY = '';
+        }
         
         buttons.forEach(btn => {
             // Square button with fixed size - set all dimensions to ensure truly square
@@ -421,6 +595,10 @@ class SettingsManager {
         if (showToolbarTextCheckbox) {
             showToolbarTextCheckbox.checked = this.showToolbarText;
         }
+        const keepMorePanelOpenCheckbox = document.getElementById('keep-more-panel-open-checkbox');
+        if (keepMorePanelOpenCheckbox) {
+            keepMorePanelOpenCheckbox.checked = this.keepMorePanelOpen;
+        }
         this.updateToolbarTextVisibility();
         
         // Canvas is always in pagination mode now
@@ -446,7 +624,11 @@ class SettingsManager {
         
         // Load global font
         this.applyGlobalFont();
-        document.getElementById('global-font-select').value = this.globalFont;
+        this.populateGlobalFontSelect();
+        const globalFontSelect = document.getElementById('global-font-select');
+        if (globalFontSelect && [...globalFontSelect.options].some(option => option.value === this.globalFont)) {
+            globalFontSelect.value = this.globalFont;
+        }
         
         // Initialize language selector
         this.initLanguageSelector();
@@ -519,22 +701,49 @@ class SettingsManager {
                 fontFamily = '"Courier New", Courier, "Consolas", monospace';
                 break;
             case 'cursive':
-                fontFamily = '"Comic Sans MS", "Apple Chancery", cursive';
+                fontFamily = '"KaiTi", "STKaiti", "DFKai-SB", cursive';
                 break;
+            case 'Noto Sans SC':
             case 'Microsoft YaHei':
-                fontFamily = '"Microsoft YaHei", "微软雅黑", Arial, sans-serif';
-                break;
-            case 'SimSun':
-                fontFamily = 'SimSun, "宋体", Georgia, serif';
-                break;
             case 'SimHei':
-                fontFamily = 'SimHei, "黑体", Arial, sans-serif';
+                fontFamily = '"Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif';
+                break;
+            case 'Noto Serif SC':
+            case 'SimSun':
+            case 'FangSong':
+                fontFamily = '"Noto Serif SC", "Songti SC", "STSong", "SimSun", serif';
+                break;
+            case 'LXGW WenKai':
+                fontFamily = '"LXGW WenKai", "Kaiti SC", "KaiTi", "STKaiti", cursive';
                 break;
             case 'KaiTi':
-                fontFamily = 'KaiTi, "楷体", Georgia, serif';
+                fontFamily = '"KaiTi", "Kaiti SC", "STKaiti", "DFKai-SB", cursive';
                 break;
-            case 'FangSong':
-                fontFamily = 'FangSong, "仿宋", Georgia, serif';
+            case 'STXingkai':
+            case 'Ma Shan Zheng':
+            case 'Zhi Mang Xing':
+                fontFamily = '"STXingkai", "KaiTi", "STKaiti", "DFKai-SB", cursive';
+                break;
+            case 'Inter':
+                fontFamily = '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+                break;
+            case 'Roboto':
+                fontFamily = '"Roboto", "Helvetica Neue", Arial, sans-serif';
+                break;
+            case 'Open Sans':
+                fontFamily = '"Open Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
+                break;
+            case 'Lora':
+                fontFamily = '"Lora", "Noto Serif SC", "Songti SC", serif';
+                break;
+            case 'JetBrains Mono':
+                fontFamily = '"JetBrains Mono", "Consolas", "Courier New", monospace';
+                break;
+            case 'Source Han Sans SC':
+                fontFamily = '"Source Han Sans SC", "Noto Sans SC", "Microsoft YaHei", sans-serif';
+                break;
+            case 'Source Han Serif SC':
+                fontFamily = '"Source Han Serif SC", "Noto Serif SC", "Songti SC", serif';
                 break;
             default:
                 // Check if it's a custom font
@@ -574,6 +783,7 @@ class SettingsManager {
             showZoomControls: this.showZoomControls,
             showImportExportBtn: this.showImportExportBtn,
             showFullscreenBtn: this.showFullscreenBtn,
+            keepMorePanelOpen: this.keepMorePanelOpen,
             patternPreferences: this.patternPreferences,
             canvasWidth: this.canvasWidth,
             canvasHeight: this.canvasHeight,
@@ -611,7 +821,7 @@ class SettingsManager {
         URL.revokeObjectURL(url);
 
         // Use custom Toast instead of alert
-        const successMsg = window.i18n ? window.i18n.t('settings.exportSuccess') : '配置已成功导出！';
+        const successMsg = window.i18n ? window.i18n.t('settings.exportSuccess') : 'Configuration exported successfully';
         this.toastManager.show(successMsg, 'success');
     }
 
@@ -720,6 +930,7 @@ class SettingsManager {
             'showZoomControls': 'settings.display.showZoomControls',
             'showImportExportBtn': 'settings.display.showImportExportBtn',
             'showFullscreenBtn': 'settings.display.showFullscreenBtn',
+            'keepMorePanelOpen': 'settings.general.morePanelBehaviorLabel',
             'canvasWidth': 'settings.canvas.customSize.width',
             'canvasHeight': 'settings.canvas.customSize.height',
             'canvasPreset': 'settings.canvas.size',
@@ -741,7 +952,7 @@ class SettingsManager {
     applySettings(newSettings) {
         const keys = [
             'toolbarSize', 'configScale', 'controlPosition', 'edgeSnapEnabled',
-            'touchZoomEnabled', 'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn',
+            'touchZoomEnabled', 'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn', 'keepMorePanelOpen',
             'canvasWidth', 'canvasHeight', 'canvasPreset', 'themeColor', 'globalFont',
             'patternPreferences'
         ];

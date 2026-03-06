@@ -32,7 +32,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - ミニマリストホワイトボード',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: '画面を回転してください',
+        rotateScreenTip: '縦向きモードが検出されました。レイアウトとツールバーを正しく表示するため、横向きでご利用ください。'
     },
 
     // Toolbar
@@ -53,6 +55,7 @@ window.translations = {
         zoomOut: 'ズームアウト (-)',
         zoomIn: 'ズームイン (+)',
         fullscreen: 'フルスクリーン (F11)',
+        exitFullscreen: 'フルスクリーンを終了 (F11)',
         zoomPlaceholder: 'ズームレベル (パーセントを入力)'
     },
 
@@ -66,6 +69,7 @@ window.translations = {
             ballpoint: 'ボールペン',
             fountain: '万年筆',
             brush: 'ブラシ',
+            marker: 'マーカー',
             color: '色',
             colorAndSize: '色とサイズ',
             colorPicker: 'カラーピッカー',
@@ -256,6 +260,10 @@ window.translations = {
     // Settings
     settings: {
         title: '設定',
+        exportSuccess: '設定のエクスポートに成功しました',
+        importSuccess: '設定をインポートしました',
+        importError: '無効な設定ファイルです',
+        importNoChange: '設定の変更が検出されませんでした',
         tabs: {
             general: '一般',
             display: '表示',
@@ -323,6 +331,8 @@ window.translations = {
             },
             edgeSnap: 'エッジスナップを有効化',
             edgeSnapHint: 'ドラッグ時にコントロールパネルを画面端に自動配置',
+            morePanelBehaviorLabel: 'その他機能パネルの動作',
+            keepMorePanelOpenHint: '機能ボタンを押した後も「その他」パネルを閉じない',
             // Toolbar customization
             toolbarCustomization: 'ツールバーのカスタマイズ',
             toolbarCustomizationHint: 'ツールバーに表示するツールを選択し、ドラッグで順序を変更',
@@ -452,6 +462,18 @@ window.translations = {
         },
         more: {
             title: 'その他の設定',
+            cacheCleanupLabel: 'キャッシュクリア',
+            cacheCleanupHint: 'キャッシュ使用量を確認し、カテゴリ別に削除できます（削除前に確認あり）',
+            clearSettingsCache: '設定キャッシュを削除',
+            clearCanvasCache: 'キャンバスキャッシュを削除',
+            clearOtherCache: 'その他のキャッシュを削除',
+            cacheSizeCalculating: '計算中...',
+            clearSelectedCache: '選択したキャッシュを削除',
+            morePanelBehaviorLabel: 'その他機能パネルの動作',
+            keepMorePanelOpenHint: '機能ボタンを押した後も「その他」パネルを閉じない',
+            selectCacheType: '削除するキャッシュ種類を選択してください。',
+            confirmClearSelectedCache: '次のキャッシュを削除します：',
+            clearLocalDataConfirmSuffix: '続行しますか？',
             description: '時刻表示の設定は右下の時刻エリアをクリックしてください',
             showTimeDisplay: '時刻と日付を表示',
             showTimeDisplayHint: '右上隅に現在の時刻と日付を表示',

@@ -4,6 +4,19 @@ const DEFAULT_MIN_FIT_SCALE = 0.1;
 const DEFAULT_TARGET_COVERAGE = 0.7;
 const DEFAULT_MIN_DEFAULT_SCALE = 0.9;
 const TOOL_CONFIG_PANEL_GAP = 8;
+const EDGE_SNAP_DISTANCE = 30;
+const PANEL_EDGE_MARGIN = 10;
+const MIN_EDGE_UNSNAP_DISTANCE = 90;
+const EDGE_UNSNAP_BUFFER = 20;
+// Keep floating feature panels below modal layer (modal starts at 2000 in CSS).
+const MAX_FEATURE_WIDGET_ZINDEX = 1900;
+const QUALITY_UPDATE_DEBOUNCE_MS = 120;
+const MIN_DYNAMIC_RENDER_SCALE = 1;
+const MAX_DYNAMIC_RENDER_SCALE = 4;
+const RENDER_SCALE_SCHEDULE_THRESHOLD = 0.15;
+const RENDER_SCALE_APPLY_THRESHOLD = 0.05;
+const MAX_DYNAMIC_BACKING_DIMENSION = 8192;
+const MAX_DYNAMIC_BACKING_PIXELS = 64 * 1024 * 1024;
 
 class DrawingBoard {
     constructor() {
@@ -49,7 +62,7 @@ class DrawingBoard {
             background: 'background-btn',
             select: 'select-btn',
             // Shape tool is launched from the More menu button.
-            shape: 'more-btn'
+            shape: 'more-shape-btn'
         };
         
         // Set callback for teaching tools insertion to auto-switch to pen
@@ -115,6 +128,8 @@ class DrawingBoard {
         this.NORMAL_MAX_SCALE = 5.0;
         this.UNLIMITED_MAX_SCALE = 500.0;
         this.MAX_CANVAS_SCALE = this.settingsManager.unlimitedZoom ? this.UNLIMITED_MAX_SCALE : this.NORMAL_MAX_SCALE;
+        this.dynamicRenderScale = 1;
+        this.qualityUpdateTimer = null;
         
         // Touch gesture state
         this.lastTapTime = 0;
@@ -128,6 +143,8 @@ class DrawingBoard {
         this.dragOffset = { x: 0, y: 0 };
         this.draggedElementWidth = 0;
         this.draggedElementHeight = 0;
+        this.dragSnapSide = null;
+        this.featureWidgetZIndex = 1200;
         
         // Coordinate origin dragging state
         this.isDraggingCoordinateOrigin = false;
@@ -151,10 +168,16 @@ class DrawingBoard {
                 this.saveSession();
             }, 1000); // 1 second delay
         };
+        // Persist a fresh recovery snapshot whenever history commits change
+        // so refresh-restore covers all tools that write through HistoryManager.
+        this.historyManager.onStateChanged = () => {
+            this.saveSessionDebounced();
+        };
 
         // Initialize
         this.resizeCanvas();
         this.setupEventListeners();
+        this.setupModalInteractionLock();
         this.settingsManager.loadSettings();
         this.backgroundManager.drawBackground();
         this.updateUI();
@@ -244,7 +267,7 @@ class DrawingBoard {
         // Get window dimensions for canvas sizing
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = this.getRenderPixelRatio();
         
         const oldWidth = this.canvas.width;
         const oldHeight = this.canvas.height;
@@ -390,6 +413,13 @@ class DrawingBoard {
             // But not if image controls are active (user is manipulating background image)
             if (this.drawingEngine.currentTool === 'background' && !this.imageControls.isActive) {
                 this.setTool('pen', false); // Don't show config panel
+            }
+
+            if (this.drawingEngine.currentTool === 'more') {
+                const hasActiveMoreFeature = !!document.querySelector('#feature-area .feature-btn.active');
+                if (!hasActiveMoreFeature) {
+                    this.setTool('pan', false);
+                }
             }
             
             if (e.button === 1 || (e.button === 0 && e.shiftKey) || this.drawingEngine.currentTool === 'pan') {
@@ -697,7 +727,10 @@ class DrawingBoard {
         
         // Shape and Teaching Tools buttons in More menu
         document.getElementById('more-shape-btn').addEventListener('click', () => this.setTool('shape'));
-        document.getElementById('more-teaching-tools-btn').addEventListener('click', () => this.teachingToolsManager.showModal());
+        document.getElementById('more-teaching-tools-btn').addEventListener('click', () => {
+            this.exitShapeMode();
+            this.teachingToolsManager.showModal();
+        });
         
         document.getElementById('config-close-btn').addEventListener('click', () => this.closeConfigPanel());
         document.getElementById('feature-close-btn').addEventListener('click', () => this.closeFeaturePanel());
@@ -893,7 +926,7 @@ class DrawingBoard {
         });
         
         // Background pattern buttons
-        document.querySelectorAll('.pattern-option-btn').forEach(btn => {
+        document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 // Use currentTarget to ensure we get the data from the button, not its children
                 const pattern = e.currentTarget.dataset.pattern;
@@ -901,7 +934,7 @@ class DrawingBoard {
                     document.getElementById('bg-image-upload').click();
                 } else {
                     this.backgroundManager.setBackgroundPattern(pattern);
-                    document.querySelectorAll('.pattern-option-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(b => b.classList.remove('active'));
                     e.currentTarget.classList.add('active');
                     document.getElementById('image-size-group').style.display = 'none';
                     
@@ -941,7 +974,7 @@ class DrawingBoard {
                     this.imageControls.resetConfirmation();
                     
                     await this.backgroundManager.setBackgroundImage(imageData);
-                    document.querySelectorAll('.pattern-option-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(b => b.classList.remove('active'));
                     document.querySelector('.pattern-option-btn[data-pattern="image"]').classList.add('active');
                     document.getElementById('image-size-group').style.display = 'flex';
                     // Hide pattern density when image is uploaded
@@ -1183,9 +1216,10 @@ class DrawingBoard {
         // Eraser shape buttons
         document.querySelectorAll('.eraser-shape-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.drawingEngine.setEraserShape(e.target.dataset.eraserShape);
+                const targetBtn = e.currentTarget;
+                this.drawingEngine.setEraserShape(targetBtn.dataset.eraserShape);
                 document.querySelectorAll('.eraser-shape-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+                targetBtn.classList.add('active');
                 // Update cursor shape
                 this.updateEraserCursorShape();
             });
@@ -1197,9 +1231,8 @@ class DrawingBoard {
             this.drawingEngine.setEraserSize(parseInt(e.target.value));
             eraserSizeValue.textContent = e.target.value;
             if (this.drawingEngine.currentTool === 'eraser') {
-                const visualEraserSize = this.calculateVisualEraserSize(parseInt(e.target.value));
-                this.eraserCursor.style.width = visualEraserSize + 'px';
-                this.eraserCursor.style.height = visualEraserSize + 'px';
+                this.eraserCursor.style.width = e.target.value + 'px';
+                this.eraserCursor.style.height = e.target.value + 'px';
             }
         });
         
@@ -1248,13 +1281,14 @@ class DrawingBoard {
         
         if (timeDisplayFeatureBtn && timeDisplayControls) {
             timeDisplayFeatureBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 // Toggle the time display controls visibility
                 const isVisible = timeDisplayControls.style.display !== 'none';
                 if (isVisible) {
                     timeDisplayControls.style.display = 'none';
                     timeDisplayFeatureBtn.classList.remove('active');
                     // Auto-switch to pen tool after closing time display settings
-                    this.closeFeaturePanel();
+                    this.handleMoreFeaturePanelAfterAction();
                     this.switchToPen();
                 } else {
                     timeDisplayControls.style.display = 'flex';
@@ -1271,11 +1305,12 @@ class DrawingBoard {
         const timerFeatureBtn = document.getElementById('timer-feature-btn');
         if (timerFeatureBtn) {
             timerFeatureBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 if (!this.timerManager) {
                     this.timerManager = new TimerManager();
                 }
                 this.timerManager.showSettingsModal();
-                this.closeFeaturePanel();
+                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
@@ -1283,11 +1318,12 @@ class DrawingBoard {
         const insertTextBtn = document.getElementById('insert-text-feature-btn');
         if (insertTextBtn) {
             insertTextBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 if (!this.insertTextManager) {
                     this.insertTextManager = new InsertTextManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
                 }
                 this.insertTextManager.trigger();
-                this.closeFeaturePanel();
+                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
@@ -1295,11 +1331,13 @@ class DrawingBoard {
         const randomPickerBtn = document.getElementById('random-picker-feature-btn');
         if (randomPickerBtn) {
             randomPickerBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 if (!this.randomPickerManager) {
                     this.randomPickerManager = new RandomPickerManager();
                 }
                 this.randomPickerManager.create();
-                this.closeFeaturePanel();
+                this.bringLatestElement('.random-picker-widget');
+                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
@@ -1307,11 +1345,13 @@ class DrawingBoard {
         const scoreboardBtn = document.getElementById('scoreboard-feature-btn');
         if (scoreboardBtn) {
             scoreboardBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 if (!this.scoreboardManager) {
                     this.scoreboardManager = new ScoreboardManager();
                 }
                 this.scoreboardManager.create();
-                this.closeFeaturePanel();
+                this.bringLatestElement('.scoreboard-widget');
+                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
@@ -1319,11 +1359,12 @@ class DrawingBoard {
         const insertImageBtn = document.getElementById('insert-image-feature-btn');
         if (insertImageBtn) {
             insertImageBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 if (!this.insertImageManager) {
                     this.insertImageManager = new InsertImageManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
                 }
                 this.insertImageManager.triggerSelect();
-                this.closeFeaturePanel();
+                this.handleMoreFeaturePanelAfterAction();
             });
         }
         
@@ -1503,6 +1544,8 @@ class DrawingBoard {
             globalFontUpload.addEventListener('change', (e) => {
                 if (e.target.files && e.target.files[0]) {
                     this.settingsManager.handleFontUpload(e.target.files[0]);
+                    this.insertTextManager?.populateFonts?.();
+                    this.renderFontManagementList?.();
                 }
             });
         }
@@ -1608,6 +1651,9 @@ class DrawingBoard {
         
         // Toolbar customization handlers
         this.initToolbarCustomization();
+
+        // Font management handlers
+        this.initFontManagement();
         
         // Control button settings handlers
         this.initControlButtonSettings();
@@ -1671,7 +1717,7 @@ class DrawingBoard {
                         if (this.settingsManager.toastManager) {
                             this.settingsManager.toastManager.show(errorMsg, 'error');
                         } else {
-                            alert(errorMsg);
+                            window.appDialog?.showAlert(errorMsg, 'error');
                         }
                     }
                 }
@@ -1682,12 +1728,39 @@ class DrawingBoard {
         const clearLocalCacheBtn = document.getElementById('clear-local-cache-btn');
         if (clearLocalCacheBtn) {
             clearLocalCacheBtn.addEventListener('click', async () => {
-                const confirmMessage = window.i18n
-                    ? window.i18n.t('settings.more.clearLocalDataConfirm')
-                    : 'This will clear local cache, canvas data, and settings, then restore first-load state. Continue?';
-                if (!window.confirm(confirmMessage)) return;
-                await this.clearAllLocalData();
-                window.location.reload();
+                const options = {
+                    settings: document.getElementById('clear-settings-cache-checkbox')?.checked,
+                    canvas: document.getElementById('clear-canvas-cache-checkbox')?.checked,
+                    other: document.getElementById('clear-other-cache-checkbox')?.checked
+                };
+                if (!options.settings && !options.canvas && !options.other) {
+                    const selectMsg = window.i18n ? window.i18n.t('settings.more.selectCacheType') : 'Please select at least one cache type.';
+                    window.appDialog?.showAlert(selectMsg, 'warning');
+                    return;
+                }
+                const sizes = await this.getCacheSizeSummary();
+                const selectedSummary = [];
+                const settingsLabel = window.i18n ? window.i18n.t('settings.more.clearSettingsCache') : 'Settings Cache';
+                const canvasLabel = window.i18n ? window.i18n.t('settings.more.clearCanvasCache') : 'Canvas Cache';
+                const otherLabel = window.i18n ? window.i18n.t('settings.more.clearOtherCache') : 'Other Cache';
+                if (options.settings) selectedSummary.push(`${settingsLabel}: ${this.formatBytes(sizes.settings)}`);
+                if (options.canvas) selectedSummary.push(`${canvasLabel}: ${this.formatBytes(sizes.canvas)}`);
+                if (options.other) selectedSummary.push(`${otherLabel}: ${this.formatBytes(sizes.other)}`);
+                const confirmTitle = window.i18n ? window.i18n.t('settings.more.confirmClearSelectedCache') : 'The following cache will be cleared:';
+                const confirmSuffix = window.i18n ? window.i18n.t('settings.more.clearLocalDataConfirmSuffix') : 'Continue?';
+                const confirmMessage = `${confirmTitle}\n${selectedSummary.join('\n')}\n\n${confirmSuffix}`;
+                const confirmed = await window.appDialog?.showConfirm(confirmMessage, confirmTitle);
+                if (!confirmed) return;
+                await this.clearSelectedCache(options);
+                await this.updateCacheSizeDisplay();
+            });
+        }
+
+        const keepMorePanelOpenCheckbox = document.getElementById('keep-more-panel-open-checkbox');
+        if (keepMorePanelOpenCheckbox) {
+            keepMorePanelOpenCheckbox.addEventListener('change', (e) => {
+                this.settingsManager.keepMorePanelOpen = e.target.checked;
+                localStorage.setItem('keepMorePanelOpen', e.target.checked);
             });
         }
 
@@ -1949,6 +2022,24 @@ class DrawingBoard {
                 document.getElementById('confirm-modal').classList.remove('show');
             }
         });
+
+        document.addEventListener('mousedown', (e) => {
+            if (!(e.target instanceof Element)) return;
+            const floatingPanel = e.target.closest('.feature-widget, .timer-display-widget, #feature-area, #config-area, #time-display-area');
+            if (floatingPanel) {
+                this.bringElementToFront(floatingPanel);
+            }
+        });
+    }
+
+    setupModalInteractionLock() {
+        const updateModalState = () => {
+            const hasBlockingModal = !!document.querySelector('.modal.show, .time-fullscreen-modal.show, .timer-fullscreen-modal.show');
+            document.body.classList.toggle('overlay-modal-open', hasBlockingModal);
+        };
+        const observer = new MutationObserver(updateModalState);
+        observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+        updateModalState();
     }
     
     setupKeyboardShortcuts() {
@@ -2255,6 +2346,13 @@ class DrawingBoard {
             
             this.draggedElementWidth = rect.width;
             this.draggedElementHeight = rect.height;
+            if (this.settingsManager.edgeSnapEnabled && element.classList.contains('vertical')) {
+                const nearLeftEdge = rect.left <= EDGE_SNAP_DISTANCE;
+                const nearRightEdge = (window.innerWidth - rect.right) <= EDGE_SNAP_DISTANCE;
+                this.dragSnapSide = nearLeftEdge ? 'left' : (nearRightEdge ? 'right' : null);
+            } else {
+                this.dragSnapSide = null;
+            }
             
             element.classList.add('dragging');
             element.style.transition = 'none';
@@ -2279,22 +2377,20 @@ class DrawingBoard {
             let x = clientX - this.dragOffset.x;
             let y = clientY - this.dragOffset.y;
             
-            const edgeSnapDistance = 30;
-            const edgeSnapHysteresis = 60; // Wider zone to prevent flicker when already snapped
+            const edgeSnapDistance = EDGE_SNAP_DISTANCE;
+            const edgeUnsnapDistance = Math.max(MIN_EDGE_UNSNAP_DISTANCE, edgeSnapDistance + EDGE_UNSNAP_BUFFER);
             const windowWidth = window.innerWidth;
             const windowHeight = window.innerHeight;
             const isToolbar = this.draggedElement.id === 'toolbar';
             const isConfigArea = this.draggedElement.id === 'config-area';
             const isTimeDisplayArea = this.draggedElement.id === 'time-display-area';
             const isFeatureArea = this.draggedElement.id === 'feature-area';
+            const shouldApplyVerticalLive = isToolbar || isConfigArea || isTimeDisplayArea || isFeatureArea;
             
             let snappedToEdge = false;
             let isVertical = false;
             let snappedLeft = false;
             let snappedRight = false;
-            
-            // Check if currently in vertical mode
-            const currentlyVertical = this.draggedElement.classList.contains('vertical');
             
             // Get current element dimensions (updated during drag)
             const currentRect = this.draggedElement.getBoundingClientRect();
@@ -2302,67 +2398,53 @@ class DrawingBoard {
             const currentHeight = currentRect.height;
             
             if (this.settingsManager.edgeSnapEnabled) {
-                // Use hysteresis: easier to snap than to unsnap (prevents flicker)
-                // When already vertical (snapped), use a dynamic hysteresis based on width difference
-                // to prevent flickering back to horizontal when the horizontal width is large
-                let effectiveSnapDistance = edgeSnapDistance;
-
-                if (currentlyVertical) {
-                    // If vertical, we need a larger hysteresis zone
-                    // Calculate based on the difference between horizontal and vertical widths
-                    // Formula ensures unsnap threshold is further than snap threshold
-                    // Width difference + buffer to avoid flicker loop
-                    const widthDiff = Math.max(0, this.draggedElementWidth - currentWidth);
-                    effectiveSnapDistance = Math.max(300, edgeSnapDistance + widthDiff + 50);
-                }
+                const keepSnapLeft = this.dragSnapSide === 'left' && clientX <= edgeUnsnapDistance;
+                const keepSnapRight = this.dragSnapSide === 'right' && clientX >= windowWidth - edgeUnsnapDistance;
+                const canSnapLeft = clientX <= edgeSnapDistance;
+                const canSnapRight = clientX >= windowWidth - edgeSnapDistance;
                 
-                // Check for left edge snap first
-                if (x < effectiveSnapDistance) {
-                    x = 10;
+                // Use explicit left/right snap state hysteresis to avoid oscillation near edge thresholds
+                if (keepSnapLeft || canSnapLeft) {
+                    x = PANEL_EDGE_MARGIN;
                     snappedToEdge = true;
                     isVertical = true;
                     snappedLeft = true;
-                }
-                // Check for right edge snap
-                else if (x + currentWidth > windowWidth - effectiveSnapDistance) {
-                    // When vertical, need to recalculate width
-                    if (isToolbar || isConfigArea || isTimeDisplayArea || isFeatureArea) {
-                        // Temporarily add vertical class to get correct dimensions
-                        this.draggedElement.classList.add('vertical');
-                        const tempWidth = this.draggedElement.getBoundingClientRect().width;
-                        this.draggedElement.classList.remove('vertical');
-                        x = windowWidth - tempWidth - 10;
-                    } else {
-                        x = windowWidth - currentWidth - 10;
-                    }
+                    this.dragSnapSide = 'left';
+                } else if (keepSnapRight || canSnapRight) {
+                    x = windowWidth - currentWidth - PANEL_EDGE_MARGIN;
                     snappedToEdge = true;
                     isVertical = true;
                     snappedRight = true;
+                    this.dragSnapSide = 'right';
+                } else if (this.dragSnapSide) {
+                    this.dragSnapSide = null;
                 }
                 // Snap to top
                 if (y < edgeSnapDistance) {
-                    y = 10;
+                    y = PANEL_EDGE_MARGIN;
                     snappedToEdge = true;
                 }
                 // Snap to bottom
                 if (y + currentHeight > windowHeight - edgeSnapDistance) {
-                    y = windowHeight - currentHeight - 10;
+                    y = windowHeight - currentHeight - PANEL_EDGE_MARGIN;
                     snappedToEdge = true;
                 }
             }
             
-            // Apply vertical layout for toolbar, config area, time display area, and feature area when snapped to left/right
-            if ((isToolbar || isConfigArea || isTimeDisplayArea || isFeatureArea) && snappedToEdge && isVertical) {
+            if (shouldApplyVerticalLive && snappedToEdge && isVertical) {
                 this.draggedElement.classList.add('vertical');
                 // Recalculate position after adding vertical class to account for dimension changes
                 if (snappedRight) {
                     const newWidth = this.draggedElement.getBoundingClientRect().width;
-                    x = windowWidth - newWidth - 10;
+                    x = windowWidth - newWidth - PANEL_EDGE_MARGIN;
+                } else if (snappedLeft) {
+                    x = PANEL_EDGE_MARGIN;
                 }
                 // Update height after dimension change for vertical layout
                 const newRect = this.draggedElement.getBoundingClientRect();
+                this.draggedElementWidth = newRect.width;
                 this.draggedElementHeight = newRect.height;
-            } else {
+            } else if (shouldApplyVerticalLive) {
                 this.draggedElement.classList.remove('vertical');
                 // Update dimensions when switching back to horizontal
                 const newRect = this.draggedElement.getBoundingClientRect();
@@ -2399,10 +2481,38 @@ class DrawingBoard {
                 // Mark toolbar as user-positioned to prevent auto-repositioning
                 if (this.draggedElement.id === 'toolbar') {
                     this.draggedElement.classList.add('user-positioned');
+                    let toolbarLayoutChanged = false;
+                    if (this.settingsManager.edgeSnapEnabled) {
+                        const rect = this.draggedElement.getBoundingClientRect();
+                        const nearLeftEdge = rect.left <= EDGE_SNAP_DISTANCE;
+                        const nearRightEdge = (window.innerWidth - rect.right) <= EDGE_SNAP_DISTANCE;
+                        if (nearLeftEdge || nearRightEdge) {
+                            this.draggedElement.classList.add('vertical');
+                            toolbarLayoutChanged = true;
+                            if (nearLeftEdge) {
+                                this.draggedElement.style.left = `${PANEL_EDGE_MARGIN}px`;
+                            } else {
+                                const newRect = this.draggedElement.getBoundingClientRect();
+                                this.draggedElement.style.left = `${window.innerWidth - newRect.width - PANEL_EDGE_MARGIN}px`;
+                            }
+                            const snappedRect = this.draggedElement.getBoundingClientRect();
+                            this.draggedElementWidth = snappedRect.width;
+                            this.draggedElementHeight = snappedRect.height;
+                        } else {
+                            this.draggedElement.classList.remove('vertical');
+                            toolbarLayoutChanged = true;
+                        }
+                    }
+                    if (toolbarLayoutChanged) {
+                        this.settingsManager.updateToolbarSize();
+                        this.positionConfigArea();
+                    }
                 }
                 
-                // Mark config-area as user-dragged to prevent scale reset
-                if (this.draggedElement.id === 'config-area') {
+                // Mark floating config/feature panels as user-dragged so reopen keeps manual position
+                if (this.draggedElement.id === 'config-area' ||
+                    this.draggedElement.id === 'feature-area' ||
+                    this.draggedElement.id === 'time-display-area') {
                     this.draggedElement.dataset.userDragged = 'true';
                 }
 
@@ -2410,6 +2520,7 @@ class DrawingBoard {
                 
                 this.isDraggingPanel = false;
                 this.draggedElement = null;
+                this.dragSnapSide = null;
             }
         };
         
@@ -2509,27 +2620,30 @@ class DrawingBoard {
             configArea.style.transform = `translateX(-50%) scale(${scale})`;
         }
 
-        requestAnimationFrame(() => {
-            this.repositionToolbarsOnResize();
-        });
     }
     
     positionFeatureArea() {
         // Position feature-area above the "更多" button
         const featureArea = document.getElementById('feature-area');
+        if (featureArea.dataset.userDragged === 'true') {
+            return;
+        }
         const moreBtn = document.getElementById('more-btn');
-        const toolbar = document.getElementById('toolbar');
-        
+        const gap = TOOL_CONFIG_PANEL_GAP + 8;
         const moreBtnRect = moreBtn.getBoundingClientRect();
-        const toolbarRect = toolbar.getBoundingClientRect();
         
+        featureArea.style.left = `${moreBtnRect.left + (moreBtnRect.width / 2)}px`;
+        featureArea.style.top = `${moreBtnRect.top - gap}px`;
+        featureArea.style.right = 'auto';
         featureArea.style.bottom = 'auto';
-        featureArea.style.left = `${moreBtnRect.left}px`;
-        featureArea.style.top = `${toolbarRect.top - 10}px`;
-        featureArea.style.transform = 'translateY(-100%)';
-        requestAnimationFrame(() => {
-            this.repositionToolbarsOnResize();
-        });
+        featureArea.style.transform = 'translate(-50%, -100%)';
+    }
+
+    exitShapeMode() {
+        if (this.drawingEngine.currentTool !== 'shape') return;
+        this.shapeDrawingManager.stopDrawing();
+        this.drawingEngine.setTool('more');
+        this.updateUI();
     }
     
     setTool(tool, showConfig = true) {
@@ -2575,6 +2689,7 @@ class DrawingBoard {
                 // Show config panel and position it above toolbar
                 configArea.classList.add('show');
                 this.positionConfigArea();
+                this.bringElementToFront(configArea);
                 // Don't close feature-area when selecting shape - allow multiple panels to be open
                 if (tool !== 'shape') {
                     featureArea.classList.remove('show');
@@ -2592,6 +2707,7 @@ class DrawingBoard {
                 featureArea.classList.add('show');
                 configArea.classList.remove('show');
                 this.positionFeatureArea();
+                this.bringElementToFront(featureArea);
             }
         } else {
             // For other tools (like pan, select), just hide panels
@@ -2610,7 +2726,11 @@ class DrawingBoard {
         if (this.drawingEngine.stopDrawing()) {
             this.historyManager.saveState();
             this.saveSessionDebounced();
-            this.closeConfigPanel();
+            // Keep eraser config open after each erase stroke so users can continuously
+            // fine-tune and erase without repeated reopen operations.
+            if (this.drawingEngine.currentTool !== 'eraser') {
+                this.closeConfigPanel();
+            }
             this.closeFeaturePanel();
         }
     }
@@ -2629,14 +2749,43 @@ class DrawingBoard {
     
     closeConfigPanel() {
         document.getElementById('config-area').classList.remove('show');
+        this.exitShapeMode();
     }
     
     closeFeaturePanel() {
         document.getElementById('feature-area').classList.remove('show');
     }
+
+    bringElementToFront(element) {
+        if (!element) return;
+        if (this.featureWidgetZIndex > MAX_FEATURE_WIDGET_ZINDEX) {
+            const floatingPanels = document.querySelectorAll('.feature-widget, .timer-display-widget, #feature-area, #config-area, #time-display-area');
+            this.featureWidgetZIndex = 1200;
+            floatingPanels.forEach(panel => {
+                this.featureWidgetZIndex += 1;
+                panel.style.zIndex = String(this.featureWidgetZIndex);
+            });
+        }
+        this.featureWidgetZIndex += 1;
+        element.style.zIndex = String(this.featureWidgetZIndex);
+    }
+
+    bringLatestElement(selector) {
+        const elements = document.querySelectorAll(selector);
+        if (elements.length > 0) {
+            this.bringElementToFront(elements[elements.length - 1]);
+        }
+    }
+
+    handleMoreFeaturePanelAfterAction() {
+        if (!this.settingsManager.keepMorePanelOpen) {
+            this.closeFeaturePanel();
+        }
+    }
     
     openSettings() {
         document.getElementById('settings-modal').classList.add('show');
+        this.updateCacheSizeDisplay();
         
         // Update time display settings UI with current values (elements may not exist if removed from Settings > More)
         const timeDisplayCheckbox = document.getElementById('show-time-display-checkbox');
@@ -2906,7 +3055,7 @@ class DrawingBoard {
                 if (this.settingsManager.toastManager) {
                     this.settingsManager.toastManager.show(successMsg, 'success');
                 } else {
-                    alert(successMsg);
+                    window.appDialog?.showAlert(successMsg, 'success');
                 }
             }
             modal.classList.remove('show');
@@ -2937,6 +3086,10 @@ class DrawingBoard {
         });
         
         const tool = this.drawingEngine.currentTool;
+        const shapeFeatureBtn = document.getElementById('more-shape-btn');
+        if (shapeFeatureBtn) {
+            shapeFeatureBtn.classList.toggle('active', tool === 'shape');
+        }
         if (tool === 'pen') {
             document.getElementById('pen-btn').classList.add('active');
             document.getElementById('pen-config').classList.add('active');
@@ -2956,6 +3109,10 @@ class DrawingBoard {
             document.getElementById('eraser-btn').classList.add('active');
             document.getElementById('eraser-config').classList.add('active');
             this.canvas.style.cursor = 'pointer';
+            const currentShape = this.drawingEngine.eraserShape === 'rectangle' ? 'rectangle' : 'circle';
+            document.querySelectorAll('.eraser-shape-btn').forEach((btn) => {
+                btn.classList.toggle('active', btn.dataset.eraserShape === currentShape);
+            });
             // Sync eraser size display with current value
             const eraserSizeSlider = document.getElementById('eraser-size-slider');
             const eraserSizeValue = document.getElementById('eraser-size-value');
@@ -3004,12 +3161,91 @@ class DrawingBoard {
         const scaleY = availableHeight / height;
         return Math.min(scaleX, scaleY, 1); // Don't scale up beyond 100%
     }
+
+    getRenderPixelRatio() {
+        const baseDpr = window.devicePixelRatio || 1;
+        return baseDpr * this.dynamicRenderScale;
+    }
+
+    getTargetRenderScale() {
+        if (!this.settingsManager.unlimitedZoom) {
+            return MIN_DYNAMIC_RENDER_SCALE;
+        }
+        const scale = this.drawingEngine?.canvasScale || 1;
+        const preferredScale = Math.min(MAX_DYNAMIC_RENDER_SCALE, Math.max(MIN_DYNAMIC_RENDER_SCALE, Math.sqrt(scale)));
+
+        const cssWidth = parseFloat(this.canvas.style.width) || this.settingsManager.canvasWidth;
+        const cssHeight = parseFloat(this.canvas.style.height) || this.settingsManager.canvasHeight;
+        const baseDpr = window.devicePixelRatio || 1;
+
+        // Calculate max safe dynamic scale from backing-dimension and backing-pixel ceilings.
+        const dimLimitScale = Math.min(
+            MAX_DYNAMIC_BACKING_DIMENSION / Math.max(1, cssWidth * baseDpr),
+            MAX_DYNAMIC_BACKING_DIMENSION / Math.max(1, cssHeight * baseDpr)
+        );
+        const pixelLimitScale = Math.sqrt(
+            MAX_DYNAMIC_BACKING_PIXELS / Math.max(1, cssWidth * cssHeight * baseDpr * baseDpr)
+        );
+        const safeScale = Math.min(preferredScale, dimLimitScale, pixelLimitScale);
+        if (!Number.isFinite(safeScale)) {
+            return MIN_DYNAMIC_RENDER_SCALE;
+        }
+        return Math.max(MIN_DYNAMIC_RENDER_SCALE, safeScale);
+    }
+
+    scheduleRenderQualityUpdate() {
+        const targetScale = this.getTargetRenderScale();
+        if (Math.abs(targetScale - this.dynamicRenderScale) < RENDER_SCALE_SCHEDULE_THRESHOLD) return;
+        if (this.qualityUpdateTimer) {
+            clearTimeout(this.qualityUpdateTimer);
+        }
+        this.qualityUpdateTimer = setTimeout(() => {
+            this.applyRenderQualityScale(targetScale);
+        }, QUALITY_UPDATE_DEBOUNCE_MS);
+    }
+
+    applyRenderQualityScale(scale) {
+        if (Math.abs(scale - this.dynamicRenderScale) < RENDER_SCALE_APPLY_THRESHOLD) return;
+
+        const width = parseFloat(this.canvas.style.width) || this.settingsManager.canvasWidth;
+        const height = parseFloat(this.canvas.style.height) || this.settingsManager.canvasHeight;
+
+        const oldCanvas = document.createElement('canvas');
+        oldCanvas.width = this.canvas.width;
+        oldCanvas.height = this.canvas.height;
+        const oldCtx = oldCanvas.getContext('2d');
+        if (!oldCtx) return;
+        oldCtx.drawImage(this.canvas, 0, 0);
+
+        this.dynamicRenderScale = scale;
+        const dpr = this.getRenderPixelRatio();
+
+        this.canvas.width = width * dpr;
+        this.canvas.height = height * dpr;
+        this.canvas.style.width = width + 'px';
+        this.canvas.style.height = height + 'px';
+
+        this.bgCanvas.width = width * dpr;
+        this.bgCanvas.height = height * dpr;
+        this.bgCanvas.style.width = width + 'px';
+        this.bgCanvas.style.height = height + 'px';
+
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.bgCtx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
+        this.ctx.scale(dpr, dpr);
+        this.bgCtx.scale(dpr, dpr);
+
+        this.ctx.drawImage(oldCanvas, 0, 0, oldCanvas.width, oldCanvas.height, 0, 0, this.canvas.width, this.canvas.height);
+        this.backgroundManager.drawBackground();
+    }
     
     applyCanvasSize() {
         // Always use pagination mode now
         const width = this.settingsManager.canvasWidth;
         const height = this.settingsManager.canvasHeight;
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = this.getRenderPixelRatio();
         
         // Save current content
         const oldWidth = this.canvas.width;
@@ -3187,6 +3423,8 @@ class DrawingBoard {
             this.canvas.style.transform = 'none';
             this.bgCanvas.style.transform = 'none';
         }
+
+        this.scheduleRenderQualityUpdate();
         
         // Update teaching tools scale factor
         this.teachingToolsManager.canvasScaleFactor = finalScale;
@@ -3233,6 +3471,7 @@ class DrawingBoard {
             this.MAX_CANVAS_SCALE = this.UNLIMITED_MAX_SCALE;
         } else {
             this.MAX_CANVAS_SCALE = this.NORMAL_MAX_SCALE;
+            this.applyRenderQualityScale(1);
             // If current scale exceeds new max, reset to max
             if (this.drawingEngine.canvasScale > this.MAX_CANVAS_SCALE) {
                 this.drawingEngine.canvasScale = this.MAX_CANVAS_SCALE;
@@ -3300,6 +3539,152 @@ class DrawingBoard {
         } else {
             historyControls.style.display = 'none';
         }
+    }
+
+    initFontManagement() {
+        this.renderFontManagementList();
+    }
+
+    renderFontManagementList() {
+        const list = document.getElementById('font-management-list');
+        if (!list || !this.settingsManager?.getManagedFontOptions) return;
+
+        const fonts = this.settingsManager.getManagedFontOptions();
+        list.innerHTML = '';
+
+        fonts.forEach(font => {
+            const item = document.createElement('div');
+            item.className = 'font-management-item';
+            item.dataset.font = font.value;
+            item.draggable = true;
+            const tWithFallback = (key, fallback) => {
+                if (!window.i18n) return fallback;
+                const translated = window.i18n.t(key);
+                return translated && translated !== key ? translated : fallback;
+            };
+            const showLabel = tWithFallback('settings.general.showFont', 'Show font');
+            const renameLabel = tWithFallback('common.edit', 'Edit');
+            const previewLabel = tWithFallback('common.preview', 'Preview');
+            const previewSample = tWithFallback('settings.general.fontPreviewSample', 'Font Preview ABC abc 123');
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = font.visible;
+            checkbox.setAttribute('aria-label', showLabel);
+
+            const dragHandle = document.createElement('span');
+            dragHandle.className = 'drag-handle';
+            dragHandle.textContent = '☰';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'font-display-name';
+            nameSpan.title = font.label;
+            nameSpan.textContent = font.label;
+
+            const editButton = document.createElement('button');
+            editButton.type = 'button';
+            editButton.className = 'font-action-btn edit-btn';
+            editButton.textContent = renameLabel;
+
+            const previewButton = document.createElement('button');
+            previewButton.type = 'button';
+            previewButton.className = 'font-action-btn preview-btn';
+            previewButton.textContent = previewLabel;
+
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'font-preview-sample';
+            const rawFontValue = String(font.value || '');
+            const safeFontFamily = (window.CSS && typeof window.CSS.escape === 'function')
+                ? window.CSS.escape(rawFontValue)
+                : rawFontValue.replace(/[^\w\s\-]/g, '');
+            previewDiv.style.fontFamily = `"${safeFontFamily}", sans-serif`;
+            previewDiv.textContent = previewSample;
+
+            item.appendChild(checkbox);
+            item.appendChild(dragHandle);
+            item.appendChild(nameSpan);
+            item.appendChild(editButton);
+            item.appendChild(previewButton);
+            item.appendChild(previewDiv);
+            list.appendChild(item);
+        });
+
+        let draggedItem = null;
+        list.querySelectorAll('.font-management-item').forEach(item => {
+            item.addEventListener('dragstart', () => {
+                draggedItem = item;
+                item.classList.add('dragging');
+            });
+
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+                draggedItem = null;
+                this.saveFontOrderFromList();
+            });
+
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if (!draggedItem || draggedItem === item) return;
+                const rect = item.getBoundingClientRect();
+                const isBefore = e.clientY < rect.top + rect.height / 2;
+                list.insertBefore(draggedItem, isBefore ? item : item.nextSibling);
+            });
+
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            checkbox?.addEventListener('change', (e) => {
+                this.settingsManager.setFontVisibility(item.dataset.font, e.target.checked);
+                this.insertTextManager?.populateFonts?.();
+            });
+
+            const editBtn = item.querySelector('.edit-btn');
+            editBtn?.addEventListener('click', () => {
+                const nameEl = item.querySelector('.font-display-name');
+                if (!nameEl) return;
+                const current = nameEl.textContent || '';
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'font-alias-input';
+                input.value = current;
+                nameEl.replaceWith(input);
+                input.focus();
+                input.select();
+                let cancelled = false;
+
+                const finishEdit = () => {
+                    if (cancelled) return;
+                    const renamed = input.value.trim();
+                    this.settingsManager.setFontAlias(item.dataset.font, renamed);
+                    this.renderFontManagementList();
+                    this.insertTextManager?.populateFonts?.();
+                };
+                input.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        finishEdit();
+                    } else if (event.key === 'Escape') {
+                        cancelled = true;
+                        input.removeEventListener('blur', finishEdit);
+                        this.renderFontManagementList();
+                    }
+                });
+                input.addEventListener('blur', finishEdit, { once: true });
+            });
+
+            const previewBtn = item.querySelector('.preview-btn');
+            previewBtn?.addEventListener('click', () => {
+                const preview = item.querySelector('.font-preview-sample');
+                if (!preview) return;
+                preview.style.display = preview.style.display === 'block' ? 'none' : 'block';
+            });
+        });
+    }
+
+    saveFontOrderFromList() {
+        const list = document.getElementById('font-management-list');
+        if (!list) return;
+        const order = [...list.querySelectorAll('.font-management-item')].map(item => item.dataset.font);
+        this.settingsManager.setFontOrder(order);
+        this.insertTextManager?.populateFonts?.();
     }
     
     // Initialize toolbar customization
@@ -3747,7 +4132,7 @@ class DrawingBoard {
                     <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
                 </svg>
             `;
-            btn.title = '退出全屏 (F11)';
+            btn.title = this.getFullscreenButtonTitle(true);
         } else {
             // Exit fullscreen
             document.exitFullscreen();
@@ -3758,8 +4143,19 @@ class DrawingBoard {
                     <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
                 </svg>
             `;
-            btn.title = '全屏 (F11)';
+            btn.title = this.getFullscreenButtonTitle(false);
         }
+    }
+
+    getFullscreenButtonTitle(isExitState) {
+        const i18n = window.i18n;
+        if (!i18n) {
+            return isExitState ? 'Exit Fullscreen (F11)' : 'Fullscreen (F11)';
+        }
+        const key = isExitState ? 'toolbar.exitFullscreen' : 'toolbar.fullscreen';
+        const fallback = isExitState ? 'Exit Fullscreen (F11)' : 'Fullscreen (F11)';
+        const translated = i18n.t(key);
+        return translated === key ? fallback : translated;
     }
     
     updatePatternGrid() {
@@ -3786,7 +4182,7 @@ class DrawingBoard {
                     <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
                 </svg>
             `;
-            btn.title = '全屏 (F11)';
+            btn.title = this.getFullscreenButtonTitle(false);
         } else {
             // Entered fullscreen
             btn.innerHTML = `
@@ -3794,7 +4190,7 @@ class DrawingBoard {
                     <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
                 </svg>
             `;
-            btn.title = '退出全屏 (F11)';
+            btn.title = this.getFullscreenButtonTitle(true);
         }
     }
     
@@ -4042,7 +4438,7 @@ class DrawingBoard {
         });
         
         // Update pattern buttons
-        document.querySelectorAll('.pattern-option-btn').forEach(btn => {
+        document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(btn => {
             if (btn.dataset.pattern === this.backgroundManager.backgroundPattern) {
                 btn.classList.add('active');
             } else {
@@ -4092,24 +4488,12 @@ class DrawingBoard {
         }
     }
     
-    /**
-     * Calculate the visual eraser size by applying the canvas scale
-     * @param {number} eraserSize - The base eraser size in canvas pixels
-     * @returns {number} The visual eraser size in screen pixels
-     */
-    calculateVisualEraserSize(eraserSize) {
-        const finalScale = this.canvasFitScale * this.drawingEngine.canvasScale;
-        return eraserSize * finalScale;
-    }
-    
     updateEraserCursor(e) {
         if (this.drawingEngine.currentTool === 'eraser') {
-            const visualEraserSize = this.calculateVisualEraserSize(this.drawingEngine.eraserSize);
-            
             this.eraserCursor.style.left = e.clientX + 'px';
             this.eraserCursor.style.top = e.clientY + 'px';
-            this.eraserCursor.style.width = visualEraserSize + 'px';
-            this.eraserCursor.style.height = visualEraserSize + 'px';
+            this.eraserCursor.style.width = this.drawingEngine.eraserSize + 'px';
+            this.eraserCursor.style.height = this.drawingEngine.eraserSize + 'px';
         }
     }
     
@@ -4398,7 +4782,7 @@ class DrawingBoard {
             if (this.settingsManager.toastManager) {
                 this.settingsManager.toastManager.show(msg, 'warning');
             } else {
-                alert(msg);
+                window.appDialog?.showAlert(msg, 'warning');
             }
             return;
         }
@@ -4420,7 +4804,7 @@ class DrawingBoard {
             if (this.settingsManager.toastManager) {
                 this.settingsManager.toastManager.show(msg, 'error');
             } else {
-                alert(msg);
+                window.appDialog?.showAlert(msg, 'error');
             }
             this.uploadedImages.pop(); // Remove the image we just added
         }
@@ -4440,7 +4824,7 @@ class DrawingBoard {
             btn.textContent = image.name;
             btn.addEventListener('click', () => {
                 this.backgroundManager.setBackgroundImage(image.data);
-                document.querySelectorAll('.pattern-option-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 document.getElementById('image-size-group').style.display = 'flex';
                 document.getElementById('pattern-density-group').style.display = 'none';
@@ -4539,6 +4923,9 @@ class DrawingBoard {
 
             const data = {
                 pages: pagesBlobs,
+                // Keep raw ImageData as a recovery fallback when blob decode is unavailable.
+                // Only one session is persisted, so this bounded duplication is acceptable.
+                pagesRaw: this.pages,
                 settings: settings,
                 canvasWidth: this.canvas.width,
                 canvasHeight: this.canvas.height
@@ -4595,7 +4982,7 @@ class DrawingBoard {
             const sessionData = await this.storageManager.loadSession();
             if (!sessionData) return;
 
-            const { pages, settings } = sessionData;
+            const { pages, pagesRaw, settings } = sessionData;
 
             // Restore settings
             if (settings) {
@@ -4673,7 +5060,9 @@ class DrawingBoard {
             }
 
             // Restore pages
-            if (pages && Array.isArray(pages)) {
+            if (pagesRaw && Array.isArray(pagesRaw) && pagesRaw.length > 0) {
+                this.pages = pagesRaw;
+            } else if (pages && Array.isArray(pages)) {
                 this.pages = await Promise.all(pages.map(blob => StorageManager.blobToImageData(blob)));
             }
 
@@ -4738,6 +5127,145 @@ class DrawingBoard {
             localStorage.removeItem('savedCurrentPage');
         } catch (e) {
             console.warn('Failed to clear session:', e);
+        }
+    }
+
+    getCacheKeyGroups() {
+        const settingsKeys = new Set([
+            'toolbarSize', 'configScale', 'controlPosition', 'edgeSnapEnabled', 'touchZoomEnabled',
+            'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn',
+            'showToolbarText', 'keepMorePanelOpen', 'canvasWidth', 'canvasHeight', 'canvasPreset',
+            'themeColor', 'globalFont', 'language', 'patternPreferences', 'toolbarOrder',
+            'toolbarVisibility', 'controlShowZoom', 'controlShowPagination', 'controlShowTime',
+            'controlShowFullscreen', 'controlShowImport', 'controlShowExport', 'penType',
+            'penLineStyle', 'penDashDensity', 'penMultiLineCount', 'penMultiLineSpacing',
+            'eraserShape', 'lineStyle'
+        ]);
+        const canvasKeys = new Set([
+            'savedCanvasData', 'savedBgCanvasData', 'savedCanvasTimestamp',
+            'savedCurrentPage', 'pageBackgrounds', 'canvasScale', 'panOffsetX', 'panOffsetY'
+        ]);
+        return { settingsKeys, canvasKeys };
+    }
+
+    getStorageEntrySize(key, value) {
+        return new Blob([`${key}${value || ''}`]).size;
+    }
+
+    formatBytes(bytes) {
+        if (!bytes || bytes <= 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB'];
+        const idx = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+        const val = bytes / Math.pow(1024, idx);
+        return `${val.toFixed(val >= 10 || idx === 0 ? 0 : 1)} ${units[idx]}`;
+    }
+
+    async getCacheSizeSummary() {
+        const { settingsKeys, canvasKeys } = this.getCacheKeyGroups();
+        const summary = { settings: 0, canvas: 0, other: 0 };
+
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            const val = localStorage.getItem(key);
+            const size = this.getStorageEntrySize(key, val);
+            if (settingsKeys.has(key)) summary.settings += size;
+            else if (canvasKeys.has(key)) summary.canvas += size;
+            else summary.other += size;
+        }
+
+        for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            const val = sessionStorage.getItem(key);
+            const size = this.getStorageEntrySize(key, val);
+            if (settingsKeys.has(key)) summary.settings += size;
+            else if (canvasKeys.has(key)) summary.canvas += size;
+            else summary.other += size;
+        }
+
+        try {
+            const session = await this.storageManager.loadSession();
+            if (session) {
+                summary.canvas += new Blob([JSON.stringify(session)]).size;
+            }
+        } catch (e) {
+            console.warn('Failed to estimate IndexedDB size:', e);
+        }
+
+        if ('caches' in window) {
+            try {
+                const cacheKeys = await caches.keys();
+                for (const cacheName of cacheKeys) {
+                    const cache = await caches.open(cacheName);
+                    const requests = await cache.keys();
+                    for (const request of requests) {
+                        const response = await cache.match(request);
+                        const blob = response ? await response.clone().blob() : null;
+                        summary.other += blob ? blob.size : 0;
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to estimate Cache Storage size:', e);
+            }
+        }
+
+        return summary;
+    }
+
+    async updateCacheSizeDisplay() {
+        const settingsSizeEl = document.getElementById('settings-cache-size');
+        const canvasSizeEl = document.getElementById('canvas-cache-size');
+        const otherSizeEl = document.getElementById('other-cache-size');
+        if (!settingsSizeEl || !canvasSizeEl || !otherSizeEl) return;
+        const summary = await this.getCacheSizeSummary();
+        settingsSizeEl.textContent = this.formatBytes(summary.settings);
+        canvasSizeEl.textContent = this.formatBytes(summary.canvas);
+        otherSizeEl.textContent = this.formatBytes(summary.other);
+    }
+
+    async clearSelectedCache(options) {
+        const { settingsKeys, canvasKeys } = this.getCacheKeyGroups();
+
+        if (options.canvas) {
+            await this.clearSessionData();
+            canvasKeys.forEach(key => {
+                localStorage.removeItem(key);
+                sessionStorage.removeItem(key);
+            });
+        }
+
+        if (options.settings) {
+            settingsKeys.forEach(key => {
+                localStorage.removeItem(key);
+                sessionStorage.removeItem(key);
+            });
+        }
+
+        if (options.other) {
+            const preserved = new Set();
+            if (!options.settings) settingsKeys.forEach(k => preserved.add(k));
+            if (!options.canvas) canvasKeys.forEach(k => preserved.add(k));
+
+            const localKeys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key) localKeys.push(key);
+            }
+            localKeys.forEach(key => {
+                if (!preserved.has(key)) localStorage.removeItem(key);
+            });
+            const sessionKeys = [];
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                if (key) sessionKeys.push(key);
+            }
+            sessionKeys.forEach(key => {
+                if (!preserved.has(key)) sessionStorage.removeItem(key);
+            });
+
+            if ('caches' in window) {
+                const cacheKeys = await caches.keys();
+                await Promise.all(cacheKeys.map(key => caches.delete(key)));
+            }
         }
     }
 

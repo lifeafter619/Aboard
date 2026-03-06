@@ -32,7 +32,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - Minimalistisches Whiteboard',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: 'Bitte Bildschirm drehen',
+        rotateScreenTip: 'Hochformat erkannt. Für korrektes Layout und vollständige Werkzeugleiste bitte ins Querformat wechseln.'
     },
 
     // Toolbar
@@ -53,6 +55,7 @@ window.translations = {
         zoomOut: 'Verkleinern (-)',
         zoomIn: 'Vergrößern (+)',
         fullscreen: 'Vollbild (F11)',
+        exitFullscreen: 'Vollbild verlassen (F11)',
         zoomPlaceholder: 'Zoomstufe (Prozent eingeben)'
     },
 
@@ -66,6 +69,7 @@ window.translations = {
             ballpoint: 'Kugelschreiber',
             fountain: 'Füllfederhalter',
             brush: 'Pinsel',
+            marker: 'Marker',
             color: 'Farbe',
             colorAndSize: 'Farbe & Größe',
             colorPicker: 'Farbwähler',
@@ -254,6 +258,10 @@ window.translations = {
     // Settings
     settings: {
         title: 'Einstellungen',
+        exportSuccess: 'Konfiguration erfolgreich exportiert',
+        importSuccess: 'Konfiguration erfolgreich importiert',
+        importError: 'Ungültige Konfigurationsdatei',
+        importNoChange: 'Keine Konfigurationsänderungen erkannt',
         tabs: {
             general: 'Allgemein',
             display: 'Anzeige',
@@ -321,6 +329,8 @@ window.translations = {
             },
             edgeSnap: 'Randausrichtung aktivieren',
             edgeSnapHint: 'Bedienfelder automatisch am Bildschirmrand ausrichten',
+            morePanelBehaviorLabel: 'Verhalten des Mehr-Panels',
+            keepMorePanelOpenHint: 'Mehr-Panel nach Klick auf Funktionsbuttons geöffnet lassen',
             // Toolbar customization
             toolbarCustomization: 'Symbolleisten-Anpassung',
             toolbarCustomizationHint: 'Wählen Sie Werkzeuge für die Symbolleiste, ziehen Sie zum Neuordnen',
@@ -451,6 +461,18 @@ window.translations = {
         },
         more: {
             title: 'Weitere Einstellungen',
+            cacheCleanupLabel: 'Cache-Bereinigung',
+            cacheCleanupHint: 'Cache-Verbrauch anzeigen und nach Kategorien löschen (mit Bestätigung vor dem Löschen)',
+            clearSettingsCache: 'Einstellungs-Cache löschen',
+            clearCanvasCache: 'Canvas-Cache löschen',
+            clearOtherCache: 'Sonstigen Cache löschen',
+            cacheSizeCalculating: 'Wird berechnet...',
+            clearSelectedCache: 'Ausgewählten Cache löschen',
+            morePanelBehaviorLabel: 'Verhalten des Mehr-Panels',
+            keepMorePanelOpenHint: 'Mehr-Panel nach Klick auf Funktionsbuttons geöffnet lassen',
+            selectCacheType: 'Bitte wählen Sie mindestens einen Cache-Typ aus.',
+            confirmClearSelectedCache: 'Folgender Cache wird gelöscht:',
+            clearLocalDataConfirmSuffix: 'Fortfahren?',
             description: 'Für Zeitanzeigeeinstellungen klicken Sie auf den Zeitbereich unten rechts',
             showTimeDisplay: 'Zeit und Datum anzeigen',
             showTimeDisplayHint: 'Aktuelle Zeit und Datum in der oberen rechten Ecke anzeigen',

@@ -16,6 +16,7 @@ class I18n {
     constructor() {
         this.currentLocale = 'zh-CN'; // Default language
         this.translations = {};
+        this.fallbackTranslations = {};
         this.fallbackLocale = 'zh-CN';
         
         // Available languages
@@ -96,20 +97,27 @@ class I18n {
      */
     async loadTranslations() {
         try {
-            const response = await fetch(`js/locales/${this.currentLocale}.js`);
-            if (!response.ok) {
-                console.warn(`Failed to load ${this.currentLocale}, falling back to ${this.fallbackLocale}`);
-                this.currentLocale = this.fallbackLocale;
-                const fallbackResponse = await fetch(`js/locales/${this.fallbackLocale}.js`);
-                const fallbackText = await fallbackResponse.text();
-                eval(fallbackText);
-            } else {
+            const loadLocaleFile = async (locale) => {
+                const response = await fetch(`js/locales/${locale}.js`);
+                if (!response.ok) {
+                    return null;
+                }
                 const text = await response.text();
                 eval(text);
+                return window.translations || null;
+            };
+
+            let localeTranslations = await loadLocaleFile(this.currentLocale);
+            if (!localeTranslations) {
+                console.warn(`Failed to load ${this.currentLocale}, falling back to ${this.fallbackLocale}`);
+                this.currentLocale = this.fallbackLocale;
+                localeTranslations = await loadLocaleFile(this.fallbackLocale);
             }
-            
-            // Translations are now in window.translations
-            this.translations = window.translations || {};
+
+            this.translations = localeTranslations || {};
+            this.fallbackTranslations = this.currentLocale === this.fallbackLocale
+                ? this.translations
+                : (await loadLocaleFile(this.fallbackLocale) || {});
 
             // Load help translations
             try {
@@ -135,6 +143,7 @@ class I18n {
         } catch (error) {
             console.error('Error loading translations:', error);
             this.translations = {};
+            this.fallbackTranslations = {};
         }
     }
 
@@ -143,14 +152,27 @@ class I18n {
      */
     t(key, params = {}) {
         const keys = key.split('.');
-        let value = this.translations;
-        
-        for (const k of keys) {
-            value = value[k];
-            if (value === undefined) {
-                console.warn(`Translation missing for key: ${key}`);
-                return key;
+        const resolve = (source) => {
+            let value = source;
+            for (const k of keys) {
+                if (value === undefined || value === null) {
+                    return undefined;
+                }
+                value = value[k];
+                if (value === undefined) {
+                    return undefined;
+                }
             }
+            return value;
+        };
+
+        let value = resolve(this.translations);
+        if (value === undefined) {
+            value = resolve(this.fallbackTranslations);
+        }
+        if (value === undefined) {
+            console.warn(`Translation missing for key: ${key}`);
+            return key;
         }
         
         // Replace parameters in translation
@@ -375,7 +397,8 @@ class I18n {
             'pencil': 'tools.pen.pencil',
             'ballpoint': 'tools.pen.ballpoint',
             'fountain': 'tools.pen.fountain',
-            'brush': 'tools.pen.brush'
+            'brush': 'tools.pen.brush',
+            'marker': 'tools.pen.marker'
         };
         
         document.querySelectorAll('.pen-type-btn').forEach(btn => {
@@ -421,7 +444,7 @@ class I18n {
             'image': 'background.upload'
         };
         
-        document.querySelectorAll('.pattern-option-btn').forEach(btn => {
+        document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(btn => {
             const pattern = btn.getAttribute('data-pattern');
             if (pattern && patterns[pattern]) {
                 // For image button, keep the icon and translate the text in span
@@ -913,17 +936,11 @@ class I18n {
         
         // Translate global font select options
         const globalFontSelect = document.getElementById('global-font-select');
-        if (globalFontSelect) {
-            globalFontSelect.options[0].text = this.t('settings.general.fonts.system');
-            globalFontSelect.options[1].text = this.t('settings.general.fonts.serif');
-            globalFontSelect.options[2].text = this.t('settings.general.fonts.sansSerif');
-            globalFontSelect.options[3].text = this.t('settings.general.fonts.monospace');
-            globalFontSelect.options[4].text = this.t('settings.general.fonts.cursive');
-            globalFontSelect.options[5].text = this.t('settings.general.fonts.yahei');
-            globalFontSelect.options[6].text = this.t('settings.general.fonts.simsun');
-            globalFontSelect.options[7].text = this.t('settings.general.fonts.simhei');
-            globalFontSelect.options[8].text = this.t('settings.general.fonts.kaiti');
-            globalFontSelect.options[9].text = this.t('settings.general.fonts.fangsong');
+        if (globalFontSelect && window.drawingBoard?.settingsManager?.populateGlobalFontSelect) {
+            window.drawingBoard.settingsManager.populateGlobalFontSelect();
+            if ([...globalFontSelect.options].some(option => option.value === window.drawingBoard.settingsManager.globalFont)) {
+                globalFontSelect.value = window.drawingBoard.settingsManager.globalFont;
+            }
         }
         
         // Translate canvas preset buttons

@@ -37,7 +37,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - Simple Whiteboard',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: 'Please rotate your screen',
+        rotateScreenTip: 'Portrait mode detected. Rotate to landscape for proper layout and full toolbar access.'
     },
 
     // Toolbar
@@ -50,7 +52,7 @@ window.translations = {
         select: 'Select',
         eraser: 'Eraser',
         clear: 'Clear',
-        background: 'Backgrnd',
+        background: 'Background',
         teachingTools: 'Tools',
         more: 'More',
         settings: 'Settings',
@@ -58,6 +60,7 @@ window.translations = {
         zoomOut: 'Zoom Out (-)',
         zoomIn: 'Zoom In (+)',
         fullscreen: 'Fullscreen (F11)',
+        exitFullscreen: 'Exit Fullscreen (F11)',
         zoomPlaceholder: 'Zoom Level (Enter %)'
     },
 
@@ -71,6 +74,7 @@ window.translations = {
             ballpoint: 'Ballpoint',
             fountain: 'Fountain',
             brush: 'Brush',
+            marker: 'Marker',
             color: 'Color',
             colorAndSize: 'Color & Size',
             colorPicker: 'Color Picker',
@@ -325,12 +329,27 @@ window.translations = {
             languageHint: 'Choose interface language',
             globalFont: 'Global Font',
             globalFontHint: 'Choose application font',
+            fontManagementHint: 'Font management: reorder, show/hide, rename and preview',
+            showFont: 'Show font',
+            fontPreviewSample: 'Font Preview ABC abc 123',
             fonts: {
                 system: 'System Default',
                 serif: 'Serif',
                 sansSerif: 'Sans-Serif',
                 monospace: 'Monospace',
                 cursive: 'Handwritten',
+                notoSansSC: 'Noto Sans SC',
+                notoSerifSC: 'Noto Serif SC',
+                lxgwWenKai: 'LXGW WenKai',
+                sourceHanSansSC: 'Source Han Sans SC',
+                sourceHanSerifSC: 'Source Han Serif SC',
+                inter: 'Inter',
+                roboto: 'Roboto',
+                openSans: 'Open Sans',
+                lora: 'Lora',
+                jetBrainsMono: 'JetBrains Mono',
+                kaiTi: 'KaiTi',
+                stXingkai: 'STXingkai',
                 // Chinese fonts
                 yahei: 'Microsoft YaHei',
                 simsun: 'SimSun',
@@ -349,6 +368,10 @@ window.translations = {
             },
             edgeSnap: 'Enable Edge Snap',
             edgeSnapHint: 'Auto-snap panels to screen edges when dragging',
+            touchZoom: 'Touch Zoom',
+            touchZoomHint: 'Allow pinch gesture to zoom canvas',
+            morePanelBehaviorLabel: 'More Panel Behavior',
+            keepMorePanelOpenHint: 'Keep the More panel open after clicking feature buttons',
             // Toolbar customization
             toolbarCustomization: 'Toolbar Customization',
             toolbarCustomizationHint: 'Select tools to display in toolbar, drag to reorder',
@@ -486,6 +509,18 @@ window.translations = {
         },
         more: {
             title: 'More Settings',
+            cacheCleanupLabel: 'Cache Cleanup',
+            cacheCleanupHint: 'View cache usage and clear by category (with confirmation before clearing)',
+            clearSettingsCache: 'Clear Settings Cache',
+            clearCanvasCache: 'Clear Canvas Cache',
+            clearOtherCache: 'Clear Other Cache',
+            cacheSizeCalculating: 'Calculating...',
+            clearSelectedCache: 'Clear Selected Cache',
+            morePanelBehaviorLabel: 'More Panel Behavior',
+            keepMorePanelOpenHint: 'Keep the More panel open after clicking feature buttons',
+            selectCacheType: 'Please select at least one cache type.',
+            confirmClearSelectedCache: 'The following cache will be cleared:',
+            clearLocalDataConfirmSuffix: 'Continue?',
             showTimeDisplay: 'Show Date & Time',
             showTimeDisplayHint: 'Display current date and time in top-right corner',
             localDataLabel: 'Local Data',

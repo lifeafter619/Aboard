@@ -1,3 +1,7 @@
+// Timeout for resolving manual update checks (milliseconds).
+const UPDATE_CHECK_TIMEOUT = 1200;
+const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+
 class PWAManager {
     constructor() {
         this.deferredPrompt = null;
@@ -33,7 +37,8 @@ class PWAManager {
                 'updateLater': '稍后',
                 'checkUpdate': '检查更新',
                 'checking': '正在检查更新...',
-                'latest': '已是最新版本'
+                'latest': '已是最新版本',
+                'versionUpdateFound': '检测到新版本：{latest}（当前：{current}），请刷新更新。'
             },
             'zh-TW': {
                 'statusTitle': '應用狀態',
@@ -50,7 +55,8 @@ class PWAManager {
                 'updateLater': '稍後',
                 'checkUpdate': '檢查更新',
                 'checking': '正在檢查更新...',
-                'latest': '已是最新版本'
+                'latest': '已是最新版本',
+                'versionUpdateFound': '檢測到新版本：{latest}（當前：{current}），請重新整理更新。'
             },
             'en-US': {
                 'statusTitle': 'App Status',
@@ -67,7 +73,8 @@ class PWAManager {
                 'updateLater': 'Later',
                 'checkUpdate': 'Check for Updates',
                 'checking': 'Checking for updates...',
-                'latest': 'You are on the latest version'
+                'latest': 'You are on the latest version',
+                'versionUpdateFound': 'New version detected: {latest} (current: {current}). Please refresh to update.'
             },
             'ja-JP': {
                 'statusTitle': 'アプリの状態',
@@ -84,7 +91,8 @@ class PWAManager {
                 'updateLater': '後で',
                 'checkUpdate': 'アップデートを確認',
                 'checking': 'アップデートを確認中...',
-                'latest': '最新バージョンです'
+                'latest': '最新バージョンです',
+                'versionUpdateFound': '新しいバージョンがあります：{latest}（現在：{current}）。更新のため再読み込みしてください。'
             },
             'ko-KR': {
                 'statusTitle': '앱 상태',
@@ -101,7 +109,8 @@ class PWAManager {
                 'updateLater': '나중에',
                 'checkUpdate': '업데이트 확인',
                 'checking': '업데이트 확인 중...',
-                'latest': '최신 버전입니다'
+                'latest': '최신 버전입니다',
+                'versionUpdateFound': '새 버전 감지: {latest} (현재: {current}). 새로고침하여 업데이트하세요.'
             },
             'fr-FR': {
                 'statusTitle': 'État de l\'application',
@@ -118,7 +127,8 @@ class PWAManager {
                 'updateLater': 'Plus tard',
                 'checkUpdate': 'Vérifier les mises à jour',
                 'checking': 'Vérification des mises à jour...',
-                'latest': 'Vous utilisez la dernière version'
+                'latest': 'Vous utilisez la dernière version',
+                'versionUpdateFound': 'Nouvelle version détectée : {latest} (actuelle : {current}). Veuillez actualiser pour mettre à jour.'
             },
             'de-DE': {
                 'statusTitle': 'App-Status',
@@ -135,7 +145,8 @@ class PWAManager {
                 'updateLater': 'Später',
                 'checkUpdate': 'Nach Updates suchen',
                 'checking': 'Suche nach Updates...',
-                'latest': 'Sie haben die neueste Version'
+                'latest': 'Sie haben die neueste Version',
+                'versionUpdateFound': 'Neue Version erkannt: {latest} (aktuell: {current}). Bitte zum Aktualisieren neu laden.'
             },
             'es-ES': {
                 'statusTitle': 'Estado de la aplicación',
@@ -152,7 +163,8 @@ class PWAManager {
                 'updateLater': 'Más tarde',
                 'checkUpdate': 'Buscar actualizaciones',
                 'checking': 'Buscando actualizaciones...',
-                'latest': 'Tienes la última versión'
+                'latest': 'Tienes la última versión',
+                'versionUpdateFound': 'Nueva versión detectada: {latest} (actual: {current}). Actualiza recargando la página.'
             }
         };
         // Fallback for other languages to English
@@ -207,7 +219,7 @@ class PWAManager {
     }
 
     loadVersion() {
-        fetch('version.txt')
+        return fetch('version.txt', { cache: 'no-store' })
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`Failed to load version.txt: ${response.status}`);
@@ -218,19 +230,57 @@ class PWAManager {
                 const version = text.trim();
                 if (!version) {
                     console.warn('Empty version in version.txt.');
-                    return;
+                    return null;
                 }
-                const semverPattern = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
-                if (!semverPattern.test(version)) {
+                if (!SEMVER_PATTERN.test(version)) {
                     console.warn('Invalid version format in version.txt:', version);
-                    return;
+                    return null;
                 }
                 this.version = version;
                 this.updateVersionDisplays();
+                return version;
             })
             .catch(error => {
                 console.warn('Failed to load version.txt:', error);
+                return null;
             });
+    }
+
+    compareVersions(versionA, versionB) {
+        const parseVersion = (version) => {
+            if (!SEMVER_PATTERN.test(String(version || '').trim())) {
+                return null;
+            }
+            const [base, pre = ''] = String(version || '').split('-', 2);
+            const numbers = base.split('.').slice(0, 3).map(v => parseInt(v, 10) || 0);
+            return { numbers, pre };
+        };
+        const a = parseVersion(versionA);
+        const b = parseVersion(versionB);
+        if (!a && !b) return 0;
+        if (!a) return -1;
+        if (!b) return 1;
+        for (let i = 0; i < 3; i++) {
+            if (a.numbers[i] > b.numbers[i]) return 1;
+            if (a.numbers[i] < b.numbers[i]) return -1;
+        }
+        if (!a.pre && b.pre) return 1;
+        if (a.pre && !b.pre) return -1;
+        if (a.pre && b.pre) return a.pre.localeCompare(b.pre);
+        return 0;
+    }
+
+    async fetchVersionFromApi() {
+        try {
+            const response = await fetch('/api/version', { cache: 'no-store' });
+            if (!response.ok) return null;
+            const data = await response.json();
+            const version = typeof data?.version === 'string' ? data.version.trim() : '';
+            return SEMVER_PATTERN.test(version) ? version : null;
+        } catch (error) {
+            console.warn('Failed to fetch /api/version:', error);
+            return null;
+        }
     }
 
     registerServiceWorker() {
@@ -396,7 +446,7 @@ class PWAManager {
             installBtn.style.display = 'none'; // Hidden by default
 
             // Check Update Button
-            const checkUpdateBtn = this.createButton('pwa-check-update-btn', this.getTranslation('checkUpdate'), () => this.checkForUpdates());
+            const checkUpdateBtn = this.createButton('pwa-check-update-btn', this.getTranslation('checkUpdate'), () => this.checkForUpdates(true));
             checkUpdateBtn.style.backgroundColor = 'transparent';
             checkUpdateBtn.style.color = 'var(--theme-color, #007AFF)';
             checkUpdateBtn.style.border = '1px solid var(--theme-color, #007AFF)';
@@ -507,7 +557,7 @@ class PWAManager {
         window.addEventListener('online', () => {
             this.updateOnlineStatus();
             // Check for updates when coming online
-            this.checkForUpdates();
+            this.checkForUpdates(false);
             // Show toast when coming back online
             if (window.drawingBoard && window.drawingBoard.settingsManager && window.drawingBoard.settingsManager.toastManager) {
                 window.drawingBoard.settingsManager.toastManager.show(this.getTranslation('online'), 'success');
@@ -611,19 +661,105 @@ class PWAManager {
         this.hideInstallButtons();
     }
 
-    checkForUpdates() {
+    async checkForUpdates(manual = false) {
+        if (!navigator.onLine) {
+            if (manual) {
+                this.showOfflineNotification();
+            }
+            return;
+        }
+
+        const checkUpdateBtn = document.getElementById('pwa-check-update-btn');
+        if (manual && checkUpdateBtn) {
+            checkUpdateBtn.disabled = true;
+            checkUpdateBtn.textContent = this.getTranslation('checking');
+        }
+
+        const finishCheck = () => {
+            if (checkUpdateBtn) {
+                checkUpdateBtn.disabled = false;
+                checkUpdateBtn.textContent = this.getTranslation('checkUpdate');
+            }
+        };
+
+        const localVersion = this.version || await this.loadVersion();
+        const latestVersion = await this.fetchVersionFromApi();
+        const hasNewerVersion = !!(localVersion && latestVersion && this.compareVersions(latestVersion, localVersion) > 0);
+
+        if (manual && hasNewerVersion && window.drawingBoard?.settingsManager?.toastManager) {
+            const message = this.getTranslation('versionUpdateFound')
+                .replace('{latest}', latestVersion)
+                .replace('{current}', localVersion);
+            window.drawingBoard.settingsManager.toastManager.show(message, 'warning');
+        }
+
         if (!('serviceWorker' in navigator)) {
+            if (manual && !hasNewerVersion && window.drawingBoard?.settingsManager?.toastManager) {
+                window.drawingBoard.settingsManager.toastManager.show(this.getTranslation('latest'), 'success');
+            }
+            finishCheck();
             return;
         }
 
         navigator.serviceWorker.getRegistration().then(reg => {
-            if (reg) {
-                reg.update().then(() => {
-                    // Check logic is handled by onupdatefound -> showUpdateModal
-                    // For manual checks, we might want to show "No updates" if nothing happens
-                    // But avoiding spamming "No updates" on automatic checks is better.
-                });
+            if (!reg) {
+                if (manual && !hasNewerVersion && window.drawingBoard?.settingsManager?.toastManager) {
+                    window.drawingBoard.settingsManager.toastManager.show(this.getTranslation('latest'), 'success');
+                }
+                finishCheck();
+                return;
             }
+
+            if (reg.waiting) {
+                this.showUpdateModal(reg.waiting);
+                finishCheck();
+                return;
+            }
+
+            let updateFound = false;
+            const updateDetectionPromise = new Promise((resolve) => {
+                let resolved = false;
+                const resolveOnce = (value) => {
+                    if (!resolved) {
+                        resolved = true;
+                        resolve(value);
+                    }
+                };
+                const handleInstallingWorker = (worker) => {
+                    if (!worker) {
+                        resolveOnce(false);
+                        return;
+                    }
+                    worker.addEventListener('statechange', () => {
+                        if (worker.state === 'installed') {
+                            resolveOnce(!!navigator.serviceWorker.controller);
+                        } else if (worker.state === 'redundant') {
+                            resolveOnce(false);
+                        }
+                    });
+                };
+                reg.addEventListener('updatefound', () => {
+                    updateFound = true;
+                    handleInstallingWorker(reg.installing);
+                }, { once: true });
+                setTimeout(() => {
+                    resolveOnce(updateFound ? true : !!reg.waiting);
+                }, UPDATE_CHECK_TIMEOUT);
+            });
+
+            reg.update()
+                .then(async () => {
+                    const hasUpdate = await updateDetectionPromise;
+                    if (manual && !hasUpdate && !reg.waiting && !hasNewerVersion && window.drawingBoard?.settingsManager?.toastManager) {
+                        window.drawingBoard.settingsManager.toastManager.show(this.getTranslation('latest'), 'success');
+                    }
+                    finishCheck();
+                })
+                .catch(() => {
+                    finishCheck();
+                });
+        }).catch(() => {
+            finishCheck();
         });
     }
 }

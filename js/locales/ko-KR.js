@@ -32,7 +32,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - 미니멀 화이트보드',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: '화면을 회전해 주세요',
+        rotateScreenTip: '세로 모드가 감지되었습니다. 올바른 레이아웃과 전체 도구 모음을 위해 가로 모드로 사용해 주세요.'
     },
 
     // Toolbar
@@ -53,6 +55,7 @@ window.translations = {
         zoomOut: '축소 (-)',
         zoomIn: '확대 (+)',
         fullscreen: '전체 화면 (F11)',
+        exitFullscreen: '전체 화면 종료 (F11)',
         zoomPlaceholder: '확대/축소 수준 (백분율 입력)'
     },
 
@@ -66,6 +69,7 @@ window.translations = {
             ballpoint: '볼펜',
             fountain: '만년필',
             brush: '붓',
+            marker: '마커',
             color: '색상',
             colorAndSize: '색상 및 크기',
             colorPicker: '색상 선택기',
@@ -256,6 +260,10 @@ window.translations = {
     // Settings
     settings: {
         title: '설정',
+        exportSuccess: '설정이 성공적으로 내보내졌습니다',
+        importSuccess: '설정을 성공적으로 가져왔습니다',
+        importError: '잘못된 구성 파일입니다',
+        importNoChange: '설정 변경이 감지되지 않았습니다',
         tabs: {
             general: '일반',
             display: '표시',
@@ -323,6 +331,8 @@ window.translations = {
             },
             edgeSnap: '가장자리 스냅 활성화',
             edgeSnapHint: '드래그 시 컨트롤 패널을 화면 가장자리에 자동 정렬',
+            morePanelBehaviorLabel: '더보기 패널 동작',
+            keepMorePanelOpenHint: '기능 버튼 클릭 후에도 더보기 패널 유지',
             // Toolbar customization
             toolbarCustomization: '툴바 사용자 정의',
             toolbarCustomizationHint: '툴바에 표시할 도구를 선택하고 드래그하여 순서 조정',
@@ -452,6 +462,18 @@ window.translations = {
         },
         more: {
             title: '추가 설정',
+            cacheCleanupLabel: '캐시 정리',
+            cacheCleanupHint: '캐시 사용량을 확인하고 항목별로 정리할 수 있습니다(정리 전 확인)',
+            clearSettingsCache: '설정 캐시 삭제',
+            clearCanvasCache: '캔버스 캐시 삭제',
+            clearOtherCache: '기타 캐시 삭제',
+            cacheSizeCalculating: '계산 중...',
+            clearSelectedCache: '선택한 캐시 정리',
+            morePanelBehaviorLabel: '더보기 패널 동작',
+            keepMorePanelOpenHint: '기능 버튼 클릭 후에도 더보기 패널 유지',
+            selectCacheType: '삭제할 캐시 유형을 하나 이상 선택하세요.',
+            confirmClearSelectedCache: '다음 캐시가 정리됩니다:',
+            clearLocalDataConfirmSuffix: '계속하시겠습니까?',
             description: '시간 표시 설정은 오른쪽 하단 시간 영역을 클릭하세요',
             showTimeDisplay: '시간 및 날짜 표시',
             showTimeDisplayHint: '오른쪽 상단에 현재 시간 및 날짜 표시',

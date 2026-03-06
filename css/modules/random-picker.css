@@ -52,6 +52,25 @@
     transition: all 0.2s ease;
 }
 
+.random-picker-help-btn {
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 6px;
+    background-color: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    transition: all 0.2s ease;
+}
+
+.random-picker-help-btn:hover {
+    background-color: #e0e0e0;
+    color: #333;
+}
+
 .random-picker-close-btn:hover {
     background-color: #e0e0e0;
     color: #333;

@@ -159,6 +159,8 @@ python3 -m http.server 8080
 
 3. Visit `http://localhost:8080` in your browser
 
+> `npm start` runs the built-in Node server and exposes `/api/version` (backed by `version.txt`).
+
 ## 💡 Usage Tips
 
 ### Basic Operations
@@ -187,6 +189,7 @@ python3 -m http.server 8080
 
 ```
 Aboard/
+├── server.js               # Local dev server (includes /api/version)
 ├── index.html              # Main HTML file
 ├── LICENSE                 # MIT License file
 ├── package.json            # Project configuration

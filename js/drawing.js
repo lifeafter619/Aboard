@@ -150,6 +150,10 @@ class DrawingEngine {
                     this.ctx.globalAlpha = 0.85;
                     this.ctx.lineWidth = this.penSize * 1.5;
                     break;
+                case 'marker':
+                    this.ctx.globalAlpha = 0.45;
+                    this.ctx.lineWidth = this.penSize * 2.2;
+                    break;
                 case 'normal':
                 default:
                     this.ctx.globalAlpha = 1.0;
@@ -161,15 +165,14 @@ class DrawingEngine {
         } else if (this.currentTool === 'eraser') {
             this.ctx.globalCompositeOperation = 'destination-out';
             this.ctx.strokeStyle = 'rgba(0,0,0,1)';
-            this.ctx.lineWidth = this.eraserSize;
+            const scaleCompensation = Math.max(0.01, this.canvasScale || 1);
+            this.ctx.lineWidth = this.eraserSize / scaleCompensation;
             this.ctx.globalAlpha = 1.0;
             this.ctx.setLineDash([]); // Always solid for eraser
             
             // Set line cap/join based on eraser shape
-            // Use 'square' for rectangle to match the visual cursor behavior
-            // 'square' extends line by half lineWidth, matching the eraser border edge
             if (this.eraserShape === 'rectangle') {
-                this.ctx.lineCap = 'square';
+                this.ctx.lineCap = 'butt';
                 this.ctx.lineJoin = 'miter';
             } else {
                 this.ctx.lineCap = 'round';
@@ -272,7 +275,7 @@ class DrawingEngine {
         this.applyLineStyle();
         
         // Check if we can use batch drawing (Normal pen)
-        const complexBrushes = ['pencil', 'brush', 'fountain', 'ballpoint'];
+        const complexBrushes = ['pencil', 'brush', 'fountain', 'ballpoint', 'marker'];
         const isComplex = complexBrushes.includes(this.penType) || this.penLineStyle === 'multi';
 
         if (!isComplex) {
@@ -326,6 +329,8 @@ class DrawingEngine {
                     this.drawPencilStroke(prevPoint, currPoint, distance);
                 } else if (this.penType === 'fountain') {
                     this.drawFountainStroke(prevPoint, currPoint, distance);
+                } else if (this.penType === 'marker') {
+                    this.drawMarkerStroke(prevPoint, currPoint, distance);
                 }
             }
         }
@@ -597,6 +602,25 @@ class DrawingEngine {
         this.ctx.restore();
         this.setupDrawingContext(); // Restore original context settings
     }
+
+    drawMarkerStroke(prevPoint, currPoint, distance) {
+        const minWidth = this.penSize * 1.6;
+        const maxWidth = this.penSize * 2.3;
+        const speedFactor = Math.min(distance / 15, 1);
+        const markerWidth = maxWidth - speedFactor * (maxWidth - minWidth);
+
+        this.ctx.save();
+        this.ctx.globalAlpha = 0.4;
+        this.ctx.lineWidth = markerWidth;
+        this.ctx.lineCap = 'square';
+        this.ctx.lineJoin = 'round';
+        this.ctx.beginPath();
+        this.ctx.moveTo(prevPoint.x, prevPoint.y);
+        this.ctx.lineTo(currPoint.x, currPoint.y);
+        this.ctx.stroke();
+        this.ctx.restore();
+        this.setupDrawingContext();
+    }
     
     stopDrawing() {
         if (this.isDrawing) {
@@ -851,6 +875,11 @@ class DrawingEngine {
             case 'brush':
                 this.ctx.globalAlpha = 0.85;
                 this.ctx.lineWidth = stroke.size * 1.5;
+                break;
+            case 'marker':
+                this.ctx.globalAlpha = 0.45;
+                this.ctx.lineWidth = stroke.size * 2.2;
+                this.ctx.lineCap = 'square';
                 break;
             case 'normal':
             default:

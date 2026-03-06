@@ -34,7 +34,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - 簡約白板',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: '請旋轉螢幕',
+        rotateScreenTip: '偵測到目前為直向模式。為了正常排版與完整工具列，請以橫向使用。'
     },
 
     // Toolbar
@@ -55,6 +57,7 @@ window.translations = {
         zoomOut: '縮小 (-)',
         zoomIn: '放大 (+)',
         fullscreen: '全螢幕 (F11)',
+        exitFullscreen: '退出全螢幕 (F11)',
         zoomPlaceholder: '縮放比例 (輸入百分比)'
     },
 
@@ -68,6 +71,7 @@ window.translations = {
             ballpoint: '圓珠筆',
             fountain: '鋼筆',
             brush: '毛筆',
+            marker: '麥克筆',
             color: '顏色',
             colorAndSize: '顏色與粗細',
             colorPicker: '取色器',
@@ -347,6 +351,8 @@ window.translations = {
             edgeSnapHint: '拖動控制面板時自動吸附到屏幕邊緣',
             touchZoom: '觸控縮放',
             touchZoomHint: '允許雙指捏合縮放畫布',
+            morePanelBehaviorLabel: '更多功能面板行為',
+            keepMorePanelOpenHint: '點擊「更多」中的功能按鈕後預設不關閉「更多」框',
             // Toolbar customization
             toolbarCustomization: '工具列自訂',
             toolbarCustomizationHint: '選擇要在工具列中顯示的工具，拖動可調整順序',
@@ -482,6 +488,18 @@ window.translations = {
         },
         more: {
             title: '更多設定',
+            cacheCleanupLabel: '快取清理',
+            cacheCleanupHint: '可查看快取占用並按類別清理（清理前會二次確認）',
+            clearSettingsCache: '清除設定項快取',
+            clearCanvasCache: '清除畫布快取',
+            clearOtherCache: '清除其他快取',
+            cacheSizeCalculating: '計算中...',
+            clearSelectedCache: '清理所選快取',
+            morePanelBehaviorLabel: '更多功能面板行為',
+            keepMorePanelOpenHint: '點擊「更多」中的功能按鈕後預設不關閉「更多」框',
+            selectCacheType: '請先選擇要清理的快取類型',
+            confirmClearSelectedCache: '將清理以下快取：',
+            clearLocalDataConfirmSuffix: '確定繼續嗎？',
             description: '時間顯示相關設定請點擊右下角時間區域進入設定界面',
             showTimeDisplay: '顯示時間和日期',
             showTimeDisplayHint: '在右上角顯示目前時間和日期',

@@ -121,7 +121,7 @@ class InsertTextManager {
             if (window.toastManager) {
                 window.toastManager.show(msg, 'error');
             } else {
-                alert(msg);
+                window.appDialog?.showAlert(msg, 'error');
             }
             return;
         }
@@ -134,7 +134,7 @@ class InsertTextManager {
             if (window.toastManager) {
                 window.toastManager.show(msg, 'error');
             } else {
-                alert(msg);
+                window.appDialog?.showAlert(msg, 'error');
             }
             return;
         }
@@ -370,23 +370,21 @@ class InsertTextManager {
         const select = document.getElementById('insert-text-font-select');
         if (!select) return;
 
-        const fonts = [
-            { value: 'sans-serif', label: 'settings.general.fonts.sansSerif' },
-            { value: 'serif', label: 'settings.general.fonts.serif' },
-            { value: 'monospace', label: 'settings.general.fonts.monospace' },
-            { value: 'cursive', label: 'settings.general.fonts.cursive' },
-            { value: 'Microsoft YaHei', label: 'settings.general.fonts.yahei' },
-            { value: 'SimSun', label: 'settings.general.fonts.simsun' },
-            { value: 'SimHei', label: 'settings.general.fonts.simhei' },
-            { value: 'KaiTi', label: 'settings.general.fonts.kaiti' },
-            { value: 'FangSong', label: 'settings.general.fonts.fangsong' },
-            { value: 'Arial', label: 'settings.general.fonts.arial' },
-            { value: 'Times New Roman', label: 'settings.general.fonts.timesNewRoman' },
-            { value: 'Courier New', label: 'settings.general.fonts.courier' },
-            { value: 'Verdana', label: 'settings.general.fonts.verdana' },
-            { value: 'Georgia', label: 'settings.general.fonts.georgia' },
-            { value: 'Impact', label: 'settings.general.fonts.impact' }
-        ];
+        const settingsManager = window.drawingBoard?.settingsManager;
+        const managedFontOptions = settingsManager && typeof settingsManager.getManagedFontOptions === 'function'
+            ? settingsManager.getManagedFontOptions()
+            : null;
+        const managedFonts = managedFontOptions
+            ? managedFontOptions.filter(font => font.visible).map(font => ({ value: font.value, label: font.label }))
+            : null;
+        const fonts = (managedFonts && managedFonts.length > 0)
+            ? managedFonts
+            : [
+                { value: 'sans-serif', label: 'settings.general.fonts.sansSerif' },
+                { value: 'serif', label: 'settings.general.fonts.serif' },
+                { value: 'monospace', label: 'settings.general.fonts.monospace' },
+                { value: 'cursive', label: 'settings.general.fonts.cursive' }
+            ];
 
         select.innerHTML = '';
         
@@ -395,23 +393,14 @@ class InsertTextManager {
             const option = document.createElement('option');
             option.value = font.value;
             // Use translation if available
-            option.textContent = window.i18n ? window.i18n.t(font.label) : font.value;
+            option.textContent = window.i18n && font.label.startsWith('settings.')
+                ? window.i18n.t(font.label)
+                : font.label;
             select.appendChild(option);
         });
 
-        // Add custom fonts if any
-        if (this.customFonts.length > 0) {
-            const optgroup = document.createElement('optgroup');
-            optgroup.label = window.i18n ? window.i18n.t('tools.text.customFonts') : 'Custom Fonts';
-            
-            this.customFonts.forEach(font => {
-                const option = document.createElement('option');
-                option.value = font.name;
-                option.textContent = font.name;
-                optgroup.appendChild(option);
-            });
-            
-            select.appendChild(optgroup);
+        if (window.drawingBoard?.settingsManager?.customFonts) {
+            this.customFonts = window.drawingBoard.settingsManager.customFonts;
         }
     }
 
@@ -470,6 +459,9 @@ class InsertTextManager {
         const fontSelect = document.getElementById('insert-text-font-select');
         fontSelect.addEventListener('change', (e) => {
             this.textConfig.fontFamily = e.target.value;
+            if (this.isActive) {
+                this.updateOverlay();
+            }
         });
 
         // Font Upload
@@ -477,7 +469,19 @@ class InsertTextManager {
         if (fontUpload) {
             fontUpload.addEventListener('change', (e) => {
                 if (e.target.files && e.target.files[0]) {
-                    this.handleFontUpload(e.target.files[0]);
+                    if (window.drawingBoard?.settingsManager) {
+                        window.drawingBoard.settingsManager.handleFontUpload(e.target.files[0]);
+                        this.customFonts = window.drawingBoard.settingsManager.customFonts;
+                        this.populateFonts();
+                        const select = document.getElementById('insert-text-font-select');
+                        const uploadedName = e.target.files[0].name.replace(/\.[^/.]+$/, '');
+                        if (select && [...select.options].some(opt => opt.value === uploadedName)) {
+                            select.value = uploadedName;
+                            this.textConfig.fontFamily = uploadedName;
+                        }
+                    } else {
+                        this.handleFontUpload(e.target.files[0]);
+                    }
                 }
             });
         }
@@ -861,7 +865,7 @@ class InsertTextManager {
         // Measure text dimensions at base (unscaled) font size so that
         // width/height are consistent with scale multiplication elsewhere.
         this.ctx.save();
-        this.ctx.font = `${fontStyle} ${fontWeight} ${effectiveFontSize}px ${this.textConfig.fontFamily}`;
+        this.ctx.font = `${fontStyle} ${fontWeight} ${effectiveFontSize}px ${this.normalizeFontFamilyForCanvas(this.textConfig.fontFamily)}`;
         this.ctx.textBaseline = 'top';
         
         const lines = this.textConfig.text.split('\n');
@@ -926,7 +930,7 @@ class InsertTextManager {
         const fontSize = textObj.fontSize;
         const fontStyle = textObj.italic ? 'italic' : 'normal';
         const fontWeight = textObj.bold ? 'bold' : 'normal';
-        this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${textObj.fontFamily}`;
+        this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${this.normalizeFontFamilyForCanvas(textObj.fontFamily)}`;
         this.ctx.textBaseline = 'top';
         this.ctx.fillStyle = textObj.color;
         
@@ -1072,7 +1076,7 @@ class InsertTextManager {
         const padding = 4;
         
         this.ctx.save();
-        this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${textObj.fontFamily}`;
+        this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${this.normalizeFontFamilyForCanvas(textObj.fontFamily)}`;
         
         const lines = textObj.text.split('\n');
         const lineHeight = fontSize * 1.2;
@@ -1166,6 +1170,18 @@ class InsertTextManager {
         if (!textObj.decorationStyle) textObj.decorationStyle = 'solid';
         if (!textObj.decorationColor) textObj.decorationColor = textObj.color || '#000000';
         if (!textObj.decorationWidth) textObj.decorationWidth = this.DEFAULT_DECORATION_WIDTH;
+    }
+
+    normalizeFontFamilyForCanvas(fontFamily) {
+        if (!fontFamily || typeof fontFamily !== 'string') return 'sans-serif';
+        return fontFamily.split(',')
+            .map(part => part.trim())
+            .filter(Boolean)
+            .map(part => {
+                const normalized = part.replace(/^["']|["']$/g, '').trim();
+                return !/\s/.test(normalized) ? normalized : `"${normalized}"`;
+            })
+            .join(', ');
     }
     
     // Get all text objects (for serialization)

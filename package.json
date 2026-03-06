@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "一个简约的web白板，更适合老师体质",
   "scripts": {
-    "start": "npx serve -l 8080"
+    "start": "node server.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",

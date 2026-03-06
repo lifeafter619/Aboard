@@ -50,6 +50,8 @@ graph LR
 ```
 
 ## 最近更新
+- **设置与交互优化**：修复“检查更新”手动检查反馈；缓存清理改为项目内统一确认弹框；“更多功能面板行为”迁移到通用设置。
+- **面板体验优化**：时间显示选项面板改为整框拖动并补充帮助入口；多个功能面板后打开项自动置顶显示。
 - **v2.3.0**：插入文字功能增加下划线和删除线样式支持；优化文字编辑弹窗尺寸；修复多语言占位符显示问题。
 - **选择工具增强**：文字选中后支持缩放手柄，选中编辑支持就地更新；刷新后恢复笔迹和文字的选择功能。
 - **属性面板优化**：笔触类型和线条样式按钮更紧凑；属性框支持随浏览器窗口大小自动重新定位。
@@ -275,6 +277,8 @@ npm start
 
 然后在浏览器访问 `http://localhost:8080`
 
+> `npm start` 会启动项目内置 Node 服务，并提供 `/api/version` 接口（读取 `version.txt`）。
+
 #### 使用 Python（无需安装额外依赖）
 
 ```bash
@@ -292,6 +296,8 @@ npx serve -l 8080
 # 使用 PHP
 php -S localhost:8080
 ```
+
+> 注意：使用 `npx serve` 或 `python3 -m http.server` 时不会提供 `/api/version`，仅适用于纯静态预览。
 
 ## 📖 使用指南
 
@@ -355,6 +361,7 @@ php -S localhost:8080
 
 ```
 Aboard/
+├── server.js               # 本地开发服务（含 /api/version）
 ├── index.html              # 主HTML文件
 ├── LICENSE                 # MIT许可证文件
 ├── package.json            # 项目配置文件
@@ -413,6 +420,7 @@ Aboard/
 │   │       └── es-ES.js   # 西班牙语帮助
 │   └── modules/           # 功能模块
 │       ├── browser-check.js # 浏览器兼容性检查
+│       ├── dialog-manager.js # 统一对话框管理模块（替代浏览器原生提示）
 │       ├── edge-drawing.js # 边缘绘制模块（沿教具边缘画线）
 │       ├── gif-manager.js # GIF动图管理模块
 │       ├── help-system.js # 帮助系统模块
