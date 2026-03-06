@@ -72,6 +72,7 @@ button, a, input[type="button"], input[type="submit"] {
     position: fixed;
     pointer-events: none;
     border: 2px dashed #bbb;
+    box-sizing: border-box;
     border-radius: 50%;
     background-color: rgba(255, 255, 255, 0.3);
     z-index: 9999;

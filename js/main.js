@@ -143,6 +143,7 @@ class DrawingBoard {
         this.dragOffset = { x: 0, y: 0 };
         this.draggedElementWidth = 0;
         this.draggedElementHeight = 0;
+        this.dragSnapSide = null;
         this.featureWidgetZIndex = 1200;
         
         // Coordinate origin dragging state
@@ -2345,6 +2346,13 @@ class DrawingBoard {
             
             this.draggedElementWidth = rect.width;
             this.draggedElementHeight = rect.height;
+            if (this.settingsManager.edgeSnapEnabled && element.classList.contains('vertical')) {
+                const nearLeftEdge = rect.left <= EDGE_SNAP_DISTANCE;
+                const nearRightEdge = (window.innerWidth - rect.right) <= EDGE_SNAP_DISTANCE;
+                this.dragSnapSide = nearLeftEdge ? 'left' : (nearRightEdge ? 'right' : null);
+            } else {
+                this.dragSnapSide = null;
+            }
             
             element.classList.add('dragging');
             element.style.transition = 'none';
@@ -2370,7 +2378,7 @@ class DrawingBoard {
             let y = clientY - this.dragOffset.y;
             
             const edgeSnapDistance = EDGE_SNAP_DISTANCE;
-            const edgeSnapHysteresis = 60; // Wider zone to prevent flicker when already snapped
+            const edgeUnsnapDistance = Math.max(MIN_EDGE_UNSNAP_DISTANCE, edgeSnapDistance + EDGE_UNSNAP_BUFFER);
             const windowWidth = window.innerWidth;
             const windowHeight = window.innerHeight;
             const isToolbar = this.draggedElement.id === 'toolbar';
@@ -2384,42 +2392,32 @@ class DrawingBoard {
             let snappedLeft = false;
             let snappedRight = false;
             
-            // Check if currently in vertical mode
-            const currentlyVertical = this.draggedElement.classList.contains('vertical');
-            
             // Get current element dimensions (updated during drag)
             const currentRect = this.draggedElement.getBoundingClientRect();
             const currentWidth = currentRect.width;
             const currentHeight = currentRect.height;
             
             if (this.settingsManager.edgeSnapEnabled) {
-                // Use hysteresis: easier to snap than to unsnap (prevents flicker)
-                // When already vertical (snapped), use a dynamic hysteresis based on width difference
-                // to prevent flickering back to horizontal when the horizontal width is large
-                let effectiveSnapDistance = edgeSnapDistance;
-
-                if (currentlyVertical) {
-                    // If vertical, we need a larger hysteresis zone
-                    // Calculate based on the difference between horizontal and vertical widths
-                    // Formula ensures unsnap threshold is further than snap threshold
-                    // Width difference + small buffer to avoid flicker loop while keeping drag-out distance short
-                    const widthDiff = Math.max(0, this.draggedElementWidth - currentWidth);
-                    effectiveSnapDistance = Math.max(MIN_EDGE_UNSNAP_DISTANCE, edgeSnapDistance + widthDiff + EDGE_UNSNAP_BUFFER);
-                }
+                const keepSnapLeft = this.dragSnapSide === 'left' && clientX <= edgeUnsnapDistance;
+                const keepSnapRight = this.dragSnapSide === 'right' && clientX >= windowWidth - edgeUnsnapDistance;
+                const canSnapLeft = clientX <= edgeSnapDistance;
+                const canSnapRight = clientX >= windowWidth - edgeSnapDistance;
                 
-                // Check for left edge snap first
-                if (x < effectiveSnapDistance) {
+                // Use explicit left/right snap state hysteresis to avoid oscillation near edge thresholds
+                if (keepSnapLeft || canSnapLeft) {
                     x = PANEL_EDGE_MARGIN;
                     snappedToEdge = true;
                     isVertical = true;
                     snappedLeft = true;
-                }
-                // Check for right edge snap
-                if (!snappedLeft && x + currentWidth > windowWidth - effectiveSnapDistance) {
+                    this.dragSnapSide = 'left';
+                } else if (keepSnapRight || canSnapRight) {
                     x = windowWidth - currentWidth - PANEL_EDGE_MARGIN;
                     snappedToEdge = true;
                     isVertical = true;
                     snappedRight = true;
+                    this.dragSnapSide = 'right';
+                } else if (this.dragSnapSide) {
+                    this.dragSnapSide = null;
                 }
                 // Snap to top
                 if (y < edgeSnapDistance) {
@@ -2522,6 +2520,7 @@ class DrawingBoard {
                 
                 this.isDraggingPanel = false;
                 this.draggedElement = null;
+                this.dragSnapSide = null;
             }
         };
         
