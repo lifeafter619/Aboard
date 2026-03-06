@@ -109,6 +109,15 @@ class DrawingEngine {
         
         return { x, y };
     }
+
+    getViewportScale() {
+        const rect = this.canvas.getBoundingClientRect();
+        if (!rect || !rect.width || !this.canvas.offsetWidth) {
+            return Math.max(0.01, this.canvasScale || 1);
+        }
+
+        return Math.max(0.01, rect.width / this.canvas.offsetWidth);
+    }
     
     applyLineStyle() {
         if (this.penLineStyle === 'dashed') {
@@ -165,7 +174,9 @@ class DrawingEngine {
         } else if (this.currentTool === 'eraser') {
             this.ctx.globalCompositeOperation = 'destination-out';
             this.ctx.strokeStyle = 'rgba(0,0,0,1)';
-            const scaleCompensation = Math.max(0.01, this.canvasScale || 1);
+            // Always match the visible dashed eraser cursor size (WYSIWYG).
+            // Use real-time viewport scale from DOM geometry instead of cached canvasScale.
+            const scaleCompensation = this.getViewportScale();
             this.ctx.lineWidth = this.eraserSize / scaleCompensation;
             this.ctx.globalAlpha = 1.0;
             this.ctx.setLineDash([]); // Always solid for eraser
