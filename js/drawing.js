@@ -165,8 +165,15 @@ class DrawingEngine {
         } else if (this.currentTool === 'eraser') {
             this.ctx.globalCompositeOperation = 'destination-out';
             this.ctx.strokeStyle = 'rgba(0,0,0,1)';
-            const scaleCompensation = Math.max(0.01, this.canvasScale || 1);
-            this.ctx.lineWidth = this.eraserSize / scaleCompensation;
+
+            // Calculate actual visual scale to ensure WYSIWYG eraser size
+            const rect = this.canvas.getBoundingClientRect();
+            let actualScale = this.canvasScale || 1;
+            if (this.canvas.offsetWidth > 0 && rect.width > 0) {
+                actualScale = rect.width / this.canvas.offsetWidth;
+            }
+            this.ctx.lineWidth = this.eraserSize / Math.max(0.01, actualScale);
+
             this.ctx.globalAlpha = 1.0;
             this.ctx.setLineDash([]); // Always solid for eraser
             
