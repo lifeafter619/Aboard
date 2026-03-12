@@ -62,6 +62,7 @@ class TimerInstance {
         
         // Minimal display mode (replaces auto-hide)
         this.isMinimal = false;
+        this.fullscreenTitleFontSizePercent = 5; // percentage of viewport for title in fullscreen
         
         this.createDisplayElement();
         this.setupFullscreenModal();
@@ -78,6 +79,8 @@ class TimerInstance {
         this.fullscreenModal = document.getElementById('timer-fullscreen-modal');
         this.fullscreenContent = document.getElementById('timer-fullscreen-content');
         this.fullscreenFontSlider = document.getElementById('timer-fullscreen-font-slider');
+        this.fullscreenTitleFontSlider = document.getElementById('timer-fullscreen-title-font-slider');
+        this.fullscreenSettingsPanel = document.getElementById('timer-fullscreen-settings-panel');
         
         if (!this.fullscreenModal || !this.fullscreenContent || !this.fullscreenFontSlider) {
             console.warn('Timer fullscreen modal elements not found');
@@ -86,12 +89,25 @@ class TimerInstance {
         
         // Set initial slider value
         this.fullscreenFontSlider.value = this.fullscreenFontSizePercent;
+        if (this.fullscreenTitleFontSlider) {
+            this.fullscreenTitleFontSlider.value = this.fullscreenTitleFontSizePercent;
+        }
         
         // Setup close button
         const closeBtn = document.getElementById('timer-fullscreen-close-btn');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
                 this.exitFullscreen();
+            });
+        }
+        
+        // Setup settings button
+        const settingsBtn = document.getElementById('timer-fullscreen-settings-btn');
+        if (settingsBtn && this.fullscreenSettingsPanel) {
+            settingsBtn.addEventListener('click', () => {
+                const isVisible = this.fullscreenSettingsPanel.style.display !== 'none';
+                this.fullscreenSettingsPanel.style.display = isVisible ? 'none' : 'block';
+                settingsBtn.classList.toggle('active', !isVisible);
             });
         }
         
@@ -102,6 +118,16 @@ class TimerInstance {
                 this.updateFullscreenDisplay();
             }
         });
+        
+        // Setup title font size slider
+        if (this.fullscreenTitleFontSlider) {
+            this.fullscreenTitleFontSlider.addEventListener('input', (e) => {
+                this.fullscreenTitleFontSizePercent = parseFloat(e.target.value);
+                if (this.isFullscreen) {
+                    this.updateFullscreenDisplay();
+                }
+            });
+        }
         
         // ESC key to exit fullscreen
         document.addEventListener('keydown', (e) => {
@@ -631,11 +657,11 @@ class TimerInstance {
         const seconds = totalSeconds % 60;
         const timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         
-        // Calculate font size based on slider value - only for time, not title
+        // Calculate font size based on slider values
         const vmin = Math.min(window.innerWidth, window.innerHeight);
         const timeFontSize = Math.floor(vmin * (this.fullscreenFontSizePercent / 100));
+        const titleFontSize = Math.floor(vmin * (this.fullscreenTitleFontSizePercent / 100));
         const modeFontSize = Math.floor(vmin * 0.02);
-        // Title font size is fixed at 3vmin (defined in CSS), not affected by slider
         
         // Update content with title if available, applying custom colors
         const modeText = this.mode === 'stopwatch' ? window.i18n.t('timer.stopwatch') : window.i18n.t('timer.countdown');
@@ -644,7 +670,7 @@ class TimerInstance {
         const fsTextColor = this.fullscreenTextColor;
         const fsBgColor = this.fullscreenBgColor;
 
-        const titleHTML = this.title ? `<div class="timer-fullscreen-title" style="color: ${fsTextColor};">${this.title}</div>` : '';
+        const titleHTML = this.title ? `<div class="timer-fullscreen-title" style="font-size: ${titleFontSize}px; color: ${fsTextColor};">${this.title}</div>` : '';
         
         this.fullscreenContent.innerHTML = `
             <div class="timer-fullscreen-mode" style="font-size: ${modeFontSize}px; color: ${fsTextColor};">${modeText}</div>

@@ -2,6 +2,7 @@ const CACHE_NAME = 'aboard-v1';
 const urlsToCache = [
   './',
   './index.html',
+  './version.txt',
   './manifest.json',
   './img/icon.svg',
   './css/style.css',

@@ -32,7 +32,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - ミニマリストホワイトボード',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: '画面を回転してください',
+        rotateScreenTip: '縦向きモードが検出されました。レイアウトとツールバーを正しく表示するため、横向きでご利用ください。'
     },
 
     // Toolbar
@@ -42,6 +44,7 @@ window.translations = {
         pen: 'ペン',
         shape: '図形',
         move: '移動',
+        select: '選択',
         eraser: '消しゴム',
         clear: 'クリア',
         background: '背景',
@@ -52,6 +55,7 @@ window.translations = {
         zoomOut: 'ズームアウト (-)',
         zoomIn: 'ズームイン (+)',
         fullscreen: 'フルスクリーン (F11)',
+        exitFullscreen: 'フルスクリーンを終了 (F11)',
         zoomPlaceholder: 'ズームレベル (パーセントを入力)'
     },
 
@@ -65,6 +69,7 @@ window.translations = {
             ballpoint: 'ボールペン',
             fountain: '万年筆',
             brush: 'ブラシ',
+            marker: 'マーカー',
             color: '色',
             colorAndSize: '色とサイズ',
             colorPicker: 'カラーピッカー',
@@ -121,7 +126,54 @@ window.translations = {
             waveDensity: '波の密度',
             lineSpacing: '線の間隔',
             lineCount: '線の数'
+        },
+        text: {
+            insertTitle: 'テキスト挿入',
+            editTitle: 'テキスト編集',
+            placeholder: 'ここにテキストを入力',
+            size: 'サイズ',
+            color: '色',
+            font: 'フォント',
+            style: 'スタイル',
+            bold: '太字',
+            italic: '斜体',
+            underline: '下線',
+            strikethrough: '取り消し線',
+            decorationStyle: '線の種類',
+            decorationWidth: '線の太さ',
+            decorationColor: '線の色',
+            uploadFont: 'フォントをアップロード',
+            customFonts: 'カスタムフォント',
+            fontUploadSuccess: 'フォントがアップロードされました！',
+            fontExists: 'このフォントは既に存在します。',
+            invalidFontFormat: '無効なフォント形式です。TTF、OTF、WOFF、またはWOFF2ファイルを使用してください。',
+            fontTooLarge: 'フォントファイルが大きすぎます。最大2MBまでです。',
+            storageQuotaExceeded: 'ストレージ容量を超えました。カスタムフォントを削除してください。'
+        },
+        select: {
+            mode: '選択モード',
+            clickMode: 'クリック',
+            rectMode: '範囲選択',
+            lassoMode: 'なげなわ',
+            transform: '変換',
+            rotate90: '90°回転',
+            flipH: '左右反転',
+            flipV: '上下反転'
         }
+    },
+
+    selection: {
+        edit: '編集',
+        copy: 'コピー',
+        delete: '削除',
+        done: '完了',
+        rotate90: '90°回転',
+        flipH: '左右反転',
+        layer: 'レイヤー',
+        layerFront: '最前面へ',
+        layerBack: '最背面へ',
+        layerUp: '前面へ',
+        layerDown: '背面へ'
     },
 
     // Line Style Modal
@@ -181,6 +233,21 @@ window.translations = {
         rotate: '回転'
     },
 
+    // Selection Controls
+    selection: {
+        copy: 'コピー',
+        delete: '削除',
+        done: '完了',
+        edit: '編集',
+        rotate90: '90°回転',
+        flipH: '左右反転',
+        layer: 'レイヤー',
+        layerFront: '最前面へ',
+        layerBack: '最背面へ',
+        layerUp: '前面へ',
+        layerDown: '背面へ'
+    },
+
     // Page Navigation
     page: {
         previous: '前へ',
@@ -193,6 +260,10 @@ window.translations = {
     // Settings
     settings: {
         title: '設定',
+        exportSuccess: '設定のエクスポートに成功しました',
+        importSuccess: '設定をインポートしました',
+        importError: '無効な設定ファイルです',
+        importNoChange: '設定の変更が検出されませんでした',
         tabs: {
             general: '一般',
             display: '表示',
@@ -260,6 +331,8 @@ window.translations = {
             },
             edgeSnap: 'エッジスナップを有効化',
             edgeSnapHint: 'ドラッグ時にコントロールパネルを画面端に自動配置',
+            morePanelBehaviorLabel: 'その他機能パネルの動作',
+            keepMorePanelOpenHint: '機能ボタンを押した後も「その他」パネルを閉じない',
             // Toolbar customization
             toolbarCustomization: 'ツールバーのカスタマイズ',
             toolbarCustomizationHint: 'ツールバーに表示するツールを選択し、ドラッグで順序を変更',
@@ -268,6 +341,7 @@ window.translations = {
                 redo: 'やり直し',
                 pen: 'ペン',
                 move: '移動',
+                select: '選択',
                 eraser: '消しゴム',
                 clear: 'クリア',
                 background: '背景',
@@ -282,7 +356,8 @@ window.translations = {
                 pagination: 'ページネーションボタン',
                 time: '時刻表示',
                 fullscreen: 'フルスクリーンボタン',
-                download: 'ダウンロードボタン'
+                import: 'インポートボタン',
+                export: 'エクスポートボタン'
             },
             controlPosition: 'コントロールボタンの位置',
             controlPositionHint: 'ズームとページネーションコントロールの表示位置を選択',
@@ -387,9 +462,25 @@ window.translations = {
         },
         more: {
             title: 'その他の設定',
+            cacheCleanupLabel: 'キャッシュクリア',
+            cacheCleanupHint: 'キャッシュ使用量を確認し、カテゴリ別に削除できます（削除前に確認あり）',
+            clearSettingsCache: '設定キャッシュを削除',
+            clearCanvasCache: 'キャンバスキャッシュを削除',
+            clearOtherCache: 'その他のキャッシュを削除',
+            cacheSizeCalculating: '計算中...',
+            clearSelectedCache: '選択したキャッシュを削除',
+            morePanelBehaviorLabel: 'その他機能パネルの動作',
+            keepMorePanelOpenHint: '機能ボタンを押した後も「その他」パネルを閉じない',
+            selectCacheType: '削除するキャッシュ種類を選択してください。',
+            confirmClearSelectedCache: '次のキャッシュを削除します：',
+            clearLocalDataConfirmSuffix: '続行しますか？',
             description: '時刻表示の設定は右下の時刻エリアをクリックしてください',
             showTimeDisplay: '時刻と日付を表示',
-            showTimeDisplayHint: '右上隅に現在の時刻と日付を表示'
+            showTimeDisplayHint: '右上隅に現在の時刻と日付を表示',
+            localDataLabel: 'ローカルデータ',
+            localDataHint: 'ローカルキャッシュ、キャンバス内容、設定を消去し、初回読み込み状態に戻します',
+            clearLocalDataButton: 'ローカルキャッシュを消去',
+            clearLocalDataConfirm: 'ローカルキャッシュ、キャンバス内容、設定を消去し、初回読み込み状態に戻します。続行しますか？'
         },
         time: {
             title: '時刻表示設定',
@@ -431,7 +522,8 @@ window.translations = {
         timer: 'タイマー',
         randomPicker: '抽選器',
         scoreboard: 'スコアボード',
-        insertImage: '画像を挿入'
+        insertImage: '画像を挿入',
+        insertText: 'テキスト挿入'
     },
 
     // Teaching Tools

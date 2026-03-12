@@ -21,7 +21,9 @@ window.translations = {
         reset: 'Reset',
         start: 'Start',
         stop: 'Stop',
-        preview: 'Preview'
+        preview: 'Preview',
+        settings: 'Settings',
+        dragToMove: 'Drag to move'
     },
 
     // Recovery dialog
@@ -35,7 +37,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - Simple Whiteboard',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: 'Please rotate your screen',
+        rotateScreenTip: 'Portrait mode detected. Rotate to landscape for proper layout and full toolbar access.'
     },
 
     // Toolbar
@@ -45,9 +49,10 @@ window.translations = {
         pen: 'Pen',
         shape: 'Shape',
         move: 'Move',
+        select: 'Select',
         eraser: 'Eraser',
         clear: 'Clear',
-        background: 'Backgrnd',
+        background: 'Background',
         teachingTools: 'Tools',
         more: 'More',
         settings: 'Settings',
@@ -55,6 +60,7 @@ window.translations = {
         zoomOut: 'Zoom Out (-)',
         zoomIn: 'Zoom In (+)',
         fullscreen: 'Fullscreen (F11)',
+        exitFullscreen: 'Exit Fullscreen (F11)',
         zoomPlaceholder: 'Zoom Level (Enter %)'
     },
 
@@ -68,6 +74,7 @@ window.translations = {
             ballpoint: 'Ballpoint',
             fountain: 'Fountain',
             brush: 'Brush',
+            marker: 'Marker',
             color: 'Color',
             colorAndSize: 'Color & Size',
             colorPicker: 'Color Picker',
@@ -125,7 +132,54 @@ window.translations = {
             waveDensity: 'Wave Density',
             lineSpacing: 'Line Spacing',
             lineCount: 'Line Count'
+        },
+        text: {
+            insertTitle: 'Insert Text',
+            editTitle: 'Edit Text',
+            placeholder: 'Enter text here',
+            size: 'Size',
+            color: 'Color',
+            font: 'Font',
+            style: 'Style',
+            bold: 'Bold',
+            italic: 'Italic',
+            underline: 'Underline',
+            strikethrough: 'Strikethrough',
+            decorationStyle: 'Line Style',
+            decorationWidth: 'Line Width',
+            decorationColor: 'Line Color',
+            uploadFont: 'Upload Font',
+            customFonts: 'Custom Fonts',
+            fontUploadSuccess: 'Font uploaded successfully!',
+            fontExists: 'This font already exists.',
+            invalidFontFormat: 'Invalid font format. Please use TTF, OTF, WOFF, or WOFF2 files.',
+            fontTooLarge: 'Font file is too large. Maximum size is 2MB.',
+            storageQuotaExceeded: 'Storage quota exceeded. Please delete some custom fonts.'
+        },
+        select: {
+            mode: 'Selection Mode',
+            clickMode: 'Click',
+            rectMode: 'Box Select',
+            lassoMode: 'Lasso',
+            transform: 'Transform',
+            rotate90: 'Rotate 90°',
+            flipH: 'Flip Horizontal',
+            flipV: 'Flip Vertical'
         }
+    },
+
+    selection: {
+        edit: 'Edit',
+        copy: 'Copy',
+        delete: 'Delete',
+        done: 'Done',
+        rotate90: 'Rotate 90°',
+        flipH: 'Flip Horizontal',
+        layer: 'Layer',
+        layerFront: 'Bring to Front',
+        layerBack: 'Send to Back',
+        layerUp: 'Move Forward',
+        layerDown: 'Move Backward'
     },
 
     // Line Style Modal
@@ -186,6 +240,21 @@ window.translations = {
         rotate: 'Rotate'
     },
 
+    // Selection Controls
+    selection: {
+        copy: 'Copy',
+        delete: 'Delete',
+        done: 'Done',
+        edit: 'Edit',
+        rotate90: 'Rotate 90°',
+        flipH: 'Flip Horizontal',
+        layer: 'Layer',
+        layerFront: 'Bring to Front',
+        layerBack: 'Send to Back',
+        layerUp: 'Move Forward',
+        layerDown: 'Move Backward'
+    },
+
     // Page Navigation
     page: {
         previous: 'Previous Page',
@@ -239,6 +308,8 @@ window.translations = {
             configScale: 'Config Panel Size',
             configScaleLabel: 'Config Panel Size: Current',
             configScaleHint: 'Adjust properties panel size',
+            showToolbarText: 'Show Toolbar Text',
+            showToolbarTextHint: 'Whether to show text labels on toolbar buttons',
             themeColorHint: 'Color of toolbar when selected',
             colorOptions: {
                 blue: 'Blue',
@@ -258,12 +329,27 @@ window.translations = {
             languageHint: 'Choose interface language',
             globalFont: 'Global Font',
             globalFontHint: 'Choose application font',
+            fontManagementHint: 'Font management: reorder, show/hide, rename and preview',
+            showFont: 'Show font',
+            fontPreviewSample: 'Font Preview ABC abc 123',
             fonts: {
                 system: 'System Default',
                 serif: 'Serif',
                 sansSerif: 'Sans-Serif',
                 monospace: 'Monospace',
                 cursive: 'Handwritten',
+                notoSansSC: 'Noto Sans SC',
+                notoSerifSC: 'Noto Serif SC',
+                lxgwWenKai: 'LXGW WenKai',
+                sourceHanSansSC: 'Source Han Sans SC',
+                sourceHanSerifSC: 'Source Han Serif SC',
+                inter: 'Inter',
+                roboto: 'Roboto',
+                openSans: 'Open Sans',
+                lora: 'Lora',
+                jetBrainsMono: 'JetBrains Mono',
+                kaiTi: 'KaiTi',
+                stXingkai: 'STXingkai',
                 // Chinese fonts
                 yahei: 'Microsoft YaHei',
                 simsun: 'SimSun',
@@ -282,6 +368,10 @@ window.translations = {
             },
             edgeSnap: 'Enable Edge Snap',
             edgeSnapHint: 'Auto-snap panels to screen edges when dragging',
+            touchZoom: 'Touch Zoom',
+            touchZoomHint: 'Allow pinch gesture to zoom canvas',
+            morePanelBehaviorLabel: 'More Panel Behavior',
+            keepMorePanelOpenHint: 'Keep the More panel open after clicking feature buttons',
             // Toolbar customization
             toolbarCustomization: 'Toolbar Customization',
             toolbarCustomizationHint: 'Select tools to display in toolbar, drag to reorder',
@@ -290,6 +380,7 @@ window.translations = {
                 redo: 'Redo',
                 pen: 'Pen',
                 move: 'Move',
+                select: 'Select',
                 eraser: 'Eraser',
                 clear: 'Clear',
                 background: 'Background',
@@ -298,13 +389,14 @@ window.translations = {
             },
             // Control button settings
             controlButtonSettings: 'Control Button Settings',
-            controlButtonSettingsHint: 'Select control buttons to display',
+            controlButtonSettingsHint: 'Select control buttons to display, drag to reorder',
             controlButtons: {
                 zoom: 'Zoom Buttons',
                 pagination: 'Pagination Buttons',
                 time: 'Time Display',
                 fullscreen: 'Fullscreen Button',
-                download: 'Download Button'
+                import: 'Import Button',
+                export: 'Export Button'
             },
             controlPosition: 'Control Position',
             controlPositionHint: 'Position of zoom and pagination controls',
@@ -417,9 +509,24 @@ window.translations = {
         },
         more: {
             title: 'More Settings',
-            description: 'For time display settings, click the time area in the bottom-right corner',
+            cacheCleanupLabel: 'Cache Cleanup',
+            cacheCleanupHint: 'View cache usage and clear by category (with confirmation before clearing)',
+            clearSettingsCache: 'Clear Settings Cache',
+            clearCanvasCache: 'Clear Canvas Cache',
+            clearOtherCache: 'Clear Other Cache',
+            cacheSizeCalculating: 'Calculating...',
+            clearSelectedCache: 'Clear Selected Cache',
+            morePanelBehaviorLabel: 'More Panel Behavior',
+            keepMorePanelOpenHint: 'Keep the More panel open after clicking feature buttons',
+            selectCacheType: 'Please select at least one cache type.',
+            confirmClearSelectedCache: 'The following cache will be cleared:',
+            clearLocalDataConfirmSuffix: 'Continue?',
             showTimeDisplay: 'Show Date & Time',
-            showTimeDisplayHint: 'Display current date and time in top-right corner'
+            showTimeDisplayHint: 'Display current date and time in top-right corner',
+            localDataLabel: 'Local Data',
+            localDataHint: 'Clear local cache, canvas data, and settings, then restore first-load state',
+            clearLocalDataButton: 'Clear Local Cache',
+            clearLocalDataConfirm: 'This will clear local cache, canvas data, and settings, then restore first-load state. Continue?'
         },
         time: {
             title: 'Time Display Settings',
@@ -470,7 +577,8 @@ window.translations = {
         timer: 'Timer',
         randomPicker: 'Picker',
         scoreboard: 'Score',
-        insertImage: 'Insert Image'
+        insertImage: 'Insert Image',
+        insertText: 'Insert Text'
     },
 
     // Random Picker
@@ -558,6 +666,8 @@ window.translations = {
         fullscreenFontSizeLabel: 'Fullscreen Font Size: Current',
         fullscreenFontSizeHint: 'Adjust fullscreen font size (10%-85%)',
         fullscreenSliderLabel: 'Font Size (10%-85%)',
+        titleFontSize: 'Title/Date Font Size',
+        timeFontSize: 'Time Font Size',
         customColor: 'Custom Color',
         transparent: 'Transparent',
         fullscreenDisabled: 'Disabled',
@@ -581,6 +691,8 @@ window.translations = {
         titlePlaceholder: 'e.g., Presentation, Exam, etc.',
         setTime: 'Set Time',
         setStartTime: 'Set Start Time',
+        titleFontSize: 'Title Font Size',
+        timeFontSize: 'Time Font Size',
         fontSettings: 'Font Settings',
         fontSize: 'Font Size',
         fontSizeLabel: 'Font Size: Current',

@@ -32,7 +32,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - Pizarra Minimalista',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: 'Gira la pantalla',
+        rotateScreenTip: 'Se detectó el modo vertical. Para un diseño correcto y la barra de herramientas completa, usa el modo horizontal.'
     },
 
     // Toolbar
@@ -42,6 +44,7 @@ window.translations = {
         pen: 'Bolígrafo',
         shape: 'Forma',
         move: 'Mover',
+        select: 'Seleccionar',
         eraser: 'Borrador',
         clear: 'Borrar',
         background: 'Fondo',
@@ -52,6 +55,7 @@ window.translations = {
         zoomOut: 'Alejar (-)',
         zoomIn: 'Acercar (+)',
         fullscreen: 'Pantalla completa (F11)',
+        exitFullscreen: 'Salir de pantalla completa (F11)',
         zoomPlaceholder: 'Nivel de zoom (Introducir porcentaje)'
     },
 
@@ -65,6 +69,7 @@ window.translations = {
             ballpoint: 'Bolígrafo de bola',
             fountain: 'Pluma estilográfica',
             brush: 'Pincel',
+            marker: 'Marcador',
             color: 'Color',
             colorAndSize: 'Color y tamaño',
             colorPicker: 'Selector de color',
@@ -119,7 +124,54 @@ window.translations = {
             waveDensity: 'Densidad de ondas',
             lineSpacing: 'Espaciado de líneas',
             lineCount: 'Número de líneas'
+        },
+        text: {
+            insertTitle: 'Insertar texto',
+            editTitle: 'Editar texto',
+            placeholder: 'Ingrese el texto aquí',
+            size: 'Tamaño',
+            color: 'Color',
+            font: 'Fuente',
+            style: 'Estilo',
+            bold: 'Negrita',
+            italic: 'Cursiva',
+            underline: 'Subrayado',
+            strikethrough: 'Tachado',
+            decorationStyle: 'Estilo de línea',
+            decorationWidth: 'Grosor de línea',
+            decorationColor: 'Color de línea',
+            uploadFont: 'Cargar fuente',
+            customFonts: 'Fuentes personalizadas',
+            fontUploadSuccess: '¡Fuente cargada exitosamente!',
+            fontExists: 'Esta fuente ya existe.',
+            invalidFontFormat: 'Formato de fuente no válido. Use archivos TTF, OTF, WOFF o WOFF2.',
+            fontTooLarge: 'El archivo de fuente es demasiado grande. El tamaño máximo es 2MB.',
+            storageQuotaExceeded: 'Cuota de almacenamiento excedida. Elimine algunas fuentes personalizadas.'
+        },
+        select: {
+            mode: 'Modo de selección',
+            clickMode: 'Clic',
+            rectMode: 'Selección por área',
+            lassoMode: 'Lazo',
+            transform: 'Transformar',
+            rotate90: 'Rotar 90°',
+            flipH: 'Voltear horizontal',
+            flipV: 'Voltear vertical'
         }
+    },
+
+    selection: {
+        edit: 'Editar',
+        copy: 'Copiar',
+        delete: 'Eliminar',
+        done: 'Hecho',
+        rotate90: 'Rotar 90°',
+        flipH: 'Voltear horizontal',
+        layer: 'Capa',
+        layerFront: 'Traer al frente',
+        layerBack: 'Enviar al fondo',
+        layerUp: 'Subir una capa',
+        layerDown: 'Bajar una capa'
     },
 
     // Line Style Modal
@@ -154,6 +206,11 @@ window.translations = {
         coordinate: 'Coordenadas',
         coordinateOriginHint: 'Doble clic para seleccionar el origen en modo Mover, luego arrastre para moverlo',
         image: 'Imagen',
+        imagePrefix: 'Imagen',
+        density: 'Densidad',
+        densityLabel: 'Densidad: Actual',
+        size: 'Tamaño',
+        sizeLabel: 'Tamaño: Actual',
         opacity: 'Opacidad del fondo',
         opacityHint: 'Ajustar la transparencia del fondo, 100% es completamente opaco',
         contrast: 'Contraste',
@@ -172,6 +229,21 @@ window.translations = {
         rotate: 'Rotar'
     },
 
+    // Selection Controls
+    selection: {
+        copy: 'Copiar',
+        delete: 'Eliminar',
+        done: 'Listo',
+        edit: 'Editar',
+        rotate90: 'Rotar 90°',
+        flipH: 'Voltear horizontal',
+        layer: 'Capa',
+        layerFront: 'Traer al frente',
+        layerBack: 'Enviar al fondo',
+        layerUp: 'Subir una capa',
+        layerDown: 'Bajar una capa'
+    },
+
     // Page Navigation
     page: {
         previous: 'Anterior',
@@ -184,6 +256,10 @@ window.translations = {
     // Settings
     settings: {
         title: 'Configuración',
+        exportSuccess: 'Configuración exportada correctamente',
+        importSuccess: 'Configuración importada correctamente',
+        importError: 'Archivo de configuración inválido',
+        importNoChange: 'No se detectaron cambios en la configuración',
         tabs: {
             general: 'General',
             display: 'Pantalla',
@@ -251,6 +327,8 @@ window.translations = {
             },
             edgeSnap: 'Habilitar ajuste de borde',
             edgeSnapHint: 'Ajustar automáticamente los paneles de control a los bordes de la pantalla',
+            morePanelBehaviorLabel: 'Comportamiento del panel Más',
+            keepMorePanelOpenHint: 'Mantener abierto el panel Más después de pulsar funciones',
             // Toolbar customization
             toolbarCustomization: 'Personalización de la barra de herramientas',
             toolbarCustomizationHint: 'Seleccione herramientas para mostrar, arrastre para reordenar',
@@ -259,6 +337,7 @@ window.translations = {
                 redo: 'Rehacer',
                 pen: 'Lápiz',
                 move: 'Mover',
+                select: 'Seleccionar',
                 eraser: 'Borrador',
                 clear: 'Borrar',
                 background: 'Fondo',
@@ -273,7 +352,8 @@ window.translations = {
                 pagination: 'Botones de paginación',
                 time: 'Visualización de hora',
                 fullscreen: 'Botón de pantalla completa',
-                download: 'Botón de descarga'
+                import: 'Botón de importación',
+                export: 'Botón de exportación'
             },
             controlPosition: 'Posición del botón de control',
             controlPositionHint: 'Elegir dónde mostrar los controles de zoom y paginación',
@@ -378,9 +458,25 @@ window.translations = {
         },
         more: {
             title: 'Más configuraciones',
+            cacheCleanupLabel: 'Limpieza de caché',
+            cacheCleanupHint: 'Ver uso de caché y limpiar por categoría (con confirmación antes de borrar)',
+            clearSettingsCache: 'Limpiar caché de configuración',
+            clearCanvasCache: 'Limpiar caché del lienzo',
+            clearOtherCache: 'Limpiar otra caché',
+            cacheSizeCalculating: 'Calculando...',
+            clearSelectedCache: 'Limpiar caché seleccionada',
+            morePanelBehaviorLabel: 'Comportamiento del panel Más',
+            keepMorePanelOpenHint: 'Mantener abierto el panel Más después de pulsar funciones',
+            selectCacheType: 'Seleccione al menos un tipo de caché.',
+            confirmClearSelectedCache: 'Se limpiará la siguiente caché:',
+            clearLocalDataConfirmSuffix: '¿Continuar?',
             description: 'Para la configuración de visualización de hora, haga clic en el área de hora en la esquina inferior derecha',
             showTimeDisplay: 'Mostrar hora y fecha',
-            showTimeDisplayHint: 'Mostrar la hora y fecha actuales en la esquina superior derecha'
+            showTimeDisplayHint: 'Mostrar la hora y fecha actuales en la esquina superior derecha',
+            localDataLabel: 'Datos locales',
+            localDataHint: 'Borrar caché local, contenido del lienzo y configuración, y restaurar el estado de la primera carga',
+            clearLocalDataButton: 'Borrar caché local',
+            clearLocalDataConfirm: 'Esto borrará la caché local, el contenido del lienzo y la configuración, y restaurará el estado de la primera carga. ¿Continuar?'
         },
         time: {
             title: 'Configuración de visualización de hora',
@@ -440,7 +536,8 @@ window.translations = {
         timer: 'Temporizador',
         randomPicker: 'Selector',
         scoreboard: 'Marcador',
-        insertImage: 'Insertar imagen'
+        insertImage: 'Insertar imagen',
+        insertText: 'Insertar texto'
     },
 
     // Teaching Tools
@@ -512,6 +609,11 @@ window.translations = {
         titlePlaceholder: 'Introducir título del temporizador',
         fontSettings: 'Configuración de fuente',
         fontSize: 'Tamaño de fuente',
+        titleFontSize: 'Tamaño título',
+        timeFontSize: 'Tamaño hora',
+        fontSizeLabel: 'Tamaño: Actual',
+        minimal: 'Mínimo',
+        minimalMode: 'Modo mínimo',
         adjustColor: 'Ajustar color',
         colorSettings: 'Configuración de color',
         textColor: 'Color de texto',

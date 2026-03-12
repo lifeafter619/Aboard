@@ -1,10 +1,17 @@
 // Settings Management Module
 // Handles application settings and preferences
+const largeScreenWidth = 1920;
+const highDpiRatio = 1.5;
 
 class SettingsManager {
     constructor() {
-        this.toolbarSize = parseInt(localStorage.getItem('toolbarSize')) || 40;
-        this.configScale = parseFloat(localStorage.getItem('configScale')) || 1.0;
+        const storedToolbarSize = localStorage.getItem('toolbarSize');
+        const storedConfigScale = localStorage.getItem('configScale');
+        const isLargeScreen = window.innerWidth >= largeScreenWidth;
+        const isHighDpi = (window.devicePixelRatio || 1) >= highDpiRatio;
+        const isHighResDisplay = isLargeScreen || isHighDpi;
+        this.toolbarSize = storedToolbarSize ? parseInt(storedToolbarSize) : (isHighResDisplay ? 60 : 55);
+        this.configScale = storedConfigScale ? parseFloat(storedConfigScale) : (isHighResDisplay ? 1.1 : 1.0);
         this.controlPosition = localStorage.getItem('controlPosition') || 'top-right';
         this.edgeSnapEnabled = localStorage.getItem('edgeSnapEnabled') !== 'false';
         this.touchZoomEnabled = localStorage.getItem('touchZoomEnabled') !== 'false';
@@ -13,15 +20,305 @@ class SettingsManager {
         this.showZoomControls = localStorage.getItem('showZoomControls') !== 'false';
         this.showImportExportBtn = localStorage.getItem('showImportExportBtn') !== 'false';
         this.showFullscreenBtn = localStorage.getItem('showFullscreenBtn') !== 'false';
+        this.showToolbarText = localStorage.getItem('showToolbarText') !== 'false'; // Default true
+        this.keepMorePanelOpen = localStorage.getItem('keepMorePanelOpen') !== 'false';
         this.patternPreferences = this.loadPatternPreferences();
         this.canvasWidth = parseInt(localStorage.getItem('canvasWidth')) || 1920;
         this.canvasHeight = parseInt(localStorage.getItem('canvasHeight')) || 1080;
         this.canvasPreset = localStorage.getItem('canvasPreset') || 'custom';
         this.themeColor = localStorage.getItem('themeColor') || '#007AFF';
         this.globalFont = localStorage.getItem('globalFont') || 'system';
+        this.customFonts = this.loadCustomFonts();
+        this.fontPreferences = this.loadFontPreferences();
+        this.ensureFontPreferencesIntegrity();
 
         // Initialize Toast Manager
         this.toastManager = new ToastManager();
+        
+        // Load custom fonts to document
+        this.loadCustomFontsToDocument();
+    }
+    
+    // Load custom fonts from localStorage
+    loadCustomFonts() {
+        const saved = localStorage.getItem('customFonts');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.warn('Failed to load custom fonts:', e);
+            }
+        }
+        return [];
+    }
+
+    getBaseFontOptions() {
+        return [
+            { value: 'system', label: 'settings.general.fonts.system' },
+            { value: 'serif', label: 'settings.general.fonts.serif' },
+            { value: 'sans-serif', label: 'settings.general.fonts.sansSerif' },
+            { value: 'monospace', label: 'settings.general.fonts.monospace' },
+            { value: 'cursive', label: 'settings.general.fonts.cursive' },
+            { value: 'Noto Sans SC', label: 'settings.general.fonts.notoSansSC', fallback: 'Noto Sans SC' },
+            { value: 'Noto Serif SC', label: 'settings.general.fonts.notoSerifSC', fallback: 'Noto Serif SC' },
+            { value: 'LXGW WenKai', label: 'settings.general.fonts.lxgwWenKai', fallback: 'LXGW WenKai' },
+            { value: 'Source Han Sans SC', label: 'settings.general.fonts.sourceHanSansSC', fallback: 'Source Han Sans SC' },
+            { value: 'Source Han Serif SC', label: 'settings.general.fonts.sourceHanSerifSC', fallback: 'Source Han Serif SC' },
+            { value: 'Inter', label: 'settings.general.fonts.inter', fallback: 'Inter' },
+            { value: 'Roboto', label: 'settings.general.fonts.roboto', fallback: 'Roboto' },
+            { value: 'Open Sans', label: 'settings.general.fonts.openSans', fallback: 'Open Sans' },
+            { value: 'Lora', label: 'settings.general.fonts.lora', fallback: 'Lora' },
+            { value: 'JetBrains Mono', label: 'settings.general.fonts.jetBrainsMono', fallback: 'JetBrains Mono' },
+            { value: 'KaiTi', label: 'settings.general.fonts.kaiTi', fallback: 'KaiTi' },
+            { value: 'STXingkai', label: 'settings.general.fonts.stXingkai', fallback: 'STXingkai' }
+        ];
+    }
+
+    getAllFontValues() {
+        const baseValues = this.getBaseFontOptions().map(f => f.value);
+        const customValues = this.customFonts.map(f => f.name);
+        return [...baseValues, ...customValues];
+    }
+
+    loadFontPreferences() {
+        const saved = localStorage.getItem('fontPreferences');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.warn('Failed to load font preferences:', e);
+            }
+        }
+        return { order: [], visibility: {}, aliases: {} };
+    }
+
+    saveFontPreferences() {
+        localStorage.setItem('fontPreferences', JSON.stringify(this.fontPreferences));
+    }
+
+    ensureFontPreferencesIntegrity() {
+        if (!this.fontPreferences || typeof this.fontPreferences !== 'object') {
+            this.fontPreferences = { order: [], visibility: {}, aliases: {} };
+        }
+        this.fontPreferences.order = Array.isArray(this.fontPreferences.order) ? this.fontPreferences.order : [];
+        this.fontPreferences.visibility = this.fontPreferences.visibility || {};
+        this.fontPreferences.aliases = this.fontPreferences.aliases || {};
+
+        const allValues = this.getAllFontValues();
+        this.fontPreferences.order = this.normalizeFontOrder(this.fontPreferences.order, allValues);
+        allValues.forEach(value => {
+            if (!this.fontPreferences.order.includes(value)) {
+                this.fontPreferences.order.push(value);
+            }
+            if (this.fontPreferences.visibility[value] === undefined) {
+                this.fontPreferences.visibility[value] = true;
+            }
+        });
+        this.saveFontPreferences();
+    }
+
+    normalizeFontOrder(order, allValues) {
+        const validOrdered = order.filter(value => allValues.includes(value));
+        const deduped = [];
+        const dedupedSet = new Set();
+        validOrdered.forEach(value => {
+            if (!dedupedSet.has(value)) {
+                dedupedSet.add(value);
+                deduped.push(value);
+            }
+        });
+        return deduped;
+    }
+    
+    // Save custom fonts to localStorage
+    saveCustomFonts() {
+        try {
+            localStorage.setItem('customFonts', JSON.stringify(this.customFonts));
+        } catch (e) {
+            const msg = window.i18n ? window.i18n.t('tools.text.storageQuotaExceeded') : 'Storage quota exceeded. Please delete some custom fonts.';
+            if (this.toastManager) {
+                this.toastManager.show(msg, 'error');
+            }
+            console.warn('Failed to save custom fonts:', e);
+        }
+    }
+    
+    // Load custom fonts into the document
+    loadCustomFontsToDocument() {
+        this.customFonts.forEach(font => {
+            this.addFontToDocument(font.name, font.data);
+        });
+    }
+    
+    // Add a font to the document
+    addFontToDocument(name, data) {
+        const fontFace = new FontFace(name, `url(${data})`);
+        return fontFace.load().then(loadedFace => {
+            document.fonts.add(loadedFace);
+            return loadedFace;
+        }).catch(err => {
+            console.warn(`Failed to load custom font ${name}:`, err);
+            return null;
+        });
+    }
+    
+    // Handle font file upload
+    handleFontUpload(file) {
+        if (!file) return;
+        
+        // Check file size (limit to 2MB)
+        const maxSize = 2 * 1024 * 1024;
+        if (file.size > maxSize) {
+            const msg = window.i18n ? window.i18n.t('tools.text.fontTooLarge') : 'Font file is too large. Maximum size is 2MB.';
+            if (this.toastManager) {
+                this.toastManager.show(msg, 'error');
+            }
+            return;
+        }
+        
+        const extension = file.name.split('.').pop().toLowerCase();
+        const validExtensions = ['ttf', 'otf', 'woff', 'woff2'];
+        
+        if (!validExtensions.includes(extension)) {
+            const msg = window.i18n ? window.i18n.t('tools.text.invalidFontFormat') : 'Invalid font format. Please use TTF, OTF, WOFF, or WOFF2 files.';
+            if (this.toastManager) {
+                this.toastManager.show(msg, 'error');
+            }
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const fontData = e.target.result;
+            const lastDotIndex = file.name.lastIndexOf('.');
+            const fontName = lastDotIndex > 0 ? file.name.substring(0, lastDotIndex) : file.name;
+            
+            const exists = this.customFonts.find(f => f.name === fontName);
+            if (!exists) {
+                this.customFonts.push({ name: fontName, data: fontData });
+                this.saveCustomFonts();
+                this.addFontToDocument(fontName, fontData);
+                this.ensureFontPreferencesIntegrity();
+                this.fontPreferences.visibility[fontName] = true;
+                if (!this.fontPreferences.aliases[fontName]) {
+                    this.fontPreferences.aliases[fontName] = fontName;
+                }
+                this.saveFontPreferences();
+                this.populateGlobalFontSelect();
+                
+                // Select the newly uploaded font
+                const select = document.getElementById('global-font-select');
+                if (select) {
+                    select.value = fontName;
+                    this.setGlobalFont(fontName);
+                }
+                
+                const msg = window.i18n ? window.i18n.t('tools.text.fontUploadSuccess') : 'Font uploaded successfully!';
+                if (this.toastManager) {
+                    this.toastManager.show(msg, 'success');
+                }
+            } else {
+                const msg = window.i18n ? window.i18n.t('tools.text.fontExists') : 'This font already exists.';
+                if (this.toastManager) {
+                    this.toastManager.show(msg, 'warning');
+                }
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    // Populate global font select with custom fonts
+    populateGlobalFontSelect() {
+        const select = document.getElementById('global-font-select');
+        if (!select) return;
+
+        const previousValue = select.value || this.globalFont;
+        select.innerHTML = '';
+
+        const visibleFonts = this.getManagedFontOptions().filter(font => font.visible);
+        visibleFonts.forEach(font => {
+            const option = document.createElement('option');
+            option.value = font.value;
+            option.textContent = font.label;
+            select.appendChild(option);
+        });
+
+        const hasPrevious = visibleFonts.some(font => font.value === previousValue);
+        if (hasPrevious) {
+            select.value = previousValue;
+        } else if (visibleFonts.length > 0) {
+            select.value = visibleFonts[0].value;
+        }
+    }
+
+    getManagedFontOptions() {
+        this.ensureFontPreferencesIntegrity();
+        const baseMap = new Map(this.getBaseFontOptions().map(font => [font.value, font]));
+        const customMap = new Map(this.customFonts.map(font => [font.name, font]));
+
+        return this.fontPreferences.order
+            .filter(value => baseMap.has(value) || customMap.has(value))
+            .map(value => {
+                const base = baseMap.get(value);
+                const custom = customMap.get(value);
+                let rawLabel = this.fontPreferences.aliases[value];
+                if (!rawLabel) {
+                    rawLabel = base ? base.label : value;
+                }
+                let translatedLabel = rawLabel;
+                if (window.i18n && typeof rawLabel === 'string' && rawLabel.startsWith('settings.')) {
+                    let translated = rawLabel;
+                    try {
+                        translated = window.i18n.t(rawLabel);
+                    } catch (e) {
+                        translated = rawLabel;
+                    }
+                    translatedLabel = (translated && translated !== rawLabel)
+                        ? translated
+                        : (base?.fallback || value);
+                }
+                return {
+                    value,
+                    label: translatedLabel,
+                    visible: this.fontPreferences.visibility[value] !== false,
+                    isCustom: Boolean(custom)
+                };
+            });
+    }
+
+    setFontVisibility(fontValue, visible) {
+        this.ensureFontPreferencesIntegrity();
+        this.fontPreferences.visibility[fontValue] = visible;
+        this.saveFontPreferences();
+        this.populateGlobalFontSelect();
+    }
+
+    setFontAlias(fontValue, alias) {
+        this.ensureFontPreferencesIntegrity();
+        const finalAlias = alias ? alias.trim() : '';
+        if (finalAlias) {
+            this.fontPreferences.aliases[fontValue] = finalAlias;
+        } else {
+            delete this.fontPreferences.aliases[fontValue];
+        }
+        this.saveFontPreferences();
+        this.populateGlobalFontSelect();
+    }
+
+    setFontOrder(order) {
+        this.ensureFontPreferencesIntegrity();
+        const allValues = this.getAllFontValues();
+        const deduped = this.normalizeFontOrder(order, allValues);
+        const dedupedSet = new Set(deduped);
+        allValues.forEach(value => {
+            if (!dedupedSet.has(value)) {
+                dedupedSet.add(value);
+                deduped.push(value);
+            }
+        });
+        this.fontPreferences.order = deduped;
+        this.saveFontPreferences();
+        this.populateGlobalFontSelect();
     }
     
     loadPatternPreferences() {
@@ -71,27 +368,83 @@ class SettingsManager {
     updateToolbarSize() {
         const toolbar = document.getElementById('toolbar');
         const buttons = toolbar.querySelectorAll('.tool-btn');
+        const TOUCH_SMALL_SCREEN_THRESHOLD = 900;
+        const PORTRAIT_TOUCH_MAX_BUTTON_SIZE = 46;
+        const LANDSCAPE_TOUCH_MAX_BUTTON_SIZE = 52;
+        const TOUCH_TOOLBAR_SAFE_MARGIN = 12;
         
-        // Size ratios for responsive toolbar scaling
-        const PADDING_VERTICAL_RATIO = 5;    // Vertical padding = toolbarSize / 5
-        const PADDING_HORIZONTAL_RATIO = 3;  // Horizontal padding = toolbarSize / 3
-        const SVG_SIZE_RATIO = 2;            // Icon size = toolbarSize / 2
-        const FONT_SIZE_RATIO = 4.5;         // Font size = toolbarSize / 4.5
+        // Square buttons with dynamic sizing based on toolbarSize
+        // All proportions scale with buttonSize for consistent appearance
+        const BUTTON_PADDING_RATIO = 0.10;   // Button padding = 10% of button size
+        const ICON_SIZE_RATIO = 0.5225;      // Icon = 52.25% of button size (base 55% reduced by 5%)
+        const FONT_SIZE_RATIO = 0.1751;      // Font = 17.51% of button size (base 17% increased by 3%)
+        const BUTTON_GAP_RATIO = 0.08;       // Button internal gap = 8% of button size (more spacing)
+        
+        // Toolbar container padding and gap also scale with button size
+        const TOOLBAR_PADDING_RATIO = 0.25;  // Toolbar padding = 25% of button size
+        const TOOLBAR_GAP_RATIO = 0.25;      // Toolbar gap = 25% of button size (increased from 20%)
+        // Secondary axis uses smaller padding to keep toolbar compact
+        const TOOLBAR_PADDING_SECONDARY_RATIO = 0.6; // Secondary padding = 60% of primary
+        
+        const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+        const shortestSide = Math.min(window.innerWidth, window.innerHeight);
+        const touchMaxButtonSize = shortestSide <= TOUCH_SMALL_SCREEN_THRESHOLD
+            ? (window.innerHeight > window.innerWidth ? PORTRAIT_TOUCH_MAX_BUTTON_SIZE : LANDSCAPE_TOUCH_MAX_BUTTON_SIZE)
+            : this.toolbarSize;
+        const buttonSize = isTouchDevice
+            ? Math.min(this.toolbarSize, touchMaxButtonSize)
+            : this.toolbarSize;
+        const buttonPadding = Math.max(2, buttonSize * BUTTON_PADDING_RATIO);
+        const iconSize = buttonSize * ICON_SIZE_RATIO;
+        const fontSize = Math.max(6, buttonSize * FONT_SIZE_RATIO);
+        const buttonGap = Math.max(1, buttonSize * BUTTON_GAP_RATIO);
+        
+        // Scale toolbar container padding and gap
+        const toolbarPadding = Math.max(4, buttonSize * TOOLBAR_PADDING_RATIO);
+        const toolbarPaddingSecondary = toolbarPadding * TOOLBAR_PADDING_SECONDARY_RATIO;
+        const toolbarGap = Math.max(2, buttonSize * TOOLBAR_GAP_RATIO);
+        const isVertical = toolbar.classList.contains('vertical');
+        
+        document.documentElement.style.setProperty('--toolbar-button-size', `${buttonSize}px`);
+
+        // Apply toolbar container styles (vertical: more padding on Y axis, horizontal: more on X axis)
+        toolbar.style.padding = isVertical 
+            ? `${toolbarPadding}px ${toolbarPaddingSecondary}px` 
+            : `${toolbarPaddingSecondary}px ${toolbarPadding}px`;
+        toolbar.style.gap = `${toolbarGap}px`;
+        if (isTouchDevice) {
+            toolbar.style.maxWidth = `calc(100vw - ${TOUCH_TOOLBAR_SAFE_MARGIN}px)`;
+            toolbar.style.overflowX = isVertical ? 'hidden' : 'auto';
+            toolbar.style.overflowY = isVertical ? 'auto' : 'hidden';
+        } else {
+            toolbar.style.maxWidth = '';
+            toolbar.style.overflowX = '';
+            toolbar.style.overflowY = '';
+        }
         
         buttons.forEach(btn => {
-            btn.style.padding = `${this.toolbarSize / PADDING_VERTICAL_RATIO}px ${this.toolbarSize / PADDING_HORIZONTAL_RATIO}px`;
-            btn.style.minWidth = `${this.toolbarSize}px`;
+            // Square button with fixed size - set all dimensions to ensure truly square
+            btn.style.width = `${buttonSize}px`;
+            btn.style.height = `${buttonSize}px`;
+            btn.style.minWidth = `${buttonSize}px`;
+            btn.style.minHeight = `${buttonSize}px`;
+            btn.style.maxWidth = `${buttonSize}px`;
+            btn.style.maxHeight = `${buttonSize}px`;
+            btn.style.padding = `${buttonPadding}px`;
+            btn.style.gap = `${buttonGap}px`;
+            btn.style.boxSizing = 'border-box';
             
             const svg = btn.querySelector('svg');
             if (svg) {
-                const svgSize = this.toolbarSize / SVG_SIZE_RATIO;
-                svg.style.width = `${svgSize}px`;
-                svg.style.height = `${svgSize}px`;
+                svg.style.width = `${iconSize}px`;
+                svg.style.height = `${iconSize}px`;
+                svg.style.flexShrink = '0';
             }
             
             const span = btn.querySelector('span');
             if (span) {
-                span.style.fontSize = `${this.toolbarSize / FONT_SIZE_RATIO}px`;
+                span.style.fontSize = `${fontSize}px`;
+                span.style.lineHeight = '1';
             }
         });
         
@@ -105,9 +458,31 @@ class SettingsManager {
         const toolbar = document.getElementById('toolbar');
         const buttons = toolbar.querySelectorAll('.tool-btn');
         const windowWidth = window.innerWidth;
+        const isVertical = toolbar.classList.contains('vertical');
+        
+        // Don't clear sizing styles - only manage text visibility via CSS classes
+        // The updateToolbarSize() function handles all sizing
+        buttons.forEach(btn => {
+            const span = btn.querySelector('span');
+            if (span) {
+                span.style.display = '';
+            }
+        });
+        
+        // If user has disabled toolbar text, add class and return (CSS handles hiding)
+        if (!this.showToolbarText) {
+            toolbar.classList.add('hide-text');
+            return;
+        } else {
+            toolbar.classList.remove('hide-text');
+        }
+        
+        // If toolbar is vertical (docked to side), text is hidden via CSS
+        if (isVertical) {
+            return;
+        }
         
         // Constants for responsive sizing
-        const ICON_ONLY_SIZE_RATIO = 0.8; // Size multiplier when text is hidden
         const SCREEN_MARGIN = 40; // Margin from screen edge
         const DEFAULT_GAP = 12; // Default gap between buttons if not specified in CSS
         
@@ -116,19 +491,6 @@ class SettingsManager {
         const toolbarStyle = window.getComputedStyle(toolbar);
         const toolbarPadding = parseFloat(toolbarStyle.paddingLeft) + parseFloat(toolbarStyle.paddingRight);
         const gap = parseFloat(toolbarStyle.gap) || DEFAULT_GAP;
-        
-        // Store original display values before measuring
-        const originalDisplayValues = new Map();
-        buttons.forEach(btn => {
-            const span = btn.querySelector('span');
-            if (span) {
-                originalDisplayValues.set(span, window.getComputedStyle(span).display);
-                // Temporarily show to measure
-                if (originalDisplayValues.get(span) === 'none') {
-                    span.style.display = 'inline';
-                }
-            }
-        });
         
         buttons.forEach((btn, index) => {
             const btnWidth = btn.offsetWidth;
@@ -143,26 +505,37 @@ class SettingsManager {
         const fitsWithText = totalWidthWithText + SCREEN_MARGIN * 2 <= windowWidth;
         
         // Show or hide text based on available space
-        buttons.forEach(btn => {
-            const span = btn.querySelector('span');
-            if (span) {
-                if (fitsWithText) {
-                    // Restore original display or use default
-                    const originalDisplay = originalDisplayValues.get(span);
-                    span.style.display = (originalDisplay !== 'none') ? originalDisplay : 'inline';
-                    btn.style.minWidth = `${this.toolbarSize}px`;
-                } else {
+        if (!fitsWithText) {
+            buttons.forEach(btn => {
+                const span = btn.querySelector('span');
+                if (span) {
                     span.style.display = 'none';
-                    // When text is hidden, reduce min-width to icon-only size
-                    btn.style.minWidth = `${this.toolbarSize * ICON_ONLY_SIZE_RATIO}px`;
                 }
-            }
-        });
+                // Let button size naturally follow content - no fixed minWidth
+            });
+        }
+    }
+    
+    setShowToolbarText(show) {
+        this.showToolbarText = show;
+        localStorage.setItem('showToolbarText', show);
+        this.updateToolbarTextVisibility();
     }
     
     updateConfigScale() {
         const configArea = document.getElementById('config-area');
-        configArea.style.transform = `translateX(-50%) scale(${this.configScale})`;
+        // Check if the config area has been manually dragged (tracked via data attribute)
+        const hasBeenDragged = configArea.dataset.userDragged === 'true';
+        
+        if (hasBeenDragged) {
+            // Config area has been dragged - only apply scale with top-left origin to prevent jump
+            configArea.style.transformOrigin = 'top left';
+            configArea.style.transform = `scale(${this.configScale})`;
+        } else {
+            // Config area is in default center position - use translateX to center
+            configArea.style.transformOrigin = 'center bottom';
+            configArea.style.transform = `translateX(-50%) scale(${this.configScale})`;
+        }
         localStorage.setItem('configScale', this.configScale);
     }
     
@@ -217,6 +590,17 @@ class SettingsManager {
             showImportExportBtnCheckbox.checked = this.showImportExportBtn;
         }
         
+        // Load toolbar text visibility setting
+        const showToolbarTextCheckbox = document.getElementById('show-toolbar-text-checkbox');
+        if (showToolbarTextCheckbox) {
+            showToolbarTextCheckbox.checked = this.showToolbarText;
+        }
+        const keepMorePanelOpenCheckbox = document.getElementById('keep-more-panel-open-checkbox');
+        if (keepMorePanelOpenCheckbox) {
+            keepMorePanelOpenCheckbox.checked = this.keepMorePanelOpen;
+        }
+        this.updateToolbarTextVisibility();
+        
         // Canvas is always in pagination mode now
         
         // Load canvas size settings
@@ -240,7 +624,11 @@ class SettingsManager {
         
         // Load global font
         this.applyGlobalFont();
-        document.getElementById('global-font-select').value = this.globalFont;
+        this.populateGlobalFontSelect();
+        const globalFontSelect = document.getElementById('global-font-select');
+        if (globalFontSelect && [...globalFontSelect.options].some(option => option.value === this.globalFont)) {
+            globalFontSelect.value = this.globalFont;
+        }
         
         // Initialize language selector
         this.initLanguageSelector();
@@ -313,25 +701,58 @@ class SettingsManager {
                 fontFamily = '"Courier New", Courier, "Consolas", monospace';
                 break;
             case 'cursive':
-                fontFamily = '"Comic Sans MS", "Apple Chancery", cursive';
+                fontFamily = '"KaiTi", "STKaiti", "DFKai-SB", cursive';
                 break;
+            case 'Noto Sans SC':
             case 'Microsoft YaHei':
-                fontFamily = '"Microsoft YaHei", "微软雅黑", Arial, sans-serif';
-                break;
-            case 'SimSun':
-                fontFamily = 'SimSun, "宋体", Georgia, serif';
-                break;
             case 'SimHei':
-                fontFamily = 'SimHei, "黑体", Arial, sans-serif';
+                fontFamily = '"Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif';
+                break;
+            case 'Noto Serif SC':
+            case 'SimSun':
+            case 'FangSong':
+                fontFamily = '"Noto Serif SC", "Songti SC", "STSong", "SimSun", serif';
+                break;
+            case 'LXGW WenKai':
+                fontFamily = '"LXGW WenKai", "Kaiti SC", "KaiTi", "STKaiti", cursive';
                 break;
             case 'KaiTi':
-                fontFamily = 'KaiTi, "楷体", Georgia, serif';
+                fontFamily = '"KaiTi", "Kaiti SC", "STKaiti", "DFKai-SB", cursive';
                 break;
-            case 'FangSong':
-                fontFamily = 'FangSong, "仿宋", Georgia, serif';
+            case 'STXingkai':
+            case 'Ma Shan Zheng':
+            case 'Zhi Mang Xing':
+                fontFamily = '"STXingkai", "KaiTi", "STKaiti", "DFKai-SB", cursive';
+                break;
+            case 'Inter':
+                fontFamily = '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+                break;
+            case 'Roboto':
+                fontFamily = '"Roboto", "Helvetica Neue", Arial, sans-serif';
+                break;
+            case 'Open Sans':
+                fontFamily = '"Open Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
+                break;
+            case 'Lora':
+                fontFamily = '"Lora", "Noto Serif SC", "Songti SC", serif';
+                break;
+            case 'JetBrains Mono':
+                fontFamily = '"JetBrains Mono", "Consolas", "Courier New", monospace';
+                break;
+            case 'Source Han Sans SC':
+                fontFamily = '"Source Han Sans SC", "Noto Sans SC", "Microsoft YaHei", sans-serif';
+                break;
+            case 'Source Han Serif SC':
+                fontFamily = '"Source Han Serif SC", "Noto Serif SC", "Songti SC", serif';
                 break;
             default:
-                fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+                // Check if it's a custom font
+                const customFont = this.customFonts.find(f => f.name === this.globalFont);
+                if (customFont) {
+                    fontFamily = `"${this.globalFont}", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+                } else {
+                    fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+                }
         }
         document.body.style.fontFamily = fontFamily;
     }
@@ -362,6 +783,7 @@ class SettingsManager {
             showZoomControls: this.showZoomControls,
             showImportExportBtn: this.showImportExportBtn,
             showFullscreenBtn: this.showFullscreenBtn,
+            keepMorePanelOpen: this.keepMorePanelOpen,
             patternPreferences: this.patternPreferences,
             canvasWidth: this.canvasWidth,
             canvasHeight: this.canvasHeight,
@@ -377,7 +799,8 @@ class SettingsManager {
                 pagination: localStorage.getItem('controlShowPagination') !== 'false',
                 time: localStorage.getItem('controlShowTime') !== 'false',
                 fullscreen: localStorage.getItem('controlShowFullscreen') !== 'false',
-                download: localStorage.getItem('controlShowDownload') !== 'false'
+                import: localStorage.getItem('controlShowImport') !== 'false',
+                export: localStorage.getItem('controlShowExport') !== 'false'
             }
         };
     }
@@ -398,7 +821,7 @@ class SettingsManager {
         URL.revokeObjectURL(url);
 
         // Use custom Toast instead of alert
-        const successMsg = window.i18n ? window.i18n.t('settings.exportSuccess') : '配置已成功导出！';
+        const successMsg = window.i18n ? window.i18n.t('settings.exportSuccess') : 'Configuration exported successfully';
         this.toastManager.show(successMsg, 'success');
     }
 
@@ -507,6 +930,7 @@ class SettingsManager {
             'showZoomControls': 'settings.display.showZoomControls',
             'showImportExportBtn': 'settings.display.showImportExportBtn',
             'showFullscreenBtn': 'settings.display.showFullscreenBtn',
+            'keepMorePanelOpen': 'settings.general.morePanelBehaviorLabel',
             'canvasWidth': 'settings.canvas.customSize.width',
             'canvasHeight': 'settings.canvas.customSize.height',
             'canvasPreset': 'settings.canvas.size',
@@ -528,7 +952,7 @@ class SettingsManager {
     applySettings(newSettings) {
         const keys = [
             'toolbarSize', 'configScale', 'controlPosition', 'edgeSnapEnabled',
-            'touchZoomEnabled', 'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn',
+            'touchZoomEnabled', 'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn', 'keepMorePanelOpen',
             'canvasWidth', 'canvasHeight', 'canvasPreset', 'themeColor', 'globalFont',
             'patternPreferences'
         ];
@@ -555,7 +979,8 @@ class SettingsManager {
             localStorage.setItem('controlShowPagination', newSettings.controlSettings.pagination);
             localStorage.setItem('controlShowTime', newSettings.controlSettings.time);
             localStorage.setItem('controlShowFullscreen', newSettings.controlSettings.fullscreen);
-            localStorage.setItem('controlShowDownload', newSettings.controlSettings.download);
+            localStorage.setItem('controlShowImport', newSettings.controlSettings.import);
+            localStorage.setItem('controlShowExport', newSettings.controlSettings.export);
         }
 
         // Apply changes visually

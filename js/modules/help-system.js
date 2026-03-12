@@ -9,18 +9,21 @@ class HelpSystem {
             'shape-config': 'help.tools.shape',
             'eraser-config': 'help.tools.eraser',
             'background-config': 'help.background',
+            'time-display-area': 'help.features.timeDisplay',
             'timer-settings-modal': 'help.features.timer',
             'random-picker-settings-modal': 'help.features.randomPicker',
-            'scoreboard-feature-btn': 'help.features.scoreboard',
             'teaching-tools-modal': 'help.features.teachingTools',
+            // time-display-area help is injected into panel title by HelpSystem.
             'time-display-settings-modal': 'help.features.timeDisplay',
-            'time-display-area': 'help.features.timeDisplay'
+            'insert-text-modal': 'help.features.insertText'
         };
     }
 
     init() {
         // Inject help buttons into config panels
         this.injectHelpButtons();
+        this.injectIntoSpecialPanels();
+        this.bindDataHelpButtons();
 
         // Listen for dynamic modals
         this.observeModals();
@@ -52,13 +55,35 @@ class HelpSystem {
         });
     }
 
+    injectIntoSpecialPanels() {
+        const timeDisplayArea = document.getElementById('time-display-area');
+        if (timeDisplayArea) {
+            this.injectIntoPanel(timeDisplayArea);
+        }
+    }
+
+    bindDataHelpButtons() {
+        document.querySelectorAll('[data-help-key]').forEach((btn) => {
+            if (btn.dataset.helpBound === 'true') return;
+            btn.dataset.helpBound = 'true';
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const helpKey = btn.dataset.helpKey;
+                if (helpKey) {
+                    this.showHelp(helpKey);
+                }
+            });
+        });
+    }
+
     observeModals() {
         // List of modal IDs that should have help buttons
         const helpModalIds = [
             'random-picker-settings-modal',
             'timer-settings-modal',
             'teaching-tools-modal',
-            'time-display-settings-modal'
+            'time-display-settings-modal',
+            'insert-text-modal'
         ];
         
         // MutationObserver to detect when settings modals are created/shown
@@ -90,15 +115,12 @@ class HelpSystem {
     }
     
     checkExistingModals() {
-        const modalIds = ['random-picker-settings-modal', 'timer-settings-modal', 'teaching-tools-modal', 'time-display-settings-modal'];
+        const modalIds = ['random-picker-settings-modal', 'timer-settings-modal', 'teaching-tools-modal', 'time-display-settings-modal', 'insert-text-modal'];
         modalIds.forEach(id => {
             const modal = document.getElementById(id);
             if (modal) this.injectIntoModal(modal);
         });
         
-        // Also inject into the time display area (not a modal but a panel)
-        const timeDisplayArea = document.getElementById('time-display-area');
-        if (timeDisplayArea) this.injectIntoPanel(timeDisplayArea);
     }
     
     checkAndInjectModal(modalId) {
@@ -165,19 +187,16 @@ class HelpSystem {
 
     createHelpButton(helpKey) {
         const btn = document.createElement('button');
-        btn.className = 'help-btn';
-        btn.innerHTML = '?';
-        btn.style.cssText = 'width:24px;height:24px;border-radius:50%;border:1px solid #ddd;background:#f5f5f5;color:#666;font-size:14px;cursor:pointer;margin-left:8px;display:inline-flex;align-items:center;justify-content:center;transition:all 0.2s;';
+        btn.className = 'help-btn color-picker-icon-btn';
+        btn.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
+                <line x1="12" y1="17" x2="12" y2="17"></line>
+            </svg>
+        `;
+        btn.style.cssText = 'width:28px;height:28px;margin-left:8px;flex-shrink:0;';
         btn.title = window.i18n.t('common.help') || 'Help';
-
-        btn.onmouseover = () => {
-            btn.style.background = '#e0e0e0';
-            btn.style.borderColor = '#ccc';
-        };
-        btn.onmouseout = () => {
-            btn.style.background = '#f5f5f5';
-            btn.style.borderColor = '#ddd';
-        };
 
         btn.addEventListener('click', (e) => {
             e.stopPropagation();

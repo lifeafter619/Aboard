@@ -139,14 +139,27 @@ graph LR
 Visit our [GitHub Pages](https://lifeafter619.github.io/Aboard/) to try it immediately!
 
 ### Local Deployment
+
+> ⚠️ **Note**: Opening `index.html` directly will not work due to browser security restrictions. Please use a local HTTP server.
+
 1. Clone the repository:
 ```bash
 git clone https://github.com/lifeafter619/Aboard.git
+cd Aboard
 ```
 
-2. Open `index.html` in your browser
+2. Start a local server:
+```bash
+# Using npm (requires Node.js)
+npm start
 
-That's it! No build process or dependencies required.
+# Or using Python
+python3 -m http.server 8080
+```
+
+3. Visit `http://localhost:8080` in your browser
+
+> `npm start` runs the built-in Node server and exposes `/api/version` (backed by `version.txt`).
 
 ## 💡 Usage Tips
 
@@ -176,31 +189,41 @@ That's it! No build process or dependencies required.
 
 ```
 Aboard/
+├── server.js               # Local dev server (includes /api/version)
 ├── index.html              # Main HTML file
 ├── LICENSE                 # MIT License file
+├── package.json            # Project configuration
 ├── announcements.json      # Announcement configuration
 ├── css/
 │   ├── style.css          # Main stylesheet
 │   └── modules/           # Modular styles
-│       ├── timer.css      # Timer styles
-│       ├── time-display.css # Time display styles
+│       ├── diff.css       # Settings comparison styles
 │       ├── export.css     # Export function styles
-│       └── feature-area.css # Feature area styles
+│       ├── feature-area.css # Feature area styles
+│       ├── insert-image.css # Insert image styles
+│       ├── insert-text.css # Text insertion styles
+│       ├── line-style-modal.css # Line style modal styles
+│       ├── project.css    # Project management styles
+│       ├── random-picker.css # Random picker styles
+│       ├── scoreboard.css # Scoreboard styles
+│       ├── shape.css      # Shape tool styles
+│       ├── teaching-tools.css # Teaching tools styles
+│       ├── time-display.css # Time display styles
+│       ├── timer.css      # Timer styles
+│       └── toast.css      # Toast notification styles
 ├── js/
+│   ├── main.js            # Main application entry point
 │   ├── drawing.js         # Drawing engine module
 │   ├── history.js         # History management module
 │   ├── background.js      # Background management module
 │   ├── image-controls.js  # Image control module
-│   ├── stroke-controls.js # Stroke control module
 │   ├── selection.js       # Selection tool module
-│   ├── settings.js        # Settings management module
-│   ├── announcement.js    # Announcement management module
+│   ├── stroke-controls.js # Stroke control module
+│   ├── announcement.js    # Announcement module
 │   ├── export.js          # Export function module
 │   ├── time-display.js    # Time display module
 │   ├── collapsible.js     # Collapsible panel module
-│   ├── shape-insertion.js # Shape insertion module
-│   ├── text-insertion.js  # Text insertion module
-│   ├── locales/           # Internationalization language files
+│   ├── locales/           # i18n locale files
 │   │   ├── zh-CN.js       # Simplified Chinese
 │   │   ├── zh-TW.js       # Traditional Chinese
 │   │   ├── en-US.js       # English
@@ -208,22 +231,27 @@ Aboard/
 │   │   ├── ko-KR.js       # Korean
 │   │   ├── fr-FR.js       # French
 │   │   ├── de-DE.js       # German
-│   │   └── es-ES.js       # Spanish
-│   ├── modules/
-│   │   ├── timer.js       # Timer module
-│   │   ├── time-display-controls.js # Time display controls
-│   │   ├── time-display-settings.js # Time display settings
-│   │   └── i18n.js        # Internationalization core module
-│   └── main.js            # Main application entry point
-├── public/                 # Public documentation directory
+│   │   ├── es-ES.js       # Spanish
+│   │   └── help/          # Help content translations
+│   └── modules/           # Feature modules
+│       ├── i18n.js        # Internationalization core
+│       ├── insert-text-manager.js # Text insertion manager
+│       ├── settings-manager.js # Settings manager
+│       ├── shape-drawing.js # Shape drawing module
+│       ├── teaching-tools.js # Teaching tools module
+│       ├── timer.js       # Timer module
+│       ├── time-display-controls.js # Time display controls
+│       ├── time-display-settings.js # Time display settings
+│       ├── random-picker.js # Random picker module
+│       ├── scoreboard.js  # Scoreboard module
+│       ├── storage-manager.js # Storage manager (IndexedDB)
+│       ├── project-manager.js # Project manager
+│       └── toast-manager.js # Toast notification module
+├── img/                    # Image assets
+├── public/                 # Public documentation
 │   ├── README.en.md       # English README
 │   └── README.zh-TW.md    # Traditional Chinese README
-├── sounds/                 # Sound files directory
-│   ├── class-bell.MP3     # Class bell sound
-│   ├── exam-end.MP3       # Exam end sound
-│   ├── gentle-alarm.MP3   # Gentle alarm sound
-│   ├── digital-beep.MP3   # Digital beep sound
-│   └── README.md          # Sound files description
+├── sounds/                 # Sound files
 └── README.md              # Project documentation (Simplified Chinese)
 ```
 

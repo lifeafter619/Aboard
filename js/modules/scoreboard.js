@@ -82,6 +82,13 @@ class ScoreboardInstance {
                             <path d="M3 21v-5h5"></path>
                         </svg>
                     </button>
+                    <button class="scoreboard-icon-btn scoreboard-help-btn" title="${window.i18n.t('common.help')}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
+                            <line x1="12" y1="17" x2="12" y2="17"></line>
+                        </svg>
+                    </button>
                     <button class="scoreboard-icon-btn scoreboard-close-btn" title="${window.i18n.t('common.close')}">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -329,7 +336,7 @@ class ScoreboardInstance {
         };
 
         header.addEventListener('mousedown', startDrag);
-        header.addEventListener('touchstart', startDrag);
+        header.addEventListener('touchstart', startDrag, { passive: false });
 
         document.addEventListener('mousemove', doDrag);
         document.addEventListener('touchmove', doDrag, { passive: false });
@@ -341,7 +348,8 @@ class ScoreboardInstance {
         const btns = [
             this.element.querySelector('.scoreboard-close-btn'),
             this.element.querySelector('.scoreboard-add-team-btn'),
-            this.element.querySelector('.scoreboard-reset-btn')
+            this.element.querySelector('.scoreboard-reset-btn'),
+            this.element.querySelector('.scoreboard-help-btn')
         ];
 
         btns.forEach(btn => {
@@ -361,6 +369,10 @@ class ScoreboardInstance {
 
         this.element.querySelector('.scoreboard-reset-btn').addEventListener('click', () => {
             this.showResetConfirmation();
+        });
+
+        this.element.querySelector('.scoreboard-help-btn').addEventListener('click', () => {
+            window.drawingBoard?.helpSystem?.showHelp('help.features.scoreboard');
         });
     }
 

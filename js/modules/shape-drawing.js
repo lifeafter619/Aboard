@@ -294,6 +294,11 @@ class ShapeDrawingManager {
                 ctx.globalAlpha = 0.85;
                 lineWidth = this.drawingEngine.penSize * 1.5;
                 break;
+            case 'marker':
+                ctx.globalAlpha = 0.45;
+                lineWidth = this.drawingEngine.penSize * 2.2;
+                ctx.lineCap = 'square';
+                break;
             case 'normal':
             default:
                 ctx.globalAlpha = 1.0;

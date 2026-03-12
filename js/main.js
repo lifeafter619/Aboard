@@ -1,5 +1,22 @@
 // Main Application Class
 // Integrates all modules and handles user interactions
+const DEFAULT_MIN_FIT_SCALE = 0.1;
+const DEFAULT_TARGET_COVERAGE = 0.7;
+const DEFAULT_MIN_DEFAULT_SCALE = 0.9;
+const TOOL_CONFIG_PANEL_GAP = 8;
+const EDGE_SNAP_DISTANCE = 30;
+const PANEL_EDGE_MARGIN = 10;
+const MIN_EDGE_UNSNAP_DISTANCE = 90;
+const EDGE_UNSNAP_BUFFER = 20;
+// Keep floating feature panels below modal layer (modal starts at 2000 in CSS).
+const MAX_FEATURE_WIDGET_ZINDEX = 1900;
+const QUALITY_UPDATE_DEBOUNCE_MS = 120;
+const MIN_DYNAMIC_RENDER_SCALE = 1;
+const MAX_DYNAMIC_RENDER_SCALE = 4;
+const RENDER_SCALE_SCHEDULE_THRESHOLD = 0.15;
+const RENDER_SCALE_APPLY_THRESHOLD = 0.05;
+const MAX_DYNAMIC_BACKING_DIMENSION = 8192;
+const MAX_DYNAMIC_BACKING_PIXELS = 64 * 1024 * 1024;
 
 class DrawingBoard {
     constructor() {
@@ -22,6 +39,8 @@ class DrawingBoard {
         this.backgroundManager = new BackgroundManager(this.bgCanvas, this.bgCtx);
         this.imageControls = new ImageControls(this.backgroundManager);
         this.strokeControls = new StrokeControls(this.drawingEngine, this.canvas, this.ctx, this.historyManager);
+        this.selectionManager = new SelectionManager(this.canvas, this.ctx, this.drawingEngine, this.strokeControls);
+        this.selectionManager.setHistoryManager(this.historyManager);
         this.timeDisplayManager = new TimeDisplayManager(this.settingsManager);
         this.timeDisplayControls = new TimeDisplayControls(this.timeDisplayManager);
         this.timeDisplaySettingsModal = new TimeDisplaySettingsModal(this.timeDisplayManager);
@@ -30,12 +49,21 @@ class DrawingBoard {
         this.randomPickerManager = null;
         this.scoreboardManager = null;
         this.insertImageManager = null;
+        this.insertTextManager = null;
         this.projectManager = null;
         this.exportManager = null;
 
         this.collapsibleManager = new CollapsibleManager();
         this.announcementManager = new AnnouncementManager();
         this.teachingToolsManager = new TeachingToolsManager(this.canvas, this.ctx, this.historyManager);
+        this.toolButtonIds = {
+            pen: 'pen-btn',
+            eraser: 'eraser-btn',
+            background: 'background-btn',
+            select: 'select-btn',
+            // Shape tool is launched from the More menu button.
+            shape: 'more-shape-btn'
+        };
         
         // Set callback for teaching tools insertion to auto-switch to pen
         this.teachingToolsManager.onToolsInserted = () => {
@@ -56,6 +84,11 @@ class DrawingBoard {
         if (window.HelpSystem) {
             this.helpSystem = new HelpSystem();
             this.helpSystem.init();
+        }
+        
+        // Re-apply i18n translations for dynamically created elements (like selection controls)
+        if (window.i18n && window.i18n.applyTranslations) {
+            window.i18n.applyTranslations();
         }
         
         // Canvas fit scale - calculated once on init and window resize
@@ -95,6 +128,8 @@ class DrawingBoard {
         this.NORMAL_MAX_SCALE = 5.0;
         this.UNLIMITED_MAX_SCALE = 500.0;
         this.MAX_CANVAS_SCALE = this.settingsManager.unlimitedZoom ? this.UNLIMITED_MAX_SCALE : this.NORMAL_MAX_SCALE;
+        this.dynamicRenderScale = 1;
+        this.qualityUpdateTimer = null;
         
         // Touch gesture state
         this.lastTapTime = 0;
@@ -108,6 +143,8 @@ class DrawingBoard {
         this.dragOffset = { x: 0, y: 0 };
         this.draggedElementWidth = 0;
         this.draggedElementHeight = 0;
+        this.dragSnapSide = null;
+        this.featureWidgetZIndex = 1200;
         
         // Coordinate origin dragging state
         this.isDraggingCoordinateOrigin = false;
@@ -131,13 +168,20 @@ class DrawingBoard {
                 this.saveSession();
             }, 1000); // 1 second delay
         };
+        // Persist a fresh recovery snapshot whenever history commits change
+        // so refresh-restore covers all tools that write through HistoryManager.
+        this.historyManager.onStateChanged = () => {
+            this.saveSessionDebounced();
+        };
 
         // Initialize
         this.resizeCanvas();
         this.setupEventListeners();
+        this.setupModalInteractionLock();
         this.settingsManager.loadSettings();
         this.backgroundManager.drawBackground();
         this.updateUI();
+        this.revealToolbar();
         this.historyManager.saveState();
         
         // Initialize pages array for pagination mode (always on)
@@ -175,16 +219,21 @@ class DrawingBoard {
     
     
     initializeCanvasView() {
-        // On startup or refresh, set canvas to 80% of browser window size and center it
+        // On startup or refresh, set canvas to a larger default scale and center it
         // Only apply if no saved scale exists
         const savedScale = localStorage.getItem('canvasScale');
-        if (!savedScale) {
-            this.drawingEngine.canvasScale = 0.80;
-            localStorage.setItem('canvasScale', 0.80);
-        }
-        
-        // Calculate initial fit scale
+        // Always calculate fit scale for applyZoom and default coverage logic.
         this.canvasFitScale = this.calculateCanvasFitScale();
+        if (!savedScale) {
+            const safeFitScale = Math.max(DEFAULT_MIN_FIT_SCALE, this.canvasFitScale);
+            // Compute canvasScale so fitScale * canvasScale meets desired coverage.
+            const scaleForCoverage = DEFAULT_TARGET_COVERAGE / safeFitScale;
+            // Keep a higher default scale so the canvas starts larger than the minimum target.
+            const boundedScale = Math.max(DEFAULT_MIN_DEFAULT_SCALE, scaleForCoverage);
+            const initialScale = Math.min(this.MAX_CANVAS_SCALE, boundedScale);
+            this.drawingEngine.canvasScale = initialScale;
+            localStorage.setItem('canvasScale', initialScale);
+        }
         
         // Always center the canvas on startup/refresh
         // Note: This ensures the canvas is properly centered after each page load,
@@ -218,7 +267,7 @@ class DrawingBoard {
         // Get window dimensions for canvas sizing
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = this.getRenderPixelRatio();
         
         const oldWidth = this.canvas.width;
         const oldHeight = this.canvas.height;
@@ -301,7 +350,15 @@ class DrawingBoard {
                     e.target.closest('.timer-fullscreen-modal') ||
                     e.target.closest('#time-display-settings-modal') ||
                     e.target.closest('#timer-settings-modal') ||
+                    e.target.closest('#selection-controls-overlay') ||
                     e.target.closest('input[type="range"]')) {
+                    return;
+                }
+            }
+            
+            // 如果正在使用选择工具并且点击在选择控件内，不要触发新的选择
+            if (this.selectionManager && this.selectionManager.hasSelection()) {
+                if (e.target.closest('#selection-controls-overlay')) {
                     return;
                 }
             }
@@ -357,9 +414,19 @@ class DrawingBoard {
             if (this.drawingEngine.currentTool === 'background' && !this.imageControls.isActive) {
                 this.setTool('pen', false); // Don't show config panel
             }
+
+            if (this.drawingEngine.currentTool === 'more') {
+                const hasActiveMoreFeature = !!document.querySelector('#feature-area .feature-btn.active');
+                if (!hasActiveMoreFeature) {
+                    this.setTool('pan', false);
+                }
+            }
             
             if (e.button === 1 || (e.button === 0 && e.shiftKey) || this.drawingEngine.currentTool === 'pan') {
                 this.drawingEngine.startPanning(e);
+            } else if (this.drawingEngine.currentTool === 'select') {
+                // Handle selection tool
+                this.selectionManager.startSelection(e);
             } else if (this.drawingEngine.currentTool === 'shape') {
                 // Handle shape drawing
                 if (this.teachingToolsManager && this.teachingToolsManager.isInteracting) {
@@ -372,6 +439,10 @@ class DrawingBoard {
                     return;
                 }
                 this.drawingEngine.startDrawing(e);
+                // Show eraser cursor only when actually erasing on canvas
+                if (this.drawingEngine.currentTool === 'eraser') {
+                    this.showEraserCursor();
+                }
             }
         });
         
@@ -409,6 +480,10 @@ class DrawingBoard {
             
             if (this.isDraggingCoordinateOrigin) {
                 this.dragCoordinateOrigin(e);
+            } else if (this.drawingEngine.currentTool === 'select' && this.selectionManager.isBoxSelecting) {
+                this.selectionManager.continueBoxSelection(e);
+            } else if (this.drawingEngine.currentTool === 'select' && this.selectionManager.isLassoSelecting) {
+                this.selectionManager.continueLassoSelection(e);
             } else if (this.drawingEngine.isPanning) {
                 this.drawingEngine.pan(e);
                 this.applyPanTransform();
@@ -443,8 +518,18 @@ class DrawingBoard {
             
             if (!e.isPrimary) return;
             this.stopDraggingCoordinateOrigin();
+            if (this.drawingEngine.currentTool === 'select' && this.selectionManager.isBoxSelecting) {
+                this.selectionManager.endBoxSelection(e);
+            }
+            if (this.drawingEngine.currentTool === 'select' && this.selectionManager.isLassoSelecting) {
+                this.selectionManager.endLassoSelection(e);
+            }
             this.handleDrawingComplete();
             this.drawingEngine.stopPanning();
+            // Hide eraser cursor when erasing stops
+            if (this.drawingEngine.currentTool === 'eraser') {
+                this.hideEraserCursor();
+            }
         });
         
         document.addEventListener('pointercancel', (e) => {
@@ -456,6 +541,10 @@ class DrawingBoard {
                 if (this.isPinching && this.activePointers.size < 2) {
                     this.handlePointerPinchEnd();
                 }
+            }
+            // Hide eraser cursor when pointer is cancelled
+            if (this.drawingEngine.currentTool === 'eraser') {
+                this.hideEraserCursor();
             }
         });
         
@@ -478,16 +567,15 @@ class DrawingBoard {
         });
         
         this.canvas.addEventListener('mouseenter', (e) => {
-            if (this.drawingEngine.currentTool === 'eraser') {
+            // Only show eraser cursor when actively erasing (mouse button down)
+            if (this.drawingEngine.currentTool === 'eraser' && this.drawingEngine.isDrawing) {
                 this.showEraserCursor();
             }
         });
         
         this.canvas.addEventListener('mouseleave', () => {
-            // Don't hide eraser cursor if we're still drawing
-            if (!this.drawingEngine.isDrawing) {
-                this.hideEraserCursor();
-            }
+            // Hide eraser cursor when leaving canvas
+            this.hideEraserCursor();
         });
         
         // Touch events - Only for gestures (Pinch Zoom)
@@ -630,6 +718,7 @@ class DrawingBoard {
         // Toolbar buttons
         document.getElementById('pen-btn').addEventListener('click', () => this.setTool('pen'));
         document.getElementById('pan-btn').addEventListener('click', () => this.setTool('pan'));
+        document.getElementById('select-btn').addEventListener('click', () => this.setTool('select'));
         document.getElementById('eraser-btn').addEventListener('click', () => this.setTool('eraser'));
         document.getElementById('background-btn').addEventListener('click', () => this.setTool('background'));
         document.getElementById('clear-btn').addEventListener('click', () => this.confirmClear());
@@ -638,7 +727,10 @@ class DrawingBoard {
         
         // Shape and Teaching Tools buttons in More menu
         document.getElementById('more-shape-btn').addEventListener('click', () => this.setTool('shape'));
-        document.getElementById('more-teaching-tools-btn').addEventListener('click', () => this.teachingToolsManager.showModal());
+        document.getElementById('more-teaching-tools-btn').addEventListener('click', () => {
+            this.exitShapeMode();
+            this.teachingToolsManager.showModal();
+        });
         
         document.getElementById('config-close-btn').addEventListener('click', () => this.closeConfigPanel());
         document.getElementById('feature-close-btn').addEventListener('click', () => this.closeFeaturePanel());
@@ -726,6 +818,8 @@ class DrawingBoard {
                 this.applyZoom(false); // Apply new fit scale without updating config-area
                 // Update toolbar text visibility on resize
                 this.settingsManager.updateToolbarTextVisibility();
+                // Reposition config-area to stay properly positioned above toolbar
+                this.positionConfigArea();
                 // Reposition toolbars to ensure they stay within viewport
                 this.repositionToolbarsOnResize();
                 // Reposition modals to ensure they stay within viewport
@@ -741,9 +835,14 @@ class DrawingBoard {
         // Pen type buttons
         document.querySelectorAll('.pen-type-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.drawingEngine.setPenType(e.target.dataset.penType);
+                const targetButton = e.currentTarget;
+                const penType = targetButton.dataset.penType;
+                if (!penType) {
+                    return;
+                }
+                this.drawingEngine.setPenType(penType);
                 document.querySelectorAll('.pen-type-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+                targetButton.classList.add('active');
             });
         });
         
@@ -827,7 +926,7 @@ class DrawingBoard {
         });
         
         // Background pattern buttons
-        document.querySelectorAll('.pattern-option-btn').forEach(btn => {
+        document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 // Use currentTarget to ensure we get the data from the button, not its children
                 const pattern = e.currentTarget.dataset.pattern;
@@ -835,7 +934,7 @@ class DrawingBoard {
                     document.getElementById('bg-image-upload').click();
                 } else {
                     this.backgroundManager.setBackgroundPattern(pattern);
-                    document.querySelectorAll('.pattern-option-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(b => b.classList.remove('active'));
                     e.currentTarget.classList.add('active');
                     document.getElementById('image-size-group').style.display = 'none';
                     
@@ -875,7 +974,7 @@ class DrawingBoard {
                     this.imageControls.resetConfirmation();
                     
                     await this.backgroundManager.setBackgroundImage(imageData);
-                    document.querySelectorAll('.pattern-option-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(b => b.classList.remove('active'));
                     document.querySelector('.pattern-option-btn[data-pattern="image"]').classList.add('active');
                     document.getElementById('image-size-group').style.display = 'flex';
                     // Hide pattern density when image is uploaded
@@ -1117,9 +1216,10 @@ class DrawingBoard {
         // Eraser shape buttons
         document.querySelectorAll('.eraser-shape-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.drawingEngine.setEraserShape(e.target.dataset.eraserShape);
+                const targetBtn = e.currentTarget;
+                this.drawingEngine.setEraserShape(targetBtn.dataset.eraserShape);
                 document.querySelectorAll('.eraser-shape-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+                targetBtn.classList.add('active');
                 // Update cursor shape
                 this.updateEraserCursorShape();
             });
@@ -1131,9 +1231,8 @@ class DrawingBoard {
             this.drawingEngine.setEraserSize(parseInt(e.target.value));
             eraserSizeValue.textContent = e.target.value;
             if (this.drawingEngine.currentTool === 'eraser') {
-                const visualEraserSize = this.calculateVisualEraserSize(parseInt(e.target.value));
-                this.eraserCursor.style.width = visualEraserSize + 'px';
-                this.eraserCursor.style.height = visualEraserSize + 'px';
+                this.eraserCursor.style.width = e.target.value + 'px';
+                this.eraserCursor.style.height = e.target.value + 'px';
             }
         });
         
@@ -1182,13 +1281,14 @@ class DrawingBoard {
         
         if (timeDisplayFeatureBtn && timeDisplayControls) {
             timeDisplayFeatureBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 // Toggle the time display controls visibility
                 const isVisible = timeDisplayControls.style.display !== 'none';
                 if (isVisible) {
                     timeDisplayControls.style.display = 'none';
                     timeDisplayFeatureBtn.classList.remove('active');
                     // Auto-switch to pen tool after closing time display settings
-                    this.closeFeaturePanel();
+                    this.handleMoreFeaturePanelAfterAction();
                     this.switchToPen();
                 } else {
                     timeDisplayControls.style.display = 'flex';
@@ -1205,11 +1305,25 @@ class DrawingBoard {
         const timerFeatureBtn = document.getElementById('timer-feature-btn');
         if (timerFeatureBtn) {
             timerFeatureBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 if (!this.timerManager) {
                     this.timerManager = new TimerManager();
                 }
                 this.timerManager.showSettingsModal();
-                this.closeFeaturePanel();
+                this.handleMoreFeaturePanelAfterAction();
+            });
+        }
+
+        // Insert Text Feature Button
+        const insertTextBtn = document.getElementById('insert-text-feature-btn');
+        if (insertTextBtn) {
+            insertTextBtn.addEventListener('click', () => {
+                this.exitShapeMode();
+                if (!this.insertTextManager) {
+                    this.insertTextManager = new InsertTextManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
+                }
+                this.insertTextManager.trigger();
+                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
@@ -1217,11 +1331,13 @@ class DrawingBoard {
         const randomPickerBtn = document.getElementById('random-picker-feature-btn');
         if (randomPickerBtn) {
             randomPickerBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 if (!this.randomPickerManager) {
                     this.randomPickerManager = new RandomPickerManager();
                 }
                 this.randomPickerManager.create();
-                this.closeFeaturePanel();
+                this.bringLatestElement('.random-picker-widget');
+                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
@@ -1229,11 +1345,13 @@ class DrawingBoard {
         const scoreboardBtn = document.getElementById('scoreboard-feature-btn');
         if (scoreboardBtn) {
             scoreboardBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 if (!this.scoreboardManager) {
                     this.scoreboardManager = new ScoreboardManager();
                 }
                 this.scoreboardManager.create();
-                this.closeFeaturePanel();
+                this.bringLatestElement('.scoreboard-widget');
+                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
@@ -1241,11 +1359,12 @@ class DrawingBoard {
         const insertImageBtn = document.getElementById('insert-image-feature-btn');
         if (insertImageBtn) {
             insertImageBtn.addEventListener('click', () => {
+                this.exitShapeMode();
                 if (!this.insertImageManager) {
                     this.insertImageManager = new InsertImageManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
                 }
                 this.insertImageManager.triggerSelect();
-                this.closeFeaturePanel();
+                this.handleMoreFeaturePanelAfterAction();
             });
         }
         
@@ -1299,6 +1418,18 @@ class DrawingBoard {
                 }
             });
         }
+        
+        // Select mode buttons
+        document.querySelectorAll('.select-mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.select-mode-btn').forEach(b => b.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                const mode = e.currentTarget.dataset.mode;
+                if (this.selectionManager) {
+                    this.selectionManager.selectionMode = mode;
+                }
+            });
+        });
     }
     
     setupSettingsListeners() {
@@ -1321,7 +1452,7 @@ class DrawingBoard {
             this.settingsManager.updateToolbarSize();
         });
         toolbarSizeInput.addEventListener('input', (e) => {
-            const value = Math.max(40, Math.min(80, parseInt(e.target.value) || 40));
+            const value = Math.max(30, Math.min(100, parseInt(e.target.value) || 40));
             e.target.value = value;
             toolbarSizeSlider.value = value;
             this.settingsManager.toolbarSize = value;
@@ -1339,7 +1470,7 @@ class DrawingBoard {
             this.settingsManager.updateConfigScale();
         });
         configScaleInput.addEventListener('input', (e) => {
-            const value = Math.max(80, Math.min(120, parseInt(e.target.value) || 100));
+            const value = Math.max(50, Math.min(150, parseInt(e.target.value) || 100));
             e.target.value = value;
             configScaleSlider.value = value;
             this.settingsManager.configScale = value / 100;
@@ -1406,6 +1537,21 @@ class DrawingBoard {
         document.getElementById('global-font-select').addEventListener('change', (e) => {
             this.settingsManager.setGlobalFont(e.target.value);
         });
+        
+        // Global font upload
+        const globalFontUpload = document.getElementById('global-font-upload');
+        if (globalFontUpload) {
+            globalFontUpload.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    this.settingsManager.handleFontUpload(e.target.files[0]);
+                    this.insertTextManager?.populateFonts?.();
+                    this.renderFontManagementList?.();
+                }
+            });
+        }
+        
+        // Populate custom fonts on load
+        this.settingsManager.populateGlobalFontSelect();
         
         // Canvas mode buttons removed - pagination is always active
         
@@ -1495,8 +1641,19 @@ class DrawingBoard {
             this.updateFullscreenBtnVisibility();
         });
         
+        // Show/hide toolbar text
+        const showToolbarTextCheckbox = document.getElementById('show-toolbar-text-checkbox');
+        if (showToolbarTextCheckbox) {
+            showToolbarTextCheckbox.addEventListener('change', (e) => {
+                this.settingsManager.setShowToolbarText(e.target.checked);
+            });
+        }
+        
         // Toolbar customization handlers
         this.initToolbarCustomization();
+
+        // Font management handlers
+        this.initFontManagement();
         
         // Control button settings handlers
         this.initControlButtonSettings();
@@ -1560,13 +1717,52 @@ class DrawingBoard {
                         if (this.settingsManager.toastManager) {
                             this.settingsManager.toastManager.show(errorMsg, 'error');
                         } else {
-                            alert(errorMsg);
+                            window.appDialog?.showAlert(errorMsg, 'error');
                         }
                     }
                 }
             };
             input.click();
         });
+
+        const clearLocalCacheBtn = document.getElementById('clear-local-cache-btn');
+        if (clearLocalCacheBtn) {
+            clearLocalCacheBtn.addEventListener('click', async () => {
+                const options = {
+                    settings: document.getElementById('clear-settings-cache-checkbox')?.checked,
+                    canvas: document.getElementById('clear-canvas-cache-checkbox')?.checked,
+                    other: document.getElementById('clear-other-cache-checkbox')?.checked
+                };
+                if (!options.settings && !options.canvas && !options.other) {
+                    const selectMsg = window.i18n ? window.i18n.t('settings.more.selectCacheType') : 'Please select at least one cache type.';
+                    window.appDialog?.showAlert(selectMsg, 'warning');
+                    return;
+                }
+                const sizes = await this.getCacheSizeSummary();
+                const selectedSummary = [];
+                const settingsLabel = window.i18n ? window.i18n.t('settings.more.clearSettingsCache') : 'Settings Cache';
+                const canvasLabel = window.i18n ? window.i18n.t('settings.more.clearCanvasCache') : 'Canvas Cache';
+                const otherLabel = window.i18n ? window.i18n.t('settings.more.clearOtherCache') : 'Other Cache';
+                if (options.settings) selectedSummary.push(`${settingsLabel}: ${this.formatBytes(sizes.settings)}`);
+                if (options.canvas) selectedSummary.push(`${canvasLabel}: ${this.formatBytes(sizes.canvas)}`);
+                if (options.other) selectedSummary.push(`${otherLabel}: ${this.formatBytes(sizes.other)}`);
+                const confirmTitle = window.i18n ? window.i18n.t('settings.more.confirmClearSelectedCache') : 'The following cache will be cleared:';
+                const confirmSuffix = window.i18n ? window.i18n.t('settings.more.clearLocalDataConfirmSuffix') : 'Continue?';
+                const confirmMessage = `${confirmTitle}\n${selectedSummary.join('\n')}\n\n${confirmSuffix}`;
+                const confirmed = await window.appDialog?.showConfirm(confirmMessage, confirmTitle);
+                if (!confirmed) return;
+                await this.clearSelectedCache(options);
+                await this.updateCacheSizeDisplay();
+            });
+        }
+
+        const keepMorePanelOpenCheckbox = document.getElementById('keep-more-panel-open-checkbox');
+        if (keepMorePanelOpenCheckbox) {
+            keepMorePanelOpenCheckbox.addEventListener('change', (e) => {
+                this.settingsManager.keepMorePanelOpen = e.target.checked;
+                localStorage.setItem('keepMorePanelOpen', e.target.checked);
+            });
+        }
 
         // Diff Modal Actions
         document.getElementById('config-diff-cancel-btn').addEventListener('click', () => {
@@ -1826,21 +2022,62 @@ class DrawingBoard {
                 document.getElementById('confirm-modal').classList.remove('show');
             }
         });
+
+        document.addEventListener('mousedown', (e) => {
+            if (!(e.target instanceof Element)) return;
+            const floatingPanel = e.target.closest('.feature-widget, .timer-display-widget, #feature-area, #config-area, #time-display-area');
+            if (floatingPanel) {
+                this.bringElementToFront(floatingPanel);
+            }
+        });
+    }
+
+    setupModalInteractionLock() {
+        const updateModalState = () => {
+            const hasBlockingModal = !!document.querySelector('.modal.show, .time-fullscreen-modal.show, .timer-fullscreen-modal.show');
+            document.body.classList.toggle('overlay-modal-open', hasBlockingModal);
+        };
+        const observer = new MutationObserver(updateModalState);
+        observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+        updateModalState();
     }
     
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
+            const isEditableTarget = e.target &&
+                (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable);
             if (e.ctrlKey || e.metaKey) {
-                if (e.key === 'z' && !e.shiftKey) {
+                const key = e.key.toLowerCase();
+                if (key === 'z' && !e.shiftKey) {
                     e.preventDefault();
                     if (this.historyManager.undo()) {
                         this.updateUI();
                     }
-                } else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+                } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
                     e.preventDefault();
                     if (this.historyManager.redo()) {
                         this.updateUI();
                     }
+                } else if (!isEditableTarget && key === 'c' && this.selectionManager?.hasSelection()) {
+                    e.preventDefault();
+                    // Copy to the internal selection clipboard (not the system clipboard).
+                    this.selectionManager.cacheSelection();
+                } else if (!isEditableTarget && key === 'v') {
+                    e.preventDefault();
+                    // Paste from the internal selection clipboard.
+                    this.selectionManager?.pasteClipboard();
+                } else if (!isEditableTarget && key === 'x' && this.selectionManager?.hasSelection()) {
+                    e.preventDefault();
+                    if (this.selectionManager.cacheSelection()) {
+                        this.selectionManager.deleteSelection();
+                    }
+                }
+            }
+            
+            if (!isEditableTarget && (e.key === 'Delete' || e.key === 'Backspace')) {
+                if (this.selectionManager?.hasSelection()) {
+                    e.preventDefault();
+                    this.selectionManager.deleteSelection();
                 }
             }
             
@@ -1897,6 +2134,7 @@ class DrawingBoard {
         // Ensure all toolbars and panels stay within viewport after window resize
         const EDGE_SPACING = 10; // Minimum spacing from viewport edges
         const panels = [
+            document.getElementById('toolbar'),
             document.getElementById('history-controls'),
             document.getElementById('config-area'),
             document.getElementById('time-display-area'),
@@ -1908,7 +2146,11 @@ class DrawingBoard {
         panels.forEach(panel => {
             if (!panel) return;
             
-            const rect = panel.getBoundingClientRect();
+            let rect = panel.getBoundingClientRect();
+            const appliedRelative = this.applyRelativePanelPosition(panel, rect, windowWidth, windowHeight, EDGE_SPACING);
+            if (appliedRelative) {
+                rect = panel.getBoundingClientRect();
+            }
             const computedStyle = window.getComputedStyle(panel);
             
             // Get current position
@@ -1918,11 +2160,31 @@ class DrawingBoard {
             let bottom = computedStyle.bottom;
             
             // Check if panel has been dragged (has explicit positioning)
-            const hasCenteredPosition = left === '50%' || computedStyle.transform.includes('translateX');
+            // Include both translateX (horizontal centering) and translateY (vertical centering) checks
+            const hasCenteredPosition = left === '50%' || 
+                                        computedStyle.transform.includes('translateX') || 
+                                        computedStyle.transform.includes('translateY');
             const hasExplicitPosition = !hasCenteredPosition && (left !== 'auto' || top !== 'auto' || right !== 'auto' || bottom !== 'auto');
             
-            // Skip panels that are centered and haven't been dragged
+            // For centered panels, check if they overflow the viewport and reposition if needed
             if (hasCenteredPosition && !hasExplicitPosition) {
+                if (rect.right > windowWidth - EDGE_SPACING) {
+                    panel.style.left = `${Math.max(EDGE_SPACING, windowWidth - rect.width - EDGE_SPACING)}px`;
+                    panel.style.right = 'auto';
+                    panel.style.transform = panel.style.transform ? panel.style.transform.replace(/translateX\([^)]*\)/, '') : '';
+                } else if (rect.left < EDGE_SPACING) {
+                    panel.style.left = `${EDGE_SPACING}px`;
+                    panel.style.right = 'auto';
+                    panel.style.transform = panel.style.transform ? panel.style.transform.replace(/translateX\([^)]*\)/, '') : '';
+                }
+                if (rect.bottom > windowHeight - EDGE_SPACING) {
+                    const newBottom = EDGE_SPACING;
+                    panel.style.bottom = `${newBottom}px`;
+                    panel.style.top = 'auto';
+                } else if (rect.top < EDGE_SPACING) {
+                    panel.style.top = `${EDGE_SPACING}px`;
+                    panel.style.bottom = 'auto';
+                }
                 return;
             }
             
@@ -1970,6 +2232,51 @@ class DrawingBoard {
             }
         });
     }
+
+    applyRelativePanelPosition(panel, rect, windowWidth, windowHeight, edgeSpacing) {
+        const relativeLeft = panel.dataset.relativeLeft;
+        const relativeTop = panel.dataset.relativeTop;
+        let applied = false;
+
+        if (relativeLeft !== undefined) {
+            const availableWidth = Math.max(1, windowWidth - rect.width);
+            const ratio = Math.min(1, Math.max(0, parseFloat(relativeLeft)));
+            const newLeft = availableWidth * ratio;
+            panel.style.left = `${Math.min(windowWidth - rect.width - edgeSpacing, Math.max(edgeSpacing, newLeft))}px`;
+            panel.style.right = 'auto';
+            applied = true;
+        }
+
+        if (relativeTop !== undefined) {
+            const availableHeight = Math.max(1, windowHeight - rect.height);
+            const ratio = Math.min(1, Math.max(0, parseFloat(relativeTop)));
+            const newTop = availableHeight * ratio;
+            panel.style.top = `${Math.min(windowHeight - rect.height - edgeSpacing, Math.max(edgeSpacing, newTop))}px`;
+            panel.style.bottom = 'auto';
+            applied = true;
+        }
+
+        return applied;
+    }
+
+    storePanelRelativePosition(panel) {
+        if (!panel) return;
+        const rect = panel.getBoundingClientRect();
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        const availableWidth = Math.max(1, windowWidth - rect.width);
+        const availableHeight = Math.max(1, windowHeight - rect.height);
+
+        const nextLeft = Math.min(1, Math.max(0, rect.left / availableWidth)).toFixed(3);
+        const nextTop = Math.min(1, Math.max(0, rect.top / availableHeight)).toFixed(3);
+
+        if (panel.dataset.relativeLeft !== nextLeft) {
+            panel.dataset.relativeLeft = nextLeft;
+        }
+        if (panel.dataset.relativeTop !== nextTop) {
+            panel.dataset.relativeTop = nextTop;
+        }
+    }
     
     repositionModalsOnResize() {
         // Reposition modal content to stay within viewport on window resize
@@ -2013,10 +2320,15 @@ class DrawingBoard {
         const timeDisplayArea = document.getElementById('time-display-area');
         const featureArea = document.getElementById('feature-area');
         const toolbar = document.getElementById('toolbar');
+        const paginationControls = document.getElementById('pagination-controls');
         
         // Unified start handler for mouse and touch events
         const handleDragStart = (e, element) => {
-            if (e.target.closest('button') || e.target.closest('input')) return;
+            // Always allow dragging from the drag handle
+            const isDragHandle = e.target.closest('.panel-drag-handle');
+            
+            // Block drag if clicking on interactive elements (unless it's a drag handle)
+            if (!isDragHandle && (e.target.closest('button') || e.target.closest('input'))) return;
             
             e.stopPropagation(); // Prevent drawing on canvas
 
@@ -2027,11 +2339,20 @@ class DrawingBoard {
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
             
+            // Calculate offset in scaled coordinates (what we see on screen)
+            // getBoundingClientRect returns already-scaled dimensions
             this.dragOffset.x = clientX - rect.left;
             this.dragOffset.y = clientY - rect.top;
             
             this.draggedElementWidth = rect.width;
             this.draggedElementHeight = rect.height;
+            if (this.settingsManager.edgeSnapEnabled && element.classList.contains('vertical')) {
+                const nearLeftEdge = rect.left <= EDGE_SNAP_DISTANCE;
+                const nearRightEdge = (window.innerWidth - rect.right) <= EDGE_SNAP_DISTANCE;
+                this.dragSnapSide = nearLeftEdge ? 'left' : (nearRightEdge ? 'right' : null);
+            } else {
+                this.dragSnapSide = null;
+            }
             
             element.classList.add('dragging');
             element.style.transition = 'none';
@@ -2039,7 +2360,7 @@ class DrawingBoard {
             e.preventDefault();
         };
         
-        [historyControls, configArea, timeDisplayArea, featureArea, toolbar].forEach(element => {
+        [historyControls, configArea, timeDisplayArea, featureArea, toolbar, paginationControls].filter(Boolean).forEach(element => {
             // Mouse events
             element.addEventListener('mousedown', (e) => handleDragStart(e, element));
             // Touch events - improve compatibility with large-screen touch devices
@@ -2056,22 +2377,20 @@ class DrawingBoard {
             let x = clientX - this.dragOffset.x;
             let y = clientY - this.dragOffset.y;
             
-            const edgeSnapDistance = 30;
-            const edgeSnapHysteresis = 60; // Wider zone to prevent flicker when already snapped
+            const edgeSnapDistance = EDGE_SNAP_DISTANCE;
+            const edgeUnsnapDistance = Math.max(MIN_EDGE_UNSNAP_DISTANCE, edgeSnapDistance + EDGE_UNSNAP_BUFFER);
             const windowWidth = window.innerWidth;
             const windowHeight = window.innerHeight;
             const isToolbar = this.draggedElement.id === 'toolbar';
             const isConfigArea = this.draggedElement.id === 'config-area';
             const isTimeDisplayArea = this.draggedElement.id === 'time-display-area';
             const isFeatureArea = this.draggedElement.id === 'feature-area';
+            const shouldApplyVerticalLive = isToolbar || isConfigArea || isTimeDisplayArea || isFeatureArea;
             
             let snappedToEdge = false;
             let isVertical = false;
             let snappedLeft = false;
             let snappedRight = false;
-            
-            // Check if currently in vertical mode
-            const currentlyVertical = this.draggedElement.classList.contains('vertical');
             
             // Get current element dimensions (updated during drag)
             const currentRect = this.draggedElement.getBoundingClientRect();
@@ -2079,67 +2398,53 @@ class DrawingBoard {
             const currentHeight = currentRect.height;
             
             if (this.settingsManager.edgeSnapEnabled) {
-                // Use hysteresis: easier to snap than to unsnap (prevents flicker)
-                // When already vertical (snapped), use a dynamic hysteresis based on width difference
-                // to prevent flickering back to horizontal when the horizontal width is large
-                let effectiveSnapDistance = edgeSnapDistance;
-
-                if (currentlyVertical) {
-                    // If vertical, we need a larger hysteresis zone
-                    // Calculate based on the difference between horizontal and vertical widths
-                    // Formula ensures unsnap threshold is further than snap threshold
-                    // Width difference + buffer to avoid flicker loop
-                    const widthDiff = Math.max(0, this.draggedElementWidth - currentWidth);
-                    effectiveSnapDistance = Math.max(300, edgeSnapDistance + widthDiff + 50);
-                }
+                const keepSnapLeft = this.dragSnapSide === 'left' && clientX <= edgeUnsnapDistance;
+                const keepSnapRight = this.dragSnapSide === 'right' && clientX >= windowWidth - edgeUnsnapDistance;
+                const canSnapLeft = clientX <= edgeSnapDistance;
+                const canSnapRight = clientX >= windowWidth - edgeSnapDistance;
                 
-                // Check for left edge snap first
-                if (x < effectiveSnapDistance) {
-                    x = 10;
+                // Use explicit left/right snap state hysteresis to avoid oscillation near edge thresholds
+                if (keepSnapLeft || canSnapLeft) {
+                    x = PANEL_EDGE_MARGIN;
                     snappedToEdge = true;
                     isVertical = true;
                     snappedLeft = true;
-                }
-                // Check for right edge snap
-                else if (x + currentWidth > windowWidth - effectiveSnapDistance) {
-                    // When vertical, need to recalculate width
-                    if (isToolbar || isConfigArea || isTimeDisplayArea || isFeatureArea) {
-                        // Temporarily add vertical class to get correct dimensions
-                        this.draggedElement.classList.add('vertical');
-                        const tempWidth = this.draggedElement.getBoundingClientRect().width;
-                        this.draggedElement.classList.remove('vertical');
-                        x = windowWidth - tempWidth - 10;
-                    } else {
-                        x = windowWidth - currentWidth - 10;
-                    }
+                    this.dragSnapSide = 'left';
+                } else if (keepSnapRight || canSnapRight) {
+                    x = windowWidth - currentWidth - PANEL_EDGE_MARGIN;
                     snappedToEdge = true;
                     isVertical = true;
                     snappedRight = true;
+                    this.dragSnapSide = 'right';
+                } else if (this.dragSnapSide) {
+                    this.dragSnapSide = null;
                 }
                 // Snap to top
                 if (y < edgeSnapDistance) {
-                    y = 10;
+                    y = PANEL_EDGE_MARGIN;
                     snappedToEdge = true;
                 }
                 // Snap to bottom
                 if (y + currentHeight > windowHeight - edgeSnapDistance) {
-                    y = windowHeight - currentHeight - 10;
+                    y = windowHeight - currentHeight - PANEL_EDGE_MARGIN;
                     snappedToEdge = true;
                 }
             }
             
-            // Apply vertical layout for toolbar, config area, time display area, and feature area when snapped to left/right
-            if ((isToolbar || isConfigArea || isTimeDisplayArea || isFeatureArea) && snappedToEdge && isVertical) {
+            if (shouldApplyVerticalLive && snappedToEdge && isVertical) {
                 this.draggedElement.classList.add('vertical');
                 // Recalculate position after adding vertical class to account for dimension changes
                 if (snappedRight) {
                     const newWidth = this.draggedElement.getBoundingClientRect().width;
-                    x = windowWidth - newWidth - 10;
+                    x = windowWidth - newWidth - PANEL_EDGE_MARGIN;
+                } else if (snappedLeft) {
+                    x = PANEL_EDGE_MARGIN;
                 }
                 // Update height after dimension change for vertical layout
                 const newRect = this.draggedElement.getBoundingClientRect();
+                this.draggedElementWidth = newRect.width;
                 this.draggedElementHeight = newRect.height;
-            } else {
+            } else if (shouldApplyVerticalLive) {
                 this.draggedElement.classList.remove('vertical');
                 // Update dimensions when switching back to horizontal
                 const newRect = this.draggedElement.getBoundingClientRect();
@@ -2154,7 +2459,15 @@ class DrawingBoard {
             
             this.draggedElement.style.left = `${x}px`;
             this.draggedElement.style.top = `${y}px`;
-            this.draggedElement.style.transform = 'none';
+            // For config-area, preserve the scale transform while dragging
+            // Use transform-origin: top left to prevent position jump due to scaling
+            if (this.draggedElement.id === 'config-area') {
+                const scale = this.settingsManager.configScale || 1;
+                this.draggedElement.style.transformOrigin = 'top left';
+                this.draggedElement.style.transform = `scale(${scale})`;
+            } else {
+                this.draggedElement.style.transform = 'none';
+            }
             this.draggedElement.style.right = 'auto';
             this.draggedElement.style.bottom = 'auto';
         };
@@ -2168,10 +2481,46 @@ class DrawingBoard {
                 // Mark toolbar as user-positioned to prevent auto-repositioning
                 if (this.draggedElement.id === 'toolbar') {
                     this.draggedElement.classList.add('user-positioned');
+                    let toolbarLayoutChanged = false;
+                    if (this.settingsManager.edgeSnapEnabled) {
+                        const rect = this.draggedElement.getBoundingClientRect();
+                        const nearLeftEdge = rect.left <= EDGE_SNAP_DISTANCE;
+                        const nearRightEdge = (window.innerWidth - rect.right) <= EDGE_SNAP_DISTANCE;
+                        if (nearLeftEdge || nearRightEdge) {
+                            this.draggedElement.classList.add('vertical');
+                            toolbarLayoutChanged = true;
+                            if (nearLeftEdge) {
+                                this.draggedElement.style.left = `${PANEL_EDGE_MARGIN}px`;
+                            } else {
+                                const newRect = this.draggedElement.getBoundingClientRect();
+                                this.draggedElement.style.left = `${window.innerWidth - newRect.width - PANEL_EDGE_MARGIN}px`;
+                            }
+                            const snappedRect = this.draggedElement.getBoundingClientRect();
+                            this.draggedElementWidth = snappedRect.width;
+                            this.draggedElementHeight = snappedRect.height;
+                        } else {
+                            this.draggedElement.classList.remove('vertical');
+                            toolbarLayoutChanged = true;
+                        }
+                    }
+                    if (toolbarLayoutChanged) {
+                        this.settingsManager.updateToolbarSize();
+                        this.positionConfigArea();
+                    }
                 }
+                
+                // Mark floating config/feature panels as user-dragged so reopen keeps manual position
+                if (this.draggedElement.id === 'config-area' ||
+                    this.draggedElement.id === 'feature-area' ||
+                    this.draggedElement.id === 'time-display-area') {
+                    this.draggedElement.dataset.userDragged = 'true';
+                }
+
+                this.storePanelRelativePosition(this.draggedElement);
                 
                 this.isDraggingPanel = false;
                 this.draggedElement = null;
+                this.dragSnapSide = null;
             }
         };
         
@@ -2206,19 +2555,95 @@ class DrawingBoard {
         this.setTool('pen', false);
     }
     
+    positionConfigArea() {
+        // Position config-area above the toolbar
+        const configArea = document.getElementById('config-area');
+        const toolbar = document.getElementById('toolbar');
+        
+        // Only position if config-area hasn't been dragged by user
+        if (configArea.dataset.userDragged === 'true') {
+            return;
+        }
+        
+        const toolbarRect = toolbar.getBoundingClientRect();
+        const isVertical = toolbar.classList.contains('vertical');
+        const tool = this.drawingEngine.currentTool;
+        const gap = TOOL_CONFIG_PANEL_GAP;
+        let toolButtonId = null;
+        if (!tool) {
+            console.warn('No active tool found for toolbar mapping.');
+        } else {
+            toolButtonId = this.toolButtonIds[tool];
+            if (!toolButtonId) {
+                console.warn(`No toolbar button mapping found for tool '${tool}'. Expected one of: ${Object.keys(this.toolButtonIds).join(', ')}.`);
+            }
+        }
+        const toolButton = toolButtonId ? document.getElementById(toolButtonId) : null;
+        if (toolButtonId && !toolButton) {
+            console.warn(`Toolbar button element not found for tool '${tool}' (ID: ${toolButtonId}).`);
+        }
+        const toolRect = toolButton ? toolButton.getBoundingClientRect() : null;
+        const referenceRect = toolRect || toolbarRect;
+        
+        // Reset inline styles first to get proper dimensions
+        configArea.style.left = '';
+        configArea.style.top = '';
+        configArea.style.bottom = '';
+        configArea.style.right = '';
+        configArea.style.transform = '';
+        configArea.style.transformOrigin = '';
+        
+        const scale = this.settingsManager.configScale || 1;
+        
+        if (isVertical) {
+            // Toolbar is on left or right side
+            const referenceCenterY = referenceRect.top + referenceRect.height / 2;
+            if (toolbarRect.left < window.innerWidth / 2) {
+                // Toolbar on left side - position config to the right of toolbar
+                configArea.style.left = `${referenceRect.right + gap}px`;
+            } else {
+                // Toolbar on right side - position config to the left of toolbar
+                configArea.style.right = `${window.innerWidth - referenceRect.left + gap}px`;
+                configArea.style.left = 'auto';
+            }
+            configArea.style.top = `${referenceCenterY}px`;
+            configArea.style.transformOrigin = 'center center';
+            configArea.style.transform = `translateY(-50%) scale(${scale})`;
+        } else {
+            // Toolbar is horizontal (bottom)
+            const referenceCenterX = referenceRect.left + referenceRect.width / 2;
+            const referenceTop = referenceRect.top;
+            configArea.style.left = `${referenceCenterX}px`;
+            configArea.style.bottom = `${window.innerHeight - referenceTop + gap}px`;
+            configArea.style.top = 'auto';
+            configArea.style.transformOrigin = 'center bottom';
+            configArea.style.transform = `translateX(-50%) scale(${scale})`;
+        }
+
+    }
+    
     positionFeatureArea() {
         // Position feature-area above the "更多" button
         const featureArea = document.getElementById('feature-area');
+        if (featureArea.dataset.userDragged === 'true') {
+            return;
+        }
         const moreBtn = document.getElementById('more-btn');
-        const toolbar = document.getElementById('toolbar');
-        
+        const gap = TOOL_CONFIG_PANEL_GAP + 8;
         const moreBtnRect = moreBtn.getBoundingClientRect();
-        const toolbarRect = toolbar.getBoundingClientRect();
         
+        featureArea.style.left = `${moreBtnRect.left + (moreBtnRect.width / 2)}px`;
+        featureArea.style.top = `${moreBtnRect.top - gap}px`;
+        featureArea.style.right = 'auto';
         featureArea.style.bottom = 'auto';
-        featureArea.style.left = `${moreBtnRect.left}px`;
-        featureArea.style.top = `${toolbarRect.top - 10}px`;
-        featureArea.style.transform = 'translateY(-100%)';
+        featureArea.style.transform = 'translate(-50%, -100%)';
+    }
+
+    exitShapeMode() {
+        if (this.drawingEngine.currentTool !== 'shape') return;
+        this.shapeDrawingManager.stopDrawing();
+        this.drawingEngine.setTool('more');
+        this.updateUI();
     }
     
     setTool(tool, showConfig = true) {
@@ -2230,26 +2655,41 @@ class DrawingBoard {
         const isSameTool = (previousTool === tool);
         const isConfigVisible = configArea.classList.contains('show');
         
+        // Deactivate selection mode if switching away from select tool
+        if (previousTool === 'select' && tool !== 'select') {
+            this.selectionManager.deactivate();
+        }
+        
         // Update drawing engine tool
         this.drawingEngine.setTool(tool);
-        if (tool === 'eraser') {
-            this.showEraserCursor();
-        } else {
+        // Don't show eraser cursor when selecting tool - only show when actually erasing on canvas
+        if (tool !== 'eraser') {
             this.hideEraserCursor();
+        }
+        
+        // Activate selection mode if switching to select tool
+        if (tool === 'select') {
+            this.selectionManager.activate();
+            // Link text manager if available
+            if (this.insertTextManager) {
+                this.selectionManager.setTextManager(this.insertTextManager);
+            }
         }
         
         this.updateUI();
         
         // Handle toggle behavior for tools with config panels
-        const toolsWithConfig = ['pen', 'eraser', 'background', 'shape'];
+        const toolsWithConfig = ['pen', 'eraser', 'background', 'shape', 'select'];
         
         if (showConfig && toolsWithConfig.includes(tool)) {
             // If clicking the same tool and config is visible, toggle it off
             if (isSameTool && isConfigVisible) {
                 configArea.classList.remove('show');
             } else {
-                // Show config panel
+                // Show config panel and position it above toolbar
                 configArea.classList.add('show');
+                this.positionConfigArea();
+                this.bringElementToFront(configArea);
                 // Don't close feature-area when selecting shape - allow multiple panels to be open
                 if (tool !== 'shape') {
                     featureArea.classList.remove('show');
@@ -2267,9 +2707,10 @@ class DrawingBoard {
                 featureArea.classList.add('show');
                 configArea.classList.remove('show');
                 this.positionFeatureArea();
+                this.bringElementToFront(featureArea);
             }
         } else {
-            // For other tools (like pan), just hide panels
+            // For other tools (like pan, select), just hide panels
             configArea.classList.remove('show');
             featureArea.classList.remove('show');
         }
@@ -2285,7 +2726,11 @@ class DrawingBoard {
         if (this.drawingEngine.stopDrawing()) {
             this.historyManager.saveState();
             this.saveSessionDebounced();
-            this.closeConfigPanel();
+            // Keep eraser config open after each erase stroke so users can continuously
+            // fine-tune and erase without repeated reopen operations.
+            if (this.drawingEngine.currentTool !== 'eraser') {
+                this.closeConfigPanel();
+            }
             this.closeFeaturePanel();
         }
     }
@@ -2304,14 +2749,43 @@ class DrawingBoard {
     
     closeConfigPanel() {
         document.getElementById('config-area').classList.remove('show');
+        this.exitShapeMode();
     }
     
     closeFeaturePanel() {
         document.getElementById('feature-area').classList.remove('show');
     }
+
+    bringElementToFront(element) {
+        if (!element) return;
+        if (this.featureWidgetZIndex > MAX_FEATURE_WIDGET_ZINDEX) {
+            const floatingPanels = document.querySelectorAll('.feature-widget, .timer-display-widget, #feature-area, #config-area, #time-display-area');
+            this.featureWidgetZIndex = 1200;
+            floatingPanels.forEach(panel => {
+                this.featureWidgetZIndex += 1;
+                panel.style.zIndex = String(this.featureWidgetZIndex);
+            });
+        }
+        this.featureWidgetZIndex += 1;
+        element.style.zIndex = String(this.featureWidgetZIndex);
+    }
+
+    bringLatestElement(selector) {
+        const elements = document.querySelectorAll(selector);
+        if (elements.length > 0) {
+            this.bringElementToFront(elements[elements.length - 1]);
+        }
+    }
+
+    handleMoreFeaturePanelAfterAction() {
+        if (!this.settingsManager.keepMorePanelOpen) {
+            this.closeFeaturePanel();
+        }
+    }
     
     openSettings() {
         document.getElementById('settings-modal').classList.add('show');
+        this.updateCacheSizeDisplay();
         
         // Update time display settings UI with current values (elements may not exist if removed from Settings > More)
         const timeDisplayCheckbox = document.getElementById('show-time-display-checkbox');
@@ -2581,7 +3055,7 @@ class DrawingBoard {
                 if (this.settingsManager.toastManager) {
                     this.settingsManager.toastManager.show(successMsg, 'success');
                 } else {
-                    alert(successMsg);
+                    window.appDialog?.showAlert(successMsg, 'success');
                 }
             }
             modal.classList.remove('show');
@@ -2612,6 +3086,10 @@ class DrawingBoard {
         });
         
         const tool = this.drawingEngine.currentTool;
+        const shapeFeatureBtn = document.getElementById('more-shape-btn');
+        if (shapeFeatureBtn) {
+            shapeFeatureBtn.classList.toggle('active', tool === 'shape');
+        }
         if (tool === 'pen') {
             document.getElementById('pen-btn').classList.add('active');
             document.getElementById('pen-config').classList.add('active');
@@ -2623,10 +3101,18 @@ class DrawingBoard {
         } else if (tool === 'pan') {
             document.getElementById('pan-btn').classList.add('active');
             this.canvas.style.cursor = 'grab';
+        } else if (tool === 'select') {
+            document.getElementById('select-btn').classList.add('active');
+            document.getElementById('select-config').classList.add('active');
+            this.canvas.style.cursor = 'crosshair';
         } else if (tool === 'eraser') {
             document.getElementById('eraser-btn').classList.add('active');
             document.getElementById('eraser-config').classList.add('active');
             this.canvas.style.cursor = 'pointer';
+            const currentShape = this.drawingEngine.eraserShape === 'rectangle' ? 'rectangle' : 'circle';
+            document.querySelectorAll('.eraser-shape-btn').forEach((btn) => {
+                btn.classList.toggle('active', btn.dataset.eraserShape === currentShape);
+            });
             // Sync eraser size display with current value
             const eraserSizeSlider = document.getElementById('eraser-size-slider');
             const eraserSizeValue = document.getElementById('eraser-size-value');
@@ -2675,12 +3161,91 @@ class DrawingBoard {
         const scaleY = availableHeight / height;
         return Math.min(scaleX, scaleY, 1); // Don't scale up beyond 100%
     }
+
+    getRenderPixelRatio() {
+        const baseDpr = window.devicePixelRatio || 1;
+        return baseDpr * this.dynamicRenderScale;
+    }
+
+    getTargetRenderScale() {
+        if (!this.settingsManager.unlimitedZoom) {
+            return MIN_DYNAMIC_RENDER_SCALE;
+        }
+        const scale = this.drawingEngine?.canvasScale || 1;
+        const preferredScale = Math.min(MAX_DYNAMIC_RENDER_SCALE, Math.max(MIN_DYNAMIC_RENDER_SCALE, Math.sqrt(scale)));
+
+        const cssWidth = parseFloat(this.canvas.style.width) || this.settingsManager.canvasWidth;
+        const cssHeight = parseFloat(this.canvas.style.height) || this.settingsManager.canvasHeight;
+        const baseDpr = window.devicePixelRatio || 1;
+
+        // Calculate max safe dynamic scale from backing-dimension and backing-pixel ceilings.
+        const dimLimitScale = Math.min(
+            MAX_DYNAMIC_BACKING_DIMENSION / Math.max(1, cssWidth * baseDpr),
+            MAX_DYNAMIC_BACKING_DIMENSION / Math.max(1, cssHeight * baseDpr)
+        );
+        const pixelLimitScale = Math.sqrt(
+            MAX_DYNAMIC_BACKING_PIXELS / Math.max(1, cssWidth * cssHeight * baseDpr * baseDpr)
+        );
+        const safeScale = Math.min(preferredScale, dimLimitScale, pixelLimitScale);
+        if (!Number.isFinite(safeScale)) {
+            return MIN_DYNAMIC_RENDER_SCALE;
+        }
+        return Math.max(MIN_DYNAMIC_RENDER_SCALE, safeScale);
+    }
+
+    scheduleRenderQualityUpdate() {
+        const targetScale = this.getTargetRenderScale();
+        if (Math.abs(targetScale - this.dynamicRenderScale) < RENDER_SCALE_SCHEDULE_THRESHOLD) return;
+        if (this.qualityUpdateTimer) {
+            clearTimeout(this.qualityUpdateTimer);
+        }
+        this.qualityUpdateTimer = setTimeout(() => {
+            this.applyRenderQualityScale(targetScale);
+        }, QUALITY_UPDATE_DEBOUNCE_MS);
+    }
+
+    applyRenderQualityScale(scale) {
+        if (Math.abs(scale - this.dynamicRenderScale) < RENDER_SCALE_APPLY_THRESHOLD) return;
+
+        const width = parseFloat(this.canvas.style.width) || this.settingsManager.canvasWidth;
+        const height = parseFloat(this.canvas.style.height) || this.settingsManager.canvasHeight;
+
+        const oldCanvas = document.createElement('canvas');
+        oldCanvas.width = this.canvas.width;
+        oldCanvas.height = this.canvas.height;
+        const oldCtx = oldCanvas.getContext('2d');
+        if (!oldCtx) return;
+        oldCtx.drawImage(this.canvas, 0, 0);
+
+        this.dynamicRenderScale = scale;
+        const dpr = this.getRenderPixelRatio();
+
+        this.canvas.width = width * dpr;
+        this.canvas.height = height * dpr;
+        this.canvas.style.width = width + 'px';
+        this.canvas.style.height = height + 'px';
+
+        this.bgCanvas.width = width * dpr;
+        this.bgCanvas.height = height * dpr;
+        this.bgCanvas.style.width = width + 'px';
+        this.bgCanvas.style.height = height + 'px';
+
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.bgCtx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
+        this.ctx.scale(dpr, dpr);
+        this.bgCtx.scale(dpr, dpr);
+
+        this.ctx.drawImage(oldCanvas, 0, 0, oldCanvas.width, oldCanvas.height, 0, 0, this.canvas.width, this.canvas.height);
+        this.backgroundManager.drawBackground();
+    }
     
     applyCanvasSize() {
         // Always use pagination mode now
         const width = this.settingsManager.canvasWidth;
         const height = this.settingsManager.canvasHeight;
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = this.getRenderPixelRatio();
         
         // Save current content
         const oldWidth = this.canvas.width;
@@ -2858,6 +3423,8 @@ class DrawingBoard {
             this.canvas.style.transform = 'none';
             this.bgCanvas.style.transform = 'none';
         }
+
+        this.scheduleRenderQualityUpdate();
         
         // Update teaching tools scale factor
         this.teachingToolsManager.canvasScaleFactor = finalScale;
@@ -2867,6 +3434,15 @@ class DrawingBoard {
         if (updateConfigScale) {
             this.updateConfigAreaScale();
         }
+    }
+
+    revealToolbar() {
+        const toolbar = document.getElementById('toolbar');
+        if (!toolbar) return;
+        // Reveal toolbar after sizing is applied to avoid a flash of unstyled content.
+        requestAnimationFrame(() => {
+            toolbar.classList.remove('toolbar-loading');
+        });
     }
     
     updateConfigAreaScale() {
@@ -2895,6 +3471,7 @@ class DrawingBoard {
             this.MAX_CANVAS_SCALE = this.UNLIMITED_MAX_SCALE;
         } else {
             this.MAX_CANVAS_SCALE = this.NORMAL_MAX_SCALE;
+            this.applyRenderQualityScale(1);
             // If current scale exceeds new max, reset to max
             if (this.drawingEngine.canvasScale > this.MAX_CANVAS_SCALE) {
                 this.drawingEngine.canvasScale = this.MAX_CANVAS_SCALE;
@@ -2962,6 +3539,152 @@ class DrawingBoard {
         } else {
             historyControls.style.display = 'none';
         }
+    }
+
+    initFontManagement() {
+        this.renderFontManagementList();
+    }
+
+    renderFontManagementList() {
+        const list = document.getElementById('font-management-list');
+        if (!list || !this.settingsManager?.getManagedFontOptions) return;
+
+        const fonts = this.settingsManager.getManagedFontOptions();
+        list.innerHTML = '';
+
+        fonts.forEach(font => {
+            const item = document.createElement('div');
+            item.className = 'font-management-item';
+            item.dataset.font = font.value;
+            item.draggable = true;
+            const tWithFallback = (key, fallback) => {
+                if (!window.i18n) return fallback;
+                const translated = window.i18n.t(key);
+                return translated && translated !== key ? translated : fallback;
+            };
+            const showLabel = tWithFallback('settings.general.showFont', 'Show font');
+            const renameLabel = tWithFallback('common.edit', 'Edit');
+            const previewLabel = tWithFallback('common.preview', 'Preview');
+            const previewSample = tWithFallback('settings.general.fontPreviewSample', 'Font Preview ABC abc 123');
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = font.visible;
+            checkbox.setAttribute('aria-label', showLabel);
+
+            const dragHandle = document.createElement('span');
+            dragHandle.className = 'drag-handle';
+            dragHandle.textContent = '☰';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'font-display-name';
+            nameSpan.title = font.label;
+            nameSpan.textContent = font.label;
+
+            const editButton = document.createElement('button');
+            editButton.type = 'button';
+            editButton.className = 'font-action-btn edit-btn';
+            editButton.textContent = renameLabel;
+
+            const previewButton = document.createElement('button');
+            previewButton.type = 'button';
+            previewButton.className = 'font-action-btn preview-btn';
+            previewButton.textContent = previewLabel;
+
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'font-preview-sample';
+            const rawFontValue = String(font.value || '');
+            const safeFontFamily = (window.CSS && typeof window.CSS.escape === 'function')
+                ? window.CSS.escape(rawFontValue)
+                : rawFontValue.replace(/[^\w\s\-]/g, '');
+            previewDiv.style.fontFamily = `"${safeFontFamily}", sans-serif`;
+            previewDiv.textContent = previewSample;
+
+            item.appendChild(checkbox);
+            item.appendChild(dragHandle);
+            item.appendChild(nameSpan);
+            item.appendChild(editButton);
+            item.appendChild(previewButton);
+            item.appendChild(previewDiv);
+            list.appendChild(item);
+        });
+
+        let draggedItem = null;
+        list.querySelectorAll('.font-management-item').forEach(item => {
+            item.addEventListener('dragstart', () => {
+                draggedItem = item;
+                item.classList.add('dragging');
+            });
+
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+                draggedItem = null;
+                this.saveFontOrderFromList();
+            });
+
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if (!draggedItem || draggedItem === item) return;
+                const rect = item.getBoundingClientRect();
+                const isBefore = e.clientY < rect.top + rect.height / 2;
+                list.insertBefore(draggedItem, isBefore ? item : item.nextSibling);
+            });
+
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            checkbox?.addEventListener('change', (e) => {
+                this.settingsManager.setFontVisibility(item.dataset.font, e.target.checked);
+                this.insertTextManager?.populateFonts?.();
+            });
+
+            const editBtn = item.querySelector('.edit-btn');
+            editBtn?.addEventListener('click', () => {
+                const nameEl = item.querySelector('.font-display-name');
+                if (!nameEl) return;
+                const current = nameEl.textContent || '';
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'font-alias-input';
+                input.value = current;
+                nameEl.replaceWith(input);
+                input.focus();
+                input.select();
+                let cancelled = false;
+
+                const finishEdit = () => {
+                    if (cancelled) return;
+                    const renamed = input.value.trim();
+                    this.settingsManager.setFontAlias(item.dataset.font, renamed);
+                    this.renderFontManagementList();
+                    this.insertTextManager?.populateFonts?.();
+                };
+                input.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        finishEdit();
+                    } else if (event.key === 'Escape') {
+                        cancelled = true;
+                        input.removeEventListener('blur', finishEdit);
+                        this.renderFontManagementList();
+                    }
+                });
+                input.addEventListener('blur', finishEdit, { once: true });
+            });
+
+            const previewBtn = item.querySelector('.preview-btn');
+            previewBtn?.addEventListener('click', () => {
+                const preview = item.querySelector('.font-preview-sample');
+                if (!preview) return;
+                preview.style.display = preview.style.display === 'block' ? 'none' : 'block';
+            });
+        });
+    }
+
+    saveFontOrderFromList() {
+        const list = document.getElementById('font-management-list');
+        if (!list) return;
+        const order = [...list.querySelectorAll('.font-management-item')].map(item => item.dataset.font);
+        this.settingsManager.setFontOrder(order);
+        this.insertTextManager?.populateFonts?.();
     }
     
     // Initialize toolbar customization
@@ -3131,21 +3854,36 @@ class DrawingBoard {
             pagination: localStorage.getItem('controlShowPagination') !== 'false',
             time: localStorage.getItem('controlShowTime') !== 'false',
             fullscreen: localStorage.getItem('controlShowFullscreen') !== 'false',
-            download: localStorage.getItem('controlShowDownload') !== 'false'
+            import: localStorage.getItem('controlShowImport') !== 'false',
+            export: localStorage.getItem('controlShowExport') !== 'false'
         };
+        
+        // Load saved order
+        const savedOrder = localStorage.getItem('controlButtonOrder');
+        if (savedOrder) {
+            try {
+                const order = JSON.parse(savedOrder);
+                this.reorderControlButtonList(order);
+                this.reorderControlButtons(order);
+            } catch (e) {
+                console.error('Failed to load control button order:', e);
+            }
+        }
         
         // Set checkbox states with null checks
         const zoomCheckbox = document.getElementById('control-show-zoom');
         const paginationCheckbox = document.getElementById('control-show-pagination');
         const timeCheckbox = document.getElementById('control-show-time');
         const fullscreenCheckbox = document.getElementById('control-show-fullscreen');
-        const downloadCheckbox = document.getElementById('control-show-download');
+        const importCheckbox = document.getElementById('control-show-import');
+        const exportCheckbox = document.getElementById('control-show-export');
         
         if (zoomCheckbox) zoomCheckbox.checked = controlSettings.zoom;
         if (paginationCheckbox) paginationCheckbox.checked = controlSettings.pagination;
         if (timeCheckbox) timeCheckbox.checked = controlSettings.time;
         if (fullscreenCheckbox) fullscreenCheckbox.checked = controlSettings.fullscreen;
-        if (downloadCheckbox) downloadCheckbox.checked = controlSettings.download;
+        if (importCheckbox) importCheckbox.checked = controlSettings.import;
+        if (exportCheckbox) exportCheckbox.checked = controlSettings.export;
         
         // Apply initial visibility
         this.applyControlButtonVisibility(controlSettings);
@@ -3179,12 +3917,150 @@ class DrawingBoard {
             });
         }
         
-        if (downloadCheckbox) {
-            downloadCheckbox.addEventListener('change', (e) => {
-                localStorage.setItem('controlShowDownload', e.target.checked);
+        if (importCheckbox) {
+            importCheckbox.addEventListener('change', (e) => {
+                localStorage.setItem('controlShowImport', e.target.checked);
                 this.applyControlButtonVisibility();
             });
         }
+        
+        if (exportCheckbox) {
+            exportCheckbox.addEventListener('change', (e) => {
+                localStorage.setItem('controlShowExport', e.target.checked);
+                this.applyControlButtonVisibility();
+            });
+        }
+        
+        // Initialize drag-and-drop for control button ordering
+        this.initControlButtonDragDrop();
+    }
+    
+    // Initialize drag-and-drop for control button reordering
+    initControlButtonDragDrop() {
+        const list = document.getElementById('control-button-list');
+        if (!list) return;
+        
+        let draggedItem = null;
+        
+        list.querySelectorAll('.control-button-item').forEach(item => {
+            item.addEventListener('dragstart', (e) => {
+                draggedItem = item;
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', item.innerHTML);
+            });
+            
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+                list.querySelectorAll('.control-button-item').forEach(i => {
+                    i.classList.remove('drag-over');
+                });
+                draggedItem = null;
+                
+                // Save the new order
+                this.saveControlButtonOrder();
+            });
+            
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            });
+            
+            item.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                if (item !== draggedItem) {
+                    item.classList.add('drag-over');
+                }
+            });
+            
+            item.addEventListener('dragleave', () => {
+                item.classList.remove('drag-over');
+            });
+            
+            item.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (item !== draggedItem && draggedItem) {
+                    // Swap positions
+                    const allItems = [...list.querySelectorAll('.control-button-item')];
+                    const draggedIndex = allItems.indexOf(draggedItem);
+                    const dropIndex = allItems.indexOf(item);
+                    
+                    if (draggedIndex < dropIndex) {
+                        list.insertBefore(draggedItem, item.nextSibling);
+                    } else {
+                        list.insertBefore(draggedItem, item);
+                    }
+                }
+                item.classList.remove('drag-over');
+            });
+        });
+    }
+    
+    // Save control button order to localStorage
+    saveControlButtonOrder() {
+        const list = document.getElementById('control-button-list');
+        if (!list) return;
+        
+        const order = [...list.querySelectorAll('.control-button-item')]
+            .map(item => item.dataset.control)
+            .filter(control => control !== undefined);
+        localStorage.setItem('controlButtonOrder', JSON.stringify(order));
+        
+        // Apply the order to actual control buttons
+        this.reorderControlButtons(order);
+    }
+    
+    // Reorder the settings list based on saved order
+    reorderControlButtonList(order) {
+        const list = document.getElementById('control-button-list');
+        if (!list || !order) return;
+        
+        order.forEach(controlName => {
+            const item = list.querySelector(`[data-control="${controlName}"]`);
+            if (item) {
+                list.appendChild(item);
+            }
+        });
+    }
+    
+    // Reorder actual control buttons in the UI based on order
+    reorderControlButtons(order) {
+        const controlArea = document.getElementById('history-controls');
+        if (!controlArea || !order) return;
+        
+        // Map control names to their element IDs
+        const controlElements = {
+            zoom: ['zoom-out-btn', 'zoom-input', 'zoom-in-btn'],
+            pagination: ['pagination-controls'],
+            time: ['time-display-area'],
+            fullscreen: ['fullscreen-btn'],
+            import: ['import-project-btn'],
+            export: ['export-btn-top']
+        };
+        
+        // Get all control elements and store them
+        const elements = {};
+        Object.keys(controlElements).forEach(control => {
+            elements[control] = controlElements[control].map(id => document.getElementById(id)).filter(el => el);
+        });
+        
+        // Reorder based on the saved order
+        order.forEach(control => {
+            if (elements[control]) {
+                elements[control].forEach(el => {
+                    controlArea.appendChild(el);
+                });
+            }
+        });
+        
+        // Append any remaining controls that weren't in the order
+        Object.keys(elements).forEach(control => {
+            if (!order.includes(control)) {
+                elements[control].forEach(el => {
+                    controlArea.appendChild(el);
+                });
+            }
+        });
     }
     
     applyControlButtonVisibility(settings) {
@@ -3194,7 +4070,8 @@ class DrawingBoard {
                 pagination: localStorage.getItem('controlShowPagination') !== 'false',
                 time: localStorage.getItem('controlShowTime') !== 'false',
                 fullscreen: localStorage.getItem('controlShowFullscreen') !== 'false',
-                download: localStorage.getItem('controlShowDownload') !== 'false'
+                import: localStorage.getItem('controlShowImport') !== 'false',
+                export: localStorage.getItem('controlShowExport') !== 'false'
             };
         }
         
@@ -3206,21 +4083,40 @@ class DrawingBoard {
         if (zoomInput) zoomInput.style.display = settings.zoom ? 'block' : 'none';
         if (zoomInBtn) zoomInBtn.style.display = settings.zoom ? 'flex' : 'none';
         
-        // Pagination controls
-        const pageControls = document.getElementById('page-controls');
-        if (pageControls) pageControls.style.display = settings.pagination ? 'flex' : 'none';
+        // Pagination controls (correct ID is pagination-controls)
+        const paginationControls = document.getElementById('pagination-controls');
+        if (paginationControls) paginationControls.style.display = settings.pagination ? 'flex' : 'none';
         
-        // Time display
+        // Time display - handle both the time widget and its config area
+        // The main widget uses .show class with !important, so we toggle the class
         const timeDisplay = document.getElementById('time-display');
-        if (timeDisplay) timeDisplay.style.display = settings.time ? 'flex' : 'none';
+        if (timeDisplay) {
+            if (settings.time) {
+                timeDisplay.classList.add('show');
+            } else {
+                timeDisplay.classList.remove('show');
+            }
+        }
+        // Also handle the config area visibility
+        const timeDisplayArea = document.getElementById('time-display-area');
+        if (timeDisplayArea) {
+            if (!settings.time) {
+                timeDisplayArea.style.display = 'none';
+            }
+            // Note: We don't restore display here because the config area is shown/hidden by clicking the time widget
+        }
         
         // Fullscreen button
         const fullscreenBtn = document.getElementById('fullscreen-btn');
         if (fullscreenBtn) fullscreenBtn.style.display = settings.fullscreen ? 'flex' : 'none';
         
-        // Download button
-        const downloadBtn = document.getElementById('download-btn');
-        if (downloadBtn) downloadBtn.style.display = settings.download ? 'flex' : 'none';
+        // Import button
+        const importBtn = document.getElementById('import-project-btn');
+        if (importBtn) importBtn.style.display = settings.import ? 'flex' : 'none';
+        
+        // Export button
+        const exportBtnTop = document.getElementById('export-btn-top');
+        if (exportBtnTop) exportBtnTop.style.display = settings.export ? 'flex' : 'none';
     }
     
     toggleFullscreen() {
@@ -3236,7 +4132,7 @@ class DrawingBoard {
                     <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
                 </svg>
             `;
-            btn.title = '退出全屏 (F11)';
+            btn.title = this.getFullscreenButtonTitle(true);
         } else {
             // Exit fullscreen
             document.exitFullscreen();
@@ -3247,8 +4143,19 @@ class DrawingBoard {
                     <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
                 </svg>
             `;
-            btn.title = '全屏 (F11)';
+            btn.title = this.getFullscreenButtonTitle(false);
         }
+    }
+
+    getFullscreenButtonTitle(isExitState) {
+        const i18n = window.i18n;
+        if (!i18n) {
+            return isExitState ? 'Exit Fullscreen (F11)' : 'Fullscreen (F11)';
+        }
+        const key = isExitState ? 'toolbar.exitFullscreen' : 'toolbar.fullscreen';
+        const fallback = isExitState ? 'Exit Fullscreen (F11)' : 'Fullscreen (F11)';
+        const translated = i18n.t(key);
+        return translated === key ? fallback : translated;
     }
     
     updatePatternGrid() {
@@ -3275,7 +4182,7 @@ class DrawingBoard {
                     <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
                 </svg>
             `;
-            btn.title = '全屏 (F11)';
+            btn.title = this.getFullscreenButtonTitle(false);
         } else {
             // Entered fullscreen
             btn.innerHTML = `
@@ -3283,7 +4190,7 @@ class DrawingBoard {
                     <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
                 </svg>
             `;
-            btn.title = '退出全屏 (F11)';
+            btn.title = this.getFullscreenButtonTitle(true);
         }
     }
     
@@ -3531,7 +4438,7 @@ class DrawingBoard {
         });
         
         // Update pattern buttons
-        document.querySelectorAll('.pattern-option-btn').forEach(btn => {
+        document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(btn => {
             if (btn.dataset.pattern === this.backgroundManager.backgroundPattern) {
                 btn.classList.add('active');
             } else {
@@ -3581,24 +4488,12 @@ class DrawingBoard {
         }
     }
     
-    /**
-     * Calculate the visual eraser size by applying the canvas scale
-     * @param {number} eraserSize - The base eraser size in canvas pixels
-     * @returns {number} The visual eraser size in screen pixels
-     */
-    calculateVisualEraserSize(eraserSize) {
-        const finalScale = this.canvasFitScale * this.drawingEngine.canvasScale;
-        return eraserSize * finalScale;
-    }
-    
     updateEraserCursor(e) {
         if (this.drawingEngine.currentTool === 'eraser') {
-            const visualEraserSize = this.calculateVisualEraserSize(this.drawingEngine.eraserSize);
-            
             this.eraserCursor.style.left = e.clientX + 'px';
             this.eraserCursor.style.top = e.clientY + 'px';
-            this.eraserCursor.style.width = visualEraserSize + 'px';
-            this.eraserCursor.style.height = visualEraserSize + 'px';
+            this.eraserCursor.style.width = this.drawingEngine.eraserSize + 'px';
+            this.eraserCursor.style.height = this.drawingEngine.eraserSize + 'px';
         }
     }
     
@@ -3887,7 +4782,7 @@ class DrawingBoard {
             if (this.settingsManager.toastManager) {
                 this.settingsManager.toastManager.show(msg, 'warning');
             } else {
-                alert(msg);
+                window.appDialog?.showAlert(msg, 'warning');
             }
             return;
         }
@@ -3909,7 +4804,7 @@ class DrawingBoard {
             if (this.settingsManager.toastManager) {
                 this.settingsManager.toastManager.show(msg, 'error');
             } else {
-                alert(msg);
+                window.appDialog?.showAlert(msg, 'error');
             }
             this.uploadedImages.pop(); // Remove the image we just added
         }
@@ -3929,7 +4824,7 @@ class DrawingBoard {
             btn.textContent = image.name;
             btn.addEventListener('click', () => {
                 this.backgroundManager.setBackgroundImage(image.data);
-                document.querySelectorAll('.pattern-option-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 document.getElementById('image-size-group').style.display = 'flex';
                 document.getElementById('pattern-density-group').style.display = 'none';
@@ -3969,6 +4864,7 @@ class DrawingBoard {
     
     // Save session data to IndexedDB via StorageManager
     async saveSession() {
+        if (this.isClearingLocalData) return;
         try {
             // Save current page to pages array first
             if (this.currentPage > 0 && this.currentPage <= this.pages.length) {
@@ -4001,11 +4897,35 @@ class DrawingBoard {
                 patternDensity: this.backgroundManager.patternDensity,
                 imageSize: this.backgroundManager.imageSize,
                 backgroundImageData: this.backgroundManager.backgroundImageData,
-                uploadedImages: this.uploadedImages
+                uploadedImages: this.uploadedImages,
+                // Text objects for selection support after restore
+                textObjects: this.insertTextManager ? this.insertTextManager.getTextObjects() : [],
+                // Strokes for selection support after restore
+                strokes: this.drawingEngine.strokes.map(s => ({
+                    points: s.points.map(p => ({ x: p.x, y: p.y })),
+                    color: s.color,
+                    size: s.size,
+                    penType: s.penType,
+                    tool: s.tool,
+                    rotation: s.rotation || 0
+                })),
+                stampedImages: this.drawingEngine.stampedImages.map(img => ({
+                    imageSrc: img.imageSrc || (img.imageElement ? img.imageElement.src : null),
+                    x: img.x,
+                    y: img.y,
+                    width: img.width,
+                    height: img.height,
+                    rotation: img.rotation || 0,
+                    flipHorizontal: img.flipHorizontal || false,
+                    flipVertical: img.flipVertical || false
+                }))
             };
 
             const data = {
                 pages: pagesBlobs,
+                // Keep raw ImageData as a recovery fallback when blob decode is unavailable.
+                // Only one session is persisted, so this bounded duplication is acceptable.
+                pagesRaw: this.pages,
                 settings: settings,
                 canvasWidth: this.canvas.width,
                 canvasHeight: this.canvas.height
@@ -4062,7 +4982,7 @@ class DrawingBoard {
             const sessionData = await this.storageManager.loadSession();
             if (!sessionData) return;
 
-            const { pages, settings } = sessionData;
+            const { pages, pagesRaw, settings } = sessionData;
 
             // Restore settings
             if (settings) {
@@ -4095,10 +5015,54 @@ class DrawingBoard {
 
                 // Restore current page index
                 if (settings.currentPage) this.currentPage = settings.currentPage;
+
+                // Restore text objects for selection support
+                if (settings.textObjects && settings.textObjects.length > 0) {
+                    if (!this.insertTextManager) {
+                        this.insertTextManager = new InsertTextManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
+                    }
+                    this.insertTextManager.setTextObjects(settings.textObjects);
+                }
+
+                // Restore strokes for selection support
+                if (settings.strokes && settings.strokes.length > 0) {
+                    this.drawingEngine.strokes = settings.strokes;
+                }
+
+                // Restore stamped images for selection support
+                if (settings.stampedImages && settings.stampedImages.length > 0) {
+                    const loadImage = (src) => new Promise((resolve) => {
+                        const img = new Image();
+                        img.onload = () => resolve(img);
+                        img.onerror = () => resolve(null);
+                        img.src = src;
+                    });
+
+                    const stampedImages = await Promise.all(settings.stampedImages.map(async (imgData) => {
+                        const imageSrc = imgData.imageSrc || imgData.src;
+                        const imageElement = imageSrc ? await loadImage(imageSrc) : null;
+                        return {
+                            ...imgData,
+                            imageSrc: imageSrc || null,
+                            imageElement
+                        };
+                    }));
+
+                    this.drawingEngine.stampedImages = stampedImages;
+                } else {
+                    this.drawingEngine.stampedImages = [];
+                }
+
+                // Link selection manager to text manager for selection to work
+                if (this.insertTextManager) {
+                    this.selectionManager.setTextManager(this.insertTextManager);
+                }
             }
 
             // Restore pages
-            if (pages && Array.isArray(pages)) {
+            if (pagesRaw && Array.isArray(pagesRaw) && pagesRaw.length > 0) {
+                this.pages = pagesRaw;
+            } else if (pages && Array.isArray(pages)) {
                 this.pages = await Promise.all(pages.map(blob => StorageManager.blobToImageData(blob)));
             }
 
@@ -4163,6 +5127,180 @@ class DrawingBoard {
             localStorage.removeItem('savedCurrentPage');
         } catch (e) {
             console.warn('Failed to clear session:', e);
+        }
+    }
+
+    getCacheKeyGroups() {
+        const settingsKeys = new Set([
+            'toolbarSize', 'configScale', 'controlPosition', 'edgeSnapEnabled', 'touchZoomEnabled',
+            'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn',
+            'showToolbarText', 'keepMorePanelOpen', 'canvasWidth', 'canvasHeight', 'canvasPreset',
+            'themeColor', 'globalFont', 'language', 'patternPreferences', 'toolbarOrder',
+            'toolbarVisibility', 'controlShowZoom', 'controlShowPagination', 'controlShowTime',
+            'controlShowFullscreen', 'controlShowImport', 'controlShowExport', 'penType',
+            'penLineStyle', 'penDashDensity', 'penMultiLineCount', 'penMultiLineSpacing',
+            'eraserShape', 'lineStyle'
+        ]);
+        const canvasKeys = new Set([
+            'savedCanvasData', 'savedBgCanvasData', 'savedCanvasTimestamp',
+            'savedCurrentPage', 'pageBackgrounds', 'canvasScale', 'panOffsetX', 'panOffsetY'
+        ]);
+        return { settingsKeys, canvasKeys };
+    }
+
+    getStorageEntrySize(key, value) {
+        return new Blob([`${key}${value || ''}`]).size;
+    }
+
+    formatBytes(bytes) {
+        if (!bytes || bytes <= 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB'];
+        const idx = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+        const val = bytes / Math.pow(1024, idx);
+        return `${val.toFixed(val >= 10 || idx === 0 ? 0 : 1)} ${units[idx]}`;
+    }
+
+    async getCacheSizeSummary() {
+        const { settingsKeys, canvasKeys } = this.getCacheKeyGroups();
+        const summary = { settings: 0, canvas: 0, other: 0 };
+
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            const val = localStorage.getItem(key);
+            const size = this.getStorageEntrySize(key, val);
+            if (settingsKeys.has(key)) summary.settings += size;
+            else if (canvasKeys.has(key)) summary.canvas += size;
+            else summary.other += size;
+        }
+
+        for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            const val = sessionStorage.getItem(key);
+            const size = this.getStorageEntrySize(key, val);
+            if (settingsKeys.has(key)) summary.settings += size;
+            else if (canvasKeys.has(key)) summary.canvas += size;
+            else summary.other += size;
+        }
+
+        try {
+            const session = await this.storageManager.loadSession();
+            if (session) {
+                summary.canvas += new Blob([JSON.stringify(session)]).size;
+            }
+        } catch (e) {
+            console.warn('Failed to estimate IndexedDB size:', e);
+        }
+
+        if ('caches' in window) {
+            try {
+                const cacheKeys = await caches.keys();
+                for (const cacheName of cacheKeys) {
+                    const cache = await caches.open(cacheName);
+                    const requests = await cache.keys();
+                    for (const request of requests) {
+                        const response = await cache.match(request);
+                        const blob = response ? await response.clone().blob() : null;
+                        summary.other += blob ? blob.size : 0;
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to estimate Cache Storage size:', e);
+            }
+        }
+
+        return summary;
+    }
+
+    async updateCacheSizeDisplay() {
+        const settingsSizeEl = document.getElementById('settings-cache-size');
+        const canvasSizeEl = document.getElementById('canvas-cache-size');
+        const otherSizeEl = document.getElementById('other-cache-size');
+        if (!settingsSizeEl || !canvasSizeEl || !otherSizeEl) return;
+        const summary = await this.getCacheSizeSummary();
+        settingsSizeEl.textContent = this.formatBytes(summary.settings);
+        canvasSizeEl.textContent = this.formatBytes(summary.canvas);
+        otherSizeEl.textContent = this.formatBytes(summary.other);
+    }
+
+    async clearSelectedCache(options) {
+        const { settingsKeys, canvasKeys } = this.getCacheKeyGroups();
+
+        if (options.canvas) {
+            await this.clearSessionData();
+            canvasKeys.forEach(key => {
+                localStorage.removeItem(key);
+                sessionStorage.removeItem(key);
+            });
+        }
+
+        if (options.settings) {
+            settingsKeys.forEach(key => {
+                localStorage.removeItem(key);
+                sessionStorage.removeItem(key);
+            });
+        }
+
+        if (options.other) {
+            const preserved = new Set();
+            if (!options.settings) settingsKeys.forEach(k => preserved.add(k));
+            if (!options.canvas) canvasKeys.forEach(k => preserved.add(k));
+
+            const localKeys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key) localKeys.push(key);
+            }
+            localKeys.forEach(key => {
+                if (!preserved.has(key)) localStorage.removeItem(key);
+            });
+            const sessionKeys = [];
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                if (key) sessionKeys.push(key);
+            }
+            sessionKeys.forEach(key => {
+                if (!preserved.has(key)) sessionStorage.removeItem(key);
+            });
+
+            if ('caches' in window) {
+                const cacheKeys = await caches.keys();
+                await Promise.all(cacheKeys.map(key => caches.delete(key)));
+            }
+        }
+    }
+
+    async clearAllLocalData() {
+        this.isClearingLocalData = true;
+        try {
+            if (this.saveTimeout) clearTimeout(this.saveTimeout);
+            await this.clearSessionData();
+            this.storageManager?.closeDB();
+
+            const dbName = this.storageManager?.dbName;
+            if ('indexedDB' in window && dbName) {
+                await new Promise((resolve) => {
+                    const request = indexedDB.deleteDatabase(dbName);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => {
+                        console.warn('Failed to delete IndexedDB:', request.error);
+                        resolve();
+                    };
+                    request.onblocked = () => {
+                        console.warn('IndexedDB deletion blocked');
+                        resolve();
+                    };
+                });
+            }
+
+            localStorage.clear();
+            sessionStorage.clear();
+
+            if ('caches' in window) {
+                const cacheKeys = await caches.keys();
+                await Promise.all(cacheKeys.map(key => caches.delete(key)));
+            }
+        } finally {
+            this.isClearingLocalData = false;
         }
     }
 }

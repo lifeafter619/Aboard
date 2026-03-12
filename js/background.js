@@ -52,6 +52,26 @@ class BackgroundManager {
         this.gifInstance = null; // Store SuperGif instance
         this.gifLoopCount = 0; // Default infinite
         this.currentGifLoop = 0;
+
+        // Cache the latest applied DOM state to reduce unnecessary style writes/reflows
+        this.imageDomStateCache = {
+            display: null,
+            opacity: null,
+            left: null,
+            top: null,
+            width: null,
+            height: null,
+            transform: null,
+            transformOrigin: null,
+            gifSettingsDisplay: null
+        };
+    }
+
+    setStyleIfChanged(element, property, value, cacheKey = property) {
+        if (!element || !element.style) return;
+        if (this.imageDomStateCache[cacheKey] === value) return;
+        element.style[property] = value;
+        this.imageDomStateCache[cacheKey] = value;
     }
     
     drawBackground() {
@@ -153,7 +173,7 @@ class BackgroundManager {
                 containerElement.appendChild(imgElement);
             }
 
-            containerElement.style.display = 'block';
+            this.setStyleIfChanged(containerElement, 'display', 'block');
 
             // Check if source changed
             if (imgElement.src !== this.backgroundImageData && !this.isImagePaused) {
@@ -164,11 +184,15 @@ class BackgroundManager {
                     this.initGif(imgElement);
                     // Show GIF settings button
                     const gifSettingsBtn = document.getElementById('bg-gif-settings-btn');
-                    if (gifSettingsBtn) gifSettingsBtn.style.display = 'block';
+                    if (gifSettingsBtn) {
+                        this.setStyleIfChanged(gifSettingsBtn, 'display', 'block', 'gifSettingsDisplay');
+                    }
                 } else {
                     // Hide GIF settings button
                     const gifSettingsBtn = document.getElementById('bg-gif-settings-btn');
-                    if (gifSettingsBtn) gifSettingsBtn.style.display = 'none';
+                    if (gifSettingsBtn) {
+                        this.setStyleIfChanged(gifSettingsBtn, 'display', 'none', 'gifSettingsDisplay');
+                    }
                     if (this.gifInstance) {
                         this.gifInstance = null;
                         // Restore img if SuperGif modified DOM
@@ -188,7 +212,7 @@ class BackgroundManager {
             const canvasWidth = this.bgCanvas.width / dpr;
             const canvasHeight = this.bgCanvas.height / dpr;
             
-            containerElement.style.opacity = this.patternIntensity;
+            this.setStyleIfChanged(containerElement, 'opacity', String(this.patternIntensity));
 
             // Handle paused state (freeze GIF or static image)
             if (this.isImagePaused) {
@@ -203,17 +227,17 @@ class BackgroundManager {
 
             if (this.imageTransform.width > 0 && this.imageTransform.height > 0) {
                 // Apply transformations using CSS
-                containerElement.style.left = `${this.imageTransform.x}px`;
-                containerElement.style.top = `${this.imageTransform.y}px`;
-                containerElement.style.width = `${this.imageTransform.width}px`;
-                containerElement.style.height = `${this.imageTransform.height}px`;
+                this.setStyleIfChanged(containerElement, 'left', `${this.imageTransform.x}px`);
+                this.setStyleIfChanged(containerElement, 'top', `${this.imageTransform.y}px`);
+                this.setStyleIfChanged(containerElement, 'width', `${this.imageTransform.width}px`);
+                this.setStyleIfChanged(containerElement, 'height', `${this.imageTransform.height}px`);
 
                 // Build transform string including flip
                 const scaleX = this.imageTransform.flipHorizontal ? -this.imageTransform.scale : this.imageTransform.scale;
                 const scaleY = this.imageTransform.flipVertical ? -this.imageTransform.scale : this.imageTransform.scale;
 
-                containerElement.style.transformOrigin = 'center center';
-                containerElement.style.transform = `rotate(${this.imageTransform.rotation}deg) scale(${scaleX}, ${scaleY})`;
+                this.setStyleIfChanged(containerElement, 'transformOrigin', 'center center');
+                this.setStyleIfChanged(containerElement, 'transform', `rotate(${this.imageTransform.rotation}deg) scale(${scaleX}, ${scaleY})`);
             } else {
                 // Fallback centering logic
                 if (imgElement.naturalWidth) {
@@ -222,11 +246,11 @@ class BackgroundManager {
                     const x = (canvasWidth - scaledWidth) / 2;
                     const y = (canvasHeight - scaledHeight) / 2;
 
-                    containerElement.style.left = `${x}px`;
-                    containerElement.style.top = `${y}px`;
-                    containerElement.style.width = `${scaledWidth}px`;
-                    containerElement.style.height = `${scaledHeight}px`;
-                    containerElement.style.transform = 'none';
+                    this.setStyleIfChanged(containerElement, 'left', `${x}px`);
+                    this.setStyleIfChanged(containerElement, 'top', `${y}px`);
+                    this.setStyleIfChanged(containerElement, 'width', `${scaledWidth}px`);
+                    this.setStyleIfChanged(containerElement, 'height', `${scaledHeight}px`);
+                    this.setStyleIfChanged(containerElement, 'transform', 'none');
                 } else {
                     // If not loaded yet, wait
                     imgElement.onload = () => this.drawBackground(); // Redraw (update styles) when loaded
@@ -235,7 +259,7 @@ class BackgroundManager {
 
         } else {
             if (containerElement) {
-                containerElement.style.display = 'none';
+                this.setStyleIfChanged(containerElement, 'display', 'none');
             }
         }
     }

@@ -32,7 +32,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - 미니멀 화이트보드',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: '화면을 회전해 주세요',
+        rotateScreenTip: '세로 모드가 감지되었습니다. 올바른 레이아웃과 전체 도구 모음을 위해 가로 모드로 사용해 주세요.'
     },
 
     // Toolbar
@@ -42,6 +44,7 @@ window.translations = {
         pen: '펜',
         shape: '도형',
         move: '이동',
+        select: '선택',
         eraser: '지우개',
         clear: '지우기',
         background: '배경',
@@ -52,6 +55,7 @@ window.translations = {
         zoomOut: '축소 (-)',
         zoomIn: '확대 (+)',
         fullscreen: '전체 화면 (F11)',
+        exitFullscreen: '전체 화면 종료 (F11)',
         zoomPlaceholder: '확대/축소 수준 (백분율 입력)'
     },
 
@@ -65,6 +69,7 @@ window.translations = {
             ballpoint: '볼펜',
             fountain: '만년필',
             brush: '붓',
+            marker: '마커',
             color: '색상',
             colorAndSize: '색상 및 크기',
             colorPicker: '색상 선택기',
@@ -121,7 +126,54 @@ window.translations = {
             waveDensity: '물결 밀도',
             lineSpacing: '선 간격',
             lineCount: '선 개수'
+        },
+        text: {
+            insertTitle: '텍스트 삽입',
+            editTitle: '텍스트 편집',
+            placeholder: '여기에 텍스트 입력',
+            size: '크기',
+            color: '색상',
+            font: '글꼴',
+            style: '스타일',
+            bold: '굵게',
+            italic: '기울임',
+            underline: '밑줄',
+            strikethrough: '취소선',
+            decorationStyle: '선 스타일',
+            decorationWidth: '선 두께',
+            decorationColor: '선 색상',
+            uploadFont: '글꼴 업로드',
+            customFonts: '사용자 정의 글꼴',
+            fontUploadSuccess: '글꼴이 업로드되었습니다!',
+            fontExists: '이 글꼴은 이미 존재합니다.',
+            invalidFontFormat: '잘못된 글꼴 형식입니다. TTF, OTF, WOFF 또는 WOFF2 파일을 사용하세요.',
+            fontTooLarge: '글꼴 파일이 너무 큽니다. 최대 2MB까지 허용됩니다.',
+            storageQuotaExceeded: '저장 공간이 초과되었습니다. 사용자 정의 글꼴을 삭제해 주세요.'
+        },
+        select: {
+            mode: '선택 모드',
+            clickMode: '클릭',
+            rectMode: '영역 선택',
+            lassoMode: '올가미',
+            transform: '변환',
+            rotate90: '90° 회전',
+            flipH: '좌우 반전',
+            flipV: '상하 반전'
         }
+    },
+
+    selection: {
+        edit: '편집',
+        copy: '복사',
+        delete: '삭제',
+        done: '완료',
+        rotate90: '90° 회전',
+        flipH: '좌우 반전',
+        layer: '레이어',
+        layerFront: '맨 앞으로',
+        layerBack: '맨 뒤로',
+        layerUp: '앞으로 한 단계',
+        layerDown: '뒤로 한 단계'
     },
 
     // Line Style Modal
@@ -181,6 +233,21 @@ window.translations = {
         rotate: '회전'
     },
 
+    // Selection Controls
+    selection: {
+        copy: '복사',
+        delete: '삭제',
+        done: '완료',
+        edit: '편집',
+        rotate90: '90° 회전',
+        flipH: '좌우 뒤집기',
+        layer: '레이어',
+        layerFront: '맨 앞으로',
+        layerBack: '맨 뒤로',
+        layerUp: '앞으로 한 단계',
+        layerDown: '뒤로 한 단계'
+    },
+
     // Page Navigation
     page: {
         previous: '이전',
@@ -193,6 +260,10 @@ window.translations = {
     // Settings
     settings: {
         title: '설정',
+        exportSuccess: '설정이 성공적으로 내보내졌습니다',
+        importSuccess: '설정을 성공적으로 가져왔습니다',
+        importError: '잘못된 구성 파일입니다',
+        importNoChange: '설정 변경이 감지되지 않았습니다',
         tabs: {
             general: '일반',
             display: '표시',
@@ -260,6 +331,8 @@ window.translations = {
             },
             edgeSnap: '가장자리 스냅 활성화',
             edgeSnapHint: '드래그 시 컨트롤 패널을 화면 가장자리에 자동 정렬',
+            morePanelBehaviorLabel: '더보기 패널 동작',
+            keepMorePanelOpenHint: '기능 버튼 클릭 후에도 더보기 패널 유지',
             // Toolbar customization
             toolbarCustomization: '툴바 사용자 정의',
             toolbarCustomizationHint: '툴바에 표시할 도구를 선택하고 드래그하여 순서 조정',
@@ -268,6 +341,7 @@ window.translations = {
                 redo: '다시 실행',
                 pen: '펜',
                 move: '이동',
+                select: '선택',
                 eraser: '지우개',
                 clear: '지우기',
                 background: '배경',
@@ -282,7 +356,8 @@ window.translations = {
                 pagination: '페이지 매김 버튼',
                 time: '시간 표시',
                 fullscreen: '전체 화면 버튼',
-                download: '다운로드 버튼'
+                import: '가져오기 버튼',
+                export: '내보내기 버튼'
             },
             controlPosition: '컨트롤 버튼 위치',
             controlPositionHint: '확대/축소 및 페이지 매김 컨트롤 표시 위치 선택',
@@ -387,9 +462,25 @@ window.translations = {
         },
         more: {
             title: '추가 설정',
+            cacheCleanupLabel: '캐시 정리',
+            cacheCleanupHint: '캐시 사용량을 확인하고 항목별로 정리할 수 있습니다(정리 전 확인)',
+            clearSettingsCache: '설정 캐시 삭제',
+            clearCanvasCache: '캔버스 캐시 삭제',
+            clearOtherCache: '기타 캐시 삭제',
+            cacheSizeCalculating: '계산 중...',
+            clearSelectedCache: '선택한 캐시 정리',
+            morePanelBehaviorLabel: '더보기 패널 동작',
+            keepMorePanelOpenHint: '기능 버튼 클릭 후에도 더보기 패널 유지',
+            selectCacheType: '삭제할 캐시 유형을 하나 이상 선택하세요.',
+            confirmClearSelectedCache: '다음 캐시가 정리됩니다:',
+            clearLocalDataConfirmSuffix: '계속하시겠습니까?',
             description: '시간 표시 설정은 오른쪽 하단 시간 영역을 클릭하세요',
             showTimeDisplay: '시간 및 날짜 표시',
-            showTimeDisplayHint: '오른쪽 상단에 현재 시간 및 날짜 표시'
+            showTimeDisplayHint: '오른쪽 상단에 현재 시간 및 날짜 표시',
+            localDataLabel: '로컬 데이터',
+            localDataHint: '로컬 캐시, 캔버스 내용, 설정을 지우고 최초 로드 상태로 복원합니다',
+            clearLocalDataButton: '로컬 캐시 지우기',
+            clearLocalDataConfirm: '로컬 캐시, 캔버스 내용, 설정을 모두 지우고 최초 로드 상태로 복원합니다. 계속하시겠습니까?'
         },
         time: {
             title: '시간 표시 설정',
@@ -431,7 +522,8 @@ window.translations = {
         timer: '타이머',
         randomPicker: '추첨기',
         scoreboard: '점수판',
-        insertImage: '이미지 삽입'
+        insertImage: '이미지 삽입',
+        insertText: '텍스트 삽입'
     },
 
     // Teaching Tools

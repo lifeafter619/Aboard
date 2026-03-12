@@ -34,7 +34,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - 簡約白板',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: '請旋轉螢幕',
+        rotateScreenTip: '偵測到目前為直向模式。為了正常排版與完整工具列，請以橫向使用。'
     },
 
     // Toolbar
@@ -44,6 +46,7 @@ window.translations = {
         pen: '筆',
         shape: '形狀',
         move: '移動',
+        select: '選擇',
         eraser: '擦除',
         clear: '清空',
         background: '背景',
@@ -54,6 +57,7 @@ window.translations = {
         zoomOut: '縮小 (-)',
         zoomIn: '放大 (+)',
         fullscreen: '全螢幕 (F11)',
+        exitFullscreen: '退出全螢幕 (F11)',
         zoomPlaceholder: '縮放比例 (輸入百分比)'
     },
 
@@ -67,6 +71,7 @@ window.translations = {
             ballpoint: '圓珠筆',
             fountain: '鋼筆',
             brush: '毛筆',
+            marker: '麥克筆',
             color: '顏色',
             colorAndSize: '顏色與粗細',
             colorPicker: '取色器',
@@ -124,7 +129,54 @@ window.translations = {
             waveDensity: '波浪密度',
             lineSpacing: '線條間距',
             lineCount: '線條數量'
+        },
+        text: {
+            insertTitle: '插入文字',
+            editTitle: '編輯文字',
+            placeholder: '在此輸入文字',
+            size: '大小',
+            color: '顏色',
+            font: '字體',
+            style: '樣式',
+            bold: '粗體',
+            italic: '斜體',
+            underline: '底線',
+            strikethrough: '刪除線',
+            decorationStyle: '線型',
+            decorationWidth: '線條粗細',
+            decorationColor: '線條顏色',
+            uploadFont: '上傳字體',
+            customFonts: '自訂字體',
+            fontUploadSuccess: '字體上傳成功！',
+            fontExists: '該字體已存在。',
+            invalidFontFormat: '無效的字體格式。請使用 TTF、OTF、WOFF 或 WOFF2 檔案。',
+            fontTooLarge: '字體檔案過大，最大允許 2MB。',
+            storageQuotaExceeded: '儲存空間不足，請刪除一些自訂字體。'
+        },
+        select: {
+            mode: '選擇模式',
+            clickMode: '點選',
+            rectMode: '框選',
+            lassoMode: '套索',
+            transform: '變換',
+            rotate90: '旋轉90°',
+            flipH: '水平翻轉',
+            flipV: '垂直翻轉'
         }
+    },
+
+    selection: {
+        edit: '編輯',
+        copy: '複製',
+        delete: '刪除',
+        done: '完成',
+        rotate90: '旋轉90°',
+        flipH: '水平翻轉',
+        layer: '圖層',
+        layerFront: '置於頂層',
+        layerBack: '置於底層',
+        layerUp: '上移一層',
+        layerDown: '下移一層'
     },
 
     // Line Style Modal
@@ -183,6 +235,21 @@ window.translations = {
         flipHorizontal: '水平翻轉',
         flipVertical: '垂直翻轉',
         rotate: '旋轉'
+    },
+
+    // Selection Controls
+    selection: {
+        copy: '複製',
+        delete: '刪除',
+        done: '完成',
+        edit: '編輯',
+        rotate90: '旋轉90°',
+        flipH: '水平翻轉',
+        layer: '圖層',
+        layerFront: '置於頂層',
+        layerBack: '置於底層',
+        layerUp: '上移一層',
+        layerDown: '下移一層'
     },
 
     // Page Navigation
@@ -255,7 +322,7 @@ window.translations = {
         general: {
             title: '通用設定',
             language: '語言',
-            languageHint: '選擇界面語言 / Choose interface language',
+            languageHint: '選擇介面語言',
             globalFont: '全局字體',
             globalFontHint: '選擇套用程序使用的字體',
             fonts: {
@@ -284,6 +351,8 @@ window.translations = {
             edgeSnapHint: '拖動控制面板時自動吸附到屏幕邊緣',
             touchZoom: '觸控縮放',
             touchZoomHint: '允許雙指捏合縮放畫布',
+            morePanelBehaviorLabel: '更多功能面板行為',
+            keepMorePanelOpenHint: '點擊「更多」中的功能按鈕後預設不關閉「更多」框',
             // Toolbar customization
             toolbarCustomization: '工具列自訂',
             toolbarCustomizationHint: '選擇要在工具列中顯示的工具，拖動可調整順序',
@@ -292,6 +361,7 @@ window.translations = {
                 redo: '重做',
                 pen: '筆',
                 move: '移動',
+                select: '選擇',
                 eraser: '擦除',
                 clear: '清空',
                 background: '背景',
@@ -306,7 +376,8 @@ window.translations = {
                 pagination: '分頁按鈕',
                 time: '時間顯示',
                 fullscreen: '全螢幕按鈕',
-                download: '下載按鈕'
+                import: '匯入按鈕',
+                export: '匯出按鈕'
             },
             controlPosition: '控制按鈕位置',
             controlPositionHint: '選擇縮放和分頁控件在屏幕上的顯示位置',
@@ -417,9 +488,25 @@ window.translations = {
         },
         more: {
             title: '更多設定',
+            cacheCleanupLabel: '快取清理',
+            cacheCleanupHint: '可查看快取占用並按類別清理（清理前會二次確認）',
+            clearSettingsCache: '清除設定項快取',
+            clearCanvasCache: '清除畫布快取',
+            clearOtherCache: '清除其他快取',
+            cacheSizeCalculating: '計算中...',
+            clearSelectedCache: '清理所選快取',
+            morePanelBehaviorLabel: '更多功能面板行為',
+            keepMorePanelOpenHint: '點擊「更多」中的功能按鈕後預設不關閉「更多」框',
+            selectCacheType: '請先選擇要清理的快取類型',
+            confirmClearSelectedCache: '將清理以下快取：',
+            clearLocalDataConfirmSuffix: '確定繼續嗎？',
             description: '時間顯示相關設定請點擊右下角時間區域進入設定界面',
             showTimeDisplay: '顯示時間和日期',
-            showTimeDisplayHint: '在右上角顯示目前時間和日期'
+            showTimeDisplayHint: '在右上角顯示目前時間和日期',
+            localDataLabel: '本地資料',
+            localDataHint: '清空本地快取、畫布內容和設定，並恢復首次載入狀態',
+            clearLocalDataButton: '清空本地快取',
+            clearLocalDataConfirm: '此操作會清空本地快取、畫布內容和設定，並恢復為首次載入狀態。確定繼續嗎？'
         },
         time: {
             title: '時間顯示設定',
@@ -469,7 +556,8 @@ window.translations = {
         timer: '計時',
         randomPicker: '點名器',
         scoreboard: '計分板',
-        insertImage: '插入圖片'
+        insertImage: '插入圖片',
+        insertText: '插入文字'
     },
 
     // Random Picker

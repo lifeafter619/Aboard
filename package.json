@@ -1,5 +1,12 @@
 {
+  "name": "aboard",
+  "version": "1.0.0",
+  "description": "一个简约的web白板，更适合老师体质",
+  "scripts": {
+    "start": "node server.js"
+  },
   "devDependencies": {
-    "@playwright/test": "^1.57.0"
+    "@playwright/test": "^1.57.0",
+    "serve": "^14.0.0"
   }
 }

@@ -49,21 +49,18 @@ graph LR
     click H "https://dev.aboard.pp.ua" "最新测试"
 ```
 
-## 最近更新 (Recent Updates)
+## 最近更新
+- **设置与交互优化**：修复“检查更新”手动检查反馈；缓存清理改为项目内统一确认弹框；“更多功能面板行为”迁移到通用设置。
+- **面板体验优化**：时间显示选项面板改为整框拖动并补充帮助入口；多个功能面板后打开项自动置顶显示。
+- **v2.3.0**：插入文字功能增加下划线和删除线样式支持；优化文字编辑弹窗尺寸；修复多语言占位符显示问题。
+- **选择工具增强**：文字选中后支持缩放手柄，选中编辑支持就地更新；刷新后恢复笔迹和文字的选择功能。
+- **属性面板优化**：笔触类型和线条样式按钮更紧凑；属性框支持随浏览器窗口大小自动重新定位。
 - **配置管理**：支持导出和导入应用配置（JSON格式），并在导入时智能对比差异，让个性化设置轻松迁移。
 - **性能优化**：实现了功能模块的按需加载（Lazy Loading），大幅提升首屏加载速度。
-- **UI 优化**：统一了导出弹窗和时间设置弹窗的界面风格，视觉体验更一致。
-- **帮助系统扩展**：为教具和时间显示设置添加了帮助内容，支持8种语言（简体中文、繁体中文、英语、日语、韩语、法语、德语、西班牙语）。
-- **帮助按钮优化**：调整帮助按钮位置至标题右侧，帮助弹窗置于最高层级（z-index: 99999）。
-- **触控优化**：增强全局触控设备兼容性，添加最小44x44px触控目标尺寸，移除触控高亮效果。
-- **触控手势增强**：使用 Pointer Events API 实现更可靠的双指捏合缩放，支持触控笔+手指组合手势，兼容各种触控设备。
-- **形状预览优化**：修复了形状绘制时预览线条比实际线条细的问题，实现了所见即所得。
-- **插入图片修复**：修复了插入图片功能无法正常显示编辑框的严重Bug。
-- **箭头设置增强**：将粗细标签统一为线条粗细，增加了箭头大小的上限（100px），并实现了箭头大小不小于线条粗细的动态约束。
+- **帮助系统扩展**：为教具和时间显示设置添加了帮助内容，支持8种语言。
+- **触控手势增强**：使用 Pointer Events API 实现更可靠的双指捏合缩放，支持触控笔+手指组合手势。
 - **点名器升级**：新增 Excel/CSV 表格导入功能，支持自定义姓名列读取。
-- **帮助系统**：在各个设置面板中增加了帮助按钮，支持丰富的文本格式（加粗、下划线、颜色、字号）。
 - **兼容性优化**：全面升级为 Pointer Events，提升 Windows 触控设备和安卓大屏的兼容性与流畅度。
-- **触控优化**：新增双指捏合缩放画布功能（可在设置中开启/关闭），双击画布智能缩放，优化了触控操作的响应速度。
 
 
 ### 📖 帮助文档格式说明
@@ -267,21 +264,40 @@ graph LR
 
 点击上方按钮即可快速部署到 Cloudflare Pages，享受赛博活佛的全球CDN加速。
 
-### 本地服务器（不建议直接运行html文件）
-如果需要完整功能（如加载公告），建议使用HTTP服务器运行：
+### 本地运行（推荐方式）
+
+> ⚠️ **注意**：直接双击打开 `index.html` 文件会导致显示异常（由于浏览器安全限制，本地文件无法使用 `fetch` 加载资源）。请使用以下方法运行本地服务器。
+
+#### 使用 npm（需要安装 Node.js）
 
 ```bash
-# 使用Python
-python3 -m http.server 8080
-
-# 使用Node.js
-npx http-server -p 8080
-
-# 使用PHP
-php -S localhost:8080
+# 进入项目目录后执行
+npm start
 ```
 
 然后在浏览器访问 `http://localhost:8080`
+
+> `npm start` 会启动项目内置 Node 服务，并提供 `/api/version` 接口（读取 `version.txt`）。
+
+#### 使用 Python（无需安装额外依赖）
+
+```bash
+python3 -m http.server 8080
+```
+
+然后在浏览器访问 `http://localhost:8080`
+
+#### 其他方式
+
+```bash
+# 使用 Node.js（无需克隆项目）
+npx serve -l 8080
+
+# 使用 PHP
+php -S localhost:8080
+```
+
+> 注意：使用 `npx serve` 或 `python3 -m http.server` 时不会提供 `/api/version`，仅适用于纯静态预览。
 
 ## 📖 使用指南
 
@@ -345,6 +361,7 @@ php -S localhost:8080
 
 ```
 Aboard/
+├── server.js               # 本地开发服务（含 /api/version）
 ├── index.html              # 主HTML文件
 ├── LICENSE                 # MIT许可证文件
 ├── package.json            # 项目配置文件
@@ -352,18 +369,20 @@ Aboard/
 ├── css/
 │   ├── style.css          # 主样式表
 │   └── modules/           # 模块化样式
-│       ├── timer.css      # 计时器样式
-│       ├── time-display.css # 时间显示样式
+│       ├── diff.css       # 设置对比样式
 │       ├── export.css     # 导出功能样式
 │       ├── feature-area.css # 功能区样式
-│       ├── teaching-tools.css # 教具功能样式
-│       ├── shape.css      # 形状工具样式
+│       ├── insert-image.css # 插入图片样式
+│       ├── insert-text.css # 文字插入样式
 │       ├── line-style-modal.css # 线条样式设置弹窗样式
+│       ├── project.css    # 项目管理样式
 │       ├── random-picker.css # 点名器样式
 │       ├── scoreboard.css # 计分板样式
-│       ├── insert-image.css # 插入图片样式
-│       ├── toast.css      # 消息提示样式
-│       └── diff.css       # 设置对比样式
+│       ├── shape.css      # 形状工具样式
+│       ├── teaching-tools.css # 教具功能样式
+│       ├── time-display.css # 时间显示样式
+│       ├── timer.css      # 计时器样式
+│       └── toast.css      # 消息提示样式
 ├── js/
 │   ├── main.js            # 主应用入口
 │   ├── drawing.js         # 绘图引擎模块
@@ -400,24 +419,29 @@ Aboard/
 │   │       ├── de-DE.js   # 德语帮助
 │   │       └── es-ES.js   # 西班牙语帮助
 │   └── modules/           # 功能模块
-│       ├── timer.js       # 计时器模块
+│       ├── browser-check.js # 浏览器兼容性检查
+│       ├── dialog-manager.js # 统一对话框管理模块（替代浏览器原生提示）
+│       ├── edge-drawing.js # 边缘绘制模块（沿教具边缘画线）
+│       ├── gif-manager.js # GIF动图管理模块
+│       ├── help-system.js # 帮助系统模块
+│       ├── i18n.js        # 国际化核心模块
+│       ├── insert-text-manager.js # 文字插入管理模块
+│       ├── libgif.js      # GIF解析库
+│       ├── line-style-modal.js # 线条样式设置弹窗模块
+│       ├── project-manager.js # 项目管理模块
+│       ├── pwa-manager.js # PWA管理模块
+│       ├── random-picker.js # 点名器模块
+│       ├── rich-text-parser.js # 富文本解析模块
+│       ├── scoreboard.js  # 计分板模块
+│       ├── script-loader.js # 脚本加载模块
+│       ├── settings-manager.js # 设置管理模块
+│       ├── shape-drawing.js # 形状绘制模块
+│       ├── storage-manager.js # 存储管理模块
+│       ├── teaching-tools.js # 教具功能模块
 │       ├── time-display-controls.js # 时间显示控制
 │       ├── time-display-settings.js # 时间显示设置
-│       ├── edge-drawing.js # 边缘绘制模块（沿教具边缘画线）
-│       ├── teaching-tools.js # 教具功能模块
-│       ├── shape-drawing.js # 形状绘制模块（支持直线、矩形、圆形）
-│       ├── random-picker.js # 点名器模块
-│       ├── scoreboard.js  # 计分板模块
-│       ├── settings-manager.js # 设置管理模块
-│       ├── toast-manager.js # 消息提示模块
-│       ├── line-style-modal.js # 线条样式设置弹窗模块
-│       ├── i18n.js        # 国际化核心模块
-│       ├── help-system.js # 帮助系统模块
-│       ├── browser-check.js # 浏览器兼容性检查
-│       ├── gif-manager.js # GIF动图管理模块
-│       ├── libgif.js      # GIF解析库
-│       ├── storage-manager.js # 存储管理模块
-│       └── project-manager.js # 项目管理模块
+│       ├── timer.js       # 计时器模块
+│       └── toast-manager.js # 消息提示模块
 ├── img/                    # 图片资源目录
 │   ├── ruler_1.png        # 直尺样式1
 │   ├── ruler_2.png        # 直尺样式2
@@ -432,9 +456,6 @@ Aboard/
 │   ├── gentle-alarm.MP3   # 柔和提示音
 │   ├── digital-beep.MP3   # 数字提示音
 │   └── README.md          # 音频文件说明
-├── tests/                  # 测试文件夹
-│   └── manual/            # 手动测试
-│       └── verify_architecture.spec.js
 └── README.md              # 项目文档（简体中文）
 ```
 

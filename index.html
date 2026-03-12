@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="css/modules/random-picker.css">
     <link rel="stylesheet" href="css/modules/scoreboard.css">
     <link rel="stylesheet" href="css/modules/insert-image.css">
+    <link rel="stylesheet" href="css/modules/insert-text.css">
     <link rel="stylesheet" href="css/modules/project.css">
     <link rel="stylesheet" href="css/modules/toast.css">
     <link rel="stylesheet" href="css/modules/diff.css">
@@ -96,11 +97,48 @@
             <div class="config-group">
                 <label data-i18n="tools.pen.type">Pen Type</label>
                 <div class="button-size-options pen-type-grid">
-                    <button class="pen-type-btn active" data-pen-type="normal" data-i18n="tools.pen.normal">Normal</button>
-                    <button class="pen-type-btn" data-pen-type="pencil" data-i18n="tools.pen.pencil">Pencil</button>
-                    <button class="pen-type-btn" data-pen-type="ballpoint" data-i18n="tools.pen.ballpoint">Ballpoint</button>
-                    <button class="pen-type-btn" data-pen-type="fountain" data-i18n="tools.pen.fountain">Fountain</button>
-                    <button class="pen-type-btn" data-pen-type="brush" data-i18n="tools.pen.brush">Brush</button>
+                    <button class="pen-type-btn active" data-pen-type="normal">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                            <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                        </svg>
+                        <span data-i18n="tools.pen.normal">Normal</span>
+                    </button>
+                    <button class="pen-type-btn" data-pen-type="pencil">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+                        </svg>
+                        <span data-i18n="tools.pen.pencil">Pencil</span>
+                    </button>
+                    <button class="pen-type-btn" data-pen-type="ballpoint">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15.5 3l5 5L7 21.5 2 22l.5-5L15.5 3z"/>
+                            <line x1="14" y1="6" x2="18" y2="10"/>
+                        </svg>
+                        <span data-i18n="tools.pen.ballpoint">Ballpoint</span>
+                    </button>
+                    <button class="pen-type-btn" data-pen-type="fountain">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 2l2 2-8 8-2-2 8-8z"/>
+                            <path d="M12 12c-2 2-4 6-4 8h8c0-2-2-6-4-8z"/>
+                        </svg>
+                        <span data-i18n="tools.pen.fountain">Fountain</span>
+                    </button>
+                    <button class="pen-type-btn" data-pen-type="brush">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/>
+                            <path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/>
+                        </svg>
+                        <span data-i18n="tools.pen.brush">Brush</span>
+                    </button>
+                    <button class="pen-type-btn" data-pen-type="marker">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 3l7 7-3 3-7-7z"></path>
+                            <path d="M4 14l7 7"></path>
+                            <path d="M3 21l6-2-4-4z"></path>
+                        </svg>
+                        <span data-i18n="tools.pen.marker">Marker</span>
+                    </button>
                 </div>
                 <!-- Line Style button below pen type -->
                 <button id="pen-line-style-settings-btn" class="open-line-style-btn">
@@ -244,8 +282,18 @@
             <div class="config-group">
                 <label data-i18n="tools.eraser.shape">形状</label>
                 <div class="button-size-options eraser-shape-options">
-                    <button class="eraser-shape-btn active" data-eraser-shape="circle" data-i18n="tools.eraser.shapeCircle">圆形</button>
-                    <button class="eraser-shape-btn" data-eraser-shape="rectangle" data-i18n="tools.eraser.shapeRectangle">方形</button>
+                    <button class="eraser-shape-btn active" data-eraser-shape="circle">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                        </svg>
+                        <span data-i18n="tools.eraser.shapeCircle">圆形</span>
+                    </button>
+                    <button class="eraser-shape-btn" data-eraser-shape="rectangle">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        </svg>
+                        <span data-i18n="tools.eraser.shapeRectangle">方形</span>
+                    </button>
                 </div>
             </div>
             <div class="config-group">
@@ -257,7 +305,7 @@
         <!-- Background configuration -->
         <div id="background-config" class="config-panel">
             <div class="config-group config-group-compact">
-                <label>背景颜色</label>
+                <label data-i18n="background.color">背景颜色</label>
                 <div class="color-picker-row">
                     <div class="color-picker-main">
                         <button class="color-btn active" data-bg-color="#ffffff" style="background-color: #ffffff; border: 1px solid #ccc;"></button>
@@ -281,7 +329,7 @@
                 </label>
             </div>
             <div class="config-group config-group-compact">
-                <label>背景图案</label>
+                <label data-i18n="background.pattern">背景图案</label>
                 <div class="button-size-options pattern-grid-compact" id="pattern-grid">
                     <button class="pattern-option-btn active" data-pattern="blank">空白</button>
                     <button class="pattern-option-btn" data-pattern="dots">点阵</button>
@@ -296,16 +344,16 @@
                             <polyline points="17 8 12 3 7 8"></polyline>
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
-                        <span class="upload-text">上传</span>
+                        <span class="upload-text" data-i18n="background.upload">上传</span>
                     </button>
                     <input type="file" id="bg-image-upload" accept="image/*" style="display: none;">
                 </div>
                 <div class="compact-sliders">
                     <div class="compact-slider-item" id="pattern-density-group" style="display: none;">
-                        <label>密度：当前 <span id="pattern-density-value">100</span>%</label>
+                        <label><span data-i18n="background.densityLabel">密度：当前</span> <span id="pattern-density-value">100</span>%</label>
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <input type="range" id="pattern-density-slider" min="20" max="300" value="100" class="slider slider-compact" style="flex: 1;">
-                            <button id="move-origin-btn" class="icon-btn" title="移动坐标原点">
+                            <button id="move-origin-btn" class="icon-btn" title="移动坐标原点" data-i18n-title="background.moveCoordinateOrigin">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M12 2v20M2 12h20"></path>
                                     <circle cx="12" cy="12" r="3"></circle>
@@ -314,7 +362,7 @@
                         </div>
                     </div>
                     <div class="compact-slider-item" id="image-size-group" style="display: none;">
-                        <label>大小：当前 <span id="bg-image-size-value">100</span>%</label>
+                        <label><span data-i18n="background.sizeLabel">大小：当前</span> <span id="bg-image-size-value">100</span>%</label>
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <input type="range" id="bg-image-size-slider" min="10" max="200" value="100" class="slider slider-compact" style="flex: 1;">
                             <button id="bg-gif-settings-btn" class="icon-btn" title="GIF设置" style="display: none;">
@@ -344,6 +392,33 @@
         <!-- More configuration (placeholder) -->
         <div id="more-config" class="config-panel">
         </div>
+
+        <!-- Select tool configuration -->
+        <div id="select-config" class="config-panel">
+            <div class="config-group">
+                <label data-i18n="tools.select.mode">Selection Mode</label>
+                <div class="button-size-options select-mode-options">
+                    <button class="select-mode-btn active" data-mode="click">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 4l7.07 17 2.51-7.39L21 11.07z"/>
+                        </svg>
+                        <span data-i18n="tools.select.clickMode">Click</span>
+                    </button>
+                    <button class="select-mode-btn" data-mode="rectangle">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="4 2"/>
+                        </svg>
+                        <span data-i18n="tools.select.rectMode">Box Select</span>
+                    </button>
+                    <button class="select-mode-btn" data-mode="lasso">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2C6.48 2 2 5.58 2 10c0 3.07 2.12 5.73 5.2 7.12L6 22l4.5-3.5C11 18.83 11.5 19 12 19c5.52 0 10-3.58 10-8S17.52 2 12 2z" stroke-dasharray="4 2"/>
+                        </svg>
+                        <span data-i18n="tools.select.lassoMode">Lasso</span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Time Display Area (independent, draggable, with edge snapping) -->
@@ -357,7 +432,7 @@
         </button>
         
         <div class="config-group">
-            <label data-i18n="timeDisplay.options">Time Display Options</label>
+            <label><span data-i18n="timeDisplay.options">Time Display Options</span></label>
             <div class="time-display-options-row">
                 <div class="time-display-checkboxes">
                     <label class="checkbox-label">
@@ -456,6 +531,12 @@
                         <polyline points="21 15 16 10 5 21"></polyline>
                     </svg>
                     <span data-i18n="features.insertImage">Image</span>
+                </button>
+                <button id="insert-text-feature-btn" class="feature-btn" data-i18n-title="features.insertText">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 7V4h16v3M9 20h6M12 4v16"/>
+                    </svg>
+                    <span data-i18n="features.insertText">Text</span>
                 </button>
             </div>
         </div>
@@ -571,18 +652,30 @@
                         <div class="settings-group">
                             <label data-i18n="settings.general.globalFont">全局字体</label>
                             <p class="settings-hint" data-i18n="settings.general.globalFontHint">选择应用程序使用的字体</p>
-                            <select id="global-font-select" class="format-select">
-                                <option value="system">系统默认</option>
-                                <option value="serif">宋体（衬线体）</option>
-                                <option value="sans-serif">黑体（无衬线体）</option>
-                                <option value="monospace">等宽字体</option>
-                                <option value="cursive">手写体</option>
-                                <option value="Microsoft YaHei">微软雅黑</option>
-                                <option value="SimSun">宋体</option>
-                                <option value="SimHei">黑体</option>
-                                <option value="KaiTi">楷体</option>
-                                <option value="FangSong">仿宋</option>
-                            </select>
+                            <div class="font-selection-row">
+                                <select id="global-font-select" class="format-select" style="flex: 1;">
+                                    <option value="system">系统默认</option>
+                                    <option value="serif">宋体（衬线体）</option>
+                                    <option value="sans-serif">黑体（无衬线体）</option>
+                                    <option value="monospace">等宽字体</option>
+                                    <option value="cursive">手写体</option>
+                                    <option value="Noto Sans SC">思源黑体</option>
+                                    <option value="Noto Serif SC">思源宋体</option>
+                                    <option value="LXGW WenKai">霞鹜文楷</option>
+                                    <option value="KaiTi">楷体</option>
+                                    <option value="STXingkai">华文行楷（手写）</option>
+                                </select>
+                                <label class="font-upload-btn" for="global-font-upload" role="button" tabindex="0" data-i18n-title="tools.text.uploadFont" aria-label="Upload custom font">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    <input type="file" id="global-font-upload" accept=".ttf,.otf,.woff,.woff2" style="display: none;">
+                                </label>
+                            </div>
+                            <p class="settings-hint" data-i18n="settings.general.fontManagementHint">字体管理：支持排序、显示开关、重命名与预览</p>
+                            <div id="font-management-list" class="font-management-list"></div>
                         </div>
                         <div class="settings-group">
                             <label class="checkbox-label">
@@ -597,6 +690,13 @@
                                 <span data-i18n="settings.general.touchZoom">触控缩放</span>
                             </label>
                             <p class="settings-hint" data-i18n="settings.general.touchZoomHint">允许使用双指捏合手势缩放画布</p>
+                        </div>
+                        <div class="settings-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="keep-more-panel-open-checkbox">
+                                <span data-i18n="settings.general.morePanelBehaviorLabel">更多功能面板行为</span>
+                            </label>
+                            <p class="settings-hint" data-i18n="settings.general.keepMorePanelOpenHint">点击“更多”中的功能按钮后默认不关闭“更多”框</p>
                         </div>
                         
                         <!-- Toolbar customization -->
@@ -623,6 +723,11 @@
                                     <input type="checkbox" id="toolbar-show-pan" checked>
                                     <span class="drag-handle">☰</span>
                                     <span data-i18n="settings.general.toolbarTools.move">移动</span>
+                                </div>
+                                <div class="toolbar-item" data-tool="select" draggable="true">
+                                    <input type="checkbox" id="toolbar-show-select" checked>
+                                    <span class="drag-handle">☰</span>
+                                    <span data-i18n="settings.general.toolbarTools.select">选择</span>
                                 </div>
                                 <div class="toolbar-item" data-tool="eraser" draggable="true">
                                     <input type="checkbox" id="toolbar-show-eraser" checked>
@@ -655,28 +760,50 @@
                         <!-- Control button settings -->
                         <div class="settings-group">
                             <label data-i18n="settings.general.controlButtonSettings">控制按钮设置</label>
-                            <p class="settings-hint" data-i18n="settings.general.controlButtonSettingsHint">选择要显示的控制按钮</p>
-                            <div class="control-button-settings">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="control-show-zoom" checked>
-                                    <span data-i18n="settings.general.controlButtons.zoom">缩放按钮</span>
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="control-show-pagination" checked>
-                                    <span data-i18n="settings.general.controlButtons.pagination">分页按钮</span>
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="control-show-time" checked>
-                                    <span data-i18n="settings.general.controlButtons.time">时间显示</span>
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="control-show-fullscreen" checked>
-                                    <span data-i18n="settings.general.controlButtons.fullscreen">全屏按钮</span>
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="control-show-download" checked>
-                                    <span data-i18n="settings.general.controlButtons.download">下载按钮</span>
-                                </label>
+                            <p class="settings-hint" data-i18n="settings.general.controlButtonSettingsHint">选择要显示的控制按钮，拖动调整顺序</p>
+                            <div class="control-button-settings" id="control-button-list">
+                                <div class="control-button-item" data-control="zoom" draggable="true">
+                                    <span class="drag-handle">☰</span>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="control-show-zoom" checked>
+                                        <span data-i18n="settings.general.controlButtons.zoom">缩放按钮</span>
+                                    </label>
+                                </div>
+                                <div class="control-button-item" data-control="pagination" draggable="true">
+                                    <span class="drag-handle">☰</span>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="control-show-pagination" checked>
+                                        <span data-i18n="settings.general.controlButtons.pagination">分页按钮</span>
+                                    </label>
+                                </div>
+                                <div class="control-button-item" data-control="time" draggable="true">
+                                    <span class="drag-handle">☰</span>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="control-show-time" checked>
+                                        <span data-i18n="settings.general.controlButtons.time">时间显示</span>
+                                    </label>
+                                </div>
+                                <div class="control-button-item" data-control="fullscreen" draggable="true">
+                                    <span class="drag-handle">☰</span>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="control-show-fullscreen" checked>
+                                        <span data-i18n="settings.general.controlButtons.fullscreen">全屏按钮</span>
+                                    </label>
+                                </div>
+                                <div class="control-button-item" data-control="import" draggable="true">
+                                    <span class="drag-handle">☰</span>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="control-show-import" checked>
+                                        <span data-i18n="settings.general.controlButtons.import">导入按钮</span>
+                                    </label>
+                                </div>
+                                <div class="control-button-item" data-control="export" draggable="true">
+                                    <span class="drag-handle">☰</span>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="control-show-export" checked>
+                                        <span data-i18n="settings.general.controlButtons.export">导出按钮</span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                         
@@ -717,20 +844,27 @@
                             <p class="settings-hint" data-i18n="settings.display.showFullscreenBtnHint">勾选后，在缩放控件旁显示全屏按钮</p>
                         </div>
                         <div class="settings-group">
-                            <label><span data-i18n="settings.display.toolbarSizeLabel">工具栏大小：当前</span> <span id="toolbar-size-value">40</span>px</label>
+                            <label><span data-i18n="settings.display.toolbarSizeLabel">工具栏大小：当前</span> <span id="toolbar-size-value">65</span>px</label>
                             <p class="settings-hint" data-i18n="settings.display.toolbarSizeHint">调整底部工具栏的大小</p>
                             <div style="display: flex; gap: 10px; align-items: center;">
-                                <input type="range" id="toolbar-size-slider" min="40" max="80" value="40" class="slider" step="5" style="flex: 1;">
-                                <input type="number" id="toolbar-size-input" min="40" max="80" value="40" step="5" style="width: 60px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                <input type="range" id="toolbar-size-slider" min="30" max="100" value="65" class="slider" step="5" style="flex: 1;">
+                                <input type="number" id="toolbar-size-input" min="30" max="100" value="50" step="5" style="width: 60px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
                             </div>
                         </div>
                         <div class="settings-group">
                             <label><span data-i18n="settings.display.configScaleLabel">属性栏大小：当前</span> <span id="config-scale-value">100</span>%</label>
                             <p class="settings-hint" data-i18n="settings.display.configScaleHint">调整弹出具体属性面板的大小</p>
                             <div style="display: flex; gap: 10px; align-items: center;">
-                                <input type="range" id="config-scale-slider" min="80" max="120" value="100" class="slider" step="10" style="flex: 1;">
-                                <input type="number" id="config-scale-input" min="80" max="120" value="100" step="10" style="width: 60px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                <input type="range" id="config-scale-slider" min="50" max="150" value="100" class="slider" step="5" style="flex: 1;">
+                                <input type="number" id="config-scale-input" min="50" max="150" value="100" step="5" style="width: 60px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
                             </div>
+                        </div>
+                        <div class="settings-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="show-toolbar-text-checkbox" checked>
+                                <span data-i18n="settings.display.showToolbarText">显示工具栏文字</span>
+                            </label>
+                            <p class="settings-hint" data-i18n="settings.display.showToolbarTextHint">是否在工具栏按钮中显示文字标签</p>
                         </div>
                         <div class="settings-group">
                             <label data-i18n="settings.display.themeColor">主题色</label>
@@ -915,7 +1049,7 @@
                             
                             <div class="about-section">
                                 <h4 data-i18n="settings.about.version">版本</h4>
-                                <p>v2.1.0</p>
+                                <p id="app-version">--</p>
                             </div>
                         </div>
                     </div>
@@ -931,8 +1065,6 @@
                     <!-- More settings -->
                     <div id="more-settings" class="settings-tab-content">
                         <h3 data-i18n="settings.more.title">更多设置</h3>
-                        <p class="settings-hint" style="margin-bottom: 16px;" data-i18n="settings.more.description">时间显示相关设置请点击右下角时间区域进入设置界面</p>
-
                         <!-- Configuration Export/Import -->
                         <div class="settings-group">
                             <label>配置管理</label>
@@ -953,6 +1085,25 @@
                                         <line x1="12" y1="3" x2="12" y2="15"></line>
                                     </svg>
                                     导入配置
+                                </button>
+                            </div>
+                        </div>
+                        <div class="settings-group">
+                            <label data-i18n="settings.more.cacheCleanupLabel">缓存清理</label>
+                            <p class="settings-hint" data-i18n="settings.more.cacheCleanupHint">可查看缓存占用并按类别清理（清理前会二次确认）</p>
+                            <div class="settings-cache-options">
+                                <label class="checkbox-label"><input type="checkbox" id="clear-settings-cache-checkbox"><span><span data-i18n="settings.more.clearSettingsCache">清除设置项缓存</span>（<span id="settings-cache-size" data-i18n="settings.more.cacheSizeCalculating">计算中...</span>）</span></label>
+                                <label class="checkbox-label"><input type="checkbox" id="clear-canvas-cache-checkbox"><span><span data-i18n="settings.more.clearCanvasCache">清除画布缓存</span>（<span id="canvas-cache-size" data-i18n="settings.more.cacheSizeCalculating">计算中...</span>）</span></label>
+                                <label class="checkbox-label"><input type="checkbox" id="clear-other-cache-checkbox"><span><span data-i18n="settings.more.clearOtherCache">清除其他缓存</span>（<span id="other-cache-size" data-i18n="settings.more.cacheSizeCalculating">计算中...</span>）</span></label>
+                            </div>
+                            <div class="button-size-options button-size-options-2">
+                                <button id="clear-local-cache-btn" class="pattern-option-btn" style="display: flex; align-items: center; justify-content: center; gap: 5px;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18"></path>
+                                        <path d="M8 6V4h8v2"></path>
+                                        <path d="M19 6l-1 14H6L5 6"></path>
+                                    </svg>
+                                    <span data-i18n="settings.more.clearSelectedCache">清理所选缓存</span>
                                 </button>
                             </div>
                         </div>
@@ -1070,7 +1221,7 @@
     </div>
 
     <!-- Bottom toolbar -->
-    <div id="toolbar">
+    <div id="toolbar" class="toolbar-loading">
         <button id="undo-btn" class="tool-btn" data-tool="undo">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 7v6h6"></path>
@@ -1102,6 +1253,13 @@
                 <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
             </svg>
             <span data-i18n="toolbar.move">移动</span>
+        </button>
+        <button id="select-btn" class="tool-btn" data-tool="select">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path>
+                <path d="M13 13l6 6"></path>
+            </svg>
+            <span data-i18n="toolbar.select">选择</span>
         </button>
         <button id="eraser-btn" class="tool-btn" data-tool="eraser">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1147,31 +1305,63 @@
 
     <!-- Fullscreen Time Display Modal -->
     <div id="time-fullscreen-modal" class="time-fullscreen-modal">
-        <button id="time-fullscreen-close-btn" class="time-fullscreen-close-btn">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-        </button>
         <div id="time-fullscreen-content"></div>
-        <div class="time-fullscreen-controls">
-            <div class="time-fullscreen-slider-label">字体大小调节 (10%-85%)</div>
-            <input type="range" id="time-fullscreen-font-slider" class="time-fullscreen-slider" min="10" max="85" value="15" step="0.5">
+        <div class="fullscreen-bottom-controls">
+            <div class="fullscreen-settings-panel" id="time-fullscreen-settings-panel" style="display: none;">
+                <div class="fullscreen-slider-group">
+                    <label data-i18n="timeDisplay.titleFontSize">标题字体大小</label>
+                    <input type="range" id="time-fullscreen-title-font-slider" class="fullscreen-slider" min="2" max="20" value="5" step="0.5">
+                </div>
+                <div class="fullscreen-slider-group">
+                    <label data-i18n="timeDisplay.timeFontSize">时间字体大小</label>
+                    <input type="range" id="time-fullscreen-font-slider" class="fullscreen-slider" min="10" max="85" value="15" step="0.5">
+                </div>
+            </div>
+            <div class="fullscreen-button-row">
+                <button id="time-fullscreen-settings-btn" class="fullscreen-control-btn" data-i18n-title="common.settings">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"></path>
+                    </svg>
+                </button>
+                <button id="time-fullscreen-close-btn" class="fullscreen-control-btn fullscreen-close-btn" data-i18n-title="common.close">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
         </div>
     </div>
 
     <!-- Fullscreen Timer Display Modal -->
     <div id="timer-fullscreen-modal" class="timer-fullscreen-modal">
-        <button id="timer-fullscreen-close-btn" class="timer-fullscreen-close-btn">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-        </button>
         <div id="timer-fullscreen-content"></div>
-        <div class="timer-fullscreen-controls">
-            <div class="timer-fullscreen-slider-label">字体大小调节 (10%-85%)</div>
-            <input type="range" id="timer-fullscreen-font-slider" class="timer-fullscreen-slider" min="10" max="85" value="15" step="0.5">
+        <div class="fullscreen-bottom-controls">
+            <div class="fullscreen-settings-panel" id="timer-fullscreen-settings-panel" style="display: none;">
+                <div class="fullscreen-slider-group">
+                    <label data-i18n="timer.titleFontSize">标题字体大小</label>
+                    <input type="range" id="timer-fullscreen-title-font-slider" class="fullscreen-slider" min="2" max="20" value="5" step="0.5">
+                </div>
+                <div class="fullscreen-slider-group">
+                    <label data-i18n="timer.timeFontSize">时间字体大小</label>
+                    <input type="range" id="timer-fullscreen-font-slider" class="fullscreen-slider" min="10" max="85" value="15" step="0.5">
+                </div>
+            </div>
+            <div class="fullscreen-button-row">
+                <button id="timer-fullscreen-settings-btn" class="fullscreen-control-btn" data-i18n-title="common.settings">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"></path>
+                    </svg>
+                </button>
+                <button id="timer-fullscreen-close-btn" class="fullscreen-control-btn fullscreen-close-btn" data-i18n-title="common.close">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1711,12 +1901,20 @@
         </div>
     </div>
 
+    <div id="portrait-orientation-overlay" aria-live="polite">
+        <div class="overlay-content">
+            <div class="overlay-title" data-i18n="app.rotateScreenTitle">请旋转屏幕</div>
+            <div class="overlay-tip" data-i18n="app.rotateScreenTip">检测到当前为竖屏模式。为获得正常排版与完整工具栏，请横屏使用。</div>
+        </div>
+    </div>
+
     <script src="js/drawing.js" defer></script>
     <script src="js/history.js" defer></script>
     <script src="js/background.js" defer></script>
     <script src="js/image-controls.js" defer></script>
     <script src="js/insert-image.js" defer></script>
     <script src="js/stroke-controls.js" defer></script>
+    <script src="js/selection.js" defer></script>
     <script src="js/collapsible.js" defer></script>
     <script src="js/time-display.js" defer></script>
     <script src="js/modules/time-display-controls.js" defer></script>
@@ -1726,6 +1924,7 @@
     <script src="js/modules/teaching-tools.js" defer></script>
     <script src="js/modules/shape-drawing.js" defer></script>
     <script src="js/modules/line-style-modal.js" defer></script>
+    <script src="js/modules/dialog-manager.js" defer></script>
     <script src="js/modules/random-picker.js" defer></script>
     <script src="js/modules/scoreboard.js" defer></script>
     <script src="js/modules/settings-manager.js" defer></script>
@@ -1733,6 +1932,7 @@
     <script src="js/export.js" defer></script>
     <script src="js/modules/i18n.js" defer></script>
     <script src="js/modules/rich-text-parser.js" defer></script>
+    <script src="js/modules/insert-text-manager.js" defer></script>
     <script src="js/modules/script-loader.js" defer></script>
     <script src="js/modules/gif-manager.js" defer></script>
     <script src="js/modules/browser-check.js" defer></script>

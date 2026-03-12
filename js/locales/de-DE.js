@@ -32,7 +32,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - Minimalistisches Whiteboard',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: 'Bitte Bildschirm drehen',
+        rotateScreenTip: 'Hochformat erkannt. Für korrektes Layout und vollständige Werkzeugleiste bitte ins Querformat wechseln.'
     },
 
     // Toolbar
@@ -42,6 +44,7 @@ window.translations = {
         pen: 'Stift',
         shape: 'Form',
         move: 'Verschieben',
+        select: 'Auswählen',
         eraser: 'Radiergummi',
         clear: 'Löschen',
         background: 'Hintergrund',
@@ -52,6 +55,7 @@ window.translations = {
         zoomOut: 'Verkleinern (-)',
         zoomIn: 'Vergrößern (+)',
         fullscreen: 'Vollbild (F11)',
+        exitFullscreen: 'Vollbild verlassen (F11)',
         zoomPlaceholder: 'Zoomstufe (Prozent eingeben)'
     },
 
@@ -65,6 +69,7 @@ window.translations = {
             ballpoint: 'Kugelschreiber',
             fountain: 'Füllfederhalter',
             brush: 'Pinsel',
+            marker: 'Marker',
             color: 'Farbe',
             colorAndSize: 'Farbe & Größe',
             colorPicker: 'Farbwähler',
@@ -121,7 +126,54 @@ window.translations = {
             waveDensity: 'Wellendichte',
             lineSpacing: 'Linienabstand',
             lineCount: 'Linienanzahl'
+        },
+        text: {
+            insertTitle: 'Text einfügen',
+            editTitle: 'Text bearbeiten',
+            placeholder: 'Text hier eingeben',
+            size: 'Größe',
+            color: 'Farbe',
+            font: 'Schriftart',
+            style: 'Stil',
+            bold: 'Fett',
+            italic: 'Kursiv',
+            underline: 'Unterstrichen',
+            strikethrough: 'Durchgestrichen',
+            decorationStyle: 'Linienstil',
+            decorationWidth: 'Linienstärke',
+            decorationColor: 'Linienfarbe',
+            uploadFont: 'Schriftart hochladen',
+            customFonts: 'Benutzerdefinierte Schriftarten',
+            fontUploadSuccess: 'Schriftart erfolgreich hochgeladen!',
+            fontExists: 'Diese Schriftart existiert bereits.',
+            invalidFontFormat: 'Ungültiges Schriftartformat. Bitte verwenden Sie TTF-, OTF-, WOFF- oder WOFF2-Dateien.',
+            fontTooLarge: 'Die Schriftartdatei ist zu groß. Maximale Größe beträgt 2MB.',
+            storageQuotaExceeded: 'Speicherplatz überschritten. Bitte löschen Sie einige benutzerdefinierte Schriftarten.'
+        },
+        select: {
+            mode: 'Auswahlmodus',
+            clickMode: 'Klick',
+            rectMode: 'Bereichsauswahl',
+            lassoMode: 'Lasso',
+            transform: 'Transformieren',
+            rotate90: '90° drehen',
+            flipH: 'Horizontal spiegeln',
+            flipV: 'Vertikal spiegeln'
         }
+    },
+
+    selection: {
+        edit: 'Bearbeiten',
+        copy: 'Kopieren',
+        delete: 'Löschen',
+        done: 'Fertig',
+        rotate90: '90° drehen',
+        flipH: 'Horizontal spiegeln',
+        layer: 'Ebene',
+        layerFront: 'In den Vordergrund',
+        layerBack: 'In den Hintergrund',
+        layerUp: 'Eine Ebene nach vorne',
+        layerDown: 'Eine Ebene nach hinten'
     },
 
     // Line Style Modal
@@ -156,6 +208,11 @@ window.translations = {
         coordinate: 'Koordinaten',
         coordinateOriginHint: 'Doppelklicken Sie im Verschiebemodus, um den Koordinatenursprung auszuwählen und zu verschieben',
         image: 'Bild',
+        imagePrefix: 'Bild',
+        density: 'Dichte',
+        densityLabel: 'Dichte: Aktuell',
+        size: 'Größe',
+        sizeLabel: 'Größe: Aktuell',
         opacity: 'Hintergrund-Deckkraft',
         opacityHint: 'Hintergrundtransparenz anpassen, 100% ist vollständig undurchsichtig',
         contrast: 'Kontrast',
@@ -174,6 +231,21 @@ window.translations = {
         rotate: 'Drehen'
     },
 
+    // Selection Controls
+    selection: {
+        copy: 'Kopieren',
+        delete: 'Löschen',
+        done: 'Fertig',
+        edit: 'Bearbeiten',
+        rotate90: '90° drehen',
+        flipH: 'Horizontal spiegeln',
+        layer: 'Ebene',
+        layerFront: 'In den Vordergrund',
+        layerBack: 'In den Hintergrund',
+        layerUp: 'Eine Ebene nach vorne',
+        layerDown: 'Eine Ebene nach hinten'
+    },
+
     // Page Navigation
     page: {
         previous: 'Vorherige',
@@ -186,6 +258,10 @@ window.translations = {
     // Settings
     settings: {
         title: 'Einstellungen',
+        exportSuccess: 'Konfiguration erfolgreich exportiert',
+        importSuccess: 'Konfiguration erfolgreich importiert',
+        importError: 'Ungültige Konfigurationsdatei',
+        importNoChange: 'Keine Konfigurationsänderungen erkannt',
         tabs: {
             general: 'Allgemein',
             display: 'Anzeige',
@@ -253,6 +329,8 @@ window.translations = {
             },
             edgeSnap: 'Randausrichtung aktivieren',
             edgeSnapHint: 'Bedienfelder automatisch am Bildschirmrand ausrichten',
+            morePanelBehaviorLabel: 'Verhalten des Mehr-Panels',
+            keepMorePanelOpenHint: 'Mehr-Panel nach Klick auf Funktionsbuttons geöffnet lassen',
             // Toolbar customization
             toolbarCustomization: 'Symbolleisten-Anpassung',
             toolbarCustomizationHint: 'Wählen Sie Werkzeuge für die Symbolleiste, ziehen Sie zum Neuordnen',
@@ -261,6 +339,7 @@ window.translations = {
                 redo: 'Wiederholen',
                 pen: 'Stift',
                 move: 'Verschieben',
+                select: 'Auswählen',
                 eraser: 'Radierer',
                 clear: 'Löschen',
                 background: 'Hintergrund',
@@ -275,7 +354,8 @@ window.translations = {
                 pagination: 'Seitennummerierung-Tasten',
                 time: 'Zeitanzeige',
                 fullscreen: 'Vollbild-Taste',
-                download: 'Download-Taste'
+                import: 'Import-Taste',
+                export: 'Export-Taste'
             },
             controlPosition: 'Position der Steuerungstasten',
             controlPositionHint: 'Wählen Sie die Position der Zoom- und Seitensteuerung',
@@ -329,16 +409,13 @@ window.translations = {
             title: 'Hintergrundeinstellungen',
             opacity: 'Hintergrunddeckkraft',
             opacityLabel: 'Hintergrunddeckkraft: Aktuell',
-        opacityHint: 'Hintergrundtransparenz anpassen, 100% ist vollständig undurchsichtig',
-        contrast: 'Kontrast',
-        contrastLabel: 'Mustertransparenz: Aktuell',
             opacityHint: 'Hintergrundtransparenz anpassen, 100% ist vollständig undurchsichtig',
             patternIntensity: 'Musterintensität',
             patternIntensityLabel: 'Mustertransparenz: Aktuell',
             patternIntensityHint: 'Helligkeit der Hintergrundmusterlinien anpassen',
             preference: 'Hintergrundmusterpräferenz',
             preferenceHint: 'Wählen Sie die im Konfigurationspanel anzuzeigenden Muster',
-        upload: 'Hochladen'
+            upload: 'Hochladen'
         },
         announcement: {
             title: 'Ankündigung',
@@ -384,9 +461,25 @@ window.translations = {
         },
         more: {
             title: 'Weitere Einstellungen',
+            cacheCleanupLabel: 'Cache-Bereinigung',
+            cacheCleanupHint: 'Cache-Verbrauch anzeigen und nach Kategorien löschen (mit Bestätigung vor dem Löschen)',
+            clearSettingsCache: 'Einstellungs-Cache löschen',
+            clearCanvasCache: 'Canvas-Cache löschen',
+            clearOtherCache: 'Sonstigen Cache löschen',
+            cacheSizeCalculating: 'Wird berechnet...',
+            clearSelectedCache: 'Ausgewählten Cache löschen',
+            morePanelBehaviorLabel: 'Verhalten des Mehr-Panels',
+            keepMorePanelOpenHint: 'Mehr-Panel nach Klick auf Funktionsbuttons geöffnet lassen',
+            selectCacheType: 'Bitte wählen Sie mindestens einen Cache-Typ aus.',
+            confirmClearSelectedCache: 'Folgender Cache wird gelöscht:',
+            clearLocalDataConfirmSuffix: 'Fortfahren?',
             description: 'Für Zeitanzeigeeinstellungen klicken Sie auf den Zeitbereich unten rechts',
             showTimeDisplay: 'Zeit und Datum anzeigen',
-            showTimeDisplayHint: 'Aktuelle Zeit und Datum in der oberen rechten Ecke anzeigen'
+            showTimeDisplayHint: 'Aktuelle Zeit und Datum in der oberen rechten Ecke anzeigen',
+            localDataLabel: 'Lokale Daten',
+            localDataHint: 'Lokalen Cache, Canvas-Inhalte und Einstellungen löschen und den Erstladezustand wiederherstellen',
+            clearLocalDataButton: 'Lokalen Cache löschen',
+            clearLocalDataConfirm: 'Dadurch werden lokaler Cache, Canvas-Inhalte und Einstellungen gelöscht und der Erstladezustand wiederhergestellt. Fortfahren?'
         },
         time: {
             title: 'Zeitanzeigeeinstellungen',
@@ -451,7 +544,8 @@ window.translations = {
         timer: 'Timer',
         randomPicker: 'Auswahl',
         scoreboard: 'Punktetafel',
-        insertImage: 'Bild einfügen'
+        insertImage: 'Bild einfügen',
+        insertText: 'Text einfügen'
     },
 
     // Teaching Tools
@@ -524,16 +618,10 @@ window.translations = {
         titlePlaceholder: 'Timer-Titel eingeben',
         setTime: 'Zeit einstellen',
         setStartTime: 'Startzeit einstellen',
-        hours: 'Stunden',
-        minutes: 'Minuten',
-        seconds: 'Sekunden',
-        title: 'Titel',
-        titlePlaceholder: 'Timer-Titel eingeben',
         fontSettings: 'Schrifteinstellungen',
         fontSize: 'Schriftgröße',
         fontSizeLabel: 'Schriftgröße: Aktuell',
         fontSizeHint: 'Schriftgröße der Zeitanzeige anpassen',
-        fontSizeLabel: 'Schriftgröße: Aktuell',
         adjustColor: 'Farbe anpassen',
         colorSettings: 'Farbeinstellungen',
         colorSettingsHint: 'Schriftart und Hintergrundfarbe für Zeitanzeige festlegen',

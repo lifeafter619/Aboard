@@ -456,6 +456,18 @@ class InsertImageManager {
         );
 
         this.ctx.restore();
+        
+        // Track the stamped image so it can be redrawn during selection operations
+        this.drawingEngine.addStampedImage({
+            imageElement: this.currentImage,
+            x: this.imagePosition.x,
+            y: this.imagePosition.y,
+            width: this.imageSize.width,
+            height: this.imageSize.height,
+            rotation: this.imageRotation,
+            flipHorizontal: this.flipHorizontal,
+            flipVertical: this.flipVertical
+        });
 
         // Save history
         this.historyManager.saveState();
@@ -609,24 +621,35 @@ class InsertImageManager {
         this.isResizing = false;
     }
 
+    // Calculate the screen center of the control box from logical coordinates
+    // This avoids using getBoundingClientRect() which returns the axis-aligned
+    // bounding box and changes size/position as the element rotates
+    getControlBoxCenter() {
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const logicalWidth = this.canvas.width / window.devicePixelRatio;
+        const logicalHeight = this.canvas.height / window.devicePixelRatio;
+        const scaleX = canvasRect.width / logicalWidth;
+        const scaleY = canvasRect.height / logicalHeight;
+
+        const centerX = canvasRect.left + (this.imagePosition.x + this.imageSize.width / 2) * scaleX;
+        const centerY = canvasRect.top + (this.imagePosition.y + this.imageSize.height / 2) * scaleY;
+        return { x: centerX, y: centerY };
+    }
+
     startRotate(e) {
         this.isRotating = true;
-        const rect = this.controlBox.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
+        const center = this.getControlBoxCenter();
 
         const pos = this.getClientPos(e);
-        this.rotateStartAngle = Math.atan2(pos.y - centerY, pos.x - centerX) * 180 / Math.PI;
+        this.rotateStartAngle = Math.atan2(pos.y - center.y, pos.x - center.x) * 180 / Math.PI;
         this.rotateStartRotation = this.imageRotation;
     }
 
     rotate(e) {
-        const rect = this.controlBox.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
+        const center = this.getControlBoxCenter();
 
         const pos = this.getClientPos(e);
-        const currentAngle = Math.atan2(pos.y - centerY, pos.x - centerX) * 180 / Math.PI;
+        const currentAngle = Math.atan2(pos.y - center.y, pos.x - center.x) * 180 / Math.PI;
         const angleDelta = currentAngle - this.rotateStartAngle;
 
         this.imageRotation = this.rotateStartRotation + angleDelta;

@@ -32,7 +32,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - Tableau Blanc Minimaliste',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: 'Veuillez faire pivoter l’écran',
+        rotateScreenTip: 'Le mode portrait est détecté. Pour une mise en page correcte et une barre d’outils complète, passez en paysage.'
     },
 
     // Toolbar
@@ -42,6 +44,7 @@ window.translations = {
         pen: 'Stylo',
         shape: 'Forme',
         move: 'Déplacer',
+        select: 'Sélectionner',
         eraser: 'Gomme',
         clear: 'Effacer',
         background: 'Arrière-plan',
@@ -52,6 +55,7 @@ window.translations = {
         zoomOut: 'Dézoomer (-)',
         zoomIn: 'Zoomer (+)',
         fullscreen: 'Plein écran (F11)',
+        exitFullscreen: 'Quitter le plein écran (F11)',
         zoomPlaceholder: 'Niveau de zoom (Entrer pourcentage)'
     },
 
@@ -65,6 +69,7 @@ window.translations = {
             ballpoint: 'Stylo à bille',
             fountain: 'Stylo-plume',
             brush: 'Pinceau',
+            marker: 'Marqueur',
             color: 'Couleur',
             colorAndSize: 'Couleur et taille',
             colorPicker: 'Sélecteur de couleur',
@@ -119,7 +124,54 @@ window.translations = {
             waveDensity: 'Densité des ondes',
             lineSpacing: 'Espacement des lignes',
             lineCount: 'Nombre de lignes'
+        },
+        text: {
+            insertTitle: 'Insérer du texte',
+            editTitle: 'Modifier le texte',
+            placeholder: 'Entrez le texte ici',
+            size: 'Taille',
+            color: 'Couleur',
+            font: 'Police',
+            style: 'Style',
+            bold: 'Gras',
+            italic: 'Italique',
+            underline: 'Souligné',
+            strikethrough: 'Barré',
+            decorationStyle: 'Style de ligne',
+            decorationWidth: 'Épaisseur de ligne',
+            decorationColor: 'Couleur de ligne',
+            uploadFont: 'Télécharger police',
+            customFonts: 'Polices personnalisées',
+            fontUploadSuccess: 'Police téléchargée avec succès !',
+            fontExists: 'Cette police existe déjà.',
+            invalidFontFormat: 'Format de police invalide. Veuillez utiliser des fichiers TTF, OTF, WOFF ou WOFF2.',
+            fontTooLarge: 'Le fichier de police est trop volumineux. La taille maximale est de 2 Mo.',
+            storageQuotaExceeded: 'Quota de stockage dépassé. Veuillez supprimer certaines polices personnalisées.'
+        },
+        select: {
+            mode: 'Mode de sélection',
+            clickMode: 'Clic',
+            rectMode: 'Sélection par zone',
+            lassoMode: 'Lasso',
+            transform: 'Transformer',
+            rotate90: 'Rotation 90°',
+            flipH: 'Retourner horizontalement',
+            flipV: 'Retourner verticalement'
         }
+    },
+
+    selection: {
+        edit: 'Modifier',
+        copy: 'Copier',
+        delete: 'Supprimer',
+        done: 'Terminé',
+        rotate90: 'Rotation 90°',
+        flipH: 'Retourner horizontalement',
+        layer: 'Calque',
+        layerFront: 'Mettre au premier plan',
+        layerBack: 'Envoyer à l’arrière',
+        layerUp: 'Avancer d’un niveau',
+        layerDown: 'Reculer d’un niveau'
     },
 
     // Line Style Modal
@@ -154,6 +206,11 @@ window.translations = {
         coordinate: 'Coordonnées',
         coordinateOriginHint: 'Double-cliquez pour sélectionner l\'origine en mode Déplacer, puis faites glisser',
         image: 'Image',
+        imagePrefix: 'Image',
+        density: 'Densité',
+        densityLabel: 'Densité : Actuelle',
+        size: 'Taille',
+        sizeLabel: 'Taille : Actuelle',
         opacity: 'Opacité de l\'arrière-plan',
         opacityHint: 'Ajuster la transparence de l\'arrière-plan, 100% est complètement opaque',
         contrast: 'Contraste',
@@ -172,6 +229,21 @@ window.translations = {
         rotate: 'Rotation'
     },
 
+    // Selection Controls
+    selection: {
+        copy: 'Copier',
+        delete: 'Supprimer',
+        done: 'Terminé',
+        edit: 'Modifier',
+        rotate90: 'Rotation 90°',
+        flipH: 'Retourner horizontalement',
+        layer: 'Calque',
+        layerFront: 'Mettre au premier plan',
+        layerBack: 'Envoyer à l’arrière',
+        layerUp: 'Avancer d’un niveau',
+        layerDown: 'Reculer d’un niveau'
+    },
+
     // Page Navigation
     page: {
         previous: 'Précédent',
@@ -184,6 +256,10 @@ window.translations = {
     // Settings
     settings: {
         title: 'Paramètres',
+        exportSuccess: 'Configuration exportée avec succès',
+        importSuccess: 'Configuration importée avec succès',
+        importError: 'Fichier de configuration invalide',
+        importNoChange: 'Aucune modification de configuration détectée',
         tabs: {
             general: 'Général',
             display: 'Affichage',
@@ -251,6 +327,8 @@ window.translations = {
             },
             edgeSnap: 'Activer l\'alignement des bords',
             edgeSnapHint: 'Aligner automatiquement les panneaux de contrôle sur les bords de l\'écran',
+            morePanelBehaviorLabel: 'Comportement du panneau Plus',
+            keepMorePanelOpenHint: 'Garder le panneau Plus ouvert après clic sur une fonction',
             // Toolbar customization
             toolbarCustomization: 'Personnalisation de la barre d\'outils',
             toolbarCustomizationHint: 'Sélectionnez les outils à afficher, glissez pour réorganiser',
@@ -259,6 +337,7 @@ window.translations = {
                 redo: 'Rétablir',
                 pen: 'Stylo',
                 move: 'Déplacer',
+                select: 'Sélectionner',
                 eraser: 'Gomme',
                 clear: 'Effacer',
                 background: 'Arrière-plan',
@@ -273,7 +352,8 @@ window.translations = {
                 pagination: 'Boutons de pagination',
                 time: 'Affichage de l\'heure',
                 fullscreen: 'Bouton plein écran',
-                download: 'Bouton de téléchargement'
+                import: 'Bouton d\'importation',
+                export: 'Bouton d\'exportation'
             },
             controlPosition: 'Position du bouton de contrôle',
             controlPositionHint: 'Choisir où afficher les contrôles de zoom et de pagination',
@@ -378,9 +458,25 @@ window.translations = {
         },
         more: {
             title: 'Plus de paramètres',
+            cacheCleanupLabel: 'Nettoyage du cache',
+            cacheCleanupHint: 'Voir l\'utilisation du cache et nettoyer par catégorie (avec confirmation avant suppression)',
+            clearSettingsCache: 'Effacer le cache des paramètres',
+            clearCanvasCache: 'Effacer le cache du canvas',
+            clearOtherCache: 'Effacer les autres caches',
+            cacheSizeCalculating: 'Calcul en cours...',
+            clearSelectedCache: 'Effacer le cache sélectionné',
+            morePanelBehaviorLabel: 'Comportement du panneau Plus',
+            keepMorePanelOpenHint: 'Garder le panneau Plus ouvert après clic sur une fonction',
+            selectCacheType: 'Veuillez sélectionner au moins un type de cache.',
+            confirmClearSelectedCache: 'Le cache suivant sera effacé :',
+            clearLocalDataConfirmSuffix: 'Continuer ?',
             description: 'Pour les paramètres d\'affichage de l\'heure, cliquez sur la zone de l\'heure en bas à droite',
             showTimeDisplay: 'Afficher l\'heure et la date',
-            showTimeDisplayHint: 'Afficher l\'heure et la date actuelles dans le coin supérieur droit'
+            showTimeDisplayHint: 'Afficher l\'heure et la date actuelles dans le coin supérieur droit',
+            localDataLabel: 'Données locales',
+            localDataHint: 'Effacer le cache local, le contenu du canvas et les paramètres, puis restaurer l\'état du premier chargement',
+            clearLocalDataButton: 'Effacer le cache local',
+            clearLocalDataConfirm: 'Cela effacera le cache local, le contenu du canvas et les paramètres, puis restaurera l\'état du premier chargement. Continuer ?'
         },
         time: {
             title: 'Paramètres d\'affichage de l\'heure',
@@ -440,7 +536,8 @@ window.translations = {
         timer: 'Minuteur',
         randomPicker: 'Sélecteur',
         scoreboard: 'Tableau',
-        insertImage: 'Image'
+        insertImage: 'Image',
+        insertText: 'Texte'
     },
 
     // Teaching Tools
@@ -512,6 +609,11 @@ window.translations = {
         titlePlaceholder: 'Entrer le titre du minuteur',
         fontSettings: 'Paramètres de police',
         fontSize: 'Taille de police',
+        titleFontSize: 'Taille titre',
+        timeFontSize: 'Taille heure',
+        fontSizeLabel: 'Taille : Actuelle',
+        minimal: 'Minimal',
+        minimalMode: 'Mode minimal',
         adjustColor: 'Ajuster la couleur',
         colorSettings: 'Paramètres de couleur',
         textColor: 'Couleur du texte',

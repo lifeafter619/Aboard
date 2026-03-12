@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect version change
+        id: version
+        run: |
+          set -e
+          before="${{ github.event.before }}"
+          after="${{ github.sha }}"
+          if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
+            before=$(git rev-parse "${after}^" 2>/dev/null || true)
+          fi
+
+          if [ ! -f version.txt ]; then
+            echo "version.txt not found" >&2
+            exit 1
+          fi
+
+          version=$(head -1 version.txt | tr -d '\r\n')
+          if [ -z "$version" ]; then
+            echo "Version not found in version.txt" >&2
+            exit 1
+          fi
+
+          previous_version=""
+          if [ -n "$before" ]; then
+            previous_version=$(git show "${before}:version.txt" 2>/dev/null | head -1 | tr -d '\r\n' || true)
+          fi
+
+          if [ -n "$previous_version" ] && [ "$previous_version" = "$version" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          tag="v${version}"
+          if git rev-parse "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Create release package
+        if: steps.version.outputs.changed == 'true'
+        run: |
+          mkdir -p release
+          zip -r "release/Aboard-${{ steps.version.outputs.tag }}.zip" . \
+            -x ".git/*" \
+            -x ".github/*" \
+            -x "node_modules/*" \
+            -x "release/*"
+
+      - name: Publish release
+        if: steps.version.outputs.changed == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Aboard ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          files: release/Aboard-${{ steps.version.outputs.tag }}.zip

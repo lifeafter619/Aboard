@@ -36,6 +36,7 @@ class TimeDisplayManager {
         this.showTime = localStorage.getItem('timeDisplayShowTime') !== 'false'; // Default true
         this.fullscreenMode = localStorage.getItem('timeDisplayFullscreenMode') || 'double'; // Default 'double' (disabled/single/double)
         this.fullscreenFontSize = parseInt(localStorage.getItem('timeDisplayFullscreenFontSize')) || 15; // Default 15 (vmin percentage)
+        this.fullscreenTitleFontSize = parseInt(localStorage.getItem('timeDisplayFullscreenTitleFontSize')) || 5; // Default 5 (vmin percentage) for date
         this.fullscreenColor = localStorage.getItem('timeDisplayFullscreenColor') || '#ffffff';
         this.fullscreenBgColor = localStorage.getItem('timeDisplayFullscreenBgColor') || '#000000';
         this.fullscreenOpacity = parseInt(localStorage.getItem('timeDisplayFullscreenOpacity')) || 95;
@@ -321,6 +322,15 @@ class TimeDisplayManager {
             this.updateFullscreenDisplay();
         }
     }
+    
+    setFullscreenTitleFontSize(size) {
+        // Constrain to 2-20% range for date/title
+        this.fullscreenTitleFontSize = Math.max(2, Math.min(20, size));
+        localStorage.setItem('timeDisplayFullscreenTitleFontSize', this.fullscreenTitleFontSize);
+        if (this.isFullscreen) {
+            this.updateFullscreenDisplay();
+        }
+    }
 
     setFullscreenColor(color) {
         this.fullscreenColor = color;
@@ -452,12 +462,32 @@ class TimeDisplayManager {
             });
         }
         
-        // Fullscreen font size slider
+        // Settings button
+        const settingsBtn = document.getElementById('time-fullscreen-settings-btn');
+        const settingsPanel = document.getElementById('time-fullscreen-settings-panel');
+        if (settingsBtn && settingsPanel) {
+            settingsBtn.addEventListener('click', () => {
+                const isVisible = settingsPanel.style.display !== 'none';
+                settingsPanel.style.display = isVisible ? 'none' : 'block';
+                settingsBtn.classList.toggle('active', !isVisible);
+            });
+        }
+        
+        // Fullscreen font size slider (time)
         const fontSlider = document.getElementById('time-fullscreen-font-slider');
         if (fontSlider) {
             fontSlider.value = this.fullscreenFontSize;
             fontSlider.addEventListener('input', (e) => {
                 this.setFullscreenFontSize(parseFloat(e.target.value));
+            });
+        }
+        
+        // Fullscreen title font size slider (date)
+        const titleFontSlider = document.getElementById('time-fullscreen-title-font-slider');
+        if (titleFontSlider) {
+            titleFontSlider.value = this.fullscreenTitleFontSize;
+            titleFontSlider.addEventListener('input', (e) => {
+                this.setFullscreenTitleFontSize(parseFloat(e.target.value));
             });
         }
         
@@ -511,10 +541,10 @@ class TimeDisplayManager {
         const timeString = this.formatTime(now);
         const dateString = this.formatDate(now);
         
-        // Use the configurable fullscreen font size
+        // Use the configurable fullscreen font sizes
         const vmin = Math.min(window.innerWidth, window.innerHeight);
         const timeFontSize = Math.floor(vmin * (this.fullscreenFontSize / 100));
-        const dateFontSize = Math.floor(vmin * (this.fullscreenFontSize / 100) * 0.35);
+        const dateFontSize = Math.floor(vmin * (this.fullscreenTitleFontSize / 100));
         
         let html = '';
         if (this.showTime) {
@@ -527,8 +557,8 @@ class TimeDisplayManager {
         this.timeFullscreenContent.innerHTML = html;
         this.timeFullscreenContent.style.color = this.fullscreenColor;
 
-        // Apply color to controls (slider label)
-        const controls = this.timeFullscreenModal.querySelector('.time-fullscreen-controls');
+        // Apply color to controls
+        const controls = this.timeFullscreenModal.querySelector('.fullscreen-bottom-controls');
         if (controls) {
             controls.style.color = this.fullscreenColor;
         }

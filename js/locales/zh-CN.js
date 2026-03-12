@@ -21,7 +21,9 @@ window.translations = {
         reset: '重置',
         start: '开始',
         stop: '停止',
-        preview: '试听'
+        preview: '试听',
+        settings: '设置',
+        dragToMove: '拖动以移动'
     },
 
     // Recovery dialog
@@ -35,7 +37,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - 简约白板',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: '请旋转屏幕',
+        rotateScreenTip: '检测到当前为竖屏模式。为获得正常排版与完整工具栏，请横屏使用。'
     },
 
     // Toolbar
@@ -45,6 +49,7 @@ window.translations = {
         pen: '笔',
         shape: '形状',
         move: '移动',
+        select: '选择',
         eraser: '擦除',
         clear: '清空',
         background: '背景',
@@ -55,6 +60,7 @@ window.translations = {
         zoomOut: '缩小 (-)',
         zoomIn: '放大 (+)',
         fullscreen: '全屏 (F11)',
+        exitFullscreen: '退出全屏 (F11)',
         zoomPlaceholder: '缩放比例 (输入百分比)'
     },
 
@@ -68,6 +74,7 @@ window.translations = {
             ballpoint: '圆珠笔',
             fountain: '钢笔',
             brush: '毛笔',
+            marker: '马克笔',
             color: '颜色',
             colorAndSize: '颜色与粗细',
             colorPicker: '取色器',
@@ -125,7 +132,54 @@ window.translations = {
             waveDensity: '波浪密度',
             lineSpacing: '线条间距',
             lineCount: '线条数量'
+        },
+        text: {
+            insertTitle: '插入文字',
+            editTitle: '编辑文字',
+            placeholder: '在此输入文字',
+            size: '大小',
+            color: '颜色',
+            font: '字体',
+            style: '样式',
+            bold: '粗体',
+            italic: '斜体',
+            underline: '下划线',
+            strikethrough: '删除线',
+            decorationStyle: '线型',
+            decorationWidth: '线条粗细',
+            decorationColor: '线条颜色',
+            uploadFont: '上传字体',
+            customFonts: '自定义字体',
+            fontUploadSuccess: '字体上传成功！',
+            fontExists: '该字体已存在。',
+            invalidFontFormat: '无效的字体格式。请使用 TTF、OTF、WOFF 或 WOFF2 文件。',
+            fontTooLarge: '字体文件过大，最大允许 2MB。',
+            storageQuotaExceeded: '存储空间不足，请删除一些自定义字体。'
+        },
+        select: {
+            mode: '选择模式',
+            clickMode: '点选',
+            rectMode: '框选',
+            lassoMode: '套索',
+            transform: '变换',
+            rotate90: '旋转90°',
+            flipH: '水平翻转',
+            flipV: '垂直翻转'
         }
+    },
+
+    selection: {
+        edit: '编辑',
+        copy: '复制',
+        delete: '删除',
+        done: '完成',
+        rotate90: '旋转90°',
+        flipH: '水平翻转',
+        layer: '图层',
+        layerFront: '置于顶层',
+        layerBack: '置于底层',
+        layerUp: '上移一层',
+        layerDown: '下移一层'
     },
 
     // Line Style Modal
@@ -186,6 +240,21 @@ window.translations = {
         rotate: '旋转'
     },
 
+    // Selection Controls
+    selection: {
+        copy: '复制',
+        delete: '删除',
+        done: '完成',
+        edit: '编辑',
+        rotate90: '旋转90°',
+        flipH: '水平翻转',
+        layer: '图层',
+        layerFront: '置于顶层',
+        layerBack: '置于底层',
+        layerUp: '上移一层',
+        layerDown: '下移一层'
+    },
+
     // Page Navigation
     page: {
         previous: '上一页',
@@ -207,7 +276,11 @@ window.translations = {
             current: '当前',
             new: '新',
             title: '导入配置确认',
-            message: '检测到以下设置将被更改：'
+            message: '检测到以下设置将被更改：',
+            oldValue: '旧值',
+            newValue: '新值',
+            confirm: '确认',
+            cancel: '取消'
         },
         tabs: {
             general: '通用',
@@ -237,6 +310,8 @@ window.translations = {
             configScale: '属性栏大小',
             configScaleLabel: '属性栏大小：当前',
             configScaleHint: '调整弹出具体属性面板的大小',
+            showToolbarText: '显示工具栏文字',
+            showToolbarTextHint: '是否在工具栏按钮中显示文字标签',
             themeColorHint: '工具栏被选中时的颜色',
             colorOptions: {
                 blue: '蓝色',
@@ -253,15 +328,30 @@ window.translations = {
         general: {
             title: '通用设置',
             language: '语言',
-            languageHint: '选择界面语言 / Choose interface language',
+            languageHint: '选择界面语言',
             globalFont: '全局字体',
             globalFontHint: '选择应用程序使用的字体',
+            fontManagementHint: '字体管理：支持排序、显示开关、重命名与预览',
+            showFont: '显示字体',
+            fontPreviewSample: '中文字体预览 ABC abc 123',
             fonts: {
                 system: '系统默认',
                 serif: '宋体（衬线体）',
                 sansSerif: '黑体（无衬线体）',
                 monospace: '等宽字体',
                 cursive: '手写体',
+                notoSansSC: '思源黑体',
+                notoSerifSC: '思源宋体',
+                lxgwWenKai: '霞鹜文楷',
+                sourceHanSansSC: '思源黑体 CN',
+                sourceHanSerifSC: '思源宋体 CN',
+                inter: 'Inter',
+                roboto: 'Roboto',
+                openSans: 'Open Sans',
+                lora: 'Lora',
+                jetBrainsMono: 'JetBrains Mono',
+                kaiTi: '楷体',
+                stXingkai: '华文行楷（手写）',
                 // 中文字体
                 yahei: '微软雅黑',
                 simsun: '宋体',
@@ -282,6 +372,8 @@ window.translations = {
             edgeSnapHint: '拖动控制面板时自动吸附到屏幕边缘',
             touchZoom: '触控缩放',
             touchZoomHint: '允许双指捏合缩放画布',
+            morePanelBehaviorLabel: '更多功能面板行为',
+            keepMorePanelOpenHint: '点击“更多”中的功能按钮后默认不关闭“更多”框',
             // Toolbar customization
             toolbarCustomization: '工具栏自定义',
             toolbarCustomizationHint: '选择要在工具栏中显示的工具，拖动可调整顺序',
@@ -290,6 +382,7 @@ window.translations = {
                 redo: '重做',
                 pen: '笔',
                 move: '移动',
+                select: '选择',
                 eraser: '擦除',
                 clear: '清空',
                 background: '背景',
@@ -298,13 +391,14 @@ window.translations = {
             },
             // Control button settings
             controlButtonSettings: '控制按钮设置',
-            controlButtonSettingsHint: '选择要显示的控制按钮',
+            controlButtonSettingsHint: '选择要显示的控制按钮，拖动调整顺序',
             controlButtons: {
                 zoom: '缩放按钮',
                 pagination: '分页按钮',
                 time: '时间显示',
                 fullscreen: '全屏按钮',
-                download: '下载按钮'
+                import: '导入按钮',
+                export: '导出按钮'
             },
             controlPosition: '控制按钮位置',
             controlPositionHint: '选择缩放和分页控件在屏幕上的显示位置',
@@ -415,9 +509,24 @@ window.translations = {
         },
         more: {
             title: '更多设置',
-            description: '时间显示相关设置请点击右下角时间区域进入设置界面',
+            cacheCleanupLabel: '缓存清理',
+            cacheCleanupHint: '可查看缓存占用并按类别清理（清理前会二次确认）',
+            clearSettingsCache: '清除设置项缓存',
+            clearCanvasCache: '清除画布缓存',
+            clearOtherCache: '清除其他缓存',
+            cacheSizeCalculating: '计算中...',
+            clearSelectedCache: '清理所选缓存',
+            morePanelBehaviorLabel: '更多功能面板行为',
+            keepMorePanelOpenHint: '点击“更多”中的功能按钮后默认不关闭“更多”框',
+            selectCacheType: '请先选择要清理的缓存类型',
+            confirmClearSelectedCache: '将清理以下缓存：',
+            clearLocalDataConfirmSuffix: '确定继续吗？',
             showTimeDisplay: '显示时间和日期',
-            showTimeDisplayHint: '在右上角显示当前时间和日期'
+            showTimeDisplayHint: '在右上角显示当前时间和日期',
+            localDataLabel: '本地数据',
+            localDataHint: '清空本地缓存、画布内容和设置，并恢复首次加载状态',
+            clearLocalDataButton: '清空本地缓存',
+            clearLocalDataConfirm: '此操作会清空本地缓存、画布内容和设置，并恢复为首次加载状态。确定继续吗？'
         },
         time: {
             title: '时间显示设置',
@@ -468,7 +577,8 @@ window.translations = {
         timer: '计时',
         randomPicker: '点名器',
         scoreboard: '计分板',
-        insertImage: '插入图片'
+        insertImage: '插入图片',
+        insertText: '插入文字'
     },
 
     // Random Picker
@@ -556,6 +666,8 @@ window.translations = {
         fullscreenFontSizeLabel: '全屏字体大小：当前',
         fullscreenFontSizeHint: '调整全屏时间显示的字体大小，范围10%-85%',
         fullscreenSliderLabel: '字体大小调节 (10%-85%)',
+        titleFontSize: '标题/日期字体大小',
+        timeFontSize: '时间字体大小',
         customColor: '自定义颜色',
         transparent: '透明',
         fullscreenDisabled: '关闭',
@@ -579,6 +691,8 @@ window.translations = {
         titlePlaceholder: '例如：课堂演讲、考试时间等',
         setTime: '设置时间',
         setStartTime: '设置开始时间',
+        titleFontSize: '标题字体大小',
+        timeFontSize: '时间字体大小',
         fontSettings: '字体设置',
         fontSize: '字体大小',
         fontSizeLabel: '字体大小：当前',
@@ -636,6 +750,13 @@ window.translations = {
         stop: '停止',
         alertSetTime: '请设置倒计时时间',
         alertTitle: '提示'
+    },
+
+    // Export
+    export: {
+        selectAtLeastOnePage: '请至少选择一页',
+        paginationRequired: '需要分页',
+        noPages: '没有可用页面'
     },
 
     // Timezone names

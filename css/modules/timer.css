@@ -749,16 +749,16 @@
 .timer-font-size-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background: var(--theme-color);
     cursor: pointer;
 }
 
 .timer-font-size-slider::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background: var(--theme-color);
     cursor: pointer;
@@ -899,8 +899,8 @@
 .timer-fullscreen-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 20px;
-    height: 20px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     background: white;
     cursor: pointer;
@@ -908,8 +908,8 @@
 }
 
 .timer-fullscreen-slider::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     background: white;
     cursor: pointer;
@@ -1024,11 +1024,20 @@
 
 .speed-control input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background: var(--theme-color);
     cursor: pointer;
+}
+
+.speed-control input[type="range"]::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--theme-color);
+    cursor: pointer;
+    border: none;
 }
 
 .speed-control span {
