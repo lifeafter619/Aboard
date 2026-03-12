@@ -18,6 +18,7 @@ class I18n {
         this.translations = {};
         this.fallbackTranslations = {};
         this.fallbackLocale = 'zh-CN';
+        this.localeOverrides = null;
         
         // Available languages
         this.availableLocales = {
@@ -97,14 +98,21 @@ class I18n {
      */
     async loadTranslations() {
         try {
-            const loadLocaleFile = async (locale) => {
-                const response = await fetch(`js/locales/${locale}.js`);
+            const loadScriptData = async (url, globalKey) => {
+                const response = await fetch(url);
                 if (!response.ok) {
                     return null;
                 }
                 const text = await response.text();
+                delete window[globalKey];
                 eval(text);
-                return window.translations || null;
+                const data = window[globalKey] || null;
+                delete window[globalKey];
+                return data;
+            };
+
+            const loadLocaleFile = async (locale) => {
+                return loadScriptData(`js/locales/${locale}.js`, 'translations');
             };
 
             let localeTranslations = await loadLocaleFile(this.currentLocale);
@@ -117,24 +125,18 @@ class I18n {
             this.translations = localeTranslations || {};
             this.fallbackTranslations = this.currentLocale === this.fallbackLocale
                 ? this.translations
-                : (await loadLocaleFile(this.fallbackLocale) || {});
+                : {};
+
+            if (this.localeOverrides === null) {
+                this.localeOverrides = await loadScriptData('js/locales/overrides.js', 'locale_translation_overrides') || {};
+            }
+            this.mergeTranslations(this.translations, this.localeOverrides[this.currentLocale]);
 
             // Load help translations
             try {
-                const helpResponse = await fetch(`js/locales/help/${this.currentLocale}.js`);
-                if (helpResponse.ok) {
-                    const helpText = await helpResponse.text();
-                    eval(helpText);
-
-                    if (window.help_translations) {
-                        for (const key in window.help_translations) {
-                            if (this.translations[key] && typeof this.translations[key] === 'object') {
-                                Object.assign(this.translations[key], window.help_translations[key]);
-                            } else {
-                                this.translations[key] = window.help_translations[key];
-                            }
-                        }
-                    }
+                const helpTranslations = await loadScriptData(`js/locales/help/${this.currentLocale}.js`, 'help_translations');
+                if (helpTranslations) {
+                    this.mergeTranslations(this.translations, helpTranslations);
                 }
             } catch (e) {
                 console.warn('Failed to load help translations', e);
@@ -145,6 +147,25 @@ class I18n {
             this.translations = {};
             this.fallbackTranslations = {};
         }
+    }
+
+    mergeTranslations(target, source) {
+        if (!target || !source || typeof source !== 'object') {
+            return target;
+        }
+
+        Object.entries(source).forEach(([key, value]) => {
+            if (value && typeof value === 'object' && !Array.isArray(value)) {
+                if (!target[key] || typeof target[key] !== 'object' || Array.isArray(target[key])) {
+                    target[key] = {};
+                }
+                this.mergeTranslations(target[key], value);
+            } else {
+                target[key] = value;
+            }
+        });
+
+        return target;
     }
 
     /**
