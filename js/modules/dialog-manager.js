@@ -32,6 +32,8 @@ class DialogManager {
                 </div>
                 <div class="modal-body">
                     <p id="app-confirm-message" class="confirm-message"></p>
+                    <div id="app-confirm-options" class="app-confirm-options"></div>
+                    <p id="app-confirm-footer" class="confirm-message app-confirm-footer"></p>
                     <div class="confirm-buttons">
                         <button id="app-confirm-cancel-btn" class="confirm-btn cancel-btn"></button>
                         <button id="app-confirm-ok-btn" class="confirm-btn ok-btn"></button>
@@ -43,15 +45,47 @@ class DialogManager {
         this.confirmModal = modal;
     }
 
-    showConfirm(message, title = null) {
+    showConfirm(messageOrConfig, title = null) {
         this.ensureConfirmModal();
         const modal = this.confirmModal;
-        const localeTitle = title || (window.i18n ? window.i18n.t('common.confirm') : 'Confirm');
-        const cancelText = window.i18n ? window.i18n.t('common.cancel') : 'Cancel';
-        const okText = window.i18n ? window.i18n.t('common.confirm') : 'OK';
+        const isConfigMode = typeof messageOrConfig === 'object' && messageOrConfig !== null;
+        const config = isConfigMode
+            ? messageOrConfig
+            : { message: messageOrConfig, title };
+        const localeTitle = config.title || (window.i18n ? window.i18n.t('common.confirm') : 'Confirm');
+        const cancelText = config.cancelText || (window.i18n ? window.i18n.t('common.cancel') : 'Cancel');
+        const okText = config.confirmText || (window.i18n ? window.i18n.t('common.confirm') : 'OK');
+        const message = String(config.message || '');
+        const footerText = String(config.footerText || '');
+        const selectableItems = Array.isArray(config.selectableItems) ? config.selectableItems : [];
+        const optionsContainer = modal.querySelector('#app-confirm-options');
+        const footerElement = modal.querySelector('#app-confirm-footer');
+        const messageElement = modal.querySelector('#app-confirm-message');
 
         modal.querySelector('#app-confirm-title').textContent = localeTitle;
-        modal.querySelector('#app-confirm-message').textContent = String(message || '');
+        messageElement.textContent = message;
+        messageElement.classList.toggle('compact', selectableItems.length > 0 || Boolean(footerText));
+        optionsContainer.innerHTML = '';
+        optionsContainer.classList.toggle('show', selectableItems.length > 0);
+        footerElement.textContent = footerText;
+        footerElement.classList.toggle('show', Boolean(footerText));
+
+        selectableItems.forEach((item, index) => {
+            const label = document.createElement('label');
+            label.className = 'checkbox-label app-confirm-option';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = item.checked !== false;
+            checkbox.value = item.value ?? String(index);
+
+            const text = document.createElement('span');
+            text.textContent = String(item.label || '');
+
+            label.appendChild(checkbox);
+            label.appendChild(text);
+            optionsContainer.appendChild(label);
+        });
         modal.querySelector('#app-confirm-cancel-btn').textContent = cancelText;
         modal.querySelector('#app-confirm-ok-btn').textContent = okText;
 
@@ -63,10 +97,30 @@ class DialogManager {
                 modal.onclick = null;
                 resolve(result);
             };
-            modal.querySelector('#app-confirm-cancel-btn').onclick = () => close(false);
-            modal.querySelector('#app-confirm-ok-btn').onclick = () => close(true);
+            modal.querySelector('#app-confirm-cancel-btn').onclick = () => {
+                close(config.returnDetails ? { confirmed: false, selectedValues: [] } : false);
+            };
+            modal.querySelector('#app-confirm-ok-btn').onclick = () => {
+                const selectedValues = Array.from(optionsContainer.querySelectorAll('input[type="checkbox"]:checked'))
+                    .map(input => input.value);
+                if (selectableItems.length > 0 && config.requireSelection && selectedValues.length === 0) {
+                    this.showAlert(
+                        config.requireSelectionMessage
+                        || (window.i18n ? window.i18n.t('settings.more.selectCacheType') : 'Please select at least one item.'),
+                        'warning'
+                    );
+                    return;
+                }
+                if (config.returnDetails) {
+                    close({ confirmed: true, selectedValues });
+                    return;
+                }
+                close(true);
+            };
             modal.onclick = (e) => {
-                if (e.target === modal) close(false);
+                if (e.target === modal) {
+                    close(config.returnDetails ? { confirmed: false, selectedValues: [] } : false);
+                }
             };
             modal.classList.add('show');
         });

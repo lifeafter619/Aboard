@@ -31,6 +31,7 @@ class SettingsManager {
         this.customFonts = this.loadCustomFonts();
         this.fontPreferences = this.loadFontPreferences();
         this.modalSizePreferences = this.loadModalSizePreferences();
+        this.modalCenterPreferences = this.loadModalCenterPreferences();
         this.ensureFontPreferencesIntegrity();
 
         // Initialize Toast Manager
@@ -105,12 +106,28 @@ class SettingsManager {
         return {};
     }
 
+    loadModalCenterPreferences() {
+        const saved = localStorage.getItem('modalCenterPreferences');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.warn('Failed to load modal center preferences:', e);
+            }
+        }
+        return {};
+    }
+
     saveFontPreferences() {
         localStorage.setItem('fontPreferences', JSON.stringify(this.fontPreferences));
     }
 
     saveModalSizePreferences() {
         localStorage.setItem('modalSizePreferences', JSON.stringify(this.modalSizePreferences));
+    }
+
+    saveModalCenterPreferences() {
+        localStorage.setItem('modalCenterPreferences', JSON.stringify(this.modalCenterPreferences));
     }
 
     ensureFontPreferencesIntegrity() {
@@ -363,10 +380,33 @@ class SettingsManager {
         this.saveModalSizePreferences();
     }
 
+    getModalCenterPreference(modalKey) {
+        if (!modalKey || !this.modalCenterPreferences || typeof this.modalCenterPreferences !== 'object') {
+            return false;
+        }
+        return this.modalCenterPreferences[modalKey] === true;
+    }
+
+    setModalCenterPreference(modalKey, keepCentered) {
+        if (!modalKey) return;
+        if (keepCentered) {
+            this.modalCenterPreferences[modalKey] = true;
+        } else {
+            delete this.modalCenterPreferences[modalKey];
+        }
+        this.saveModalCenterPreferences();
+    }
+
     resetModalSizePreference(modalKey) {
         if (!modalKey || !this.modalSizePreferences?.[modalKey]) return;
         delete this.modalSizePreferences[modalKey];
         this.saveModalSizePreferences();
+    }
+
+    resetModalCenterPreference(modalKey) {
+        if (!modalKey || !this.modalCenterPreferences?.[modalKey]) return;
+        delete this.modalCenterPreferences[modalKey];
+        this.saveModalCenterPreferences();
     }
     
     loadPatternPreferences() {
@@ -845,6 +885,7 @@ class SettingsManager {
             themeColor: this.themeColor,
             globalFont: this.globalFont,
             modalSizePreferences: JSON.parse(JSON.stringify(this.modalSizePreferences || {})),
+            modalCenterPreferences: JSON.parse(JSON.stringify(this.modalCenterPreferences || {})),
             // Also include toolbar customization
             toolbarOrder: localStorage.getItem('toolbarOrder'),
             toolbarVisibility: localStorage.getItem('toolbarVisibility'),
@@ -990,6 +1031,19 @@ class SettingsManager {
             return `${sizeLabel} - ${modalNames[modalKey] || modalKey}`;
         }
 
+        if (key.startsWith('modalCenterPreferences.')) {
+            const modalKey = key.split('.')[1];
+            const modalNames = {
+                settingsModal: i18n.t('settings.title'),
+                timerSettingsModal: i18n.t('timer.settingsTitle'),
+                timeDisplaySettingsModal: i18n.t('timeDisplay.settingsTitle'),
+                randomPickerSettingsModal: i18n.t('randomPicker.settingsTitle')
+            };
+            const centeredKey = 'common.keepCentered';
+            const centeredLabel = i18n.t(centeredKey);
+            return `${centeredLabel !== centeredKey ? centeredLabel : 'Keep Centered'} - ${modalNames[modalKey] || modalKey}`;
+        }
+
         // Map internal keys to translation keys
         const map = {
             'toolbarSize': 'settings.display.toolbarSize',
@@ -1047,6 +1101,10 @@ class SettingsManager {
         if (newSettings.modalSizePreferences && typeof newSettings.modalSizePreferences === 'object') {
             this.modalSizePreferences = newSettings.modalSizePreferences;
             this.saveModalSizePreferences();
+        }
+        if (newSettings.modalCenterPreferences && typeof newSettings.modalCenterPreferences === 'object') {
+            this.modalCenterPreferences = newSettings.modalCenterPreferences;
+            this.saveModalCenterPreferences();
         }
 
         if (newSettings.controlSettings) {

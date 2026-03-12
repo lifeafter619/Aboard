@@ -23,7 +23,9 @@ window.translations = {
         stop: '停止',
         preview: '预览',
         settings: '设置',
-        dragToMove: '拖动以移动'
+        dragToMove: '拖动以移动',
+        restoreSize: '\u6062\u590d\u5927\u5c0f',
+        keepCentered: '\u4fdd\u6301\u5c45\u4e2d'
     },
 
     // Recovery dialog
@@ -519,7 +521,8 @@ window.translations = {
             morePanelBehaviorLabel: '更多功能面板行为',
             keepMorePanelOpenHint: '点击“更多”中的功能按钮后默认不关闭“更多”框',
             selectCacheType: '请先选择要清理的缓存类型',
-            confirmClearSelectedCache: '将清理以下缓存：',
+            confirmClearTitle: '\u786e\u8ba4\u6e05\u7406',
+            confirmClearSelectedCache: '\u8bf7\u9009\u62e9\u8981\u6e05\u7406\u7684\u7f13\u5b58\u9879\uff1a',
             clearLocalDataConfirmSuffix: '确定继续吗？',
             showTimeDisplay: '显示时间和日期',
             showTimeDisplayHint: '在右上角显示当前时间和日期',

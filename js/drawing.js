@@ -11,7 +11,10 @@ class DrawingEngine {
         this.currentColor = '#000000';
         this.penSize = 5;
         this.penType = localStorage.getItem('penType') || 'normal';
-        this.eraserSize = 20;
+        const storedEraserSize = parseInt(localStorage.getItem('eraserSize'), 10);
+        this.eraserSize = Number.isFinite(storedEraserSize)
+            ? this.normalizeEraserSize(storedEraserSize)
+            : this.getAdaptiveDefaultEraserSize();
         this.eraserShape = localStorage.getItem('eraserShape') || 'circle';
         this.currentTool = 'pen';
         
@@ -721,8 +724,42 @@ class DrawingEngine {
         localStorage.setItem('penType', type);
     }
     
-    setEraserSize(size) {
-        this.eraserSize = size;
+    normalizeEraserSize(size) {
+        const numericSize = Math.round(parseFloat(size));
+        if (!Number.isFinite(numericSize)) {
+            return 20;
+        }
+        return Math.max(10, Math.min(150, numericSize));
+    }
+
+    getAdaptiveDefaultEraserSize() {
+        const viewportShortEdge = Math.max(0, Math.min(window.innerWidth || 0, window.innerHeight || 0));
+        const screenShortEdge = Math.max(
+            viewportShortEdge,
+            Math.min(window.screen?.availWidth || viewportShortEdge, window.screen?.availHeight || viewportShortEdge)
+        );
+        const referenceShortEdge = (viewportShortEdge * 0.7) + (screenShortEdge * 0.3);
+        return Math.max(16, Math.min(30, Math.round(referenceShortEdge * 0.022)));
+    }
+
+    hasStoredEraserSizePreference() {
+        return localStorage.getItem('eraserSize') !== null;
+    }
+
+    refreshAdaptiveEraserSize() {
+        if (this.hasStoredEraserSizePreference()) {
+            return false;
+        }
+        this.eraserSize = this.getAdaptiveDefaultEraserSize();
+        return true;
+    }
+
+    setEraserSize(size, options = {}) {
+        const { persist = true } = options;
+        this.eraserSize = this.normalizeEraserSize(size);
+        if (persist) {
+            localStorage.setItem('eraserSize', String(this.eraserSize));
+        }
     }
     
     setEraserShape(shape) {

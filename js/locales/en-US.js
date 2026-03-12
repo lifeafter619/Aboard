@@ -23,7 +23,9 @@ window.translations = {
         stop: 'Stop',
         preview: 'Preview',
         settings: 'Settings',
-        dragToMove: 'Drag to move'
+        dragToMove: 'Drag to move',
+        restoreSize: 'Restore Size',
+        keepCentered: 'Keep Centered'
     },
 
     // Recovery dialog
@@ -519,7 +521,8 @@ window.translations = {
             morePanelBehaviorLabel: 'More Panel Behavior',
             keepMorePanelOpenHint: 'Keep the More panel open after clicking feature buttons',
             selectCacheType: 'Please select at least one cache type.',
-            confirmClearSelectedCache: 'The following cache will be cleared:',
+            confirmClearTitle: 'Confirm Cleanup',
+            confirmClearSelectedCache: 'Select the cache items to clear:',
             clearLocalDataConfirmSuffix: 'Continue?',
             showTimeDisplay: 'Show Date & Time',
             showTimeDisplayHint: 'Display current date and time in top-right corner',

@@ -679,7 +679,8 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     min-width: 0;
 }
 
-.modal-reset-size-btn {
+.modal-reset-size-btn,
+.modal-keep-centered-btn {
     display: none;
     border: 1px solid #d9d9df;
     border-radius: 999px;
@@ -692,10 +693,17 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     white-space: nowrap;
 }
 
-.modal-reset-size-btn.show {
+.modal-reset-size-btn.show,
+.modal-keep-centered-btn.show {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+}
+
+.modal-keep-centered-btn.active {
+    background: rgba(0, 122, 255, 0.12);
+    border-color: rgba(0, 122, 255, 0.45);
+    color: #0a63c9;
 }
 
 .resizable-modal-content {
@@ -1513,6 +1521,38 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     color: #666;
     margin-bottom: 24px;
     line-height: 1.5;
+}
+
+.confirm-message.compact {
+    margin-bottom: 0;
+}
+
+.app-confirm-options {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.app-confirm-options.show {
+    display: flex;
+}
+
+.app-confirm-option {
+    align-items: flex-start;
+    padding: 10px 12px;
+    border: 1px solid #e5e5ea;
+    border-radius: 10px;
+    background: #fafafa;
+}
+
+.app-confirm-footer {
+    display: none;
+    margin-bottom: 0;
+    font-size: 14px;
+}
+
+.app-confirm-footer.show {
+    display: block;
 }
 
 .confirm-buttons {

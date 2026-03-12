@@ -194,6 +194,11 @@ class DrawingBoard {
         this.setupModalInteractionLock();
         this.settingsManager.loadSettings();
         this.initResizableModals();
+        window.addEventListener('localeChanged', () => {
+            document.querySelectorAll('.resizable-modal-content').forEach(content => {
+                this.updateModalHeaderActionButtons(content);
+            });
+        });
         this.backgroundManager.drawBackground();
         this.updateUI();
         this.revealToolbar();
@@ -389,6 +394,11 @@ class DrawingBoard {
         });
     }
 
+    getLocaleText(key, fallback) {
+        const translated = window.i18n?.t(key);
+        return translated && translated !== key ? translated : fallback;
+    }
+
     registerResizableModal(config) {
         const content = document.querySelector(config.selector);
         if (!content || content.dataset.modalResizeRegistered === 'true') {
@@ -428,12 +438,22 @@ class DrawingBoard {
                 const resetButton = document.createElement('button');
                 resetButton.type = 'button';
                 resetButton.className = 'modal-reset-size-btn';
-                resetButton.textContent = '恢复大小';
                 resetButton.addEventListener('click', (event) => {
                     event.stopPropagation();
                     this.resetResizableModalSize(content);
                 });
                 titleGroup.appendChild(resetButton);
+            }
+
+            if (!titleGroup.querySelector('.modal-keep-centered-btn')) {
+                const keepCenteredButton = document.createElement('button');
+                keepCenteredButton.type = 'button';
+                keepCenteredButton.className = 'modal-keep-centered-btn';
+                keepCenteredButton.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    this.toggleModalKeepCentered(content);
+                });
+                titleGroup.appendChild(keepCenteredButton);
             }
         }
 
@@ -458,22 +478,37 @@ class DrawingBoard {
 
         const modalKey = content.dataset.modalResizeKey;
         const savedSize = this.settingsManager.getModalSizePreference(modalKey);
+        const keepCentered = this.settingsManager.getModalCenterPreference(modalKey);
         if (savedSize) {
-            this.applyCustomModalLayout(content, savedSize.width, savedSize.height, true);
+            this.applyCustomModalLayout(content, savedSize.width, savedSize.height, keepCentered);
         } else {
             this.restoreDefaultModalLayout(content);
         }
-        this.updateModalResetButtonVisibility(content);
+        this.updateModalHeaderActionButtons(content);
     }
 
-    updateModalResetButtonVisibility(content) {
+    updateModalHeaderActionButtons(content) {
         const resetButton = content?.querySelector('.modal-reset-size-btn');
-        if (!resetButton) {
+        const keepCenteredButton = content?.querySelector('.modal-keep-centered-btn');
+        if (!resetButton && !keepCenteredButton) {
             return;
         }
         const modalKey = content.dataset.modalResizeKey;
         const hasCustomSize = Boolean(this.settingsManager.getModalSizePreference(modalKey));
-        resetButton.classList.toggle('show', hasCustomSize);
+        const keepCentered = this.settingsManager.getModalCenterPreference(modalKey);
+        const restoreSizeText = this.getLocaleText('common.restoreSize', 'Restore Size');
+        const keepCenteredText = this.getLocaleText('common.keepCentered', 'Keep Centered');
+
+        if (resetButton) {
+            resetButton.textContent = restoreSizeText;
+            resetButton.classList.toggle('show', hasCustomSize);
+        }
+        if (keepCenteredButton) {
+            keepCenteredButton.textContent = keepCenteredText;
+            keepCenteredButton.classList.toggle('show', hasCustomSize);
+            keepCenteredButton.classList.toggle('active', hasCustomSize && keepCentered);
+            keepCenteredButton.setAttribute('aria-pressed', String(hasCustomSize && keepCentered));
+        }
     }
 
     getModalLayoutBounds(content) {
@@ -540,9 +575,26 @@ class DrawingBoard {
 
     resetResizableModalSize(content) {
         if (!content) return;
-        this.settingsManager.resetModalSizePreference(content.dataset.modalResizeKey);
+        const modalKey = content.dataset.modalResizeKey;
+        this.settingsManager.resetModalSizePreference(modalKey);
+        this.settingsManager.resetModalCenterPreference(modalKey);
         this.restoreDefaultModalLayout(content);
-        this.updateModalResetButtonVisibility(content);
+        this.updateModalHeaderActionButtons(content);
+    }
+
+    toggleModalKeepCentered(content) {
+        if (!content) return;
+        const modalKey = content.dataset.modalResizeKey;
+        if (!this.settingsManager.getModalSizePreference(modalKey)) {
+            return;
+        }
+        const nextValue = !this.settingsManager.getModalCenterPreference(modalKey);
+        this.settingsManager.setModalCenterPreference(modalKey, nextValue);
+        if (nextValue) {
+            const rect = content.getBoundingClientRect();
+            this.applyCustomModalLayout(content, rect.width, rect.height, true);
+        }
+        this.updateModalHeaderActionButtons(content);
     }
 
     startModalResize(event, content, handleName) {
@@ -559,7 +611,8 @@ class DrawingBoard {
             handleName,
             startX: event.clientX,
             startY: event.clientY,
-            startRect: content.getBoundingClientRect()
+            startRect: content.getBoundingClientRect(),
+            keepCentered: this.settingsManager.getModalCenterPreference(content.dataset.modalResizeKey)
         };
 
         content.classList.add('modal-resizing');
@@ -581,7 +634,7 @@ class DrawingBoard {
 
         event.preventDefault();
 
-        const { content, handleName, startRect, startX, startY } = state;
+        const { content, handleName, startRect, startX, startY, keepCentered } = state;
         const { minWidth, minHeight, maxWidth, maxHeight } = this.getModalLayoutBounds(content);
         const startRight = startRect.left + startRect.width;
         const startBottom = startRect.top + startRect.height;
@@ -610,16 +663,21 @@ class DrawingBoard {
         width = Math.min(maxWidth, Math.max(minWidth, width));
         height = Math.min(maxHeight, Math.max(minHeight, height));
 
-        if (handleName.includes('left')) {
-            left = startRight - width;
+        if (keepCentered) {
+            left = (window.innerWidth - width) / 2;
+            top = (window.innerHeight - height) / 2;
         } else {
-            left = Math.min(Math.max(MODAL_RESIZE_EDGE_MARGIN, left), window.innerWidth - MODAL_RESIZE_EDGE_MARGIN - width);
-        }
+            if (handleName.includes('left')) {
+                left = startRight - width;
+            } else {
+                left = Math.min(Math.max(MODAL_RESIZE_EDGE_MARGIN, left), window.innerWidth - MODAL_RESIZE_EDGE_MARGIN - width);
+            }
 
-        if (handleName.includes('top')) {
-            top = startBottom - height;
-        } else {
-            top = Math.min(Math.max(MODAL_RESIZE_EDGE_MARGIN, top), window.innerHeight - MODAL_RESIZE_EDGE_MARGIN - height);
+            if (handleName.includes('top')) {
+                top = startBottom - height;
+            } else {
+                top = Math.min(Math.max(MODAL_RESIZE_EDGE_MARGIN, top), window.innerHeight - MODAL_RESIZE_EDGE_MARGIN - height);
+            }
         }
 
         content.style.left = `${Math.round(left)}px`;
@@ -642,8 +700,29 @@ class DrawingBoard {
             width: rect.width,
             height: rect.height
         });
-        this.updateModalResetButtonVisibility(state.content);
+        this.updateModalHeaderActionButtons(state.content);
         this.modalResizeState = null;
+    }
+
+    syncEraserSizeControls() {
+        const eraserSizeSlider = document.getElementById('eraser-size-slider');
+        const eraserSizeValue = document.getElementById('eraser-size-value');
+        if (eraserSizeSlider) {
+            eraserSizeSlider.value = this.drawingEngine.eraserSize;
+        }
+        if (eraserSizeValue) {
+            eraserSizeValue.textContent = this.drawingEngine.eraserSize;
+        }
+        if (this.drawingEngine.currentTool === 'eraser') {
+            this.eraserCursor.style.width = `${this.drawingEngine.eraserSize}px`;
+            this.eraserCursor.style.height = `${this.drawingEngine.eraserSize}px`;
+        }
+    }
+
+    refreshAdaptiveEraserSize() {
+        if (this.drawingEngine.refreshAdaptiveEraserSize()) {
+            this.syncEraserSizeControls();
+        }
     }
     
     
@@ -1257,6 +1336,8 @@ class DrawingBoard {
                 this.repositionToolbarsOnResize();
                 // Reposition modals to ensure they stay within viewport
                 this.repositionModalsOnResize();
+                // Keep the adaptive default eraser size aligned with the current viewport.
+                this.refreshAdaptiveEraserSize();
             }, 150); // 150ms debounce delay
         });
         
@@ -1668,6 +1749,7 @@ class DrawingBoard {
                 this.eraserCursor.style.height = e.target.value + 'px';
             }
         });
+        this.syncEraserSizeControls();
         
         // Shape type buttons
         document.querySelectorAll('.shape-type-btn').forEach(btn => {
@@ -2169,29 +2251,51 @@ class DrawingBoard {
         const clearLocalCacheBtn = document.getElementById('clear-local-cache-btn');
         if (clearLocalCacheBtn) {
             clearLocalCacheBtn.addEventListener('click', async () => {
-                const options = {
-                    settings: document.getElementById('clear-settings-cache-checkbox')?.checked,
-                    canvas: document.getElementById('clear-canvas-cache-checkbox')?.checked,
-                    other: document.getElementById('clear-other-cache-checkbox')?.checked
-                };
-                if (!options.settings && !options.canvas && !options.other) {
-                    const selectMsg = window.i18n ? window.i18n.t('settings.more.selectCacheType') : 'Please select at least one cache type.';
-                    window.appDialog?.showAlert(selectMsg, 'warning');
-                    return;
-                }
                 const sizes = await this.getCacheSizeSummary();
-                const selectedSummary = [];
                 const settingsLabel = window.i18n ? window.i18n.t('settings.more.clearSettingsCache') : 'Settings Cache';
                 const canvasLabel = window.i18n ? window.i18n.t('settings.more.clearCanvasCache') : 'Canvas Cache';
                 const otherLabel = window.i18n ? window.i18n.t('settings.more.clearOtherCache') : 'Other Cache';
-                if (options.settings) selectedSummary.push(`${settingsLabel}: ${this.formatBytes(sizes.settings)}`);
-                if (options.canvas) selectedSummary.push(`${canvasLabel}: ${this.formatBytes(sizes.canvas)}`);
-                if (options.other) selectedSummary.push(`${otherLabel}: ${this.formatBytes(sizes.other)}`);
-                const confirmTitle = window.i18n ? window.i18n.t('settings.more.confirmClearSelectedCache') : 'The following cache will be cleared:';
-                const confirmSuffix = window.i18n ? window.i18n.t('settings.more.clearLocalDataConfirmSuffix') : 'Continue?';
-                const confirmMessage = `${confirmTitle}\n${selectedSummary.join('\n')}\n\n${confirmSuffix}`;
-                const confirmed = await window.appDialog?.showConfirm(confirmMessage, confirmTitle);
-                if (!confirmed) return;
+                const selectableItems = [
+                    {
+                        value: 'settings',
+                        label: `${settingsLabel}: ${this.formatBytes(sizes.settings)}`,
+                        checked: document.getElementById('clear-settings-cache-checkbox')?.checked
+                    },
+                    {
+                        value: 'canvas',
+                        label: `${canvasLabel}: ${this.formatBytes(sizes.canvas)}`,
+                        checked: document.getElementById('clear-canvas-cache-checkbox')?.checked
+                    },
+                    {
+                        value: 'other',
+                        label: `${otherLabel}: ${this.formatBytes(sizes.other)}`,
+                        checked: document.getElementById('clear-other-cache-checkbox')?.checked
+                    }
+                ];
+                const confirmTitle = window.i18n ? window.i18n.t('settings.more.confirmClearTitle') : 'Confirm Cleanup';
+                const confirmMessage = window.i18n ? window.i18n.t('settings.more.confirmClearSelectedCache') : 'Select the cache items to clear:';
+                const selectMsg = window.i18n ? window.i18n.t('settings.more.selectCacheType') : 'Please select at least one cache type.';
+                const confirmResult = await window.appDialog?.showConfirm({
+                    title: confirmTitle,
+                    message: confirmMessage,
+                    selectableItems,
+                    requireSelection: true,
+                    requireSelectionMessage: selectMsg,
+                    returnDetails: true
+                });
+                if (!confirmResult?.confirmed) return;
+                const selectedValues = new Set(confirmResult.selectedValues || []);
+                const options = {
+                    settings: selectedValues.has('settings'),
+                    canvas: selectedValues.has('canvas'),
+                    other: selectedValues.has('other')
+                };
+                const settingsCheckbox = document.getElementById('clear-settings-cache-checkbox');
+                const canvasCheckbox = document.getElementById('clear-canvas-cache-checkbox');
+                const otherCheckbox = document.getElementById('clear-other-cache-checkbox');
+                if (settingsCheckbox) settingsCheckbox.checked = options.settings;
+                if (canvasCheckbox) canvasCheckbox.checked = options.canvas;
+                if (otherCheckbox) otherCheckbox.checked = options.other;
                 await this.clearSelectedCache(options);
                 await this.updateCacheSizeDisplay();
             });
@@ -2726,12 +2830,13 @@ class DrawingBoard {
 
             const modalKey = modalContent.dataset.modalResizeKey;
             const savedSize = this.settingsManager.getModalSizePreference(modalKey);
+            const keepCentered = this.settingsManager.getModalCenterPreference(modalKey);
             if (savedSize) {
-                this.applyCustomModalLayout(modalContent, savedSize.width, savedSize.height, true);
+                this.applyCustomModalLayout(modalContent, savedSize.width, savedSize.height, keepCentered);
             } else {
                 this.restoreDefaultModalLayout(modalContent);
             }
-            this.updateModalResetButtonVisibility(modalContent);
+            this.updateModalHeaderActionButtons(modalContent);
         });
     }
     
@@ -3609,13 +3714,7 @@ class DrawingBoard {
             document.querySelectorAll('.eraser-shape-btn').forEach((btn) => {
                 btn.classList.toggle('active', btn.dataset.eraserShape === currentShape);
             });
-            // Sync eraser size display with current value
-            const eraserSizeSlider = document.getElementById('eraser-size-slider');
-            const eraserSizeValue = document.getElementById('eraser-size-value');
-            if (eraserSizeSlider && eraserSizeValue) {
-                eraserSizeSlider.value = this.drawingEngine.eraserSize;
-                eraserSizeValue.textContent = this.drawingEngine.eraserSize;
-            }
+            this.syncEraserSizeControls();
         } else if (tool === 'background') {
             document.getElementById('background-btn').classList.add('active');
             document.getElementById('background-config').classList.add('active');
@@ -5588,11 +5687,8 @@ class DrawingBoard {
         }
 
         // Sync Eraser Size Slider
-        const eraserSizeSlider = document.getElementById('eraser-size-slider');
-        const eraserSizeValue = document.getElementById('eraser-size-value');
-        if (eraserSizeSlider && settings.eraserSize) {
-            eraserSizeSlider.value = settings.eraserSize;
-            eraserSizeValue.textContent = settings.eraserSize;
+        if (settings.eraserSize) {
+            this.syncEraserSizeControls();
         }
 
         // Sync active color buttons
@@ -5628,11 +5724,11 @@ class DrawingBoard {
             'toolbarSize', 'configScale', 'controlPosition', 'edgeSnapEnabled', 'touchZoomEnabled',
             'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn',
             'showToolbarText', 'keepMorePanelOpen', 'canvasWidth', 'canvasHeight', 'canvasPreset',
-            'themeColor', 'globalFont', 'language', 'patternPreferences', 'modalSizePreferences', 'toolbarOrder',
+            'themeColor', 'globalFont', 'language', 'patternPreferences', 'modalSizePreferences', 'modalCenterPreferences', 'toolbarOrder',
             'toolbarVisibility', 'controlShowZoom', 'controlShowPagination', 'controlShowTime',
             'controlShowFullscreen', 'controlShowImport', 'controlShowExport', 'penType',
             'penLineStyle', 'penDashDensity', 'penMultiLineCount', 'penMultiLineSpacing',
-            'eraserShape', 'lineStyle'
+            'eraserShape', 'eraserSize', 'lineStyle'
         ]);
         const canvasKeys = new Set([
             'savedCanvasData', 'savedBgCanvasData', 'savedCanvasTimestamp',
