@@ -159,6 +159,7 @@ class DrawingBoard {
         this.pendingPanelDrag = null;
         this.featureWidgetZIndex = 1200;
         this.modalResizeState = null;
+        this.cacheSizeRequestToken = 0;
         
         // Coordinate origin dragging state
         this.isDraggingCoordinateOrigin = false;
@@ -5741,6 +5742,40 @@ class DrawingBoard {
         return new Blob([`${key}${value || ''}`]).size;
     }
 
+    async getBrowserStorageEstimate() {
+        if (!navigator.storage?.estimate) {
+            return null;
+        }
+        try {
+            return await navigator.storage.estimate();
+        } catch (e) {
+            console.warn('Failed to read navigator.storage estimate:', e);
+            return null;
+        }
+    }
+
+    async getCacheStorageUsageFallback() {
+        let total = 0;
+        if (!('caches' in window)) {
+            return total;
+        }
+        try {
+            const cacheKeys = await caches.keys();
+            for (const cacheName of cacheKeys) {
+                const cache = await caches.open(cacheName);
+                const requests = await cache.keys();
+                for (const request of requests) {
+                    const response = await cache.match(request);
+                    const blob = response ? await response.clone().blob() : null;
+                    total += blob ? blob.size : 0;
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to estimate Cache Storage size:', e);
+        }
+        return total;
+    }
+
     formatBytes(bytes) {
         if (!bytes || bytes <= 0) return '0 B';
         const units = ['B', 'KB', 'MB', 'GB'];
@@ -5752,11 +5787,13 @@ class DrawingBoard {
     async getCacheSizeSummary() {
         const { settingsKeys, canvasKeys } = this.getCacheKeyGroups();
         const summary = { settings: 0, canvas: 0, other: 0 };
+        let localAndSessionTotal = 0;
 
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             const val = localStorage.getItem(key);
             const size = this.getStorageEntrySize(key, val);
+            localAndSessionTotal += size;
             if (settingsKeys.has(key)) summary.settings += size;
             else if (canvasKeys.has(key)) summary.canvas += size;
             else summary.other += size;
@@ -5766,34 +5803,41 @@ class DrawingBoard {
             const key = sessionStorage.key(i);
             const val = sessionStorage.getItem(key);
             const size = this.getStorageEntrySize(key, val);
+            localAndSessionTotal += size;
             if (settingsKeys.has(key)) summary.settings += size;
             else if (canvasKeys.has(key)) summary.canvas += size;
             else summary.other += size;
         }
 
+        const browserEstimate = await this.getBrowserStorageEstimate();
+        const usageDetails = browserEstimate?.usageDetails || {};
+        const estimatedIndexedDbUsage = Number.isFinite(usageDetails.indexedDB) ? usageDetails.indexedDB : null;
+        const estimatedCacheUsage = Number.isFinite(usageDetails.caches) ? usageDetails.caches : null;
+
+        let indexedDbCanvasUsage = 0;
         try {
             const session = await this.storageManager.loadSession();
             if (session) {
-                summary.canvas += new Blob([JSON.stringify(session)]).size;
+                indexedDbCanvasUsage = new Blob([JSON.stringify(session)]).size;
             }
         } catch (e) {
             console.warn('Failed to estimate IndexedDB size:', e);
         }
+        summary.canvas += estimatedIndexedDbUsage !== null
+            ? Math.max(indexedDbCanvasUsage, estimatedIndexedDbUsage)
+            : indexedDbCanvasUsage;
 
-        if ('caches' in window) {
-            try {
-                const cacheKeys = await caches.keys();
-                for (const cacheName of cacheKeys) {
-                    const cache = await caches.open(cacheName);
-                    const requests = await cache.keys();
-                    for (const request of requests) {
-                        const response = await cache.match(request);
-                        const blob = response ? await response.clone().blob() : null;
-                        summary.other += blob ? blob.size : 0;
-                    }
-                }
-            } catch (e) {
-                console.warn('Failed to estimate Cache Storage size:', e);
+        const cacheUsage = estimatedCacheUsage !== null
+            ? estimatedCacheUsage
+            : await this.getCacheStorageUsageFallback();
+        summary.other += cacheUsage;
+
+        const browserUsage = Number.isFinite(browserEstimate?.usage) ? browserEstimate.usage : null;
+        if (browserUsage !== null) {
+            const knownUsage = localAndSessionTotal + (estimatedIndexedDbUsage ?? indexedDbCanvasUsage) + cacheUsage;
+            const residualUsage = Math.max(0, browserUsage - knownUsage);
+            if (residualUsage > 0) {
+                summary.other += residualUsage;
             }
         }
 
@@ -5805,7 +5849,11 @@ class DrawingBoard {
         const canvasSizeEl = document.getElementById('canvas-cache-size');
         const otherSizeEl = document.getElementById('other-cache-size');
         if (!settingsSizeEl || !canvasSizeEl || !otherSizeEl) return;
+        const requestToken = ++this.cacheSizeRequestToken;
         const summary = await this.getCacheSizeSummary();
+        if (requestToken !== this.cacheSizeRequestToken) {
+            return;
+        }
         settingsSizeEl.textContent = this.formatBytes(summary.settings);
         canvasSizeEl.textContent = this.formatBytes(summary.canvas);
         otherSizeEl.textContent = this.formatBytes(summary.other);

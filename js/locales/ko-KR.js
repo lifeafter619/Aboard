@@ -18,7 +18,9 @@ window.translations = {
         no: '아니오',
         ok: '확인',
         apply: '적용',
-        reset: '재설정'
+        reset: '재설정',
+        restoreSize: '크기 복원',
+        keepCentered: '가운데 유지'
     },
 
     // Recovery dialog
@@ -472,7 +474,8 @@ window.translations = {
             morePanelBehaviorLabel: '더보기 패널 동작',
             keepMorePanelOpenHint: '기능 버튼 클릭 후에도 더보기 패널 유지',
             selectCacheType: '삭제할 캐시 유형을 하나 이상 선택하세요.',
-            confirmClearSelectedCache: '다음 캐시가 정리됩니다:',
+            confirmClearTitle: '정리 확인',
+            confirmClearSelectedCache: '정리할 캐시 항목을 선택하세요:',
             clearLocalDataConfirmSuffix: '계속하시겠습니까?',
             description: '시간 표시 설정은 오른쪽 하단 시간 영역을 클릭하세요',
             showTimeDisplay: '시간 및 날짜 표시',

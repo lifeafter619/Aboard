@@ -18,7 +18,9 @@ window.translations = {
         no: 'No',
         ok: 'OK',
         apply: 'Aplicar',
-        reset: 'Restablecer'
+        reset: 'Restablecer',
+        restoreSize: 'Restablecer tamaño',
+        keepCentered: 'Mantener centrado'
     },
 
     // Recovery dialog
@@ -468,7 +470,8 @@ window.translations = {
             morePanelBehaviorLabel: 'Comportamiento del panel Más',
             keepMorePanelOpenHint: 'Mantener abierto el panel Más después de pulsar funciones',
             selectCacheType: 'Seleccione al menos un tipo de caché.',
-            confirmClearSelectedCache: 'Se limpiará la siguiente caché:',
+            confirmClearTitle: 'Confirmar limpieza',
+            confirmClearSelectedCache: 'Seleccione los elementos de caché que desea limpiar:',
             clearLocalDataConfirmSuffix: '¿Continuar?',
             description: 'Para la configuración de visualización de hora, haga clic en el área de hora en la esquina inferior derecha',
             showTimeDisplay: 'Mostrar hora y fecha',

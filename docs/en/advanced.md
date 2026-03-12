@@ -9,6 +9,7 @@
 - `js/history.js` handles undo and redo snapshots.
 - `js/modules/storage-manager.js` coordinates persistence and recovery with IndexedDB / local storage.
 - `settings-manager` provides a single place for toolbar sizing, theme, locale, and exportable preferences.
+- Cache size accounting now prefers `navigator.storage.estimate()` when available, falls back to manual cache inspection, and ignores stale async refreshes so the cleanup panel does not show outdated numbers after clearing.
 
 ## 3. Classroom Utility Layer
 - The clock, timer, random picker, scoreboard, and teaching tools are intentionally kept separate from the core drawing engine.
@@ -21,6 +22,7 @@
   1. missing `data-i18n` markers;
   2. missing locale keys;
   3. dynamic DOM nodes that were not retranslated after locale changes.
+- Recent examples include modal header actions such as `Restore Size` / `Keep Centered` and the selectable cache-cleanup confirmation dialog; these strings must stay aligned across every locale.
 
 ## 5. Deployment and Debugging
 - Local development works with `node server.js` or `npm start`.

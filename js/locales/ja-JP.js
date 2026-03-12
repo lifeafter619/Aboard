@@ -18,7 +18,9 @@ window.translations = {
         no: 'いいえ',
         ok: 'OK',
         apply: '適用',
-        reset: 'リセット'
+        reset: 'リセット',
+        restoreSize: 'サイズを元に戻す',
+        keepCentered: '中央を維持'
     },
 
     // Recovery dialog
@@ -472,7 +474,8 @@ window.translations = {
             morePanelBehaviorLabel: 'その他機能パネルの動作',
             keepMorePanelOpenHint: '機能ボタンを押した後も「その他」パネルを閉じない',
             selectCacheType: '削除するキャッシュ種類を選択してください。',
-            confirmClearSelectedCache: '次のキャッシュを削除します：',
+            confirmClearTitle: 'クリアを確認',
+            confirmClearSelectedCache: '削除するキャッシュ項目を選択してください:',
             clearLocalDataConfirmSuffix: '続行しますか？',
             description: '時刻表示の設定は右下の時刻エリアをクリックしてください',
             showTimeDisplay: '時刻と日付を表示',

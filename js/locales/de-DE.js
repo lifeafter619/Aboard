@@ -18,7 +18,9 @@ window.translations = {
         no: 'Nein',
         ok: 'OK',
         apply: 'Anwenden',
-        reset: 'Zurücksetzen'
+        reset: 'Zurücksetzen',
+        restoreSize: 'Größe zurücksetzen',
+        keepCentered: 'Zentriert halten'
     },
 
     // Recovery dialog
@@ -471,7 +473,8 @@ window.translations = {
             morePanelBehaviorLabel: 'Verhalten des Mehr-Panels',
             keepMorePanelOpenHint: 'Mehr-Panel nach Klick auf Funktionsbuttons geöffnet lassen',
             selectCacheType: 'Bitte wählen Sie mindestens einen Cache-Typ aus.',
-            confirmClearSelectedCache: 'Folgender Cache wird gelöscht:',
+            confirmClearTitle: 'Bereinigung bestätigen',
+            confirmClearSelectedCache: 'Wählen Sie die zu löschenden Cache-Einträge aus:',
             clearLocalDataConfirmSuffix: 'Fortfahren?',
             description: 'Für Zeitanzeigeeinstellungen klicken Sie auf den Zeitbereich unten rechts',
             showTimeDisplay: 'Zeit und Datum anzeigen',

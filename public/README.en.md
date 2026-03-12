@@ -19,6 +19,7 @@ A lightweight web whiteboard built for teaching and presentation workflows. It a
 - Multiple pen styles, shapes, eraser modes, background patterns, image insertion, text insertion, and selection editing.
 - Classroom helpers including clock display, timer, random picker, scoreboard, and teaching tools.
 - Paginated canvas, auto-save and restore, PWA support, configuration import/export, and multi-language UI.
+- Resizable utility windows support restore-size plus keep-centered behavior; cache cleanup supports per-item confirmation; eraser size now adapts to the viewport by default.
 - Mostly front-end architecture with readable modules, making follow-up customization straightforward.
 
 ## Quick Start

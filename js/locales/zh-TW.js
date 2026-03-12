@@ -20,7 +20,9 @@ window.translations = {
         apply: '套用',
         reset: '重置',
         start: '開始',
-        stop: '停止'
+        stop: '停止',
+        restoreSize: '恢復大小',
+        keepCentered: '保持置中'
     },
 
     // Recovery dialog
@@ -498,7 +500,8 @@ window.translations = {
             morePanelBehaviorLabel: '更多功能面板行為',
             keepMorePanelOpenHint: '點擊「更多」中的功能按鈕後預設不關閉「更多」框',
             selectCacheType: '請先選擇要清理的快取類型',
-            confirmClearSelectedCache: '將清理以下快取：',
+            confirmClearTitle: '確認清理',
+            confirmClearSelectedCache: '請選擇要清理的快取項目：',
             clearLocalDataConfirmSuffix: '確定繼續嗎？',
             description: '時間顯示相關設定請點擊右下角時間區域進入設定界面',
             showTimeDisplay: '顯示時間和日期',
