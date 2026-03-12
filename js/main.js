@@ -17,6 +17,18 @@ const RENDER_SCALE_SCHEDULE_THRESHOLD = 0.15;
 const RENDER_SCALE_APPLY_THRESHOLD = 0.05;
 const MAX_DYNAMIC_BACKING_DIMENSION = 8192;
 const MAX_DYNAMIC_BACKING_PIXELS = 64 * 1024 * 1024;
+const PANEL_DRAG_START_THRESHOLD = 8;
+const MODAL_RESIZE_EDGE_MARGIN = 20;
+const MODAL_RESIZE_MIN_WIDTH = 360;
+const MODAL_RESIZE_MIN_HEIGHT = 280;
+const LAZY_MANAGER_SCRIPTS = {
+    ExportManager: 'js/export.js',
+    ProjectManager: 'js/modules/project-manager.js',
+    TimerManager: 'js/modules/timer.js',
+    InsertTextManager: 'js/modules/insert-text-manager.js',
+    RandomPickerManager: 'js/modules/random-picker.js',
+    ScoreboardManager: 'js/modules/scoreboard.js'
+};
 
 class DrawingBoard {
     constructor() {
@@ -144,7 +156,9 @@ class DrawingBoard {
         this.draggedElementWidth = 0;
         this.draggedElementHeight = 0;
         this.dragSnapSide = null;
+        this.pendingPanelDrag = null;
         this.featureWidgetZIndex = 1200;
+        this.modalResizeState = null;
         
         // Coordinate origin dragging state
         this.isDraggingCoordinateOrigin = false;
@@ -179,6 +193,7 @@ class DrawingBoard {
         this.setupEventListeners();
         this.setupModalInteractionLock();
         this.settingsManager.loadSettings();
+        this.initResizableModals();
         this.backgroundManager.drawBackground();
         this.updateUI();
         this.revealToolbar();
@@ -215,6 +230,420 @@ class DrawingBoard {
         
         // Check for saved canvas data and show recovery dialog
         this.checkForRecovery();
+        this.scheduleMoreFeaturePreload();
+    }
+
+    async loadManagerConstructor(name) {
+        const existingCtor = window[name];
+        if (typeof existingCtor === 'function') {
+            return existingCtor;
+        }
+
+        const src = LAZY_MANAGER_SCRIPTS[name];
+        if (!src) {
+            throw new Error(`No lazy script registered for ${name}`);
+        }
+        if (!window.ScriptLoader?.load) {
+            throw new Error('ScriptLoader is not available');
+        }
+
+        await window.ScriptLoader.load(src);
+        const ctor = window[name];
+        if (typeof ctor !== 'function') {
+            throw new Error(`${name} did not register on window after loading ${src}`);
+        }
+        return ctor;
+    }
+
+    showLazyLoadError(featureName, error) {
+        console.error(`Failed to load ${featureName}:`, error);
+        const message = `加载${featureName}功能失败，请刷新页面后重试。`;
+        if (this.settingsManager?.toastManager) {
+            this.settingsManager.toastManager.show(message, 'error');
+            return;
+        }
+        window.appDialog?.showAlert(message, 'error');
+    }
+
+    async getExportManager() {
+        if (!this.exportManager) {
+            const ExportManagerCtor = await this.loadManagerConstructor('ExportManager');
+            this.exportManager = new ExportManagerCtor(this.canvas, this.bgCanvas, this);
+        }
+        return this.exportManager;
+    }
+
+    async getProjectManager() {
+        if (!this.projectManager) {
+            const ProjectManagerCtor = await this.loadManagerConstructor('ProjectManager');
+            this.projectManager = new ProjectManagerCtor(this);
+        }
+        return this.projectManager;
+    }
+
+    async getTimerManager() {
+        if (!this.timerManager) {
+            const TimerManagerCtor = await this.loadManagerConstructor('TimerManager');
+            this.timerManager = new TimerManagerCtor();
+            this.initResizableModals();
+        }
+        return this.timerManager;
+    }
+
+    async getInsertTextManager() {
+        if (!this.insertTextManager) {
+            const InsertTextManagerCtor = await this.loadManagerConstructor('InsertTextManager');
+            this.insertTextManager = new InsertTextManagerCtor(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
+            this.selectionManager.setTextManager(this.insertTextManager);
+        }
+        return this.insertTextManager;
+    }
+
+    async getRandomPickerManager() {
+        if (!this.randomPickerManager) {
+            const RandomPickerManagerCtor = await this.loadManagerConstructor('RandomPickerManager');
+            this.randomPickerManager = new RandomPickerManagerCtor();
+            this.initResizableModals();
+        }
+        return this.randomPickerManager;
+    }
+
+    async getScoreboardManager() {
+        if (!this.scoreboardManager) {
+            const ScoreboardManagerCtor = await this.loadManagerConstructor('ScoreboardManager');
+            this.scoreboardManager = new ScoreboardManagerCtor();
+        }
+        return this.scoreboardManager;
+    }
+
+    scheduleMoreFeaturePreload() {
+        if (this.moreFeaturePreloadScheduled) {
+            return;
+        }
+        this.moreFeaturePreloadScheduled = true;
+
+        const kickoff = () => {
+            window.setTimeout(() => {
+                void this.preloadMoreFeatureManagers();
+            }, 400);
+        };
+
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(() => kickoff(), { timeout: 1500 });
+        } else {
+            window.setTimeout(kickoff, 1200);
+        }
+    }
+
+    async preloadMoreFeatureManagers() {
+        const preloadTasks = [
+            () => this.getTimerManager(),
+            () => this.getInsertTextManager(),
+            () => this.getRandomPickerManager(),
+            () => this.getScoreboardManager()
+        ];
+
+        for (const preload of preloadTasks) {
+            try {
+                await preload();
+            } catch (error) {
+                console.warn('Silent more-feature preload failed:', error);
+            }
+
+            await new Promise(resolve => window.setTimeout(resolve, 120));
+        }
+    }
+
+    getResizableModalConfigs() {
+        return [
+            {
+                key: 'settingsModal',
+                selector: '#settings-modal .settings-modal-content',
+                minWidth: 700,
+                minHeight: 420
+            },
+            {
+                key: 'timeDisplaySettingsModal',
+                selector: '#time-display-settings-modal .timer-modal-content',
+                minWidth: 440,
+                minHeight: 360
+            },
+            {
+                key: 'timerSettingsModal',
+                selector: '#timer-settings-modal .timer-modal-content',
+                minWidth: 460,
+                minHeight: 420
+            },
+            {
+                key: 'randomPickerSettingsModal',
+                selector: '#random-picker-settings-modal .random-picker-modal-content',
+                minWidth: 440,
+                minHeight: 360
+            }
+        ];
+    }
+
+    initResizableModals() {
+        this.getResizableModalConfigs().forEach(config => {
+            this.registerResizableModal(config);
+        });
+    }
+
+    registerResizableModal(config) {
+        const content = document.querySelector(config.selector);
+        if (!content || content.dataset.modalResizeRegistered === 'true') {
+            return;
+        }
+
+        content.dataset.modalResizeRegistered = 'true';
+        content.dataset.modalResizeKey = config.key;
+        content.dataset.modalResizeMinWidth = String(config.minWidth || MODAL_RESIZE_MIN_WIDTH);
+        content.dataset.modalResizeMinHeight = String(config.minHeight || MODAL_RESIZE_MIN_HEIGHT);
+        content.dataset.defaultInlineWidth = content.style.width || '';
+        content.dataset.defaultInlineHeight = content.style.height || '';
+        content.dataset.defaultInlineMaxWidth = content.style.maxWidth || '';
+        content.dataset.defaultInlineMaxHeight = content.style.maxHeight || '';
+        content.dataset.defaultInlineLeft = content.style.left || '';
+        content.dataset.defaultInlineTop = content.style.top || '';
+        content.dataset.defaultInlineRight = content.style.right || '';
+        content.dataset.defaultInlineBottom = content.style.bottom || '';
+        content.dataset.defaultInlinePosition = content.style.position || '';
+        content.dataset.defaultInlineMargin = content.style.margin || '';
+        content.dataset.defaultInlineTransform = content.style.transform || '';
+
+        content.classList.add('resizable-modal-content');
+
+        const header = content.querySelector('.modal-header, .timer-modal-header');
+        const title = header?.querySelector('h2');
+        if (header && title) {
+            let titleGroup = header.querySelector('.modal-title-group');
+            if (!titleGroup) {
+                titleGroup = document.createElement('div');
+                titleGroup.className = 'modal-title-group';
+                header.insertBefore(titleGroup, title);
+                titleGroup.appendChild(title);
+            }
+
+            if (!titleGroup.querySelector('.modal-reset-size-btn')) {
+                const resetButton = document.createElement('button');
+                resetButton.type = 'button';
+                resetButton.className = 'modal-reset-size-btn';
+                resetButton.textContent = '恢复大小';
+                resetButton.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    this.resetResizableModalSize(content);
+                });
+                titleGroup.appendChild(resetButton);
+            }
+        }
+
+        ['top-left', 'top-right', 'bottom-left', 'bottom-right'].forEach(handleName => {
+            const handle = document.createElement('div');
+            handle.className = `modal-resize-handle ${handleName}`;
+            handle.dataset.handle = handleName;
+            handle.addEventListener('pointerdown', (event) => this.startModalResize(event, content, handleName));
+            content.appendChild(handle);
+        });
+
+        this.syncResizableModalState(content);
+    }
+
+    syncResizableModalState(target) {
+        const content = typeof target === 'string'
+            ? document.querySelector(`#${target} .settings-modal-content, #${target} .timer-modal-content, #${target} .random-picker-modal-content`)
+            : target;
+        if (!content) {
+            return;
+        }
+
+        const modalKey = content.dataset.modalResizeKey;
+        const savedSize = this.settingsManager.getModalSizePreference(modalKey);
+        if (savedSize) {
+            this.applyCustomModalLayout(content, savedSize.width, savedSize.height, true);
+        } else {
+            this.restoreDefaultModalLayout(content);
+        }
+        this.updateModalResetButtonVisibility(content);
+    }
+
+    updateModalResetButtonVisibility(content) {
+        const resetButton = content?.querySelector('.modal-reset-size-btn');
+        if (!resetButton) {
+            return;
+        }
+        const modalKey = content.dataset.modalResizeKey;
+        const hasCustomSize = Boolean(this.settingsManager.getModalSizePreference(modalKey));
+        resetButton.classList.toggle('show', hasCustomSize);
+    }
+
+    getModalLayoutBounds(content) {
+        const availableWidth = Math.max(260, window.innerWidth - MODAL_RESIZE_EDGE_MARGIN * 2);
+        const availableHeight = Math.max(220, window.innerHeight - MODAL_RESIZE_EDGE_MARGIN * 2);
+        const configuredMinWidth = Math.max(MODAL_RESIZE_MIN_WIDTH, parseFloat(content.dataset.modalResizeMinWidth) || MODAL_RESIZE_MIN_WIDTH);
+        const configuredMinHeight = Math.max(MODAL_RESIZE_MIN_HEIGHT, parseFloat(content.dataset.modalResizeMinHeight) || MODAL_RESIZE_MIN_HEIGHT);
+        const maxWidth = availableWidth;
+        const maxHeight = availableHeight;
+        const minWidth = Math.min(configuredMinWidth, maxWidth);
+        const minHeight = Math.min(configuredMinHeight, maxHeight);
+        return { minWidth, minHeight, maxWidth, maxHeight };
+    }
+
+    applyCustomModalLayout(content, desiredWidth, desiredHeight, centerInViewport = false) {
+        if (!content) return;
+
+        const { minWidth, minHeight, maxWidth, maxHeight } = this.getModalLayoutBounds(content);
+        const width = Math.min(maxWidth, Math.max(minWidth, Math.round(desiredWidth)));
+        const height = Math.min(maxHeight, Math.max(minHeight, Math.round(desiredHeight)));
+
+        content.classList.add('modal-custom-sized');
+        content.style.position = 'fixed';
+        content.style.width = `${width}px`;
+        content.style.height = `${height}px`;
+        content.style.maxWidth = `${maxWidth}px`;
+        content.style.maxHeight = `${maxHeight}px`;
+        content.style.right = 'auto';
+        content.style.bottom = 'auto';
+        content.style.margin = '0';
+        content.style.transform = 'none';
+
+        let left = parseFloat(content.style.left);
+        let top = parseFloat(content.style.top);
+
+        if (centerInViewport || !Number.isFinite(left) || !Number.isFinite(top)) {
+            left = Math.round((window.innerWidth - width) / 2);
+            top = Math.round((window.innerHeight - height) / 2);
+        }
+
+        const maxLeft = Math.max(MODAL_RESIZE_EDGE_MARGIN, window.innerWidth - MODAL_RESIZE_EDGE_MARGIN - width);
+        const maxTop = Math.max(MODAL_RESIZE_EDGE_MARGIN, window.innerHeight - MODAL_RESIZE_EDGE_MARGIN - height);
+
+        content.style.left = `${Math.min(maxLeft, Math.max(MODAL_RESIZE_EDGE_MARGIN, left))}px`;
+        content.style.top = `${Math.min(maxTop, Math.max(MODAL_RESIZE_EDGE_MARGIN, top))}px`;
+    }
+
+    restoreDefaultModalLayout(content) {
+        if (!content) return;
+
+        content.classList.remove('modal-custom-sized');
+        content.style.width = content.dataset.defaultInlineWidth || '';
+        content.style.height = content.dataset.defaultInlineHeight || '';
+        content.style.maxWidth = content.dataset.defaultInlineMaxWidth || '';
+        content.style.maxHeight = content.dataset.defaultInlineMaxHeight || '';
+        content.style.left = content.dataset.defaultInlineLeft || '';
+        content.style.top = content.dataset.defaultInlineTop || '';
+        content.style.right = content.dataset.defaultInlineRight || '';
+        content.style.bottom = content.dataset.defaultInlineBottom || '';
+        content.style.position = content.dataset.defaultInlinePosition || '';
+        content.style.margin = content.dataset.defaultInlineMargin || '';
+        content.style.transform = content.dataset.defaultInlineTransform || '';
+    }
+
+    resetResizableModalSize(content) {
+        if (!content) return;
+        this.settingsManager.resetModalSizePreference(content.dataset.modalResizeKey);
+        this.restoreDefaultModalLayout(content);
+        this.updateModalResetButtonVisibility(content);
+    }
+
+    startModalResize(event, content, handleName) {
+        if (!content || !handleName) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const rect = content.getBoundingClientRect();
+        this.applyCustomModalLayout(content, rect.width, rect.height, false);
+
+        this.modalResizeState = {
+            content,
+            handleName,
+            startX: event.clientX,
+            startY: event.clientY,
+            startRect: content.getBoundingClientRect()
+        };
+
+        content.classList.add('modal-resizing');
+        const moveHandler = (moveEvent) => this.handleModalResize(moveEvent);
+        const endHandler = () => this.finishModalResize();
+        this.modalResizeState.moveHandler = moveHandler;
+        this.modalResizeState.endHandler = endHandler;
+
+        document.addEventListener('pointermove', moveHandler);
+        document.addEventListener('pointerup', endHandler, { once: true });
+        document.addEventListener('pointercancel', endHandler, { once: true });
+    }
+
+    handleModalResize(event) {
+        const state = this.modalResizeState;
+        if (!state?.content) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const { content, handleName, startRect, startX, startY } = state;
+        const { minWidth, minHeight, maxWidth, maxHeight } = this.getModalLayoutBounds(content);
+        const startRight = startRect.left + startRect.width;
+        const startBottom = startRect.top + startRect.height;
+        const dx = event.clientX - startX;
+        const dy = event.clientY - startY;
+
+        let left = startRect.left;
+        let top = startRect.top;
+        let width = startRect.width;
+        let height = startRect.height;
+
+        if (handleName.includes('left')) {
+            left = Math.min(startRight - minWidth, Math.max(MODAL_RESIZE_EDGE_MARGIN, startRect.left + dx));
+            width = startRight - left;
+        } else {
+            width = Math.max(minWidth, Math.min(maxWidth, startRect.width + dx));
+        }
+
+        if (handleName.includes('top')) {
+            top = Math.min(startBottom - minHeight, Math.max(MODAL_RESIZE_EDGE_MARGIN, startRect.top + dy));
+            height = startBottom - top;
+        } else {
+            height = Math.max(minHeight, Math.min(maxHeight, startRect.height + dy));
+        }
+
+        width = Math.min(maxWidth, Math.max(minWidth, width));
+        height = Math.min(maxHeight, Math.max(minHeight, height));
+
+        if (handleName.includes('left')) {
+            left = startRight - width;
+        } else {
+            left = Math.min(Math.max(MODAL_RESIZE_EDGE_MARGIN, left), window.innerWidth - MODAL_RESIZE_EDGE_MARGIN - width);
+        }
+
+        if (handleName.includes('top')) {
+            top = startBottom - height;
+        } else {
+            top = Math.min(Math.max(MODAL_RESIZE_EDGE_MARGIN, top), window.innerHeight - MODAL_RESIZE_EDGE_MARGIN - height);
+        }
+
+        content.style.left = `${Math.round(left)}px`;
+        content.style.top = `${Math.round(top)}px`;
+        content.style.width = `${Math.round(width)}px`;
+        content.style.height = `${Math.round(height)}px`;
+    }
+
+    finishModalResize() {
+        const state = this.modalResizeState;
+        if (!state?.content) {
+            return;
+        }
+
+        document.removeEventListener('pointermove', state.moveHandler);
+        state.content.classList.remove('modal-resizing');
+
+        const rect = state.content.getBoundingClientRect();
+        this.settingsManager.setModalSizePreference(state.content.dataset.modalResizeKey, {
+            width: rect.width,
+            height: rect.height
+        });
+        this.updateModalResetButtonVisibility(state.content);
+        this.modalResizeState = null;
     }
     
     
@@ -768,25 +1197,29 @@ class DrawingBoard {
         document.getElementById('fullscreen-btn').addEventListener('click', () => this.toggleFullscreen());
         
         // Export button (moved to top controls, always visible)
-        document.getElementById('export-btn-top').addEventListener('click', () => {
-            if (!this.exportManager) {
-                this.exportManager = new ExportManager(this.canvas, this.bgCanvas, this);
+        document.getElementById('export-btn-top').addEventListener('click', async () => {
+            try {
+                const exportManager = await this.getExportManager();
+                exportManager.showModal();
+            } catch (error) {
+                this.showLazyLoadError('导出', error);
             }
-            this.exportManager.showModal();
         });
-        
+
         // Import Project Button
-        document.getElementById('import-project-btn').addEventListener('click', () => {
-            if (!this.projectManager) {
-                this.projectManager = new ProjectManager(this);
-            }
+        document.getElementById('import-project-btn').addEventListener('click', async () => {
             // Create a hidden file input
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.aboard,.json';
-            input.onchange = (e) => {
+            input.onchange = async (e) => {
                 if (e.target.files.length > 0) {
-                    this.projectManager.importProject(e.target.files[0]);
+                    try {
+                        const projectManager = await this.getProjectManager();
+                        projectManager.importProject(e.target.files[0]);
+                    } catch (error) {
+                        this.showLazyLoadError('项目导入', error);
+                    }
                 }
             };
             input.click();
@@ -1304,54 +1737,62 @@ class DrawingBoard {
         // Timer Feature Button
         const timerFeatureBtn = document.getElementById('timer-feature-btn');
         if (timerFeatureBtn) {
-            timerFeatureBtn.addEventListener('click', () => {
+            timerFeatureBtn.addEventListener('click', async () => {
                 this.exitShapeMode();
-                if (!this.timerManager) {
-                    this.timerManager = new TimerManager();
+                try {
+                    const timerManager = await this.getTimerManager();
+                    timerManager.showSettingsModal();
+                    this.handleMoreFeaturePanelAfterAction();
+                } catch (error) {
+                    this.showLazyLoadError('计时器', error);
                 }
-                this.timerManager.showSettingsModal();
-                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
         // Insert Text Feature Button
         const insertTextBtn = document.getElementById('insert-text-feature-btn');
         if (insertTextBtn) {
-            insertTextBtn.addEventListener('click', () => {
+            insertTextBtn.addEventListener('click', async () => {
                 this.exitShapeMode();
-                if (!this.insertTextManager) {
-                    this.insertTextManager = new InsertTextManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
+                try {
+                    const insertTextManager = await this.getInsertTextManager();
+                    insertTextManager.trigger();
+                    this.handleMoreFeaturePanelAfterAction();
+                } catch (error) {
+                    this.showLazyLoadError('文字插入', error);
                 }
-                this.insertTextManager.trigger();
-                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
         // Random Picker Feature Button
         const randomPickerBtn = document.getElementById('random-picker-feature-btn');
         if (randomPickerBtn) {
-            randomPickerBtn.addEventListener('click', () => {
+            randomPickerBtn.addEventListener('click', async () => {
                 this.exitShapeMode();
-                if (!this.randomPickerManager) {
-                    this.randomPickerManager = new RandomPickerManager();
+                try {
+                    const randomPickerManager = await this.getRandomPickerManager();
+                    randomPickerManager.create();
+                    this.bringLatestElement('.random-picker-widget');
+                    this.handleMoreFeaturePanelAfterAction();
+                } catch (error) {
+                    this.showLazyLoadError('随机点名', error);
                 }
-                this.randomPickerManager.create();
-                this.bringLatestElement('.random-picker-widget');
-                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
         // Scoreboard Feature Button
         const scoreboardBtn = document.getElementById('scoreboard-feature-btn');
         if (scoreboardBtn) {
-            scoreboardBtn.addEventListener('click', () => {
+            scoreboardBtn.addEventListener('click', async () => {
                 this.exitShapeMode();
-                if (!this.scoreboardManager) {
-                    this.scoreboardManager = new ScoreboardManager();
+                try {
+                    const scoreboardManager = await this.getScoreboardManager();
+                    scoreboardManager.create();
+                    this.bringLatestElement('.scoreboard-widget');
+                    this.handleMoreFeaturePanelAfterAction();
+                } catch (error) {
+                    this.showLazyLoadError('计分板', error);
                 }
-                this.scoreboardManager.create();
-                this.bringLatestElement('.scoreboard-widget');
-                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
@@ -2279,38 +2720,18 @@ class DrawingBoard {
     }
     
     repositionModalsOnResize() {
-        // Reposition modal content to stay within viewport on window resize
-        const modals = [
-            document.querySelector('#settings-modal .settings-modal-content'),
-            document.querySelector('#timer-settings-modal .timer-modal-content'),
-            document.querySelector('#time-display-settings-modal .timer-modal-content')
-        ];
-        
-        modals.forEach(modalContent => {
+        this.getResizableModalConfigs().forEach(config => {
+            const modalContent = document.querySelector(config.selector);
             if (!modalContent) return;
-            
-            // Only reposition if modal is currently visible
-            const modal = modalContent.closest('.show, [style*="display: flex"]');
-            if (!modal) return;
-            
-            const rect = modalContent.getBoundingClientRect();
-            const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight;
-            
-            // Check if modal content exceeds viewport
-            const EDGE_SPACING = 20;
-            
-            // Reset any transforms or positions first
-            modalContent.style.transform = '';
-            modalContent.style.position = '';
-            
-            // If modal is larger than viewport, it will be scrollable via parent
-            // Just ensure it's centered
-            if (rect.width > windowWidth - 2 * EDGE_SPACING || 
-                rect.height > windowHeight - 2 * EDGE_SPACING) {
-                // Modal is too large - parent modal should handle scrolling
-                // No specific positioning needed
+
+            const modalKey = modalContent.dataset.modalResizeKey;
+            const savedSize = this.settingsManager.getModalSizePreference(modalKey);
+            if (savedSize) {
+                this.applyCustomModalLayout(modalContent, savedSize.width, savedSize.height, true);
+            } else {
+                this.restoreDefaultModalLayout(modalContent);
             }
+            this.updateModalResetButtonVisibility(modalContent);
         });
     }
     
@@ -2331,9 +2752,6 @@ class DrawingBoard {
             if (!isDragHandle && (e.target.closest('button') || e.target.closest('input'))) return;
             
             e.stopPropagation(); // Prevent drawing on canvas
-
-            this.isDraggingPanel = true;
-            this.draggedElement = element;
             
             const rect = element.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -2353,9 +2771,12 @@ class DrawingBoard {
             } else {
                 this.dragSnapSide = null;
             }
-            
-            element.classList.add('dragging');
-            element.style.transition = 'none';
+
+            this.pendingPanelDrag = {
+                element,
+                startX: clientX,
+                startY: clientY
+            };
             
             e.preventDefault();
         };
@@ -2369,10 +2790,22 @@ class DrawingBoard {
         
         // Unified move handler for mouse and touch events
         const handleDragMove = (e) => {
-            if (!this.isDraggingPanel || !this.draggedElement) return;
-            
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            if (!this.isDraggingPanel && this.pendingPanelDrag) {
+                const distance = Math.hypot(clientX - this.pendingPanelDrag.startX, clientY - this.pendingPanelDrag.startY);
+                if (distance < PANEL_DRAG_START_THRESHOLD) {
+                    return;
+                }
+
+                this.isDraggingPanel = true;
+                this.draggedElement = this.pendingPanelDrag.element;
+                this.draggedElement.classList.add('dragging');
+                this.draggedElement.style.transition = 'none';
+            }
+
+            if (!this.isDraggingPanel || !this.draggedElement) return;
             
             let x = clientX - this.dragOffset.x;
             let y = clientY - this.dragOffset.y;
@@ -2522,6 +2955,7 @@ class DrawingBoard {
                 this.draggedElement = null;
                 this.dragSnapSide = null;
             }
+            this.pendingPanelDrag = null;
         };
         
         // Add both mouse and touch event listeners for better touch device support
@@ -2554,11 +2988,48 @@ class DrawingBoard {
         // Helper method to switch to pen tool
         this.setTool('pen', false);
     }
+
+    clampFloatingPanelToViewport(panel, edgeSpacing = 12) {
+        if (!panel) return;
+
+        const rect = panel.getBoundingClientRect();
+        let dx = 0;
+        let dy = 0;
+
+        if (rect.left < edgeSpacing) {
+            dx = edgeSpacing - rect.left;
+        } else if (rect.right > window.innerWidth - edgeSpacing) {
+            dx = window.innerWidth - edgeSpacing - rect.right;
+        }
+
+        if (rect.top < edgeSpacing) {
+            dy = edgeSpacing - rect.top;
+        } else if (rect.bottom > window.innerHeight - edgeSpacing) {
+            dy = window.innerHeight - edgeSpacing - rect.bottom;
+        }
+
+        if (dx !== 0) {
+            if (panel.style.left && panel.style.left !== 'auto') {
+                panel.style.left = `${parseFloat(panel.style.left) + dx}px`;
+            } else if (panel.style.right && panel.style.right !== 'auto') {
+                panel.style.right = `${parseFloat(panel.style.right) - dx}px`;
+            }
+        }
+
+        if (dy !== 0) {
+            if (panel.style.top && panel.style.top !== 'auto') {
+                panel.style.top = `${parseFloat(panel.style.top) + dy}px`;
+            } else if (panel.style.bottom && panel.style.bottom !== 'auto') {
+                panel.style.bottom = `${parseFloat(panel.style.bottom) - dy}px`;
+            }
+        }
+    }
     
     positionConfigArea() {
         // Position config-area above the toolbar
         const configArea = document.getElementById('config-area');
         const toolbar = document.getElementById('toolbar');
+        const featureArea = document.getElementById('feature-area');
         
         // Only position if config-area hasn't been dragged by user
         if (configArea.dataset.userDragged === 'true') {
@@ -2594,6 +3065,26 @@ class DrawingBoard {
         configArea.style.transformOrigin = '';
         
         const scale = this.settingsManager.configScale || 1;
+        const shouldAnchorToShapeFeature = tool === 'shape' &&
+            featureArea?.classList.contains('show') &&
+            toolRect;
+
+        if (shouldAnchorToShapeFeature) {
+            const referenceCenterY = referenceRect.top + referenceRect.height / 2;
+            const placeOnLeft = referenceRect.left > window.innerWidth / 2;
+            configArea.style.left = placeOnLeft
+                ? `${referenceRect.left - gap}px`
+                : `${referenceRect.right + gap}px`;
+            configArea.style.right = 'auto';
+            configArea.style.top = `${referenceCenterY}px`;
+            configArea.style.bottom = 'auto';
+            configArea.style.transformOrigin = placeOnLeft ? 'right center' : 'left center';
+            configArea.style.transform = placeOnLeft
+                ? `translate(-100%, -50%) scale(${scale})`
+                : `translate(0, -50%) scale(${scale})`;
+            this.clampFloatingPanelToViewport(configArea);
+            return;
+        }
         
         if (isVertical) {
             // Toolbar is on left or right side
@@ -2620,6 +3111,8 @@ class DrawingBoard {
             configArea.style.transform = `translateX(-50%) scale(${scale})`;
         }
 
+        this.clampFloatingPanelToViewport(configArea);
+
     }
     
     positionFeatureArea() {
@@ -2637,6 +3130,7 @@ class DrawingBoard {
         featureArea.style.right = 'auto';
         featureArea.style.bottom = 'auto';
         featureArea.style.transform = 'translate(-50%, -100%)';
+        this.clampFloatingPanelToViewport(featureArea);
     }
 
     exitShapeMode() {
@@ -2784,6 +3278,7 @@ class DrawingBoard {
     }
     
     openSettings() {
+        this.syncResizableModalState('settings-modal');
         document.getElementById('settings-modal').classList.add('show');
         this.updateCacheSizeDisplay();
         
@@ -3050,6 +3545,7 @@ class DrawingBoard {
                 this.updateImportExportBtnVisibility();
                 this.updateFullscreenBtnVisibility();
                 this.updatePatternGrid();
+                this.repositionModalsOnResize();
 
                 const successMsg = window.i18n ? window.i18n.t('settings.importSuccess') : '配置已导入';
                 if (this.settingsManager.toastManager) {
@@ -3593,11 +4089,10 @@ class DrawingBoard {
 
             const previewDiv = document.createElement('div');
             previewDiv.className = 'font-preview-sample';
-            const rawFontValue = String(font.value || '');
-            const safeFontFamily = (window.CSS && typeof window.CSS.escape === 'function')
-                ? window.CSS.escape(rawFontValue)
-                : rawFontValue.replace(/[^\w\s\-]/g, '');
-            previewDiv.style.fontFamily = `"${safeFontFamily}", sans-serif`;
+            const fontFamilyStack = this.settingsManager?.getFontFamilyStack
+                ? this.settingsManager.getFontFamilyStack(font.value)
+                : `"${String(font.value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"')}", sans-serif`;
+            previewDiv.style.fontFamily = fontFamilyStack;
             previewDiv.textContent = previewSample;
 
             item.appendChild(checkbox);
@@ -5018,10 +5513,8 @@ class DrawingBoard {
 
                 // Restore text objects for selection support
                 if (settings.textObjects && settings.textObjects.length > 0) {
-                    if (!this.insertTextManager) {
-                        this.insertTextManager = new InsertTextManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
-                    }
-                    this.insertTextManager.setTextObjects(settings.textObjects);
+                    const insertTextManager = await this.getInsertTextManager();
+                    insertTextManager.setTextObjects(settings.textObjects);
                 }
 
                 // Restore strokes for selection support
@@ -5135,7 +5628,7 @@ class DrawingBoard {
             'toolbarSize', 'configScale', 'controlPosition', 'edgeSnapEnabled', 'touchZoomEnabled',
             'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn',
             'showToolbarText', 'keepMorePanelOpen', 'canvasWidth', 'canvasHeight', 'canvasPreset',
-            'themeColor', 'globalFont', 'language', 'patternPreferences', 'toolbarOrder',
+            'themeColor', 'globalFont', 'language', 'patternPreferences', 'modalSizePreferences', 'toolbarOrder',
             'toolbarVisibility', 'controlShowZoom', 'controlShowPagination', 'controlShowTime',
             'controlShowFullscreen', 'controlShowImport', 'controlShowExport', 'penType',
             'penLineStyle', 'penDashDensity', 'penMultiLineCount', 'penMultiLineSpacing',

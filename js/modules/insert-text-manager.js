@@ -1326,3 +1326,7 @@ class InsertTextManager {
         this.isRotating = false;
     }
 }
+
+if (typeof window !== 'undefined') {
+    window.InsertTextManager = InsertTextManager;
+}

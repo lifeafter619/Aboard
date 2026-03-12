@@ -471,3 +471,7 @@ class ExportManager {
         exportPage(0);
     }
 }
+
+if (typeof window !== 'undefined') {
+    window.ExportManager = ExportManager;
+}
