@@ -471,6 +471,7 @@ class PWAManager {
     injectAnnouncementUI() {
         const modalBody = document.querySelector('#announcement-modal .modal-body');
         const contentDiv = document.getElementById('announcement-content');
+        const buttonRow = document.querySelector('#announcement-modal .announcement-buttons');
 
         if (modalBody && contentDiv && !document.getElementById('pwa-announcement-status')) {
             const container = document.createElement('div');
@@ -506,18 +507,23 @@ class PWAManager {
 
             // Install Button
             const installBtn = this.createButton('pwa-announcement-install-btn', this.getTranslation('install'), () => this.installApp());
-            installBtn.style.alignSelf = 'flex-start'; // Align left like text
+            installBtn.classList.add('announcement-btn', 'announcement-install-btn');
             installBtn.style.display = 'none';
 
             container.appendChild(statusRow);
             container.appendChild(versionRow);
-            container.appendChild(installBtn);
 
             // Insert after content
             if (contentDiv.nextSibling) {
                 modalBody.insertBefore(container, contentDiv.nextSibling);
             } else {
                 modalBody.appendChild(container);
+            }
+
+            if (buttonRow) {
+                buttonRow.insertBefore(installBtn, buttonRow.firstChild);
+            } else {
+                container.appendChild(installBtn);
             }
 
             this.announcementStatusIndicator = indicator;
