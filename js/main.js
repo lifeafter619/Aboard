@@ -5518,9 +5518,6 @@ class DrawingBoard {
 
             const data = {
                 pages: pagesBlobs,
-                // Keep raw ImageData as a recovery fallback when blob decode is unavailable.
-                // Only one session is persisted, so this bounded duplication is acceptable.
-                pagesRaw: this.pages,
                 settings: settings,
                 canvasWidth: this.canvas.width,
                 canvasHeight: this.canvas.height
@@ -5710,6 +5707,7 @@ class DrawingBoard {
     async clearSessionData() {
         try {
             await this.storageManager.clearSession();
+            this.storageManager.clearSessionSizeEstimate();
             // Also clear legacy localStorage data to be clean
             localStorage.removeItem('savedCanvasData');
             localStorage.removeItem('savedBgCanvasData');
@@ -5733,7 +5731,8 @@ class DrawingBoard {
         ]);
         const canvasKeys = new Set([
             'savedCanvasData', 'savedBgCanvasData', 'savedCanvasTimestamp',
-            'savedCurrentPage', 'pageBackgrounds', 'canvasScale', 'panOffsetX', 'panOffsetY'
+            'savedCurrentPage', 'pageBackgrounds', 'canvasScale', 'panOffsetX', 'panOffsetY',
+            'aboardSessionSizeEstimate'
         ]);
         return { settingsKeys, canvasKeys };
     }
@@ -5766,8 +5765,16 @@ class DrawingBoard {
                 const requests = await cache.keys();
                 for (const request of requests) {
                     const response = await cache.match(request);
-                    const blob = response ? await response.clone().blob() : null;
-                    total += blob ? blob.size : 0;
+                    if (!response) {
+                        continue;
+                    }
+                    const contentLength = Number(response.headers.get('content-length'));
+                    if (Number.isFinite(contentLength) && contentLength > 0) {
+                        total += contentLength;
+                        continue;
+                    }
+                    const blob = await response.clone().blob();
+                    total += blob.size;
                 }
             }
         } catch (e) {
@@ -5814,14 +5821,17 @@ class DrawingBoard {
         const estimatedIndexedDbUsage = Number.isFinite(usageDetails.indexedDB) ? usageDetails.indexedDB : null;
         const estimatedCacheUsage = Number.isFinite(usageDetails.caches) ? usageDetails.caches : null;
 
-        let indexedDbCanvasUsage = 0;
-        try {
-            const session = await this.storageManager.loadSession();
-            if (session) {
-                indexedDbCanvasUsage = new Blob([JSON.stringify(session)]).size;
+        let indexedDbCanvasUsage = this.storageManager?.getSessionSizeEstimate?.() || 0;
+        if (!indexedDbCanvasUsage) {
+            try {
+                const session = await this.storageManager.loadSession();
+                indexedDbCanvasUsage = StorageManager.estimateSessionSize(session);
+                if (indexedDbCanvasUsage > 0) {
+                    this.storageManager.setSessionSizeEstimate(indexedDbCanvasUsage);
+                }
+            } catch (e) {
+                console.warn('Failed to estimate IndexedDB size:', e);
             }
-        } catch (e) {
-            console.warn('Failed to estimate IndexedDB size:', e);
         }
         summary.canvas += estimatedIndexedDbUsage !== null
             ? Math.max(indexedDbCanvasUsage, estimatedIndexedDbUsage)
@@ -5850,13 +5860,23 @@ class DrawingBoard {
         const otherSizeEl = document.getElementById('other-cache-size');
         if (!settingsSizeEl || !canvasSizeEl || !otherSizeEl) return;
         const requestToken = ++this.cacheSizeRequestToken;
-        const summary = await this.getCacheSizeSummary();
-        if (requestToken !== this.cacheSizeRequestToken) {
-            return;
+        try {
+            const summary = await this.getCacheSizeSummary();
+            if (requestToken !== this.cacheSizeRequestToken) {
+                return;
+            }
+            settingsSizeEl.textContent = this.formatBytes(summary.settings);
+            canvasSizeEl.textContent = this.formatBytes(summary.canvas);
+            otherSizeEl.textContent = this.formatBytes(summary.other);
+        } catch (e) {
+            console.warn('Failed to update cache size display:', e);
+            if (requestToken !== this.cacheSizeRequestToken) {
+                return;
+            }
+            settingsSizeEl.textContent = '0 B';
+            canvasSizeEl.textContent = '0 B';
+            otherSizeEl.textContent = '0 B';
         }
-        settingsSizeEl.textContent = this.formatBytes(summary.settings);
-        canvasSizeEl.textContent = this.formatBytes(summary.canvas);
-        otherSizeEl.textContent = this.formatBytes(summary.other);
     }
 
     async clearSelectedCache(options) {

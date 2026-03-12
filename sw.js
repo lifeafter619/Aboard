@@ -1,5 +1,8 @@
-const CORE_CACHE_NAME = 'aboard-core-v2';
-const RUNTIME_CACHE_NAME = 'aboard-runtime-v2';
+const CORE_CACHE_NAME = 'aboard-core-v3';
+const RUNTIME_CACHE_NAME = 'aboard-runtime-v3';
+const RUNTIME_CACHE_MAX_ENTRIES = 24;
+const RUNTIME_CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'worker', 'image', 'font', 'manifest']);
+const RUNTIME_CACHEABLE_EXTENSIONS = /\.(?:css|gif|ico|jpe?g|js|json|png|svg|webp|woff2?)$/i;
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -54,12 +57,55 @@ function isSameOrigin(requestUrl) {
   return requestUrl.origin === self.location.origin;
 }
 
+function isRangeRequest(request) {
+  return request.headers.has('range');
+}
+
+function isRuntimeCacheableRequest(request, url) {
+  if (request.mode === 'navigate' || isRangeRequest(request)) {
+    return false;
+  }
+
+  if (request.destination) {
+    return RUNTIME_CACHEABLE_DESTINATIONS.has(request.destination);
+  }
+
+  return RUNTIME_CACHEABLE_EXTENSIONS.test(url.pathname);
+}
+
+function canStoreResponse(response) {
+  return response && response.status === 200 && response.type !== 'error';
+}
+
+async function trimRuntimeCache(cache) {
+  const keys = await cache.keys();
+  const overflow = keys.length - RUNTIME_CACHE_MAX_ENTRIES;
+  if (overflow <= 0) {
+    return;
+  }
+
+  await Promise.all(keys.slice(0, overflow).map(request => cache.delete(request)));
+}
+
+async function storeRuntimeResponse(cache, request, response) {
+  if (!canStoreResponse(response)) {
+    return;
+  }
+
+  try {
+    await cache.put(request, response.clone());
+    await trimRuntimeCache(cache);
+  } catch (error) {
+    console.warn('Skipping Cache Storage write for request:', request.url, error);
+  }
+}
+
 async function networkFirst(request) {
   const cache = await caches.open(RUNTIME_CACHE_NAME);
   try {
     const response = await fetch(request);
     if (response && response.ok) {
-      cache.put(request, response.clone());
+      await storeRuntimeResponse(cache, request, response);
     }
     return response;
   } catch (error) {
@@ -80,7 +126,7 @@ async function cacheFirst(request) {
 
   const response = await fetch(request);
   if (response && response.ok) {
-    cache.put(request, response.clone());
+    await storeRuntimeResponse(cache, request, response);
   }
   return response;
 }
@@ -107,7 +153,7 @@ self.addEventListener('activate', event => {
         }
         return Promise.resolve();
       })
-    ))
+    )).then(() => self.clients.claim())
   );
 });
 
@@ -119,6 +165,10 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(request.url);
   if (!isSameOrigin(url)) {
+    return;
+  }
+
+  if (isRangeRequest(request)) {
     return;
   }
 
@@ -134,6 +184,10 @@ self.addEventListener('fetch', event => {
         return cache.match('./index.html');
       })
     );
+    return;
+  }
+
+  if (!isRuntimeCacheableRequest(request, url)) {
     return;
   }
 

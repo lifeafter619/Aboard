@@ -6,6 +6,7 @@ class StorageManager {
         this.dbName = 'AboardDB';
         this.storeName = 'sessions';
         this.dbVersion = 1;
+        this.sizeEstimateKey = 'aboardSessionSizeEstimate';
         this.db = null;
         this.initPromise = this.initDB();
     }
@@ -56,6 +57,7 @@ class StorageManager {
             };
 
             request.onsuccess = () => {
+                this.setSessionSizeEstimate(StorageManager.estimateSessionSize(sessionData));
                 resolve();
             };
         });
@@ -74,7 +76,11 @@ class StorageManager {
             };
 
             request.onsuccess = () => {
-                resolve(request.result);
+                const result = request.result;
+                if (result && !this.getSessionSizeEstimate()) {
+                    this.setSessionSizeEstimate(StorageManager.estimateSessionSize(result));
+                }
+                resolve(result);
             };
         });
     }
@@ -108,6 +114,7 @@ class StorageManager {
             };
 
             request.onsuccess = () => {
+                this.clearSessionSizeEstimate();
                 resolve();
             };
         });
@@ -118,6 +125,63 @@ class StorageManager {
             this.db.close();
             this.db = null;
         }
+    }
+
+    getSessionSizeEstimate() {
+        try {
+            const raw = localStorage.getItem(this.sizeEstimateKey);
+            const bytes = Number(raw);
+            return Number.isFinite(bytes) && bytes > 0 ? bytes : 0;
+        } catch (e) {
+            console.warn('Failed to read session size estimate:', e);
+            return 0;
+        }
+    }
+
+    setSessionSizeEstimate(bytes) {
+        try {
+            const normalizedBytes = Math.max(0, Math.round(Number(bytes) || 0));
+            if (normalizedBytes > 0) {
+                localStorage.setItem(this.sizeEstimateKey, String(normalizedBytes));
+            } else {
+                localStorage.removeItem(this.sizeEstimateKey);
+            }
+        } catch (e) {
+            console.warn('Failed to persist session size estimate:', e);
+        }
+    }
+
+    clearSessionSizeEstimate() {
+        try {
+            localStorage.removeItem(this.sizeEstimateKey);
+        } catch (e) {
+            console.warn('Failed to clear session size estimate:', e);
+        }
+    }
+
+    static estimateSessionSize(sessionData) {
+        if (!sessionData) return 0;
+
+        let total = 0;
+        if (Array.isArray(sessionData.pages)) {
+            total += sessionData.pages.reduce((sum, page) => {
+                if (page instanceof Blob) {
+                    return sum + page.size;
+                }
+                return sum;
+            }, 0);
+        }
+
+        const metadata = {
+            id: sessionData.id || '',
+            timestamp: sessionData.timestamp || 0,
+            settings: sessionData.settings || null,
+            canvasWidth: sessionData.canvasWidth || 0,
+            canvasHeight: sessionData.canvasHeight || 0
+        };
+        total += new Blob([JSON.stringify(metadata)]).size;
+
+        return total;
     }
 
     // Helper: Convert ImageData to Blob
