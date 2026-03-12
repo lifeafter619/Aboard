@@ -258,3 +258,7 @@ class ProjectManager {
         }
     }
 }
+
+if (typeof window !== 'undefined') {
+    window.ProjectManager = ProjectManager;
+}

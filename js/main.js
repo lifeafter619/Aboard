@@ -17,6 +17,14 @@ const RENDER_SCALE_SCHEDULE_THRESHOLD = 0.15;
 const RENDER_SCALE_APPLY_THRESHOLD = 0.05;
 const MAX_DYNAMIC_BACKING_DIMENSION = 8192;
 const MAX_DYNAMIC_BACKING_PIXELS = 64 * 1024 * 1024;
+const LAZY_MANAGER_SCRIPTS = {
+    ExportManager: 'js/export.js',
+    ProjectManager: 'js/modules/project-manager.js',
+    TimerManager: 'js/modules/timer.js',
+    InsertTextManager: 'js/modules/insert-text-manager.js',
+    RandomPickerManager: 'js/modules/random-picker.js',
+    ScoreboardManager: 'js/modules/scoreboard.js'
+};
 
 class DrawingBoard {
     constructor() {
@@ -215,6 +223,87 @@ class DrawingBoard {
         
         // Check for saved canvas data and show recovery dialog
         this.checkForRecovery();
+    }
+
+    async loadManagerConstructor(name) {
+        const existingCtor = window[name];
+        if (typeof existingCtor === 'function') {
+            return existingCtor;
+        }
+
+        const src = LAZY_MANAGER_SCRIPTS[name];
+        if (!src) {
+            throw new Error(`No lazy script registered for ${name}`);
+        }
+        if (!window.ScriptLoader?.load) {
+            throw new Error('ScriptLoader is not available');
+        }
+
+        await window.ScriptLoader.load(src);
+        const ctor = window[name];
+        if (typeof ctor !== 'function') {
+            throw new Error(`${name} did not register on window after loading ${src}`);
+        }
+        return ctor;
+    }
+
+    showLazyLoadError(featureName, error) {
+        console.error(`Failed to load ${featureName}:`, error);
+        const message = `加载${featureName}功能失败，请刷新页面后重试。`;
+        if (this.settingsManager?.toastManager) {
+            this.settingsManager.toastManager.show(message, 'error');
+            return;
+        }
+        window.appDialog?.showAlert(message, 'error');
+    }
+
+    async getExportManager() {
+        if (!this.exportManager) {
+            const ExportManagerCtor = await this.loadManagerConstructor('ExportManager');
+            this.exportManager = new ExportManagerCtor(this.canvas, this.bgCanvas, this);
+        }
+        return this.exportManager;
+    }
+
+    async getProjectManager() {
+        if (!this.projectManager) {
+            const ProjectManagerCtor = await this.loadManagerConstructor('ProjectManager');
+            this.projectManager = new ProjectManagerCtor(this);
+        }
+        return this.projectManager;
+    }
+
+    async getTimerManager() {
+        if (!this.timerManager) {
+            const TimerManagerCtor = await this.loadManagerConstructor('TimerManager');
+            this.timerManager = new TimerManagerCtor();
+        }
+        return this.timerManager;
+    }
+
+    async getInsertTextManager() {
+        if (!this.insertTextManager) {
+            const InsertTextManagerCtor = await this.loadManagerConstructor('InsertTextManager');
+            this.insertTextManager = new InsertTextManagerCtor(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
+            this.selectionManager.setTextManager(this.insertTextManager);
+        }
+        return this.insertTextManager;
+    }
+
+    async getRandomPickerManager() {
+        if (!this.randomPickerManager) {
+            const RandomPickerManagerCtor = await this.loadManagerConstructor('RandomPickerManager');
+            this.randomPickerManager = new RandomPickerManagerCtor();
+        }
+        return this.randomPickerManager;
+    }
+
+    async getScoreboardManager() {
+        if (!this.scoreboardManager) {
+            const ScoreboardManagerCtor = await this.loadManagerConstructor('ScoreboardManager');
+            this.scoreboardManager = new ScoreboardManagerCtor();
+        }
+        return this.scoreboardManager;
     }
     
     
@@ -768,25 +857,29 @@ class DrawingBoard {
         document.getElementById('fullscreen-btn').addEventListener('click', () => this.toggleFullscreen());
         
         // Export button (moved to top controls, always visible)
-        document.getElementById('export-btn-top').addEventListener('click', () => {
-            if (!this.exportManager) {
-                this.exportManager = new ExportManager(this.canvas, this.bgCanvas, this);
+        document.getElementById('export-btn-top').addEventListener('click', async () => {
+            try {
+                const exportManager = await this.getExportManager();
+                exportManager.showModal();
+            } catch (error) {
+                this.showLazyLoadError('导出', error);
             }
-            this.exportManager.showModal();
         });
-        
+
         // Import Project Button
-        document.getElementById('import-project-btn').addEventListener('click', () => {
-            if (!this.projectManager) {
-                this.projectManager = new ProjectManager(this);
-            }
+        document.getElementById('import-project-btn').addEventListener('click', async () => {
             // Create a hidden file input
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.aboard,.json';
-            input.onchange = (e) => {
+            input.onchange = async (e) => {
                 if (e.target.files.length > 0) {
-                    this.projectManager.importProject(e.target.files[0]);
+                    try {
+                        const projectManager = await this.getProjectManager();
+                        projectManager.importProject(e.target.files[0]);
+                    } catch (error) {
+                        this.showLazyLoadError('项目导入', error);
+                    }
                 }
             };
             input.click();
@@ -1304,54 +1397,62 @@ class DrawingBoard {
         // Timer Feature Button
         const timerFeatureBtn = document.getElementById('timer-feature-btn');
         if (timerFeatureBtn) {
-            timerFeatureBtn.addEventListener('click', () => {
+            timerFeatureBtn.addEventListener('click', async () => {
                 this.exitShapeMode();
-                if (!this.timerManager) {
-                    this.timerManager = new TimerManager();
+                try {
+                    const timerManager = await this.getTimerManager();
+                    timerManager.showSettingsModal();
+                    this.handleMoreFeaturePanelAfterAction();
+                } catch (error) {
+                    this.showLazyLoadError('计时器', error);
                 }
-                this.timerManager.showSettingsModal();
-                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
         // Insert Text Feature Button
         const insertTextBtn = document.getElementById('insert-text-feature-btn');
         if (insertTextBtn) {
-            insertTextBtn.addEventListener('click', () => {
+            insertTextBtn.addEventListener('click', async () => {
                 this.exitShapeMode();
-                if (!this.insertTextManager) {
-                    this.insertTextManager = new InsertTextManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
+                try {
+                    const insertTextManager = await this.getInsertTextManager();
+                    insertTextManager.trigger();
+                    this.handleMoreFeaturePanelAfterAction();
+                } catch (error) {
+                    this.showLazyLoadError('文字插入', error);
                 }
-                this.insertTextManager.trigger();
-                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
         // Random Picker Feature Button
         const randomPickerBtn = document.getElementById('random-picker-feature-btn');
         if (randomPickerBtn) {
-            randomPickerBtn.addEventListener('click', () => {
+            randomPickerBtn.addEventListener('click', async () => {
                 this.exitShapeMode();
-                if (!this.randomPickerManager) {
-                    this.randomPickerManager = new RandomPickerManager();
+                try {
+                    const randomPickerManager = await this.getRandomPickerManager();
+                    randomPickerManager.create();
+                    this.bringLatestElement('.random-picker-widget');
+                    this.handleMoreFeaturePanelAfterAction();
+                } catch (error) {
+                    this.showLazyLoadError('随机点名', error);
                 }
-                this.randomPickerManager.create();
-                this.bringLatestElement('.random-picker-widget');
-                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
         // Scoreboard Feature Button
         const scoreboardBtn = document.getElementById('scoreboard-feature-btn');
         if (scoreboardBtn) {
-            scoreboardBtn.addEventListener('click', () => {
+            scoreboardBtn.addEventListener('click', async () => {
                 this.exitShapeMode();
-                if (!this.scoreboardManager) {
-                    this.scoreboardManager = new ScoreboardManager();
+                try {
+                    const scoreboardManager = await this.getScoreboardManager();
+                    scoreboardManager.create();
+                    this.bringLatestElement('.scoreboard-widget');
+                    this.handleMoreFeaturePanelAfterAction();
+                } catch (error) {
+                    this.showLazyLoadError('计分板', error);
                 }
-                this.scoreboardManager.create();
-                this.bringLatestElement('.scoreboard-widget');
-                this.handleMoreFeaturePanelAfterAction();
             });
         }
 
@@ -5018,10 +5119,8 @@ class DrawingBoard {
 
                 // Restore text objects for selection support
                 if (settings.textObjects && settings.textObjects.length > 0) {
-                    if (!this.insertTextManager) {
-                        this.insertTextManager = new InsertTextManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
-                    }
-                    this.insertTextManager.setTextObjects(settings.textObjects);
+                    const insertTextManager = await this.getInsertTextManager();
+                    insertTextManager.setTextObjects(settings.textObjects);
                 }
 
                 // Restore strokes for selection support

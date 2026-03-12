@@ -1706,3 +1706,7 @@ class TimerManager {
         }
     }
 }
+
+if (typeof window !== 'undefined') {
+    window.TimerManager = TimerManager;
+}
