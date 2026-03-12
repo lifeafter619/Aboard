@@ -937,7 +937,7 @@ class TimerManager {
             btn.innerHTML = `
                 ${displayName}
                 <div style="display: flex; gap: 4px;">
-                    <button class="sound-preview-btn" title="试听">
+                    <button class="sound-preview-btn" title="预览">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polygon points="5 3 19 12 5 21 5 3"></polygon>
                         </svg>
@@ -1296,6 +1296,7 @@ class TimerManager {
         
         const modal = document.getElementById('timer-settings-modal');
         if (modal) {
+            window.drawingBoard?.syncResizableModalState?.('timer-settings-modal');
             modal.classList.add('show');
             
             // Reset to defaults
@@ -1355,6 +1356,7 @@ class TimerManager {
         
         const modal = document.getElementById('timer-settings-modal');
         if (modal) {
+            window.drawingBoard?.syncResizableModalState?.('timer-settings-modal');
             modal.classList.add('show');
             
             // Set mode based on timer
@@ -1611,14 +1613,14 @@ class TimerManager {
         // Reset all preview button states
         if (this.currentPreviewButton) {
             if (this.currentPreviewButton.id === 'timer-sound-preview-btn') {
-                this.currentPreviewButton.textContent = window.i18n.t('common.preview') || '试听';
+                this.currentPreviewButton.textContent = window.i18n.t('common.preview') || '预览';
             } else {
                 this.currentPreviewButton.innerHTML = `
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polygon points="5 3 19 12 5 21 5 3"></polygon>
                     </svg>
                 `;
-                this.currentPreviewButton.title = window.i18n.t('common.preview') || '试听';
+                this.currentPreviewButton.title = window.i18n.t('common.preview') || '预览';
             }
             this.currentPreviewButton = null;
         }

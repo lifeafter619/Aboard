@@ -669,6 +669,92 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     color: #333;
 }
 
+.modal-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.modal-reset-size-btn {
+    display: none;
+    border: 1px solid #d9d9df;
+    border-radius: 999px;
+    background: #f7f7fa;
+    color: #555;
+    font-size: 12px;
+    line-height: 1;
+    padding: 6px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.modal-reset-size-btn.show {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.resizable-modal-content {
+    position: relative;
+}
+
+.resizable-modal-content.modal-custom-sized {
+    margin: 0;
+}
+
+.resizable-modal-content.modal-resizing {
+    user-select: none;
+}
+
+.modal-resize-handle {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    z-index: 2;
+    touch-action: none;
+}
+
+.modal-resize-handle::before {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: rgba(0, 122, 255, 0.16);
+    border: 1px solid rgba(0, 122, 255, 0.45);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.resizable-modal-content:hover .modal-resize-handle::before,
+.resizable-modal-content.modal-resizing .modal-resize-handle::before {
+    opacity: 1;
+}
+
+.modal-resize-handle.top-left {
+    top: 4px;
+    left: 4px;
+    cursor: nwse-resize;
+}
+
+.modal-resize-handle.top-right {
+    top: 4px;
+    right: 4px;
+    cursor: nesw-resize;
+}
+
+.modal-resize-handle.bottom-left {
+    bottom: 4px;
+    left: 4px;
+    cursor: nesw-resize;
+}
+
+.modal-resize-handle.bottom-right {
+    right: 4px;
+    bottom: 4px;
+    cursor: nwse-resize;
+}
+
 /* Settings layout with sidebar */
 .settings-layout {
     display: flex;

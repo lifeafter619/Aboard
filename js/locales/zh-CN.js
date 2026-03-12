@@ -21,7 +21,7 @@ window.translations = {
         reset: '重置',
         start: '开始',
         stop: '停止',
-        preview: '试听',
+        preview: '预览',
         settings: '设置',
         dragToMove: '拖动以移动'
     },
@@ -708,7 +708,7 @@ window.translations = {
         fullscreenFontSizeLabel: '全屏字体大小：当前',
         soundSettings: '声音设置',
         playSound: '倒计时结束时播放提示音',
-        preview: '试听',
+        preview: '预览',
         moreSettings: '更多设置',
         playbackSpeed: '播放倍速',
         loopPlayback: '循环播放',

@@ -30,6 +30,7 @@ class SettingsManager {
         this.globalFont = localStorage.getItem('globalFont') || 'system';
         this.customFonts = this.loadCustomFonts();
         this.fontPreferences = this.loadFontPreferences();
+        this.modalSizePreferences = this.loadModalSizePreferences();
         this.ensureFontPreferencesIntegrity();
 
         // Initialize Toast Manager
@@ -92,8 +93,24 @@ class SettingsManager {
         return { order: [], visibility: {}, aliases: {} };
     }
 
+    loadModalSizePreferences() {
+        const saved = localStorage.getItem('modalSizePreferences');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.warn('Failed to load modal size preferences:', e);
+            }
+        }
+        return {};
+    }
+
     saveFontPreferences() {
         localStorage.setItem('fontPreferences', JSON.stringify(this.fontPreferences));
+    }
+
+    saveModalSizePreferences() {
+        localStorage.setItem('modalSizePreferences', JSON.stringify(this.modalSizePreferences));
     }
 
     ensureFontPreferencesIntegrity() {
@@ -319,6 +336,37 @@ class SettingsManager {
         this.fontPreferences.order = deduped;
         this.saveFontPreferences();
         this.populateGlobalFontSelect();
+    }
+
+    getModalSizePreference(modalKey) {
+        if (!modalKey || !this.modalSizePreferences || typeof this.modalSizePreferences !== 'object') {
+            return null;
+        }
+        const size = this.modalSizePreferences[modalKey];
+        if (!size || typeof size !== 'object') {
+            return null;
+        }
+        const width = parseFloat(size.width);
+        const height = parseFloat(size.height);
+        if (!Number.isFinite(width) || !Number.isFinite(height)) {
+            return null;
+        }
+        return { width, height };
+    }
+
+    setModalSizePreference(modalKey, size) {
+        if (!modalKey || !size) return;
+        const width = Math.round(parseFloat(size.width));
+        const height = Math.round(parseFloat(size.height));
+        if (!Number.isFinite(width) || !Number.isFinite(height)) return;
+        this.modalSizePreferences[modalKey] = { width, height };
+        this.saveModalSizePreferences();
+    }
+
+    resetModalSizePreference(modalKey) {
+        if (!modalKey || !this.modalSizePreferences?.[modalKey]) return;
+        delete this.modalSizePreferences[modalKey];
+        this.saveModalSizePreferences();
     }
     
     loadPatternPreferences() {
@@ -685,9 +733,9 @@ class SettingsManager {
         this.applyGlobalFont();
     }
     
-    applyGlobalFont() {
+    getFontFamilyStack(fontValue = this.globalFont) {
         let fontFamily;
-        switch(this.globalFont) {
+        switch(fontValue) {
             case 'system':
                 fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
                 break;
@@ -747,13 +795,19 @@ class SettingsManager {
                 break;
             default:
                 // Check if it's a custom font
-                const customFont = this.customFonts.find(f => f.name === this.globalFont);
+                const customFont = this.customFonts.find(f => f.name === fontValue);
                 if (customFont) {
-                    fontFamily = `"${this.globalFont}", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+                    const safeFontName = String(fontValue).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                    fontFamily = `"${safeFontName}", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
                 } else {
                     fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
                 }
         }
+        return fontFamily;
+    }
+
+    applyGlobalFont() {
+        const fontFamily = this.getFontFamilyStack(this.globalFont);
         document.body.style.fontFamily = fontFamily;
     }
     
@@ -790,6 +844,7 @@ class SettingsManager {
             canvasPreset: this.canvasPreset,
             themeColor: this.themeColor,
             globalFont: this.globalFont,
+            modalSizePreferences: JSON.parse(JSON.stringify(this.modalSizePreferences || {})),
             // Also include toolbar customization
             toolbarOrder: localStorage.getItem('toolbarOrder'),
             toolbarVisibility: localStorage.getItem('toolbarVisibility'),
@@ -919,6 +974,22 @@ class SettingsManager {
             return i18n.t('settings.general.toolbarCustomization');
         }
 
+        if (key.startsWith('modalSizePreferences.')) {
+            const modalKey = key.split('.')[1];
+            const sizeLabelKey = 'settings.display.windowScale';
+            const translatedSizeLabel = i18n.t(sizeLabelKey);
+            const modalNames = {
+                settingsModal: i18n.t('settings.title'),
+                timerSettingsModal: i18n.t('timer.settingsTitle'),
+                timeDisplaySettingsModal: i18n.t('timeDisplay.settingsTitle'),
+                randomPickerSettingsModal: i18n.t('randomPicker.settingsTitle')
+            };
+            const sizeLabel = translatedSizeLabel && translatedSizeLabel !== sizeLabelKey
+                ? translatedSizeLabel
+                : '窗口尺寸';
+            return `${sizeLabel} - ${modalNames[modalKey] || modalKey}`;
+        }
+
         // Map internal keys to translation keys
         const map = {
             'toolbarSize': 'settings.display.toolbarSize',
@@ -973,6 +1044,10 @@ class SettingsManager {
         // Handle special storage items
         if (newSettings.toolbarOrder) localStorage.setItem('toolbarOrder', newSettings.toolbarOrder);
         if (newSettings.toolbarVisibility) localStorage.setItem('toolbarVisibility', newSettings.toolbarVisibility);
+        if (newSettings.modalSizePreferences && typeof newSettings.modalSizePreferences === 'object') {
+            this.modalSizePreferences = newSettings.modalSizePreferences;
+            this.saveModalSizePreferences();
+        }
 
         if (newSettings.controlSettings) {
             localStorage.setItem('controlShowZoom', newSettings.controlSettings.zoom);
