@@ -28,6 +28,7 @@ class HelpSystem {
         this.injectHelpButtons();
         this.injectIntoSpecialPanels();
         this.bindDataHelpButtons();
+        this.removeUnsupportedFeatureButtonHelpButtons();
         this.refreshHelpButtonLabels();
 
         // Listen for dynamic modals
@@ -38,6 +39,7 @@ class HelpSystem {
             this.injectIntoSpecialPanels();
             this.checkExistingModals();
             this.bindDataHelpButtons();
+            this.removeUnsupportedFeatureButtonHelpButtons();
             this.refreshHelpButtonLabels();
         });
     }
@@ -69,35 +71,42 @@ class HelpSystem {
 
     bindDataHelpButtons() {
         document.querySelectorAll('[data-help-key]').forEach((btn) => {
-            if (btn.dataset.helpBound === 'true') return;
-            btn.dataset.helpBound = 'true';
+            this.bindHelpButton(btn);
+        });
+    }
 
-            btn.addEventListener('pointerdown', (e) => {
-                e.stopPropagation();
-            });
+    bindHelpButton(btn) {
+        if (!btn || btn.dataset.helpBound === 'true') {
+            return;
+        }
 
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const helpKey = btn.dataset.helpKey;
-                if (helpKey) {
-                    this.showHelp(helpKey);
-                }
-            });
+        btn.dataset.helpBound = 'true';
 
-            if (btn.getAttribute('role') === 'button') {
-                btn.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const helpKey = btn.dataset.helpKey;
-                        if (helpKey) {
-                            this.showHelp(helpKey);
-                        }
-                    }
-                });
+        btn.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+        });
+
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const helpKey = btn.dataset.helpKey;
+            if (helpKey) {
+                this.showHelp(helpKey);
             }
         });
+
+        if (btn.tagName === 'BUTTON' || btn.getAttribute('role') === 'button') {
+            btn.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const helpKey = btn.dataset.helpKey;
+                    if (helpKey) {
+                        this.showHelp(helpKey);
+                    }
+                }
+            });
+        }
     }
 
     observeModals() {
@@ -271,7 +280,14 @@ class HelpSystem {
             </svg>
         `;
         btn.style.cssText = 'width:28px;height:28px;margin-left:8px;flex-shrink:0;';
+        this.bindHelpButton(btn);
         return btn;
+    }
+
+    removeUnsupportedFeatureButtonHelpButtons() {
+        document.querySelectorAll('#feature-area .feature-btn .help-btn').forEach((btn) => {
+            btn.remove();
+        });
     }
 
     refreshHelpButtonLabels() {

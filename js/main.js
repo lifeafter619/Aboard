@@ -3679,6 +3679,8 @@ class DrawingBoard {
     }
     
     updateUI() {
+        const configArea = document.getElementById('config-area');
+
         document.querySelectorAll('.tool-btn').forEach(btn => {
             btn.classList.remove('active');
         });
@@ -3730,6 +3732,10 @@ class DrawingBoard {
             }
             
             this.canvas.style.cursor = 'default';
+        }
+
+        if (configArea && !configArea.querySelector('.config-panel.active')) {
+            configArea.classList.remove('show');
         }
         
         document.getElementById('undo-btn').disabled = !this.historyManager.canUndo();
