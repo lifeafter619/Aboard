@@ -177,10 +177,10 @@ class DrawingEngine {
         } else if (this.currentTool === 'eraser') {
             this.ctx.globalCompositeOperation = 'destination-out';
             this.ctx.strokeStyle = 'rgba(0,0,0,1)';
+            this.ctx.fillStyle = 'rgba(0,0,0,1)';
             // Always match the visible dashed eraser cursor size (WYSIWYG).
             // Use real-time viewport scale from DOM geometry instead of cached canvasScale.
-            const scaleCompensation = this.getViewportScale();
-            this.ctx.lineWidth = this.eraserSize / scaleCompensation;
+            this.ctx.lineWidth = this.getCanvasEraserSize();
             this.ctx.globalAlpha = 1.0;
             this.ctx.setLineDash([]); // Always solid for eraser
             
@@ -230,8 +230,10 @@ class DrawingEngine {
         
         this.setupDrawingContext();
         
-        // For dashed/dotted lines, draw initial dot
-        if (this.penLineStyle === 'dotted' || this.penLineStyle === 'dashed') {
+        if (this.currentTool === 'eraser' && this.eraserShape === 'rectangle') {
+            this.eraseRectangleAtPoint(pos);
+        } else if (this.penLineStyle === 'dotted' || this.penLineStyle === 'dashed') {
+            // For dashed/dotted lines, draw initial dot
             this.ctx.beginPath();
             this.ctx.arc(pos.x, pos.y, this.penSize / 2, 0, Math.PI * 2);
             this.ctx.fill();
@@ -284,9 +286,21 @@ class DrawingEngine {
         }
         
         if (validPoints.length === 0) return;
+
+        if (this.currentTool === 'eraser' && this.eraserShape === 'rectangle') {
+            const startIndex = this.points.length - validPoints.length;
+            for (let i = 0; i < validPoints.length; i++) {
+                const currIndex = startIndex + i;
+                if (currIndex === 0) continue;
+                this.eraseRectangleSegment(this.points[currIndex - 1], this.points[currIndex]);
+            }
+            return;
+        }
         
         // Apply line style before drawing
-        this.applyLineStyle();
+        if (this.currentTool === 'pen') {
+            this.applyLineStyle();
+        }
         
         // Check if we can use batch drawing (Normal pen)
         const complexBrushes = ['pencil', 'brush', 'fountain', 'ballpoint', 'marker'];
@@ -765,6 +779,43 @@ class DrawingEngine {
     setEraserShape(shape) {
         this.eraserShape = shape;
         localStorage.setItem('eraserShape', shape);
+    }
+
+    getCanvasEraserSize() {
+        return this.eraserSize / this.getViewportScale();
+    }
+
+    eraseRectangleAtPoint(point) {
+        const size = this.getCanvasEraserSize();
+        const halfSize = size / 2;
+        this.ctx.fillRect(point.x - halfSize, point.y - halfSize, size, size);
+    }
+
+    eraseRectangleSegment(startPoint, endPoint) {
+        const size = this.getCanvasEraserSize();
+        const halfSize = size / 2;
+        const dx = endPoint.x - startPoint.x;
+        const dy = endPoint.y - startPoint.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance === 0) {
+            this.eraseRectangleAtPoint(startPoint);
+            return;
+        }
+
+        // Sample axis-aligned squares along the path so the actual erasing area
+        // matches the visible square cursor and feels as continuous as the circle eraser.
+        const step = Math.max(1, size * 0.22);
+        const steps = Math.max(1, Math.ceil(distance / step));
+
+        this.ctx.beginPath();
+        for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            const x = startPoint.x + dx * t;
+            const y = startPoint.y + dy * t;
+            this.ctx.rect(x - halfSize, y - halfSize, size, size);
+        }
+        this.ctx.fill();
     }
     
     // Stroke selection methods

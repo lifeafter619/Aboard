@@ -149,12 +149,21 @@ class TimerInstance {
         display.innerHTML = `
             <div class="timer-display-header">
                 <div class="timer-display-mode">${modeText}</div>
-                <button class="timer-close-btn" title="${window.i18n.t('common.close')}">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
+                <div class="timer-display-header-actions">
+                    <button class="timer-help-btn" type="button" data-help-key="help.features.timer" data-i18n-title="common.help" title="${window.i18n.t('common.help')}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
+                            <line x1="12" y1="17" x2="12" y2="17"></line>
+                        </svg>
+                    </button>
+                    <button class="timer-close-btn" type="button" title="${window.i18n.t('common.close')}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
             </div>
             ${titleHTML}
             <div class="timer-display-time">00:00:00</div>
@@ -207,6 +216,8 @@ class TimerInstance {
         
         document.body.appendChild(display);
         this.displayElement = display;
+        window.drawingBoard?.helpSystem?.bindDataHelpButtons?.();
+        window.drawingBoard?.helpSystem?.refreshHelpButtonLabels?.();
         
         // Apply custom colors
         display.style.backgroundColor = this.bgColor;

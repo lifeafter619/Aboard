@@ -79,6 +79,13 @@ class ImageControls {
                     
                     <!-- Control toolbar with only confirm button -->
                     <div class="image-controls-toolbar">
+                        <button id="image-help-btn" class="image-control-btn image-help-btn" type="button" data-help-key="help.background" data-i18n-title="common.help">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
+                                <line x1="12" y1="17" x2="12" y2="17"></line>
+                            </svg>
+                        </button>
                         <button id="image-done-btn" class="image-control-btn image-done-btn" data-i18n-title="imageControls.confirm">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <polyline points="20 6 9 17 4 12"></polyline>
@@ -93,6 +100,8 @@ class ImageControls {
         
         this.overlay = document.getElementById('image-controls-overlay');
         this.controlBox = document.getElementById('image-controls-box');
+        window.drawingBoard?.helpSystem?.bindDataHelpButtons?.();
+        window.drawingBoard?.helpSystem?.refreshHelpButtonLabels?.();
     }
     
     setupEventListeners() {

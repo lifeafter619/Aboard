@@ -88,6 +88,13 @@ class InsertImageManager {
 
                     <!-- Control toolbar -->
                     <div class="image-controls-toolbar">
+                        <button id="insert-image-help-btn" class="image-control-btn image-help-btn" type="button" data-help-key="help.features.insertImage" data-i18n-title="common.help" title="${window.i18n.t('common.help')}">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
+                                <line x1="12" y1="17" x2="12" y2="17"></line>
+                            </svg>
+                        </button>
                         <button id="insert-image-cancel-btn" class="image-control-btn image-cancel-btn" title="Cancel">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -108,6 +115,8 @@ class InsertImageManager {
 
         this.overlay = document.getElementById('insert-image-overlay');
         this.controlBox = document.getElementById('insert-image-box');
+        window.drawingBoard?.helpSystem?.bindDataHelpButtons?.();
+        window.drawingBoard?.helpSystem?.refreshHelpButtonLabels?.();
     }
 
     setupEventListeners() {
