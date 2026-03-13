@@ -53,6 +53,7 @@ class DrawingBoard {
         this.strokeControls = new StrokeControls(this.drawingEngine, this.canvas, this.ctx, this.historyManager);
         this.selectionManager = new SelectionManager(this.canvas, this.ctx, this.drawingEngine, this.strokeControls);
         this.selectionManager.setHistoryManager(this.historyManager);
+        this.selectionManager.setBackgroundManager(this.backgroundManager);
         this.timeDisplayManager = new TimeDisplayManager(this.settingsManager);
         this.timeDisplayControls = new TimeDisplayControls(this.timeDisplayManager);
         this.timeDisplaySettingsModal = new TimeDisplaySettingsModal(this.timeDisplayManager);
@@ -860,6 +861,8 @@ class DrawingBoard {
                     e.target.closest('#time-display-settings-modal') ||
                     e.target.closest('#timer-settings-modal') ||
                     e.target.closest('#selection-controls-overlay') ||
+                    e.target.closest('#insert-image-overlay') ||
+                    e.target.closest('#image-controls-overlay') ||
                     e.target.closest('input[type="range"]')) {
                     return;
                 }
@@ -1507,6 +1510,33 @@ class DrawingBoard {
                 reader.readAsDataURL(file);
             }
         });
+
+        const refreshBackgroundMediaControls = () => {
+            const playbackBtn = document.getElementById('bg-image-playback-btn');
+            if (!playbackBtn) return;
+
+            const isGif = this.backgroundManager.isGif(this.backgroundManager.backgroundImageData);
+            playbackBtn.style.display = isGif ? 'inline-flex' : 'none';
+
+            if (this.backgroundManager.isImagePaused) {
+                playbackBtn.classList.add('paused');
+                playbackBtn.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                `;
+            } else {
+                playbackBtn.classList.remove('paused');
+                playbackBtn.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="6" y="4" width="4" height="16"></rect>
+                        <rect x="14" y="4" width="4" height="16"></rect>
+                    </svg>
+                `;
+            }
+        };
+
+        window.addEventListener('backgroundMediaStateChanged', refreshBackgroundMediaControls);
         
         // Background image size slider
         const bgImageSizeSlider = document.getElementById('bg-image-size-slider');
@@ -1574,32 +1604,13 @@ class DrawingBoard {
         // Background playback toggle (for GIFs)
         const playbackBtn = document.getElementById('bg-image-playback-btn');
         if (playbackBtn) {
-            const updatePlaybackIcon = () => {
-                if (this.backgroundManager.isImagePaused) {
-                    playbackBtn.classList.add('paused');
-                    playbackBtn.innerHTML = `
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                        </svg>
-                    `;
-                } else {
-                    playbackBtn.classList.remove('paused');
-                    playbackBtn.innerHTML = `
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="6" y="4" width="4" height="16"></rect>
-                            <rect x="14" y="4" width="4" height="16"></rect>
-                        </svg>
-                    `;
-                }
-            };
-
             playbackBtn.addEventListener('click', () => {
                 this.backgroundManager.toggleImagePlayback();
-                updatePlaybackIcon();
             });
 
             // Listen for auto-pause event from background manager
-            window.addEventListener('backgroundGifPaused', updatePlaybackIcon);
+            window.addEventListener('backgroundGifPaused', refreshBackgroundMediaControls);
+            refreshBackgroundMediaControls();
         }
         
         // Pattern density slider
@@ -5423,12 +5434,17 @@ class DrawingBoard {
             btn.className = 'pattern-option-btn uploaded-image-btn';
             btn.dataset.imageId = image.id;
             btn.textContent = image.name;
-            btn.addEventListener('click', () => {
-                this.backgroundManager.setBackgroundImage(image.data);
+            btn.addEventListener('click', async () => {
+                this.imageControls.resetConfirmation();
+                await this.backgroundManager.setBackgroundImage(image.data);
                 document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 document.getElementById('image-size-group').style.display = 'flex';
                 document.getElementById('pattern-density-group').style.display = 'none';
+                const imgData = this.backgroundManager.getImageData();
+                if (imgData) {
+                    this.imageControls.showControls(imgData);
+                }
             });
             
             // Insert before the upload button
@@ -5508,7 +5524,8 @@ class DrawingBoard {
                     size: s.size,
                     penType: s.penType,
                     tool: s.tool,
-                    rotation: s.rotation || 0
+                    rotation: s.rotation || 0,
+                    layerOrder: s.layerOrder || 0
                 })),
                 stampedImages: this.drawingEngine.stampedImages.map(img => ({
                     imageSrc: img.imageSrc || (img.imageElement ? img.imageElement.src : null),
@@ -5518,7 +5535,8 @@ class DrawingBoard {
                     height: img.height,
                     rotation: img.rotation || 0,
                     flipHorizontal: img.flipHorizontal || false,
-                    flipVertical: img.flipVertical || false
+                    flipVertical: img.flipVertical || false,
+                    layerOrder: img.layerOrder || 0
                 }))
             };
 
@@ -5653,6 +5671,8 @@ class DrawingBoard {
                 if (this.insertTextManager) {
                     this.selectionManager.setTextManager(this.insertTextManager);
                 }
+
+                this.drawingEngine.syncLayerCounter(this.insertTextManager?.textObjects || []);
             }
 
             // Restore pages

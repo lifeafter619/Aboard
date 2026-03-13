@@ -77,13 +77,18 @@ class ImageControls {
                         </svg>
                     </div>
                     
-                    <!-- Control toolbar with only confirm button -->
+                    <!-- Control toolbar -->
                     <div class="image-controls-toolbar">
-                        <button id="image-help-btn" class="image-control-btn image-help-btn" type="button" data-help-key="help.background" data-i18n-title="common.help">
+                        <button id="image-copy-btn" class="image-control-btn" type="button" data-i18n-title="selection.copy">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
-                                <line x1="12" y1="17" x2="12" y2="17"></line>
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+                        <button id="image-delete-btn" class="image-control-btn image-cancel-btn" type="button" data-i18n-title="selection.delete">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                             </svg>
                         </button>
                         <button id="image-done-btn" class="image-control-btn image-done-btn" data-i18n-title="imageControls.confirm">
@@ -100,13 +105,14 @@ class ImageControls {
         
         this.overlay = document.getElementById('image-controls-overlay');
         this.controlBox = document.getElementById('image-controls-box');
-        window.drawingBoard?.helpSystem?.bindDataHelpButtons?.();
-        window.drawingBoard?.helpSystem?.refreshHelpButtonLabels?.();
     }
     
     setupEventListeners() {
-        // Drag image
-        this.controlBox.addEventListener('mousedown', (e) => {
+        const handleDragStart = (e) => {
+            e.stopPropagation();
+            if (e.type !== 'mousemove') {
+                e.preventDefault?.();
+            }
             if (e.target === this.controlBox || e.target.closest('.image-controls-box') === this.controlBox) {
                 if (!e.target.classList.contains('resize-handle') && 
                     !e.target.classList.contains('rotate-handle') &&
@@ -118,21 +124,33 @@ class ImageControls {
                     this.startDrag(e);
                 }
             }
-        });
+        };
+
+        this.controlBox.addEventListener('mousedown', handleDragStart);
+        this.controlBox.addEventListener('pointerdown', handleDragStart);
+        this.controlBox.addEventListener('touchstart', handleDragStart, { passive: false });
         
         // Resize handles
         this.controlBox.querySelectorAll('.resize-handle').forEach(handle => {
-            handle.addEventListener('mousedown', (e) => {
+            const startResize = (e) => {
                 e.stopPropagation();
+                e.preventDefault?.();
                 this.startResize(e, handle.dataset.handle);
-            });
+            };
+            handle.addEventListener('mousedown', startResize);
+            handle.addEventListener('pointerdown', startResize);
+            handle.addEventListener('touchstart', startResize, { passive: false });
         });
         
         // Rotation handle
-        document.getElementById('rotate-handle').addEventListener('mousedown', (e) => {
+        const startRotate = (e) => {
             e.stopPropagation();
+            e.preventDefault?.();
             this.startRotate(e);
-        });
+        };
+        document.getElementById('rotate-handle').addEventListener('mousedown', startRotate);
+        document.getElementById('rotate-handle').addEventListener('pointerdown', startRotate);
+        document.getElementById('rotate-handle').addEventListener('touchstart', startRotate, { passive: false });
         
         // Flip horizontal handle
         document.getElementById('flip-horizontal-handle').addEventListener('click', (e) => {
@@ -146,8 +164,8 @@ class ImageControls {
             this.toggleFlipVertical();
         });
         
-        // Global mouse events
-        document.addEventListener('mousemove', (e) => {
+        // Global move events
+        const handleMove = (e) => {
             if (this.isDragging) {
                 this.drag(e);
             } else if (this.isResizing) {
@@ -155,15 +173,50 @@ class ImageControls {
             } else if (this.isRotating) {
                 this.rotate(e);
             }
-        });
+        };
+
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('pointermove', handleMove);
+        document.addEventListener('touchmove', (e) => {
+            if (this.isDragging || this.isResizing || this.isRotating) {
+                e.preventDefault();
+                handleMove(e);
+            }
+        }, { passive: false });
         
-        document.addEventListener('mouseup', () => {
+        const handleEnd = () => {
             this.stopDrag();
             this.stopResize();
             this.stopRotate();
-        });
+        };
+        document.addEventListener('mouseup', handleEnd);
+        document.addEventListener('pointerup', handleEnd);
+        document.addEventListener('touchend', handleEnd);
+        document.addEventListener('pointercancel', handleEnd);
+        document.addEventListener('touchcancel', handleEnd);
         
-        // Toolbar button - only confirm button
+        [document.getElementById('image-copy-btn'), document.getElementById('image-delete-btn'), document.getElementById('image-done-btn')]
+            .forEach(btn => {
+                btn.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                });
+                btn.addEventListener('pointerdown', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                });
+            });
+
+        document.getElementById('image-copy-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            this.copyImageToCanvas();
+        });
+        document.getElementById('image-delete-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            this.deleteImage();
+        });
         document.getElementById('image-done-btn').addEventListener('click', () => this.confirmImage());
     }
     
@@ -213,7 +266,7 @@ class ImageControls {
             this.imagePosition.x = existingTransform.x;
             this.imagePosition.y = existingTransform.y;
             this.imageRotation = existingTransform.rotation || 0;
-            this.imageScale = existingTransform.scale || 1.0;
+            this.imageScale = 1.0;
             this.flipHorizontal = existingTransform.flipHorizontal || false;
             this.flipVertical = existingTransform.flipVertical || false;
         } else {
@@ -262,6 +315,49 @@ class ImageControls {
         this.isConfirmed = false;
         localStorage.removeItem('backgroundImageConfirmed');
     }
+
+    copyImageToCanvas() {
+        const drawingBoard = window.drawingBoard;
+        const bgImage = this.backgroundManager.backgroundImage;
+        if (!drawingBoard || !bgImage) return false;
+
+        drawingBoard.ctx.save();
+        const centerX = this.imagePosition.x + this.imageSize.width / 2;
+        const centerY = this.imagePosition.y + this.imageSize.height / 2;
+        drawingBoard.ctx.translate(centerX, centerY);
+        drawingBoard.ctx.rotate(this.imageRotation * Math.PI / 180);
+        drawingBoard.ctx.scale(this.flipHorizontal ? -1 : 1, this.flipVertical ? -1 : 1);
+        drawingBoard.ctx.drawImage(
+            bgImage,
+            -this.imageSize.width / 2,
+            -this.imageSize.height / 2,
+            this.imageSize.width,
+            this.imageSize.height
+        );
+        drawingBoard.ctx.restore();
+
+        drawingBoard.drawingEngine?.addStampedImage({
+            imageElement: bgImage,
+            imageSrc: this.backgroundManager.backgroundImageData,
+            x: this.imagePosition.x,
+            y: this.imagePosition.y,
+            width: this.imageSize.width,
+            height: this.imageSize.height,
+            rotation: this.imageRotation,
+            flipHorizontal: this.flipHorizontal,
+            flipVertical: this.flipVertical
+        });
+
+        drawingBoard.historyManager?.saveState();
+        return true;
+    }
+
+    deleteImage() {
+        this.backgroundManager.clearBackgroundImage();
+        this.resetConfirmation();
+        this.hideControls();
+        window.drawingBoard?.updateBackgroundUI?.();
+    }
     
     updateControlBox() {
         const canvas = this.backgroundManager.bgCanvas;
@@ -303,10 +399,32 @@ class ImageControls {
             width: this.imageSize.width,
             height: this.imageSize.height,
             rotation: this.imageRotation,
-            scale: this.imageScale,
+            scale: 1,
             flipHorizontal: this.flipHorizontal,
             flipVertical: this.flipVertical
         });
+    }
+
+    getClientPos(e) {
+        if (e.touches && e.touches.length > 0) {
+            return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+        return { x: e.clientX, y: e.clientY };
+    }
+
+    getControlBoxCenter() {
+        const canvas = this.backgroundManager.bgCanvas;
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        const logicalWidth = canvas.width / dpr;
+        const logicalHeight = canvas.height / dpr;
+        const scaleX = rect.width / logicalWidth;
+        const scaleY = rect.height / logicalHeight;
+
+        return {
+            x: rect.left + (this.imagePosition.x + this.imageSize.width / 2) * scaleX,
+            y: rect.top + (this.imagePosition.y + this.imageSize.height / 2) * scaleY
+        };
     }
     
     toggleFlipHorizontal() {
@@ -331,7 +449,7 @@ class ImageControls {
     
     startDrag(e) {
         this.isDragging = true;
-        this.dragStartPos = { x: e.clientX, y: e.clientY };
+        this.dragStartPos = this.getClientPos(e);
         this.dragStartImagePos = { ...this.imagePosition };
         this.controlBox.style.cursor = 'grabbing';
     }
@@ -346,8 +464,9 @@ class ImageControls {
         const logicalWidth = canvas.width / dpr;
         const scaleX = rect.width / logicalWidth;
         
-        const deltaX = (e.clientX - this.dragStartPos.x) / scaleX;
-        const deltaY = (e.clientY - this.dragStartPos.y) / scaleX; // Use same scale for both axes
+        const pos = this.getClientPos(e);
+        const deltaX = (pos.x - this.dragStartPos.x) / scaleX;
+        const deltaY = (pos.y - this.dragStartPos.y) / scaleX; // Use same scale for both axes
         
         this.imagePosition.x = this.dragStartImagePos.x + deltaX;
         this.imagePosition.y = this.dragStartImagePos.y + deltaY;
@@ -363,7 +482,7 @@ class ImageControls {
     startResize(e, handle) {
         this.isResizing = true;
         this.resizeHandle = handle;
-        this.resizeStartPos = { x: e.clientX, y: e.clientY };
+        this.resizeStartPos = this.getClientPos(e);
         this.resizeStartSize = { ...this.imageSize };
         this.dragStartImagePos = { ...this.imagePosition };
     }
@@ -378,8 +497,9 @@ class ImageControls {
         const logicalWidth = canvas.width / dpr;
         const scaleX = rect.width / logicalWidth;
         
-        const deltaX = (e.clientX - this.resizeStartPos.x) / scaleX;
-        const deltaY = (e.clientY - this.resizeStartPos.y) / scaleX; // Use same scale for both axes
+        const pos = this.getClientPos(e);
+        const deltaX = (pos.x - this.resizeStartPos.x) / scaleX;
+        const deltaY = (pos.y - this.resizeStartPos.y) / scaleX; // Use same scale for both axes
         
         const aspectRatio = this.resizeStartSize.width / this.resizeStartSize.height;
         
@@ -430,22 +550,18 @@ class ImageControls {
     
     startRotate(e) {
         this.isRotating = true;
-        const rect = this.controlBox.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        
-        this.rotateStartAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+        const center = this.getControlBoxCenter();
+        const pos = this.getClientPos(e);
+        this.rotateStartAngle = Math.atan2(pos.y - center.y, pos.x - center.x) * 180 / Math.PI;
         this.rotateStartRotation = this.imageRotation;
     }
     
     rotate(e) {
         if (!this.isRotating) return;
-        
-        const rect = this.controlBox.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        
-        const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+
+        const center = this.getControlBoxCenter();
+        const pos = this.getClientPos(e);
+        const currentAngle = Math.atan2(pos.y - center.y, pos.x - center.x) * 180 / Math.PI;
         const angleDelta = currentAngle - this.rotateStartAngle;
         
         this.imageRotation = this.rotateStartRotation + angleDelta;
@@ -535,7 +651,7 @@ class ImageControls {
             width: this.imageSize.width,
             height: this.imageSize.height,
             rotation: this.imageRotation,
-            scale: this.imageScale
+            scale: 1
         };
     }
 }

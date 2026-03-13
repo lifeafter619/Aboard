@@ -134,6 +134,7 @@ class InsertImageManager {
         const handleDragStart = (e) => {
             // Stop propagation to prevent drawing on canvas
             e.stopPropagation();
+            e.preventDefault?.();
 
             if (e.target === this.controlBox || e.target.closest('.image-controls-box') === this.controlBox) {
                 if (!e.target.classList.contains('resize-handle') &&
@@ -149,16 +150,18 @@ class InsertImageManager {
         };
 
         this.controlBox.addEventListener('mousedown', handleDragStart);
+        this.controlBox.addEventListener('pointerdown', handleDragStart);
         this.controlBox.addEventListener('touchstart', handleDragStart, { passive: false });
 
         // Resize handles
         this.controlBox.querySelectorAll('.resize-handle').forEach(handle => {
             const startResize = (e) => {
                 e.stopPropagation();
-                if (e.type === 'touchstart') e.preventDefault();
+                e.preventDefault?.();
                 this.startResize(e, handle.dataset.handle);
             };
             handle.addEventListener('mousedown', startResize);
+            handle.addEventListener('pointerdown', startResize);
             handle.addEventListener('touchstart', startResize, { passive: false });
         });
 
@@ -166,10 +169,11 @@ class InsertImageManager {
         const rotateHandle = document.getElementById('insert-image-rotate-handle');
         const startRotate = (e) => {
             e.stopPropagation();
-            if (e.type === 'touchstart') e.preventDefault();
+            e.preventDefault?.();
             this.startRotate(e);
         };
         rotateHandle.addEventListener('mousedown', startRotate);
+        rotateHandle.addEventListener('pointerdown', startRotate);
         rotateHandle.addEventListener('touchstart', startRotate, { passive: false });
 
         // Flip horizontal handle
@@ -188,6 +192,9 @@ class InsertImageManager {
 
         // Global move/up events
         const handleMove = (e) => {
+            if ((this.isDragging || this.isResizing || this.isRotating) && e.type === 'touchmove') {
+                e.preventDefault();
+            }
             if (this.isDragging) this.drag(e);
             else if (this.isResizing) this.resize(e);
             else if (this.isRotating) this.rotate(e);
@@ -200,9 +207,13 @@ class InsertImageManager {
         };
 
         document.addEventListener('mousemove', handleMove);
+        document.addEventListener('pointermove', handleMove);
         document.addEventListener('touchmove', handleMove, { passive: false });
         document.addEventListener('mouseup', handleEnd);
+        document.addEventListener('pointerup', handleEnd);
         document.addEventListener('touchend', handleEnd);
+        document.addEventListener('pointercancel', handleEnd);
+        document.addEventListener('touchcancel', handleEnd);
 
         // Buttons
         document.getElementById('insert-image-confirm-btn').addEventListener('click', () => this.confirmImage());

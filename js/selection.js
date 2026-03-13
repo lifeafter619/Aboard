@@ -9,6 +9,7 @@ class SelectionManager {
         this.strokeControls = strokeControls;
         this.textManager = null; // Set later via setTextManager
         this.historyManager = null; // Set later via setHistoryManager
+        this.backgroundManager = null; // Set later via setBackgroundManager
         
         this.isActive = false;
         this.isSelecting = false;
@@ -83,6 +84,10 @@ class SelectionManager {
     
     setHistoryManager(historyManager) {
         this.historyManager = historyManager;
+    }
+
+    setBackgroundManager(backgroundManager) {
+        this.backgroundManager = backgroundManager;
     }
     
     createSelectionControls() {
@@ -450,7 +455,9 @@ class SelectionManager {
 
     updateLayerMenuVisibility() {
         if (!this.layerButton) return;
-        const shouldShowLayerButton = this.selectionType && this.selectionType !== 'multi';
+        const shouldShowLayerButton = this.selectionType &&
+            this.selectionType !== 'multi' &&
+            this.selectionType !== 'background';
         this.layerButton.style.display = shouldShowLayerButton ? '' : 'none';
         if (!shouldShowLayerButton) {
             this.hideLayerMenu();
@@ -458,59 +465,46 @@ class SelectionManager {
     }
 
     applyLayerAction(action) {
-        if (!this.hasSelection() || this.selectionType === 'multi') return;
+        if (!this.hasSelection() || this.selectionType === 'multi' || this.selectionType === 'background') return;
 
-        let collection = null;
-        let updateSelection = null;
-        if (this.selectionType === 'stroke') {
-            collection = this.drawingEngine.strokes;
-            updateSelection = (index) => {
-                this.selectedIndex = index;
-                this.drawingEngine.selectStroke(index);
-            };
-        } else if (this.selectionType === 'image') {
-            collection = this.drawingEngine.stampedImages;
-            updateSelection = (index) => {
-                this.selectedIndex = index;
-                this.drawingEngine.selectImage(index);
-            };
-        } else if (this.selectionType === 'text' && this.textManager) {
-            collection = this.textManager.textObjects;
-            updateSelection = (index) => {
-                this.selectedIndex = index;
-                this.textManager.selectedTextIndex = index;
-            };
-        }
+        const renderables = this.drawingEngine.getRenderableObjects(this.textManager?.textObjects || []);
+        const selectedRenderable = renderables.find(renderable =>
+            renderable.type === this.selectionType && renderable.index === this.selectedIndex
+        );
 
-        if (!collection || this.selectedIndex === null) return;
+        if (!selectedRenderable) return;
 
-        const maxIndex = collection.length - 1;
-        let targetIndex = this.selectedIndex;
+        const currentIndex = renderables.indexOf(selectedRenderable);
+        let targetIndex = currentIndex;
+
         switch (action) {
             case 'bring-to-front':
-                targetIndex = maxIndex;
+                targetIndex = renderables.length - 1;
                 break;
             case 'send-to-back':
                 targetIndex = 0;
                 break;
             case 'move-forward':
-                targetIndex = Math.min(maxIndex, this.selectedIndex + 1);
+                targetIndex = Math.min(renderables.length - 1, currentIndex + 1);
                 break;
             case 'move-backward':
-                targetIndex = Math.max(0, this.selectedIndex - 1);
+                targetIndex = Math.max(0, currentIndex - 1);
                 break;
             default:
                 return;
         }
 
-        if (targetIndex === this.selectedIndex) {
+        if (targetIndex === currentIndex) {
             this.hideLayerMenu();
             return;
         }
 
-        const [item] = collection.splice(this.selectedIndex, 1);
-        collection.splice(targetIndex, 0, item);
-        updateSelection(targetIndex);
+        renderables.splice(currentIndex, 1);
+        renderables.splice(targetIndex, 0, selectedRenderable);
+        renderables.forEach((renderable, index) => {
+            renderable.item.layerOrder = index + 1;
+        });
+        this.drawingEngine.syncLayerCounter(this.textManager?.textObjects || []);
         this.hideLayerMenu();
         this.redrawWithSelection();
         this.updateControlBox();
@@ -619,6 +613,11 @@ class SelectionManager {
             this.selectStroke(strokeIndex);
             return true;
         }
+
+        if (this.backgroundManager?.isPointInBackgroundImage?.(coords.x, coords.y)) {
+            this.selectBackgroundImage();
+            return true;
+        }
         
         // If not on any object, deselect everything
         this.clearSelection();
@@ -651,6 +650,19 @@ class SelectionManager {
         this.showControls();
         this.redrawWithSelection();
     }
+
+    selectBackgroundImage() {
+        if (!this.backgroundManager?.hasBackgroundImage?.()) return;
+        this.drawingEngine.deselectStroke();
+        this.drawingEngine.deselectImage();
+        if (this.textManager) {
+            this.textManager.selectedTextIndex = null;
+        }
+        this.selectionType = 'background';
+        this.selectedIndex = null;
+        this.showControls();
+        this.redrawWithSelection();
+    }
     
     showControls() {
         this.overlay.style.display = 'block';
@@ -659,8 +671,12 @@ class SelectionManager {
         this.updateLayerMenuVisibility();
         // Show edit button only for text selections
         const editBtn = document.getElementById('selection-edit-btn');
+        const copyBtn = document.getElementById('selection-copy-btn');
         if (editBtn) {
             editBtn.style.display = (this.selectionType === 'text') ? '' : 'none';
+        }
+        if (copyBtn) {
+            copyBtn.style.display = this.selectionType === 'background' ? 'none' : '';
         }
         this.updateControlBox();
     }
@@ -673,7 +689,7 @@ class SelectionManager {
     
     updateControlBox() {
         if (this.selectionType === null) return;
-        if (this.selectionType !== 'multi' && this.selectedIndex === null) return;
+        if (this.selectionType !== 'multi' && this.selectionType !== 'background' && this.selectedIndex === null) return;
         
         let bounds = null;
         let rotation = 0;
@@ -698,6 +714,16 @@ class SelectionManager {
             if (!img) return;
             bounds = this.drawingEngine.getImageBounds(img);
             rotation = img.rotation || 0;
+        } else if (this.selectionType === 'background') {
+            const transform = this.backgroundManager?.getBackgroundImageTransform?.();
+            if (!transform) return;
+            bounds = {
+                x: transform.x,
+                y: transform.y,
+                width: transform.width,
+                height: transform.height
+            };
+            rotation = transform.rotation || 0;
         } else if (this.selectionType === 'multi') {
             // During rotation, use the saved original bounds to keep box shape fixed
             if (this.isRotating && this.multiBounds) {
@@ -735,7 +761,7 @@ class SelectionManager {
     startDrag(e) {
         if (this.selectionType === 'multi') {
             // Multi-select drag
-        } else if (this.selectedIndex === null) {
+        } else if (this.selectionType !== 'background' && this.selectedIndex === null) {
             return;
         }
         
@@ -758,6 +784,13 @@ class SelectionManager {
         } else if (this.selectionType === 'image') {
             const img = this.drawingEngine.stampedImages[this.selectedIndex];
             this.dragStartObjectPos = { x: img.x, y: img.y };
+        } else if (this.selectionType === 'background') {
+            const transform = this.backgroundManager?.getBackgroundImageTransform?.();
+            if (!transform) {
+                this.isDragging = false;
+                return;
+            }
+            this.dragStartObjectPos = { x: transform.x, y: transform.y };
         } else if (this.selectionType === 'multi') {
             this.multiDragStartPositions = [];
             for (const idx of this.selectedStrokes) {
@@ -790,7 +823,7 @@ class SelectionManager {
     
     drag(e) {
         if (!this.isDragging) return;
-        if (this.selectionType !== 'multi' && this.selectedIndex === null) return;
+        if (this.selectionType !== 'multi' && this.selectionType !== 'background' && this.selectedIndex === null) return;
         
         const pos = this.getClientPos(e);
         const rect = this.canvas.getBoundingClientRect();
@@ -817,6 +850,14 @@ class SelectionManager {
             const img = this.drawingEngine.stampedImages[this.selectedIndex];
             img.x = this.dragStartObjectPos.x + deltaX;
             img.y = this.dragStartObjectPos.y + deltaY;
+        } else if (this.selectionType === 'background') {
+            const transform = this.backgroundManager?.getBackgroundImageTransform?.();
+            if (!transform) return;
+            this.backgroundManager.updateImageTransform({
+                ...transform,
+                x: this.dragStartObjectPos.x + deltaX,
+                y: this.dragStartObjectPos.y + deltaY
+            });
         } else if (this.selectionType === 'multi') {
             for (const idx of this.selectedStrokes) {
                 const stroke = this.drawingEngine.strokes[idx];
@@ -880,7 +921,7 @@ class SelectionManager {
         }
     }
     startResize(e, handle) {
-        if (this.selectionType !== 'multi' && this.selectedIndex === null) return;
+        if (this.selectionType !== 'multi' && this.selectionType !== 'background' && this.selectedIndex === null) return;
         
         this.isResizing = true;
         this.resizeHandle = handle;
@@ -910,6 +951,18 @@ class SelectionManager {
         } else if (this.selectionType === 'image') {
             const img = this.drawingEngine.stampedImages[this.selectedIndex];
             this.resizeStartBounds = { x: img.x, y: img.y, width: img.width, height: img.height };
+        } else if (this.selectionType === 'background') {
+            const transform = this.backgroundManager?.getBackgroundImageTransform?.();
+            if (!transform) {
+                this.isResizing = false;
+                return;
+            }
+            this.resizeStartBounds = {
+                x: transform.x,
+                y: transform.y,
+                width: transform.width,
+                height: transform.height
+            };
         } else if (this.selectionType === 'multi') {
             this.resizeStartBounds = this.getMultiBounds();
             for (const idx of this.selectedStrokes) {
@@ -946,7 +999,7 @@ class SelectionManager {
     
     resize(e) {
         if (!this.isResizing || !this.resizeStartBounds) return;
-        if (this.selectionType !== 'multi' && this.selectedIndex === null) return;
+        if (this.selectionType !== 'multi' && this.selectionType !== 'background' && this.selectedIndex === null) return;
         
         const pos = this.getClientPos(e);
         const canvasScale = this.getCanvasScale();
@@ -1018,6 +1071,16 @@ class SelectionManager {
             img.y = newBounds.y;
             img.width = newBounds.width;
             img.height = newBounds.height;
+        } else if (this.selectionType === 'background') {
+            const transform = this.backgroundManager?.getBackgroundImageTransform?.();
+            if (!transform) return;
+            this.backgroundManager.updateImageTransform({
+                ...transform,
+                x: newBounds.x,
+                y: newBounds.y,
+                width: newBounds.width,
+                height: newBounds.height
+            });
         } else if (this.selectionType === 'multi') {
             for (const idx of this.selectedStrokes) {
                 const stroke = this.drawingEngine.strokes[idx];
@@ -1120,6 +1183,10 @@ class SelectionManager {
             const img = this.drawingEngine.stampedImages[this.selectedIndex];
             if (!img) return null;
             bounds = { x: img.x, y: img.y, width: img.width, height: img.height };
+        } else if (this.selectionType === 'background') {
+            const transform = this.backgroundManager?.getBackgroundImageTransform?.();
+            if (!transform) return null;
+            bounds = { x: transform.x, y: transform.y, width: transform.width, height: transform.height };
         } else if (this.selectionType === 'multi') {
             // During rotation, use the saved original bounds center
             bounds = (this.isRotating && this.multiBounds) ? this.multiBounds : this.getMultiSelectionBounds();
@@ -1137,7 +1204,7 @@ class SelectionManager {
     }
     
     startRotate(e) {
-        if (this.selectionType !== 'multi' && this.selectedIndex === null) return;
+        if (this.selectionType !== 'multi' && this.selectionType !== 'background' && this.selectedIndex === null) return;
         
         this.isRotating = true;
         
@@ -1155,6 +1222,13 @@ class SelectionManager {
         } else if (this.selectionType === 'image') {
             const img = this.drawingEngine.stampedImages[this.selectedIndex];
             this.rotateStartRotation = img.rotation || 0;
+        } else if (this.selectionType === 'background') {
+            const transform = this.backgroundManager?.getBackgroundImageTransform?.();
+            if (!transform) {
+                this.isRotating = false;
+                return;
+            }
+            this.rotateStartRotation = transform.rotation || 0;
         } else if (this.selectionType === 'multi') {
             this.rotateStartRotation = this.multiRotation;
             this.multiBounds = this.getMultiSelectionBounds();
@@ -1194,7 +1268,7 @@ class SelectionManager {
     
     rotate(e) {
         if (!this.isRotating) return;
-        if (this.selectionType !== 'multi' && this.selectedIndex === null) return;
+        if (this.selectionType !== 'multi' && this.selectionType !== 'background' && this.selectedIndex === null) return;
         
         const center = this.getControlBoxScreenCenter();
         if (!center) return;
@@ -1228,6 +1302,13 @@ class SelectionManager {
         } else if (this.selectionType === 'image') {
             const img = this.drawingEngine.stampedImages[this.selectedIndex];
             img.rotation = this.normalizeAngle(this.rotateStartRotation + angleDelta);
+        } else if (this.selectionType === 'background') {
+            const transform = this.backgroundManager?.getBackgroundImageTransform?.();
+            if (!transform) return;
+            this.backgroundManager.updateImageTransform({
+                ...transform,
+                rotation: this.normalizeAngle(this.rotateStartRotation + angleDelta)
+            });
         } else if (this.selectionType === 'multi') {
             const bounds = this.multiBounds;
             if (!bounds) return;
@@ -1328,6 +1409,9 @@ class SelectionManager {
     
     // Action methods
     copySelection() {
+        if (this.selectionType === 'background') {
+            return false;
+        }
         // Cache the selection for paste while still duplicating on the canvas.
         this.cacheSelection();
         if (this.selectionType === 'multi') {
@@ -1342,7 +1426,8 @@ class SelectionManager {
                         size: stroke.size,
                         penType: stroke.penType,
                         tool: stroke.tool,
-                        rotation: stroke.rotation || 0
+                        rotation: stroke.rotation || 0,
+                        layerOrder: this.drawingEngine.getNextLayerOrder()
                     };
                     this.drawingEngine.strokes.push(copiedStroke);
                     newStrokeIndices.push(this.drawingEngine.strokes.length - 1);
@@ -1360,7 +1445,8 @@ class SelectionManager {
                         height: img.height,
                         rotation: img.rotation || 0,
                         flipHorizontal: img.flipHorizontal || false,
-                        flipVertical: img.flipVertical || false
+                        flipVertical: img.flipVertical || false,
+                        layerOrder: this.drawingEngine.getNextLayerOrder()
                     };
                     this.drawingEngine.stampedImages.push(copiedImage);
                     newImageIndices.push(this.drawingEngine.stampedImages.length - 1);
@@ -1374,7 +1460,8 @@ class SelectionManager {
                         const copiedText = {
                             ...textObj,
                             x: textObj.x + this.COPY_OFFSET,
-                            y: textObj.y + this.COPY_OFFSET
+                            y: textObj.y + this.COPY_OFFSET,
+                            layerOrder: this.drawingEngine.getNextLayerOrder()
                         };
                         this.textManager.textObjects.push(copiedText);
                         newTextIndices.push(this.textManager.textObjects.length - 1);
@@ -1391,7 +1478,7 @@ class SelectionManager {
             return true;
         }
         
-        if (this.selectedIndex === null) return false;
+        if (this.selectionType !== 'background' && this.selectedIndex === null) return false;
         
         if (this.selectionType === 'stroke') {
             const result = this.drawingEngine.copySelectedStroke();
@@ -1429,7 +1516,8 @@ class SelectionManager {
         const hasStrokes = this.drawingEngine.strokes.length > 0;
         const hasImages = this.drawingEngine.stampedImages.length > 0;
         const hasTexts = this.textManager && this.textManager.textObjects && this.textManager.textObjects.length > 0;
-        return hasStrokes || hasImages || hasTexts;
+        const hasBackgroundImage = this.backgroundManager?.hasBackgroundImage?.() || false;
+        return hasStrokes || hasImages || hasTexts || hasBackgroundImage;
     }
 
     cacheSelection() {
@@ -1497,14 +1585,18 @@ class SelectionManager {
         for (const stroke of this.clipboard.strokes || []) {
             const copiedStroke = {
                 ...stroke,
-                points: stroke.points.map(p => ({ x: p.x + this.COPY_OFFSET, y: p.y + this.COPY_OFFSET }))
+                points: stroke.points.map(p => ({ x: p.x + this.COPY_OFFSET, y: p.y + this.COPY_OFFSET })),
+                layerOrder: this.drawingEngine.getNextLayerOrder()
             };
             this.drawingEngine.strokes.push(copiedStroke);
             newStrokeIndices.push(this.drawingEngine.strokes.length - 1);
         }
 
         for (const img of this.clipboard.images || []) {
-            const copiedImage = this.applyPasteOffset({ ...img }, this.COPY_OFFSET, this.COPY_OFFSET);
+            const copiedImage = this.applyPasteOffset({
+                ...img,
+                layerOrder: this.drawingEngine.getNextLayerOrder()
+            }, this.COPY_OFFSET, this.COPY_OFFSET);
             this.drawingEngine.stampedImages.push(copiedImage);
             newImageIndices.push(this.drawingEngine.stampedImages.length - 1);
         }
@@ -1512,6 +1604,7 @@ class SelectionManager {
         if (this.textManager) {
             for (const textObj of this.clipboard.texts || []) {
                 const copiedText = this.createTextCopy(textObj);
+                copiedText.layerOrder = this.drawingEngine.getNextLayerOrder();
                 const offsetText = this.applyPasteOffset(copiedText, this.COPY_OFFSET, this.COPY_OFFSET);
                 this.textManager.textObjects.push(offsetText);
                 newTextIndices.push(this.textManager.textObjects.length - 1);
@@ -1563,7 +1656,8 @@ class SelectionManager {
             size: stroke.size,
             penType: stroke.penType,
             tool: stroke.tool,
-            rotation: stroke.rotation || 0
+            rotation: stroke.rotation || 0,
+            layerOrder: stroke.layerOrder || 0
         };
     }
 
@@ -1576,7 +1670,8 @@ class SelectionManager {
             height: img.height,
             rotation: img.rotation || 0,
             flipHorizontal: img.flipHorizontal || false,
-            flipVertical: img.flipVertical || false
+            flipVertical: img.flipVertical || false,
+            layerOrder: img.layerOrder || 0
         };
     }
 
@@ -1626,7 +1721,7 @@ class SelectionManager {
             return true;
         }
         
-        if (this.selectedIndex === null) return false;
+        if (this.selectionType !== 'background' && this.selectedIndex === null) return false;
         
         if (this.selectionType === 'stroke') {
             const result = this.drawingEngine.deleteSelectedStroke();
@@ -1652,6 +1747,13 @@ class SelectionManager {
                 this.saveHistory();
             }
             return result;
+        } else if (this.selectionType === 'background') {
+            if (!this.backgroundManager?.hasBackgroundImage?.()) return false;
+            this.backgroundManager.clearBackgroundImage();
+            window.drawingBoard?.updateBackgroundUI?.();
+            this.clearSelection();
+            this.saveHistory();
+            return true;
         }
         
         return false;
@@ -1717,6 +1819,13 @@ class SelectionManager {
             const img = this.drawingEngine.stampedImages[this.selectedIndex];
             if (!img) return;
             img.rotation = this.normalizeAngle((img.rotation || 0) + 90);
+        } else if (this.selectionType === 'background') {
+            const transform = this.backgroundManager?.getBackgroundImageTransform?.();
+            if (!transform) return;
+            this.backgroundManager.updateImageTransform({
+                ...transform,
+                rotation: this.normalizeAngle((transform.rotation || 0) + 90)
+            });
         } else if (this.selectionType === 'multi') {
             const bounds = this.getMultiBounds();
             if (!bounds) return;
@@ -1791,6 +1900,13 @@ class SelectionManager {
             const img = this.drawingEngine.stampedImages[this.selectedIndex];
             if (!img) return;
             img.flipHorizontal = !(img.flipHorizontal || false);
+        } else if (this.selectionType === 'background') {
+            const transform = this.backgroundManager?.getBackgroundImageTransform?.();
+            if (!transform) return;
+            this.backgroundManager.updateImageTransform({
+                ...transform,
+                flipHorizontal: !transform.flipHorizontal
+            });
         } else if (this.selectionType === 'multi') {
             const bounds = this.getMultiBounds();
             if (!bounds) return;
@@ -1845,6 +1961,13 @@ class SelectionManager {
             const img = this.drawingEngine.stampedImages[this.selectedIndex];
             if (!img) return;
             img.flipVertical = !(img.flipVertical || false);
+        } else if (this.selectionType === 'background') {
+            const transform = this.backgroundManager?.getBackgroundImageTransform?.();
+            if (!transform) return;
+            this.backgroundManager.updateImageTransform({
+                ...transform,
+                flipVertical: !transform.flipVertical
+            });
         } else if (this.selectionType === 'multi') {
             const bounds = this.getMultiBounds();
             if (!bounds) return;
@@ -1919,7 +2042,9 @@ class SelectionManager {
     }
     
     hasSelection() {
-        return this.selectedIndex !== null || (this.selectionType === 'multi' && (this.selectedStrokes.length > 0 || this.selectedImages.length > 0 || this.selectedTexts.length > 0));
+        return this.selectionType === 'background' ||
+            this.selectedIndex !== null ||
+            (this.selectionType === 'multi' && (this.selectedStrokes.length > 0 || this.selectedImages.length > 0 || this.selectedTexts.length > 0));
     }
     
     clearSelection() {
@@ -1971,19 +2096,7 @@ class SelectionManager {
             (this.textManager && this.textManager.textObjects && this.textManager.textObjects.length > 0);
         
         if (hasVectorContent) {
-            // Redraw from vector data
-            // Redraw stamped images (preserves inserted images during selection operations)
-            this.drawingEngine.redrawStampedImages();
-            
-            // Redraw all strokes
-            for (const stroke of this.drawingEngine.strokes) {
-                this.drawingEngine.redrawStroke(stroke);
-            }
-            
-            // Redraw all text objects
-            if (this.textManager) {
-                this.textManager.drawAllTextObjects();
-            }
+            this.drawingEngine.renderScene(this.textManager);
         } else {
             // No vector content: restore base canvas from history to preserve
             // pixel content (e.g. after session restore where vector data is not available)
@@ -2091,12 +2204,17 @@ class SelectionManager {
         this.boxSelectStart = null;
         this.boxSelectEnd = null;
         
-        this.applyFoundSelection(foundStrokes, foundImages, foundTexts);
+        const backgroundBounds = this.backgroundManager?.getBackgroundImageVisualBounds?.();
+        const foundBackground = !!(this.backgroundManager?.hasBackgroundImage?.() &&
+            backgroundBounds &&
+            this.rectsIntersect(canvasSelRect, backgroundBounds));
+
+        this.applyFoundSelection(foundStrokes, foundImages, foundTexts, foundBackground);
     }
     
     // Apply selection from found strokes, images, and texts (shared by box and lasso selection)
-    applyFoundSelection(foundStrokes, foundImages, foundTexts = []) {
-        const totalFound = foundStrokes.length + foundImages.length + foundTexts.length;
+    applyFoundSelection(foundStrokes, foundImages, foundTexts = [], foundBackground = false) {
+        const totalFound = foundStrokes.length + foundImages.length + foundTexts.length + (foundBackground ? 1 : 0);
         
         if (totalFound === 0) {
             return;
@@ -2106,6 +2224,8 @@ class SelectionManager {
             this.selectImage(foundImages[0]);
         } else if (totalFound === 1 && foundTexts.length === 1) {
             this.selectText(foundTexts[0]);
+        } else if (totalFound === 1 && foundBackground) {
+            this.selectBackgroundImage();
         } else {
             // Multi-select: include strokes, images, and texts
             this.selectedStrokes = foundStrokes;
@@ -2398,7 +2518,12 @@ class SelectionManager {
             }
         }
         
-        this.applyFoundSelection(foundStrokes, foundImages, foundTexts);
+        const backgroundBounds = this.backgroundManager?.getBackgroundImageVisualBounds?.();
+        const foundBackground = !!(this.backgroundManager?.hasBackgroundImage?.() &&
+            backgroundBounds &&
+            this.polygonIntersectsRect(canvasLassoPoints, backgroundBounds));
+
+        this.applyFoundSelection(foundStrokes, foundImages, foundTexts, foundBackground);
     }
     
     // Ray-casting point-in-polygon algorithm

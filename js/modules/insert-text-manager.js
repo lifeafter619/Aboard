@@ -895,6 +895,9 @@ class InsertTextManager {
             decorationWidth: this.textConfig.decorationWidth || this.DEFAULT_DECORATION_WIDTH,
             rotation: this.textRotation,
             scale: 1,
+            layerOrder: this.editingTextIndex !== null && this.textObjects[this.editingTextIndex]
+                ? (this.textObjects[this.editingTextIndex].layerOrder ?? this.drawingEngine?.getNextLayerOrder?.())
+                : (this.drawingEngine?.getNextLayerOrder?.() ?? Date.now()),
             width: maxWidth + 8, // Include padding
             height: lines.length * baseLineHeight + 8
         };
@@ -1104,7 +1107,8 @@ class InsertTextManager {
         const copy = {
             ...textObj,
             x: textObj.x + 20,
-            y: textObj.y + 20
+            y: textObj.y + 20,
+            layerOrder: this.drawingEngine?.getNextLayerOrder?.() ?? Date.now()
         };
         this.textObjects.push(copy);
         this.selectedTextIndex = this.textObjects.length - 1;
@@ -1193,6 +1197,9 @@ class InsertTextManager {
     setTextObjects(objects) {
         this.textObjects = objects || [];
         this.textObjects.forEach(textObj => this.normalizeTextObjectScale(textObj));
+        if (this.drawingEngine?.syncLayerCounter) {
+            this.drawingEngine.syncLayerCounter(this.textObjects);
+        }
     }
     
     // Clear all text objects
@@ -1206,13 +1213,9 @@ class InsertTextManager {
         // Clear and redraw canvas contents
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Redraw stamped images
-        if (this.drawingEngine) {
-            this.drawingEngine.redrawStampedImages();
-            // Redraw all strokes
-            for (const stroke of this.drawingEngine.strokes) {
-                this.drawingEngine.redrawStroke(stroke);
-            }
+        if (this.drawingEngine?.renderScene) {
+            this.drawingEngine.renderScene(this);
+            return;
         }
         
         // Redraw all text objects

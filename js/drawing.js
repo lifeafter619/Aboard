@@ -58,6 +58,7 @@ class DrawingEngine {
         // Stamped images storage (for redraw support)
         this.stampedImages = [];
         this.selectedImageIndex = null;
+        this.layerCounter = 1;
         
         // Canvas scaling and panning
         this.canvasScale = parseFloat(localStorage.getItem('canvasScale')) || 1.0;
@@ -668,7 +669,8 @@ class DrawingEngine {
                     size: this.penSize,
                     penType: this.penType,
                     tool: this.currentTool,
-                    rotation: 0 // Initialize rotation property
+                    rotation: 0, // Initialize rotation property
+                    layerOrder: this.getNextLayerOrder()
                 });
             }
             
@@ -923,7 +925,8 @@ class DrawingEngine {
             size: stroke.size,
             penType: stroke.penType,
             tool: stroke.tool,
-            rotation: stroke.rotation || 0
+            rotation: stroke.rotation || 0,
+            layerOrder: this.getNextLayerOrder()
         };
         
         this.strokes.push(copiedStroke);
@@ -1008,32 +1011,123 @@ class DrawingEngine {
     
     // Stamped image management
     addStampedImage(imageData) {
+        if (!imageData) return;
+        if (!Number.isFinite(imageData.layerOrder)) {
+            imageData.layerOrder = this.getNextLayerOrder();
+        } else {
+            this.layerCounter = Math.max(this.layerCounter, imageData.layerOrder + 1);
+        }
         this.stampedImages.push(imageData);
+    }
+
+    getNextLayerOrder() {
+        return this.layerCounter++;
+    }
+
+    syncLayerCounter(textObjects = []) {
+        let maxLayerOrder = 0;
+        [this.strokes, this.stampedImages, textObjects || []].forEach(collection => {
+            collection.forEach(item => {
+                if (Number.isFinite(item?.layerOrder)) {
+                    maxLayerOrder = Math.max(maxLayerOrder, item.layerOrder);
+                }
+            });
+        });
+        this.layerCounter = Math.max(this.layerCounter, maxLayerOrder + 1, 1);
+    }
+
+    ensureLayerOrder(item) {
+        if (!item) return 0;
+        if (!Number.isFinite(item.layerOrder)) {
+            item.layerOrder = this.getNextLayerOrder();
+        } else {
+            this.layerCounter = Math.max(this.layerCounter, item.layerOrder + 1);
+        }
+        return item.layerOrder;
+    }
+
+    getRenderableObjects(textObjects = []) {
+        const renderables = [];
+        let fallbackOrder = 0;
+
+        this.strokes.forEach((stroke, index) => {
+            renderables.push({
+                type: 'stroke',
+                index,
+                item: stroke,
+                layerOrder: this.ensureLayerOrder(stroke),
+                fallbackOrder: fallbackOrder++
+            });
+        });
+
+        this.stampedImages.forEach((image, index) => {
+            renderables.push({
+                type: 'image',
+                index,
+                item: image,
+                layerOrder: this.ensureLayerOrder(image),
+                fallbackOrder: fallbackOrder++
+            });
+        });
+
+        (textObjects || []).forEach((textObj, index) => {
+            renderables.push({
+                type: 'text',
+                index,
+                item: textObj,
+                layerOrder: this.ensureLayerOrder(textObj),
+                fallbackOrder: fallbackOrder++
+            });
+        });
+
+        return renderables.sort((a, b) => {
+            if (a.layerOrder === b.layerOrder) {
+                return a.fallbackOrder - b.fallbackOrder;
+            }
+            return a.layerOrder - b.layerOrder;
+        });
+    }
+
+    renderScene(textManager = null) {
+        const renderables = this.getRenderableObjects(textManager?.textObjects || []);
+        renderables.forEach(renderable => {
+            if (renderable.type === 'stroke') {
+                this.redrawStroke(renderable.item);
+            } else if (renderable.type === 'image') {
+                this.redrawSingleStampedImage(renderable.item);
+            } else if (renderable.type === 'text' && textManager?.drawTextObject) {
+                textManager.drawTextObject(renderable.item);
+            }
+        });
     }
     
     redrawStampedImages() {
         for (const img of this.stampedImages) {
-            if (!img.imageElement) continue;
-            
-            this.ctx.save();
-            const centerX = img.x + img.width / 2;
-            const centerY = img.y + img.height / 2;
-            this.ctx.translate(centerX, centerY);
-            this.ctx.rotate(img.rotation * Math.PI / 180);
-            
-            const flipScaleX = img.flipHorizontal ? -1 : 1;
-            const flipScaleY = img.flipVertical ? -1 : 1;
-            this.ctx.scale(flipScaleX, flipScaleY);
-            
-            this.ctx.drawImage(
-                img.imageElement,
-                -img.width / 2,
-                -img.height / 2,
-                img.width,
-                img.height
-            );
-            this.ctx.restore();
+            this.redrawSingleStampedImage(img);
         }
+    }
+
+    redrawSingleStampedImage(img) {
+        if (!img?.imageElement) return;
+
+        this.ctx.save();
+        const centerX = img.x + img.width / 2;
+        const centerY = img.y + img.height / 2;
+        this.ctx.translate(centerX, centerY);
+        this.ctx.rotate((img.rotation || 0) * Math.PI / 180);
+
+        const flipScaleX = img.flipHorizontal ? -1 : 1;
+        const flipScaleY = img.flipVertical ? -1 : 1;
+        this.ctx.scale(flipScaleX, flipScaleY);
+
+        this.ctx.drawImage(
+            img.imageElement,
+            -img.width / 2,
+            -img.height / 2,
+            img.width,
+            img.height
+        );
+        this.ctx.restore();
     }
     
     clearStampedImages() {
@@ -1085,7 +1179,8 @@ class DrawingEngine {
             height: img.height,
             rotation: img.rotation || 0,
             flipHorizontal: img.flipHorizontal || false,
-            flipVertical: img.flipVertical || false
+            flipVertical: img.flipVertical || false,
+            layerOrder: this.getNextLayerOrder()
         };
         this.stampedImages.push(copy);
         this.selectedImageIndex = this.stampedImages.length - 1;

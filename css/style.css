@@ -1871,6 +1871,7 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     cursor: move;
     box-shadow: 0 0 0 1px rgba(0, 122, 255, 0.1);
     transform-origin: center center;
+    touch-action: none;
 }
 
 #selection-controls-box.text-selection-only {

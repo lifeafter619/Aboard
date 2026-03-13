@@ -36,6 +36,19 @@ class BackgroundManager {
         const savedTransform = localStorage.getItem('imageTransform');
         if (savedTransform) {
             this.imageTransform = JSON.parse(savedTransform);
+            if (this.imageTransform.scale &&
+                this.imageTransform.scale !== 1 &&
+                this.imageTransform.width > 0 &&
+                this.imageTransform.height > 0) {
+                const factor = Math.abs(this.imageTransform.scale);
+                const newWidth = this.imageTransform.width * factor;
+                const newHeight = this.imageTransform.height * factor;
+                this.imageTransform.x -= (newWidth - this.imageTransform.width) / 2;
+                this.imageTransform.y -= (newHeight - this.imageTransform.height) / 2;
+                this.imageTransform.width = newWidth;
+                this.imageTransform.height = newHeight;
+                this.imageTransform.scale = 1;
+            }
         }
         
         // Load saved image if exists
@@ -65,6 +78,7 @@ class BackgroundManager {
             transformOrigin: null,
             gifSettingsDisplay: null
         };
+        this.backgroundUiStateCache = null;
     }
 
     setStyleIfChanged(element, property, value, cacheKey = property) {
@@ -72,6 +86,99 @@ class BackgroundManager {
         if (this.imageDomStateCache[cacheKey] === value) return;
         element.style[property] = value;
         this.imageDomStateCache[cacheKey] = value;
+    }
+
+    emitBackgroundUiState() {
+        const nextState = JSON.stringify({
+            hasImage: this.backgroundPattern === 'image' && !!this.backgroundImageData,
+            isGif: this.isGif(this.backgroundImageData),
+            isPaused: !!this.isImagePaused
+        });
+
+        if (this.backgroundUiStateCache === nextState) {
+            return;
+        }
+
+        this.backgroundUiStateCache = nextState;
+        const detail = JSON.parse(nextState);
+        window.dispatchEvent(new CustomEvent('backgroundMediaStateChanged', { detail }));
+    }
+
+    hasBackgroundImage() {
+        return this.backgroundPattern === 'image' &&
+            !!this.backgroundImageData &&
+            this.imageTransform.width > 0 &&
+            this.imageTransform.height > 0;
+    }
+
+    getBackgroundImageTransform() {
+        if (!this.hasBackgroundImage()) {
+            return null;
+        }
+
+        return {
+            x: this.imageTransform.x,
+            y: this.imageTransform.y,
+            width: this.imageTransform.width,
+            height: this.imageTransform.height,
+            rotation: this.imageTransform.rotation || 0,
+            flipHorizontal: !!this.imageTransform.flipHorizontal,
+            flipVertical: !!this.imageTransform.flipVertical,
+            scale: 1
+        };
+    }
+
+    getBackgroundImageCornerPoints() {
+        const transform = this.getBackgroundImageTransform();
+        if (!transform) return [];
+
+        const centerX = transform.x + transform.width / 2;
+        const centerY = transform.y + transform.height / 2;
+        const rotationRad = (transform.rotation || 0) * Math.PI / 180;
+        const cos = Math.cos(rotationRad);
+        const sin = Math.sin(rotationRad);
+        const halfWidth = transform.width / 2;
+        const halfHeight = transform.height / 2;
+
+        return [
+            { x: -halfWidth, y: -halfHeight },
+            { x: halfWidth, y: -halfHeight },
+            { x: halfWidth, y: halfHeight },
+            { x: -halfWidth, y: halfHeight }
+        ].map(point => ({
+            x: centerX + point.x * cos - point.y * sin,
+            y: centerY + point.x * sin + point.y * cos
+        }));
+    }
+
+    getBackgroundImageVisualBounds() {
+        const corners = this.getBackgroundImageCornerPoints();
+        if (corners.length === 0) return null;
+
+        const xs = corners.map(point => point.x);
+        const ys = corners.map(point => point.y);
+
+        return {
+            x: Math.min(...xs),
+            y: Math.min(...ys),
+            width: Math.max(...xs) - Math.min(...xs),
+            height: Math.max(...ys) - Math.min(...ys)
+        };
+    }
+
+    isPointInBackgroundImage(x, y) {
+        const transform = this.getBackgroundImageTransform();
+        if (!transform) return false;
+
+        const centerX = transform.x + transform.width / 2;
+        const centerY = transform.y + transform.height / 2;
+        const relX = x - centerX;
+        const relY = y - centerY;
+        const rotationRad = -(transform.rotation || 0) * Math.PI / 180;
+        const localX = relX * Math.cos(rotationRad) - relY * Math.sin(rotationRad);
+        const localY = relX * Math.sin(rotationRad) + relY * Math.cos(rotationRad);
+
+        return Math.abs(localX) <= transform.width / 2 && Math.abs(localY) <= transform.height / 2;
     }
     
     drawBackground() {
@@ -233,8 +340,8 @@ class BackgroundManager {
                 this.setStyleIfChanged(containerElement, 'height', `${this.imageTransform.height}px`);
 
                 // Build transform string including flip
-                const scaleX = this.imageTransform.flipHorizontal ? -this.imageTransform.scale : this.imageTransform.scale;
-                const scaleY = this.imageTransform.flipVertical ? -this.imageTransform.scale : this.imageTransform.scale;
+                const scaleX = this.imageTransform.flipHorizontal ? -1 : 1;
+                const scaleY = this.imageTransform.flipVertical ? -1 : 1;
 
                 this.setStyleIfChanged(containerElement, 'transformOrigin', 'center center');
                 this.setStyleIfChanged(containerElement, 'transform', `rotate(${this.imageTransform.rotation}deg) scale(${scaleX}, ${scaleY})`);
@@ -261,7 +368,13 @@ class BackgroundManager {
             if (containerElement) {
                 this.setStyleIfChanged(containerElement, 'display', 'none');
             }
+            const gifSettingsBtn = document.getElementById('bg-gif-settings-btn');
+            if (gifSettingsBtn) {
+                this.setStyleIfChanged(gifSettingsBtn, 'display', 'none', 'gifSettingsDisplay');
+            }
         }
+
+        this.emitBackgroundUiState();
     }
 
     isGif(dataUrl) {
@@ -315,6 +428,7 @@ class BackgroundManager {
                     canvas.style.width = '100%';
                     canvas.style.height = '100%';
                 }
+                this.emitBackgroundUiState();
             });
         } catch(e) {
             console.error("Failed to init SuperGif", e);
@@ -329,6 +443,7 @@ class BackgroundManager {
                 this.isImagePaused = true;
                 // Dispatch event for UI update
                 window.dispatchEvent(new CustomEvent('backgroundGifPaused'));
+                this.emitBackgroundUiState();
             }
         }
     }
@@ -567,6 +682,7 @@ class BackgroundManager {
         this.backgroundPattern = pattern;
         localStorage.setItem('backgroundPattern', this.backgroundPattern);
         this.drawBackground();
+        this.emitBackgroundUiState();
     }
     
     setOpacity(opacity) {
@@ -591,7 +707,10 @@ class BackgroundManager {
         this.backgroundImageData = imageData;
         this.isImagePaused = false;
         this.imageStaticData = null;
+        this.currentGifLoop = 0;
         localStorage.setItem('backgroundImageData', imageData);
+        const preserveTransform = this.imageTransform.width > 0 && this.imageTransform.height > 0;
+        const existingTransform = preserveTransform ? { ...this.imageTransform } : null;
         
         return new Promise((resolve) => {
             // Create an Image object to get dimensions for ImageControls
@@ -599,18 +718,30 @@ class BackgroundManager {
             img.onload = () => {
                 this.backgroundImage = img;
 
-                // If this is a new image, reset transform to center it
-                this.imageTransform = {
-                    x: 0,
-                    y: 0,
-                    width: 0, // Resetting width/height forces ImageControls to recalculate
-                    height: 0,
-                    rotation: 0,
-                    scale: 1.0
-                };
+                if (existingTransform) {
+                    this.imageTransform = {
+                        ...existingTransform,
+                        scale: 1,
+                        flipHorizontal: !!existingTransform.flipHorizontal,
+                        flipVertical: !!existingTransform.flipVertical
+                    };
+                } else {
+                    // If this is a new image, reset transform to center it
+                    this.imageTransform = {
+                        x: 0,
+                        y: 0,
+                        width: 0, // Resetting width/height forces ImageControls to recalculate
+                        height: 0,
+                        rotation: 0,
+                        scale: 1.0,
+                        flipHorizontal: false,
+                        flipVertical: false
+                    };
+                }
 
                 this.backgroundPattern = 'image';
                 this.drawBackground();
+                this.emitBackgroundUiState();
                 resolve();
             };
             img.src = imageData;
@@ -618,7 +749,10 @@ class BackgroundManager {
     }
 
     toggleImagePlayback() {
-        if (!this.backgroundPattern === 'image' || !this.backgroundImageData) return;
+        if (this.backgroundPattern !== 'image' || !this.backgroundImageData || !this.isGif(this.backgroundImageData)) {
+            this.emitBackgroundUiState();
+            return false;
+        }
 
         this.isImagePaused = !this.isImagePaused;
 
@@ -628,13 +762,16 @@ class BackgroundManager {
             } else {
                 if (this.gifLoopCount > 0 && this.currentGifLoop >= this.gifLoopCount) {
                     this.currentGifLoop = 0;
+                    if (typeof this.gifInstance.move_to === 'function') {
+                        this.gifInstance.move_to(0);
+                    }
                 }
                 this.gifInstance.play();
             }
-        } else {
-            // Fallback for non-GIFs
-            this.updateBackgroundImageElement();
         }
+
+        this.emitBackgroundUiState();
+        return true;
     }
 
     captureStaticFrame() {
@@ -642,11 +779,19 @@ class BackgroundManager {
     }
     
     setImageSize(size) {
+        const previousSize = this.imageSize || 1;
         this.imageSize = size;
         localStorage.setItem('imageSize', size);
-        // If transform exists, update the scale in transform as well
+        // If transform exists, scale width/height directly so the visual image and control box stay aligned
         if (this.imageTransform.width > 0 && this.imageTransform.height > 0) {
-            this.imageTransform.scale = size;
+            const factor = previousSize > 0 ? (size / previousSize) : size;
+            const newWidth = Math.max(1, this.imageTransform.width * factor);
+            const newHeight = Math.max(1, this.imageTransform.height * factor);
+            this.imageTransform.x -= (newWidth - this.imageTransform.width) / 2;
+            this.imageTransform.y -= (newHeight - this.imageTransform.height) / 2;
+            this.imageTransform.width = newWidth;
+            this.imageTransform.height = newHeight;
+            this.imageTransform.scale = 1;
             localStorage.setItem('imageTransform', JSON.stringify(this.imageTransform));
         }
         if (this.backgroundPattern === 'image') {
@@ -655,11 +800,47 @@ class BackgroundManager {
     }
     
     updateImageTransform(transform) {
-        this.imageTransform = transform;
-        localStorage.setItem('imageTransform', JSON.stringify(transform));
+        this.imageTransform = {
+            ...transform,
+            scale: 1,
+            flipHorizontal: !!transform.flipHorizontal,
+            flipVertical: !!transform.flipVertical
+        };
+        localStorage.setItem('imageTransform', JSON.stringify(this.imageTransform));
         if (this.backgroundPattern === 'image') {
             this.drawBackground();
         }
+    }
+
+    clearBackgroundImage() {
+        this.backgroundImage = null;
+        this.backgroundImageData = null;
+        this.isImagePaused = false;
+        this.imageStaticData = null;
+        this.currentGifLoop = 0;
+        this.gifInstance = null;
+        this.imageTransform = {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            rotation: 0,
+            scale: 1,
+            flipHorizontal: false,
+            flipVertical: false
+        };
+
+        localStorage.removeItem('backgroundImageData');
+        localStorage.removeItem('imageTransform');
+        localStorage.removeItem('backgroundImageConfirmed');
+
+        if (this.backgroundPattern === 'image') {
+            this.backgroundPattern = 'blank';
+            localStorage.setItem('backgroundPattern', this.backgroundPattern);
+        }
+
+        this.drawBackground();
+        this.emitBackgroundUiState();
     }
     
     getImageData() {
