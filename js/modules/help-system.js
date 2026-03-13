@@ -21,23 +21,12 @@ class HelpSystem {
             'line-style-modal': 'help.tools.lineStyle'
         };
 
-        this.featureHelpMap = {
-            'more-shape-btn': 'help.features.shape',
-            'more-teaching-tools-btn': 'help.features.teachingTools',
-            'time-display-feature-btn': 'help.features.timeDisplay',
-            'timer-feature-btn': 'help.features.timer',
-            'random-picker-feature-btn': 'help.features.randomPicker',
-            'scoreboard-feature-btn': 'help.features.scoreboard',
-            'insert-image-feature-btn': 'help.features.insertImage',
-            'insert-text-feature-btn': 'help.features.insertText'
-        };
     }
 
     init() {
         // Inject help buttons into config panels
         this.injectHelpButtons();
         this.injectIntoSpecialPanels();
-        this.injectFeatureHelpButtons();
         this.bindDataHelpButtons();
         this.refreshHelpButtonLabels();
 
@@ -47,7 +36,6 @@ class HelpSystem {
         window.addEventListener('localeChanged', () => {
             this.injectHelpButtons();
             this.injectIntoSpecialPanels();
-            this.injectFeatureHelpButtons();
             this.checkExistingModals();
             this.bindDataHelpButtons();
             this.refreshHelpButtonLabels();
@@ -77,31 +65,6 @@ class HelpSystem {
         if (timeDisplayArea) {
             this.injectIntoPanel(timeDisplayArea);
         }
-    }
-
-    injectFeatureHelpButtons() {
-        Object.entries(this.featureHelpMap).forEach(([id, helpKey]) => {
-            const featureBtn = document.getElementById(id);
-            if (!featureBtn || featureBtn.querySelector('.feature-help-btn')) {
-                return;
-            }
-
-            const helpBtn = document.createElement('span');
-            helpBtn.className = 'feature-help-btn';
-            helpBtn.dataset.helpKey = helpKey;
-            helpBtn.setAttribute('role', 'button');
-            helpBtn.tabIndex = 0;
-            helpBtn.setAttribute('data-i18n-title', 'common.help');
-            helpBtn.setAttribute('aria-label', window.i18n?.t('common.help') || 'Help');
-            helpBtn.innerHTML = `
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
-                    <line x1="12" y1="17" x2="12" y2="17"></line>
-                </svg>
-            `;
-            featureBtn.appendChild(helpBtn);
-        });
     }
 
     bindDataHelpButtons() {
@@ -314,7 +277,7 @@ class HelpSystem {
     refreshHelpButtonLabels() {
         const helpLabel = window.i18n?.t('common.help') || 'Help';
         const helpButtons = document.querySelectorAll(
-            '.help-btn, .feature-help-btn, .random-picker-help-btn, .scoreboard-help-btn, .timer-help-btn, .image-help-btn'
+            '.help-btn, .random-picker-help-btn, .scoreboard-help-btn, .timer-help-btn, .image-help-btn'
         );
 
         helpButtons.forEach((btn) => {
