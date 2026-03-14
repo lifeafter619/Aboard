@@ -898,6 +898,12 @@ class InsertTextManager {
             layerOrder: this.editingTextIndex !== null && this.textObjects[this.editingTextIndex]
                 ? (this.textObjects[this.editingTextIndex].layerOrder ?? this.drawingEngine?.getNextLayerOrder?.())
                 : (this.drawingEngine?.getNextLayerOrder?.() ?? Date.now()),
+            objectId: this.editingTextIndex !== null && this.textObjects[this.editingTextIndex]
+                ? (this.textObjects[this.editingTextIndex].objectId ?? this.drawingEngine?.getNextObjectId?.())
+                : (this.drawingEngine?.getNextObjectId?.() ?? `obj-${Date.now()}`),
+            groupId: this.editingTextIndex !== null && this.textObjects[this.editingTextIndex]
+                ? (this.textObjects[this.editingTextIndex].groupId ?? null)
+                : null,
             width: maxWidth + 8, // Include padding
             height: lines.length * baseLineHeight + 8
         };
@@ -1090,12 +1096,15 @@ class InsertTextManager {
         });
         this.ctx.restore();
         
-        return {
+        const bounds = {
             x: textObj.x,
             y: textObj.y,
             width: maxWidth + padding * 2,
             height: lines.length * lineHeight + padding * 2
         };
+        textObj.width = bounds.width;
+        textObj.height = bounds.height;
+        return bounds;
     }
     
     // Copy selected text object
@@ -1108,7 +1117,9 @@ class InsertTextManager {
             ...textObj,
             x: textObj.x + 20,
             y: textObj.y + 20,
-            layerOrder: this.drawingEngine?.getNextLayerOrder?.() ?? Date.now()
+            layerOrder: this.drawingEngine?.getNextLayerOrder?.() ?? Date.now(),
+            objectId: this.drawingEngine?.getNextObjectId?.() ?? `obj-${Date.now()}`,
+            groupId: null
         };
         this.textObjects.push(copy);
         this.selectedTextIndex = this.textObjects.length - 1;
@@ -1196,7 +1207,15 @@ class InsertTextManager {
     // Set text objects (for deserialization)
     setTextObjects(objects) {
         this.textObjects = objects || [];
-        this.textObjects.forEach(textObj => this.normalizeTextObjectScale(textObj));
+        this.textObjects.forEach(textObj => {
+            this.normalizeTextObjectScale(textObj);
+            if (this.drawingEngine?.ensureObjectId) {
+                this.drawingEngine.ensureObjectId(textObj);
+            }
+            if (typeof textObj.groupId === 'undefined') {
+                textObj.groupId = null;
+            }
+        });
         if (this.drawingEngine?.syncLayerCounter) {
             this.drawingEngine.syncLayerCounter(this.textObjects);
         }

@@ -175,7 +175,9 @@ window.translations = {
         layerFront: '맨 앞으로',
         layerBack: '맨 뒤로',
         layerUp: '앞으로 한 단계',
-        layerDown: '뒤로 한 단계'
+        layerDown: '뒤로 한 단계',
+        group: '그룹',
+        ungroup: '그룹 해제'
     },
 
     // Line Style Modal
@@ -247,7 +249,9 @@ window.translations = {
         layerFront: '맨 앞으로',
         layerBack: '맨 뒤로',
         layerUp: '앞으로 한 단계',
-        layerDown: '뒤로 한 단계'
+        layerDown: '뒤로 한 단계',
+        group: '그룹',
+        ungroup: '그룹 해제'
     },
 
     // Page Navigation

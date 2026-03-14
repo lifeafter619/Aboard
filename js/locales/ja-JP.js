@@ -175,7 +175,9 @@ window.translations = {
         layerFront: '最前面へ',
         layerBack: '最背面へ',
         layerUp: '前面へ',
-        layerDown: '背面へ'
+        layerDown: '背面へ',
+        group: 'グループ化',
+        ungroup: 'グループ解除'
     },
 
     // Line Style Modal
@@ -247,7 +249,9 @@ window.translations = {
         layerFront: '最前面へ',
         layerBack: '最背面へ',
         layerUp: '前面へ',
-        layerDown: '背面へ'
+        layerDown: '背面へ',
+        group: 'グループ化',
+        ungroup: 'グループ解除'
     },
 
     // Page Navigation

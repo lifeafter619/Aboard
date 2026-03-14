@@ -18,8 +18,9 @@ class SelectionManager {
         this.selectedStrokes = [];
         
         // Current selection type and index
-        this.selectionType = null; // 'stroke', 'text', 'image', or 'multi'
+        this.selectionType = null; // 'stroke', 'text', 'image', 'group', or 'multi'
         this.selectedIndex = null;
+        this.selectedGroupId = null;
         
         // Dragging state
         this.isDragging = false;
@@ -89,6 +90,181 @@ class SelectionManager {
     setBackgroundManager(backgroundManager) {
         this.backgroundManager = backgroundManager;
     }
+
+    isCompoundSelection() {
+        return this.selectionType === 'multi' || this.selectionType === 'group';
+    }
+
+    getSelectedGroup() {
+        return this.selectedGroupId
+            ? this.drawingEngine.getGroupById(this.selectedGroupId)
+            : null;
+    }
+
+    getSelectedObjectIds() {
+        const ids = [];
+        this.selectedStrokes.forEach(idx => {
+            const stroke = this.drawingEngine.strokes[idx];
+            if (stroke?.objectId) ids.push(stroke.objectId);
+        });
+        this.selectedImages.forEach(idx => {
+            const img = this.drawingEngine.stampedImages[idx];
+            if (img?.objectId) ids.push(img.objectId);
+        });
+        if (this.textManager) {
+            this.selectedTexts.forEach(idx => {
+                const textObj = this.textManager.textObjects[idx];
+                if (textObj?.objectId) ids.push(textObj.objectId);
+            });
+        }
+        return ids;
+    }
+
+    selectionContainsGroupedObjects() {
+        return this.getSelectedObjectIds().some(objectId => {
+            const ref = this.drawingEngine.getObjectRefById(objectId, this.textManager?.textObjects || []);
+            return !!ref?.item?.groupId;
+        });
+    }
+
+    refreshSelectedGroupMembers() {
+        if (this.selectionType !== 'group' || !this.selectedGroupId) return;
+        const members = this.drawingEngine.getGroupMembers(this.selectedGroupId, this.textManager?.textObjects || []);
+        this.selectedStrokes = members.filter(member => member.type === 'stroke').map(member => member.index);
+        this.selectedImages = members.filter(member => member.type === 'image').map(member => member.index);
+        this.selectedTexts = members.filter(member => member.type === 'text').map(member => member.index);
+    }
+
+    selectGroup(groupId) {
+        const group = this.drawingEngine.getGroupById(groupId);
+        if (!group) return false;
+        this.drawingEngine.deselectStroke();
+        this.drawingEngine.deselectImage();
+        if (this.textManager) {
+            this.textManager.selectedTextIndex = null;
+        }
+        this.selectionType = 'group';
+        this.selectedGroupId = groupId;
+        this.selectedIndex = null;
+        this.multiRotation = 0;
+        this.refreshSelectedGroupMembers();
+        this.showControls();
+        this.redrawWithSelection();
+        return true;
+    }
+
+    selectObjectById(objectId) {
+        const ref = this.drawingEngine.getObjectRefById(objectId, this.textManager?.textObjects || []);
+        if (!ref) return false;
+        if (ref.item?.groupId) {
+            return this.selectGroup(ref.item.groupId);
+        }
+        if (ref.type === 'stroke') {
+            this.selectStroke(ref.index);
+            return true;
+        }
+        if (ref.type === 'image') {
+            this.selectImage(ref.index);
+            return true;
+        }
+        if (ref.type === 'text') {
+            this.selectText(ref.index);
+            return true;
+        }
+        return false;
+    }
+
+    hitImageAtPoint(img, x, y) {
+        if (!img) return false;
+        const cx = img.x + img.width / 2;
+        const cy = img.y + img.height / 2;
+        const rot = -(img.rotation || 0) * Math.PI / 180;
+        const dx = x - cx;
+        const dy = y - cy;
+        const localX = dx * Math.cos(rot) - dy * Math.sin(rot) + cx;
+        const localY = dx * Math.sin(rot) + dy * Math.cos(rot) + cy;
+        return localX >= img.x && localX <= img.x + img.width &&
+            localY >= img.y && localY <= img.y + img.height;
+    }
+
+    hitTextAtPoint(textObj, index, x, y) {
+        const bounds = this.getTextObjectSelectionBounds(index);
+        return !!bounds &&
+            x >= bounds.x && x <= bounds.x + bounds.width &&
+            y >= bounds.y && y <= bounds.y + bounds.height;
+    }
+
+    getTopRenderableAtPoint(x, y) {
+        const renderables = this.drawingEngine.getRenderableObjects(this.textManager?.textObjects || []);
+        for (let i = renderables.length - 1; i >= 0; i--) {
+            const renderable = renderables[i];
+            if (renderable.type === 'group') {
+                const members = [...(renderable.members || [])].sort((a, b) => {
+                    if (a.layerOrder === b.layerOrder) {
+                        return a.fallbackOrder - b.fallbackOrder;
+                    }
+                    return a.layerOrder - b.layerOrder;
+                });
+                for (let j = members.length - 1; j >= 0; j--) {
+                    const member = members[j];
+                    if (member.type === 'stroke' && this.drawingEngine.isPointNearStroke(x, y, member.item, this.drawingEngine.SELECTION_THRESHOLD)) {
+                        return { type: 'group', groupId: renderable.groupId };
+                    }
+                    if (member.type === 'image' && this.hitImageAtPoint(member.item, x, y)) {
+                        return { type: 'group', groupId: renderable.groupId };
+                    }
+                    if (member.type === 'text' && this.hitTextAtPoint(member.item, member.index, x, y)) {
+                        return { type: 'group', groupId: renderable.groupId };
+                    }
+                }
+            } else if (renderable.type === 'stroke' && this.drawingEngine.isPointNearStroke(x, y, renderable.item, this.drawingEngine.SELECTION_THRESHOLD)) {
+                return { type: 'stroke', index: renderable.index };
+            } else if (renderable.type === 'image' && this.hitImageAtPoint(renderable.item, x, y)) {
+                return { type: 'image', index: renderable.index };
+            } else if (renderable.type === 'text' && this.hitTextAtPoint(renderable.item, renderable.index, x, y)) {
+                return { type: 'text', index: renderable.index };
+            }
+        }
+        return null;
+    }
+
+    expandGroupedSelection(foundStrokes, foundImages, foundTexts) {
+        const strokeSet = new Set(foundStrokes || []);
+        const imageSet = new Set(foundImages || []);
+        const textSet = new Set(foundTexts || []);
+        const groupIds = new Set();
+
+        strokeSet.forEach(index => {
+            const stroke = this.drawingEngine.strokes[index];
+            if (stroke?.groupId) groupIds.add(stroke.groupId);
+        });
+        imageSet.forEach(index => {
+            const img = this.drawingEngine.stampedImages[index];
+            if (img?.groupId) groupIds.add(img.groupId);
+        });
+        if (this.textManager) {
+            textSet.forEach(index => {
+                const textObj = this.textManager.textObjects[index];
+                if (textObj?.groupId) groupIds.add(textObj.groupId);
+            });
+        }
+
+        groupIds.forEach(groupId => {
+            const members = this.drawingEngine.getGroupMembers(groupId, this.textManager?.textObjects || []);
+            members.forEach(member => {
+                if (member.type === 'stroke') strokeSet.add(member.index);
+                if (member.type === 'image') imageSet.add(member.index);
+                if (member.type === 'text') textSet.add(member.index);
+            });
+        });
+
+        return {
+            strokes: [...strokeSet],
+            images: [...imageSet],
+            texts: [...textSet],
+            groupIds: [...groupIds]
+        };
+    }
     
     createSelectionControls() {
         // Create selection controls overlay similar to stroke-controls
@@ -157,6 +333,22 @@ class SelectionManager {
                                 <button class="selection-layer-item" data-layer-action="move-backward" data-i18n="selection.layerDown">Move Backward</button>
                             </div>
                         </div>
+                        <button id="selection-group-btn" class="image-control-btn" data-i18n-title="selection.group" title="Group" style="display:none;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                                <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                                <rect x="8.5" y="14" width="7" height="7" rx="1"></rect>
+                                <path d="M10 7h4M7 10v4M17 10v4M10 17h4"></path>
+                            </svg>
+                        </button>
+                        <button id="selection-ungroup-btn" class="image-control-btn" data-i18n-title="selection.ungroup" title="Ungroup" style="display:none;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                                <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                                <rect x="8.5" y="14" width="7" height="7" rx="1"></rect>
+                                <path d="M10 7h4M7 10v4M17 10v4"></path>
+                            </svg>
+                        </button>
                         <button id="selection-delete-btn" class="image-control-btn image-cancel-btn" data-i18n-title="selection.delete" title="Delete">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="3 6 5 6 21 6"></polyline>
@@ -343,13 +535,15 @@ class SelectionManager {
         const deleteBtn = document.getElementById('selection-delete-btn');
         const doneBtn = document.getElementById('selection-done-btn');
         const editBtn = document.getElementById('selection-edit-btn');
+        const groupBtn = document.getElementById('selection-group-btn');
+        const ungroupBtn = document.getElementById('selection-ungroup-btn');
         const rotate90Handle = document.getElementById('selection-rotate90-handle');
         const flipHHandle = document.getElementById('selection-flip-h-handle');
         const layerBtn = document.getElementById('selection-layer-btn');
         const layerMenu = document.getElementById('selection-layer-menu');
         
         // Add mousedown/pointerdown handlers to prevent events from propagating to document
-        [copyBtn, deleteBtn, doneBtn, editBtn, rotate90Handle, flipHHandle, layerBtn].forEach(btn => {
+        [copyBtn, deleteBtn, doneBtn, editBtn, groupBtn, ungroupBtn, rotate90Handle, flipHHandle, layerBtn].forEach(btn => {
             if (!btn) return;
             btn.addEventListener('mousedown', (e) => {
                 e.stopPropagation();
@@ -384,6 +578,22 @@ class SelectionManager {
                 e.stopPropagation();
                 e.preventDefault();
                 this.editSelectedText();
+            });
+        }
+
+        if (groupBtn) {
+            groupBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.groupSelection();
+            });
+        }
+
+        if (ungroupBtn) {
+            ungroupBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.ungroupSelection();
             });
         }
         
@@ -455,9 +665,10 @@ class SelectionManager {
 
     updateLayerMenuVisibility() {
         if (!this.layerButton) return;
-        const shouldShowLayerButton = this.selectionType &&
-            this.selectionType !== 'multi' &&
-            this.selectionType !== 'background';
+        const shouldShowLayerButton = !!this.selectionType &&
+            (this.selectionType === 'group' ||
+                (!this.isCompoundSelection() &&
+                    (this.selectionType !== 'background' || this.backgroundManager?.isBackgroundImageOutsideCanvas?.())));
         this.layerButton.style.display = shouldShowLayerButton ? '' : 'none';
         if (!shouldShowLayerButton) {
             this.hideLayerMenu();
@@ -465,12 +676,25 @@ class SelectionManager {
     }
 
     applyLayerAction(action) {
-        if (!this.hasSelection() || this.selectionType === 'multi' || this.selectionType === 'background') return;
+        if (!this.hasSelection()) return;
+
+        if (this.selectionType === 'background') {
+            if (!this.backgroundManager?.isBackgroundImageOutsideCanvas?.()) return;
+            const changed = this.backgroundManager.applyOutsideLayerAction?.(action, this.drawingEngine, this.textManager?.textObjects || []);
+            this.hideLayerMenu();
+            this.updateControlBox();
+            if (changed) {
+                this.saveHistory();
+            }
+            return;
+        }
 
         const renderables = this.drawingEngine.getRenderableObjects(this.textManager?.textObjects || []);
-        const selectedRenderable = renderables.find(renderable =>
-            renderable.type === this.selectionType && renderable.index === this.selectedIndex
-        );
+        const selectedRenderable = this.selectionType === 'group'
+            ? renderables.find(renderable => renderable.type === 'group' && renderable.groupId === this.selectedGroupId)
+            : renderables.find(renderable =>
+                renderable.type === this.selectionType && renderable.index === this.selectedIndex
+            );
 
         if (!selectedRenderable) return;
 
@@ -501,10 +725,7 @@ class SelectionManager {
 
         renderables.splice(currentIndex, 1);
         renderables.splice(targetIndex, 0, selectedRenderable);
-        renderables.forEach((renderable, index) => {
-            renderable.item.layerOrder = index + 1;
-        });
-        this.drawingEngine.syncLayerCounter(this.textManager?.textObjects || []);
+        this.drawingEngine.normalizeTopLevelLayerOrders(this.textManager?.textObjects || [], renderables);
         this.hideLayerMenu();
         this.redrawWithSelection();
         this.updateControlBox();
@@ -589,28 +810,18 @@ class SelectionManager {
             this.startLassoSelection(e);
             return true;
         }
-        
-        // Click selection mode
-        // First, check for text objects
-        if (this.textManager && this.textManager.textObjects && this.textManager.textObjects.length > 0) {
-            const textIndex = this.textManager.hitTestText(coords.x, coords.y);
-            if (textIndex >= 0) {
-                this.selectText(textIndex);
-                return true;
+
+        const target = this.getTopRenderableAtPoint(coords.x, coords.y);
+        if (target) {
+            if (target.type === 'group') {
+                this.selectGroup(target.groupId);
+            } else if (target.type === 'stroke') {
+                this.selectStroke(target.index);
+            } else if (target.type === 'image') {
+                this.selectImage(target.index);
+            } else if (target.type === 'text') {
+                this.selectText(target.index);
             }
-        }
-        
-        // Check for stamped images
-        const imageIndex = this.drawingEngine.findImageAtPoint(coords.x, coords.y);
-        if (imageIndex !== null) {
-            this.selectImage(imageIndex);
-            return true;
-        }
-        
-        // Then check for strokes
-        const strokeIndex = this.drawingEngine.findStrokeAtPoint(coords.x, coords.y);
-        if (strokeIndex !== null) {
-            this.selectStroke(strokeIndex);
             return true;
         }
 
@@ -628,6 +839,10 @@ class SelectionManager {
     selectStroke(index) {
         this.selectionType = 'stroke';
         this.selectedIndex = index;
+        this.selectedGroupId = null;
+        this.selectedStrokes = [];
+        this.selectedImages = [];
+        this.selectedTexts = [];
         this.drawingEngine.selectStroke(index);
         this.showControls();
         this.redrawWithSelection();
@@ -636,6 +851,10 @@ class SelectionManager {
     selectText(index) {
         this.selectionType = 'text';
         this.selectedIndex = index;
+        this.selectedGroupId = null;
+        this.selectedStrokes = [];
+        this.selectedImages = [];
+        this.selectedTexts = [];
         if (this.textManager) {
             this.textManager.selectedTextIndex = index;
         }
@@ -646,6 +865,10 @@ class SelectionManager {
     selectImage(index) {
         this.selectionType = 'image';
         this.selectedIndex = index;
+        this.selectedGroupId = null;
+        this.selectedStrokes = [];
+        this.selectedImages = [];
+        this.selectedTexts = [];
         this.drawingEngine.selectImage(index);
         this.showControls();
         this.redrawWithSelection();
@@ -660,6 +883,10 @@ class SelectionManager {
         }
         this.selectionType = 'background';
         this.selectedIndex = null;
+        this.selectedGroupId = null;
+        this.selectedStrokes = [];
+        this.selectedImages = [];
+        this.selectedTexts = [];
         this.showControls();
         this.redrawWithSelection();
     }
@@ -672,11 +899,22 @@ class SelectionManager {
         // Show edit button only for text selections
         const editBtn = document.getElementById('selection-edit-btn');
         const copyBtn = document.getElementById('selection-copy-btn');
+        const groupBtn = document.getElementById('selection-group-btn');
+        const ungroupBtn = document.getElementById('selection-ungroup-btn');
         if (editBtn) {
             editBtn.style.display = (this.selectionType === 'text') ? '' : 'none';
         }
         if (copyBtn) {
             copyBtn.style.display = this.selectionType === 'background' ? 'none' : '';
+        }
+        if (groupBtn) {
+            const totalSelected = this.selectedStrokes.length + this.selectedImages.length + this.selectedTexts.length;
+            groupBtn.style.display = (this.isCompoundSelection() &&
+                totalSelected > 1 &&
+                !this.selectionContainsGroupedObjects()) ? '' : 'none';
+        }
+        if (ungroupBtn) {
+            ungroupBtn.style.display = this.selectionType === 'group' ? '' : 'none';
         }
         this.updateControlBox();
     }
@@ -689,7 +927,10 @@ class SelectionManager {
     
     updateControlBox() {
         if (this.selectionType === null) return;
-        if (this.selectionType !== 'multi' && this.selectionType !== 'background' && this.selectedIndex === null) return;
+        if (this.selectionType === 'group') {
+            this.refreshSelectedGroupMembers();
+        }
+        if (!this.isCompoundSelection() && this.selectionType !== 'background' && this.selectedIndex === null) return;
         
         let bounds = null;
         let rotation = 0;
@@ -724,7 +965,7 @@ class SelectionManager {
                 height: transform.height
             };
             rotation = transform.rotation || 0;
-        } else if (this.selectionType === 'multi') {
+        } else if (this.isCompoundSelection()) {
             // During rotation, use the saved original bounds to keep box shape fixed
             if (this.isRotating && this.multiBounds) {
                 bounds = this.multiBounds;
@@ -759,7 +1000,7 @@ class SelectionManager {
     
     // Drag handling
     startDrag(e) {
-        if (this.selectionType === 'multi') {
+        if (this.isCompoundSelection()) {
             // Multi-select drag
         } else if (this.selectionType !== 'background' && this.selectedIndex === null) {
             return;
@@ -791,7 +1032,7 @@ class SelectionManager {
                 return;
             }
             this.dragStartObjectPos = { x: transform.x, y: transform.y };
-        } else if (this.selectionType === 'multi') {
+        } else if (this.isCompoundSelection()) {
             this.multiDragStartPositions = [];
             for (const idx of this.selectedStrokes) {
                 const stroke = this.drawingEngine.strokes[idx];
@@ -823,7 +1064,7 @@ class SelectionManager {
     
     drag(e) {
         if (!this.isDragging) return;
-        if (this.selectionType !== 'multi' && this.selectionType !== 'background' && this.selectedIndex === null) return;
+        if (!this.isCompoundSelection() && this.selectionType !== 'background' && this.selectedIndex === null) return;
         
         const pos = this.getClientPos(e);
         const rect = this.canvas.getBoundingClientRect();
@@ -858,7 +1099,7 @@ class SelectionManager {
                 x: this.dragStartObjectPos.x + deltaX,
                 y: this.dragStartObjectPos.y + deltaY
             });
-        } else if (this.selectionType === 'multi') {
+        } else if (this.isCompoundSelection()) {
             for (const idx of this.selectedStrokes) {
                 const stroke = this.drawingEngine.strokes[idx];
                 if (stroke) {
@@ -905,7 +1146,7 @@ class SelectionManager {
                         delete point.originalY;
                     }
                 }
-            } else if (this.selectionType === 'multi') {
+            } else if (this.isCompoundSelection()) {
                 for (const idx of this.selectedStrokes) {
                     const stroke = this.drawingEngine.strokes[idx];
                     if (stroke) {
@@ -921,7 +1162,7 @@ class SelectionManager {
         }
     }
     startResize(e, handle) {
-        if (this.selectionType !== 'multi' && this.selectionType !== 'background' && this.selectedIndex === null) return;
+        if (!this.isCompoundSelection() && this.selectionType !== 'background' && this.selectedIndex === null) return;
         
         this.isResizing = true;
         this.resizeHandle = handle;
@@ -963,7 +1204,7 @@ class SelectionManager {
                 width: transform.width,
                 height: transform.height
             };
-        } else if (this.selectionType === 'multi') {
+        } else if (this.isCompoundSelection()) {
             this.resizeStartBounds = this.getMultiBounds();
             for (const idx of this.selectedStrokes) {
                 const stroke = this.drawingEngine.strokes[idx];
@@ -999,7 +1240,7 @@ class SelectionManager {
     
     resize(e) {
         if (!this.isResizing || !this.resizeStartBounds) return;
-        if (this.selectionType !== 'multi' && this.selectionType !== 'background' && this.selectedIndex === null) return;
+        if (!this.isCompoundSelection() && this.selectionType !== 'background' && this.selectedIndex === null) return;
         
         const pos = this.getClientPos(e);
         const canvasScale = this.getCanvasScale();
@@ -1081,7 +1322,7 @@ class SelectionManager {
                 width: newBounds.width,
                 height: newBounds.height
             });
-        } else if (this.selectionType === 'multi') {
+        } else if (this.isCompoundSelection()) {
             for (const idx of this.selectedStrokes) {
                 const stroke = this.drawingEngine.strokes[idx];
                 if (stroke) {
@@ -1146,7 +1387,7 @@ class SelectionManager {
                         delete point.originalY;
                     }
                 }
-            } else if (this.selectionType === 'multi') {
+            } else if (this.isCompoundSelection()) {
                 for (const idx of this.selectedStrokes) {
                     const stroke = this.drawingEngine.strokes[idx];
                     if (stroke) {
@@ -1187,7 +1428,7 @@ class SelectionManager {
             const transform = this.backgroundManager?.getBackgroundImageTransform?.();
             if (!transform) return null;
             bounds = { x: transform.x, y: transform.y, width: transform.width, height: transform.height };
-        } else if (this.selectionType === 'multi') {
+        } else if (this.isCompoundSelection()) {
             // During rotation, use the saved original bounds center
             bounds = (this.isRotating && this.multiBounds) ? this.multiBounds : this.getMultiSelectionBounds();
         }
@@ -1204,7 +1445,7 @@ class SelectionManager {
     }
     
     startRotate(e) {
-        if (this.selectionType !== 'multi' && this.selectionType !== 'background' && this.selectedIndex === null) return;
+        if (!this.isCompoundSelection() && this.selectionType !== 'background' && this.selectedIndex === null) return;
         
         this.isRotating = true;
         
@@ -1229,7 +1470,7 @@ class SelectionManager {
                 return;
             }
             this.rotateStartRotation = transform.rotation || 0;
-        } else if (this.selectionType === 'multi') {
+        } else if (this.isCompoundSelection()) {
             this.rotateStartRotation = this.multiRotation;
             this.multiBounds = this.getMultiSelectionBounds();
             this.multiStrokeRotateStart = [];
@@ -1268,7 +1509,7 @@ class SelectionManager {
     
     rotate(e) {
         if (!this.isRotating) return;
-        if (this.selectionType !== 'multi' && this.selectionType !== 'background' && this.selectedIndex === null) return;
+        if (!this.isCompoundSelection() && this.selectionType !== 'background' && this.selectedIndex === null) return;
         
         const center = this.getControlBoxScreenCenter();
         if (!center) return;
@@ -1309,7 +1550,7 @@ class SelectionManager {
                 ...transform,
                 rotation: this.normalizeAngle(this.rotateStartRotation + angleDelta)
             });
-        } else if (this.selectionType === 'multi') {
+        } else if (this.isCompoundSelection()) {
             const bounds = this.multiBounds;
             if (!bounds) return;
             const centerX = bounds.x + bounds.width / 2;
@@ -1388,7 +1629,7 @@ class SelectionManager {
                     }
                     delete stroke.originalBounds;
                 }
-            } else if (this.selectionType === 'multi') {
+            } else if (this.isCompoundSelection()) {
                 for (const idx of this.selectedStrokes) {
                     const stroke = this.drawingEngine.strokes[idx];
                     if (stroke) {
@@ -1414,7 +1655,8 @@ class SelectionManager {
         }
         // Cache the selection for paste while still duplicating on the canvas.
         this.cacheSelection();
-        if (this.selectionType === 'multi') {
+        if (this.isCompoundSelection()) {
+            const wasGroupedSelection = this.selectionType === 'group';
             if (this.selectedStrokes.length === 0 && this.selectedImages.length === 0 && this.selectedTexts.length === 0) return false;
             const newStrokeIndices = [];
             for (const idx of this.selectedStrokes) {
@@ -1427,7 +1669,9 @@ class SelectionManager {
                         penType: stroke.penType,
                         tool: stroke.tool,
                         rotation: stroke.rotation || 0,
-                        layerOrder: this.drawingEngine.getNextLayerOrder()
+                        layerOrder: this.drawingEngine.getNextLayerOrder(),
+                        objectId: this.drawingEngine.getNextObjectId(),
+                        groupId: null
                     };
                     this.drawingEngine.strokes.push(copiedStroke);
                     newStrokeIndices.push(this.drawingEngine.strokes.length - 1);
@@ -1439,6 +1683,7 @@ class SelectionManager {
                 if (img) {
                     const copiedImage = {
                         imageElement: img.imageElement,
+                        imageSrc: img.imageSrc || img.imageElement?.src || null,
                         x: img.x + this.COPY_OFFSET,
                         y: img.y + this.COPY_OFFSET,
                         width: img.width,
@@ -1446,7 +1691,9 @@ class SelectionManager {
                         rotation: img.rotation || 0,
                         flipHorizontal: img.flipHorizontal || false,
                         flipVertical: img.flipVertical || false,
-                        layerOrder: this.drawingEngine.getNextLayerOrder()
+                        layerOrder: this.drawingEngine.getNextLayerOrder(),
+                        objectId: this.drawingEngine.getNextObjectId(),
+                        groupId: null
                     };
                     this.drawingEngine.stampedImages.push(copiedImage);
                     newImageIndices.push(this.drawingEngine.stampedImages.length - 1);
@@ -1461,7 +1708,9 @@ class SelectionManager {
                             ...textObj,
                             x: textObj.x + this.COPY_OFFSET,
                             y: textObj.y + this.COPY_OFFSET,
-                            layerOrder: this.drawingEngine.getNextLayerOrder()
+                            layerOrder: this.drawingEngine.getNextLayerOrder(),
+                            objectId: this.drawingEngine.getNextObjectId(),
+                            groupId: null
                         };
                         this.textManager.textObjects.push(copiedText);
                         newTextIndices.push(this.textManager.textObjects.length - 1);
@@ -1472,6 +1721,14 @@ class SelectionManager {
             this.selectedImages = newImageIndices;
             this.selectedTexts = newTextIndices;
             this.multiRotation = 0;
+            this.selectedGroupId = null;
+            this.selectionType = 'multi';
+            if (wasGroupedSelection) {
+                const createdGroup = this.drawingEngine.groupObjects(this.getSelectedObjectIds(), this.textManager?.textObjects || []);
+                if (createdGroup) {
+                    this.selectGroup(createdGroup.id);
+                }
+            }
             this.updateControlBox();
             this.redrawWithSelection();
             this.saveHistory();
@@ -1545,7 +1802,7 @@ class SelectionManager {
             if (textObj) {
                 cachedTexts.push(this.createTextCopy(textObj));
             }
-        } else if (this.selectionType === 'multi') {
+        } else if (this.isCompoundSelection()) {
             for (const idx of this.selectedStrokes) {
                 const stroke = this.drawingEngine.strokes[idx];
                 if (stroke) {
@@ -1572,7 +1829,12 @@ class SelectionManager {
             this.clipboard = null;
             return false;
         }
-        this.clipboard = { strokes: cachedStrokes, images: cachedImages, texts: cachedTexts };
+        this.clipboard = {
+            strokes: cachedStrokes,
+            images: cachedImages,
+            texts: cachedTexts,
+            grouped: this.selectionType === 'group'
+        };
         return true;
     }
 
@@ -1586,7 +1848,9 @@ class SelectionManager {
             const copiedStroke = {
                 ...stroke,
                 points: stroke.points.map(p => ({ x: p.x + this.COPY_OFFSET, y: p.y + this.COPY_OFFSET })),
-                layerOrder: this.drawingEngine.getNextLayerOrder()
+                layerOrder: this.drawingEngine.getNextLayerOrder(),
+                objectId: this.drawingEngine.getNextObjectId(),
+                groupId: null
             };
             this.drawingEngine.strokes.push(copiedStroke);
             newStrokeIndices.push(this.drawingEngine.strokes.length - 1);
@@ -1595,7 +1859,9 @@ class SelectionManager {
         for (const img of this.clipboard.images || []) {
             const copiedImage = this.applyPasteOffset({
                 ...img,
-                layerOrder: this.drawingEngine.getNextLayerOrder()
+                layerOrder: this.drawingEngine.getNextLayerOrder(),
+                objectId: this.drawingEngine.getNextObjectId(),
+                groupId: null
             }, this.COPY_OFFSET, this.COPY_OFFSET);
             this.drawingEngine.stampedImages.push(copiedImage);
             newImageIndices.push(this.drawingEngine.stampedImages.length - 1);
@@ -1605,6 +1871,8 @@ class SelectionManager {
             for (const textObj of this.clipboard.texts || []) {
                 const copiedText = this.createTextCopy(textObj);
                 copiedText.layerOrder = this.drawingEngine.getNextLayerOrder();
+                copiedText.objectId = this.drawingEngine.getNextObjectId();
+                copiedText.groupId = null;
                 const offsetText = this.applyPasteOffset(copiedText, this.COPY_OFFSET, this.COPY_OFFSET);
                 this.textManager.textObjects.push(offsetText);
                 newTextIndices.push(this.textManager.textObjects.length - 1);
@@ -1640,9 +1908,13 @@ class SelectionManager {
             this.selectedTexts = newTextIndices;
             this.multiRotation = 0;
             this.selectionType = 'multi';
+            this.selectedGroupId = null;
             this.selectedIndex = null;
             this.showControls();
             this.redrawWithSelection();
+            if (this.clipboard.grouped) {
+                this.groupSelection(false);
+            }
         }
 
         this.saveHistory();
@@ -1664,6 +1936,7 @@ class SelectionManager {
     createImageCopy(img) {
         return {
             imageElement: img.imageElement,
+            imageSrc: img.imageSrc || img.imageElement?.src || null,
             x: img.x,
             y: img.y,
             width: img.width,
@@ -1698,23 +1971,62 @@ class SelectionManager {
     }
     
     deleteSelection() {
-        if (this.selectionType === 'multi') {
+        if (this.selectionType === 'group') {
+            if (!this.selectedGroupId) return false;
+            const groupMembers = this.drawingEngine.getGroupMembers(this.selectedGroupId, this.textManager?.textObjects || []);
+            const strokeIndices = groupMembers.filter(member => member.type === 'stroke').map(member => member.index).sort((a, b) => b - a);
+            const imageIndices = groupMembers.filter(member => member.type === 'image').map(member => member.index).sort((a, b) => b - a);
+            const textIndices = groupMembers.filter(member => member.type === 'text').map(member => member.index).sort((a, b) => b - a);
+
+            strokeIndices.forEach(idx => {
+                const stroke = this.drawingEngine.strokes[idx];
+                this.drawingEngine.removeObjectFromGroups(stroke?.objectId);
+                this.drawingEngine.strokes.splice(idx, 1);
+            });
+            imageIndices.forEach(idx => {
+                const img = this.drawingEngine.stampedImages[idx];
+                this.drawingEngine.removeObjectFromGroups(img?.objectId);
+                this.drawingEngine.stampedImages.splice(idx, 1);
+            });
+            if (this.textManager) {
+                textIndices.forEach(idx => {
+                    const textObj = this.textManager.textObjects[idx];
+                    this.drawingEngine.removeObjectFromGroups(textObj?.objectId);
+                    this.textManager.textObjects.splice(idx, 1);
+                });
+            }
+            this.drawingEngine.objectGroups = this.drawingEngine.objectGroups.filter(group => group.id !== this.selectedGroupId);
+            this.drawingEngine.cleanupGroups(this.textManager?.textObjects || []);
+            this.clearSelection();
+            this.redrawCanvas();
+            this.saveHistory();
+            return true;
+        }
+
+        if (this.isCompoundSelection()) {
             if (this.selectedStrokes.length === 0 && this.selectedImages.length === 0 && this.selectedTexts.length === 0) return false;
             // Sort indices in descending order to remove from end first
             const sortedStrokes = [...this.selectedStrokes].sort((a, b) => b - a);
             for (const idx of sortedStrokes) {
+                const stroke = this.drawingEngine.strokes[idx];
+                this.drawingEngine.removeObjectFromGroups(stroke?.objectId);
                 this.drawingEngine.strokes.splice(idx, 1);
             }
             const sortedImages = [...this.selectedImages].sort((a, b) => b - a);
             for (const idx of sortedImages) {
+                const img = this.drawingEngine.stampedImages[idx];
+                this.drawingEngine.removeObjectFromGroups(img?.objectId);
                 this.drawingEngine.stampedImages.splice(idx, 1);
             }
             if (this.textManager) {
                 const sortedTexts = [...this.selectedTexts].sort((a, b) => b - a);
                 for (const idx of sortedTexts) {
+                    const textObj = this.textManager.textObjects[idx];
+                    this.drawingEngine.removeObjectFromGroups(textObj?.objectId);
                     this.textManager.textObjects.splice(idx, 1);
                 }
             }
+            this.drawingEngine.cleanupGroups(this.textManager?.textObjects || []);
             this.clearSelection();
             this.redrawCanvas();
             this.saveHistory();
@@ -1792,6 +2104,41 @@ class SelectionManager {
             this.historyManager.saveState();
         }
     }
+
+    groupSelection(saveHistory = true) {
+        if (this.selectionType !== 'multi') return false;
+        const objectIds = this.getSelectedObjectIds();
+        if (objectIds.length < 2 || this.selectionContainsGroupedObjects()) {
+            return false;
+        }
+        const group = this.drawingEngine.groupObjects(objectIds, this.textManager?.textObjects || []);
+        if (!group) return false;
+        this.selectGroup(group.id);
+        if (saveHistory) {
+            this.saveHistory();
+        }
+        return true;
+    }
+
+    ungroupSelection(saveHistory = true) {
+        if (this.selectionType !== 'group' || !this.selectedGroupId) return false;
+        const members = this.drawingEngine.ungroupObjects(this.selectedGroupId, this.textManager?.textObjects || []);
+        if (!members.length) return false;
+
+        this.selectedGroupId = null;
+        this.selectedStrokes = members.filter(member => member.type === 'stroke').map(member => member.index);
+        this.selectedImages = members.filter(member => member.type === 'image').map(member => member.index);
+        this.selectedTexts = members.filter(member => member.type === 'text').map(member => member.index);
+        this.selectionType = 'multi';
+        this.selectedIndex = null;
+        this.multiRotation = 0;
+        this.showControls();
+        this.redrawWithSelection();
+        if (saveHistory) {
+            this.saveHistory();
+        }
+        return true;
+    }
     
     rotate90() {
         if (!this.hasSelection()) return;
@@ -1826,7 +2173,7 @@ class SelectionManager {
                 ...transform,
                 rotation: this.normalizeAngle((transform.rotation || 0) + 90)
             });
-        } else if (this.selectionType === 'multi') {
+        } else if (this.isCompoundSelection()) {
             const bounds = this.getMultiBounds();
             if (!bounds) return;
             const cx = bounds.x + bounds.width / 2;
@@ -1907,7 +2254,7 @@ class SelectionManager {
                 ...transform,
                 flipHorizontal: !transform.flipHorizontal
             });
-        } else if (this.selectionType === 'multi') {
+        } else if (this.isCompoundSelection()) {
             const bounds = this.getMultiBounds();
             if (!bounds) return;
             const cx = bounds.x + bounds.width / 2;
@@ -1968,7 +2315,7 @@ class SelectionManager {
                 ...transform,
                 flipVertical: !transform.flipVertical
             });
-        } else if (this.selectionType === 'multi') {
+        } else if (this.isCompoundSelection()) {
             const bounds = this.getMultiBounds();
             if (!bounds) return;
             const cy = bounds.y + bounds.height / 2;
@@ -2044,12 +2391,13 @@ class SelectionManager {
     hasSelection() {
         return this.selectionType === 'background' ||
             this.selectedIndex !== null ||
-            (this.selectionType === 'multi' && (this.selectedStrokes.length > 0 || this.selectedImages.length > 0 || this.selectedTexts.length > 0));
+            (this.isCompoundSelection() && (this.selectedStrokes.length > 0 || this.selectedImages.length > 0 || this.selectedTexts.length > 0));
     }
     
     clearSelection() {
         this.selectionType = null;
         this.selectedIndex = null;
+        this.selectedGroupId = null;
         this.hasUnsavedChanges = false;
         this.hideLayerMenu();
         this.drawingEngine.deselectStroke();
@@ -2106,6 +2454,7 @@ class SelectionManager {
                     this.ctx.putImageData(baseState, 0, 0);
                 }
             }
+            this.drawingEngine.updateOffCanvasImageMirrors(this.textManager?.textObjects || []);
         }
         
         // Draw selection border if something is selected
@@ -2214,25 +2563,30 @@ class SelectionManager {
     
     // Apply selection from found strokes, images, and texts (shared by box and lasso selection)
     applyFoundSelection(foundStrokes, foundImages, foundTexts = [], foundBackground = false) {
-        const totalFound = foundStrokes.length + foundImages.length + foundTexts.length + (foundBackground ? 1 : 0);
+        const expandedSelection = this.expandGroupedSelection(foundStrokes, foundImages, foundTexts);
+        const totalFound = expandedSelection.strokes.length + expandedSelection.images.length + expandedSelection.texts.length + (foundBackground ? 1 : 0);
         
         if (totalFound === 0) {
             return;
-        } else if (totalFound === 1 && foundStrokes.length === 1) {
-            this.selectStroke(foundStrokes[0]);
-        } else if (totalFound === 1 && foundImages.length === 1) {
-            this.selectImage(foundImages[0]);
-        } else if (totalFound === 1 && foundTexts.length === 1) {
-            this.selectText(foundTexts[0]);
+        } else if (!foundBackground && expandedSelection.groupIds.length === 1 &&
+            totalFound === expandedSelection.strokes.length + expandedSelection.images.length + expandedSelection.texts.length) {
+            this.selectGroup(expandedSelection.groupIds[0]);
+        } else if (totalFound === 1 && expandedSelection.strokes.length === 1) {
+            this.selectStroke(expandedSelection.strokes[0]);
+        } else if (totalFound === 1 && expandedSelection.images.length === 1) {
+            this.selectImage(expandedSelection.images[0]);
+        } else if (totalFound === 1 && expandedSelection.texts.length === 1) {
+            this.selectText(expandedSelection.texts[0]);
         } else if (totalFound === 1 && foundBackground) {
             this.selectBackgroundImage();
         } else {
             // Multi-select: include strokes, images, and texts
-            this.selectedStrokes = foundStrokes;
-            this.selectedImages = foundImages;
-            this.selectedTexts = foundTexts;
+            this.selectedStrokes = expandedSelection.strokes;
+            this.selectedImages = expandedSelection.images;
+            this.selectedTexts = expandedSelection.texts;
             this.multiRotation = 0;
             this.selectionType = 'multi';
+            this.selectedGroupId = null;
             this.selectedIndex = null;
             this.showControls();
             this.redrawWithSelection();
@@ -2407,12 +2761,15 @@ class SelectionManager {
         this.ctx.font = previousFont;
         const lineHeight = fontSize * this.TEXT_LINE_HEIGHT;
         const padding = this.TEXT_BOUNDS_PADDING;
-        return {
+        const bounds = {
             x: textObj.x,
             y: textObj.y,
             width: maxWidth + padding * 2,
             height: lines.length * lineHeight + padding * 2
         };
+        textObj.width = bounds.width;
+        textObj.height = bounds.height;
+        return bounds;
     }
     
     getMultiBounds() {

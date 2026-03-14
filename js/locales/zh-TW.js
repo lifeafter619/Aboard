@@ -178,7 +178,9 @@ window.translations = {
         layerFront: '置於頂層',
         layerBack: '置於底層',
         layerUp: '上移一層',
-        layerDown: '下移一層'
+        layerDown: '下移一層',
+        group: '群組',
+        ungroup: '取消群組'
     },
 
     // Line Style Modal
@@ -251,7 +253,9 @@ window.translations = {
         layerFront: '置於頂層',
         layerBack: '置於底層',
         layerUp: '上移一層',
-        layerDown: '下移一層'
+        layerDown: '下移一層',
+        group: '群組',
+        ungroup: '取消群組'
     },
 
     // Page Navigation

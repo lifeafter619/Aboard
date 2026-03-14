@@ -4975,6 +4975,7 @@ class DrawingBoard {
         
         // Restore page-specific background if exists
         this.restorePageBackground(pageNumber);
+        this.drawingEngine.updateOffCanvasImageMirrors(this.insertTextManager?.textObjects || []);
 
         // Save session state (current page change)
         this.saveSessionDebounced();
@@ -4994,7 +4995,8 @@ class DrawingBoard {
             coordinateOriginX: this.backgroundManager.coordinateOriginX,
             coordinateOriginY: this.backgroundManager.coordinateOriginY,
             imageTransform: this.backgroundManager.imageTransform,
-            gifLoopCount: this.backgroundManager.gifLoopCount
+            gifLoopCount: this.backgroundManager.gifLoopCount,
+            backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder || 1
         };
         localStorage.setItem('pageBackgrounds', JSON.stringify(this.pageBackgrounds));
     }
@@ -5018,6 +5020,9 @@ class DrawingBoard {
             }
             if (bg.imageTransform) this.backgroundManager.imageTransform = bg.imageTransform;
             if (typeof bg.gifLoopCount !== 'undefined') this.backgroundManager.gifLoopCount = bg.gifLoopCount;
+            if (typeof bg.backgroundOutsideLayerOrder !== 'undefined') {
+                this.backgroundManager.backgroundOutsideLayerOrder = bg.backgroundOutsideLayerOrder;
+            }
 
             // Load image if exists
             if (bg.backgroundImageData && bg.backgroundPattern === 'image') {
@@ -5514,7 +5519,9 @@ class DrawingBoard {
                 patternDensity: this.backgroundManager.patternDensity,
                 imageSize: this.backgroundManager.imageSize,
                 backgroundImageData: this.backgroundManager.backgroundImageData,
+                backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder || 1,
                 uploadedImages: this.uploadedImages,
+                objectGroups: this.drawingEngine.objectGroups || [],
                 // Text objects for selection support after restore
                 textObjects: this.insertTextManager ? this.insertTextManager.getTextObjects() : [],
                 // Strokes for selection support after restore
@@ -5525,7 +5532,9 @@ class DrawingBoard {
                     penType: s.penType,
                     tool: s.tool,
                     rotation: s.rotation || 0,
-                    layerOrder: s.layerOrder || 0
+                    layerOrder: s.layerOrder || 0,
+                    objectId: s.objectId || this.drawingEngine.getNextObjectId(),
+                    groupId: s.groupId || null
                 })),
                 stampedImages: this.drawingEngine.stampedImages.map(img => ({
                     imageSrc: img.imageSrc || (img.imageElement ? img.imageElement.src : null),
@@ -5536,7 +5545,9 @@ class DrawingBoard {
                     rotation: img.rotation || 0,
                     flipHorizontal: img.flipHorizontal || false,
                     flipVertical: img.flipVertical || false,
-                    layerOrder: img.layerOrder || 0
+                    layerOrder: img.layerOrder || 0,
+                    objectId: img.objectId || this.drawingEngine.getNextObjectId(),
+                    groupId: img.groupId || null
                 }))
             };
 
@@ -5623,6 +5634,7 @@ class DrawingBoard {
                 if (settings.patternDensity) this.backgroundManager.patternDensity = settings.patternDensity;
                 if (settings.imageSize) this.backgroundManager.imageSize = settings.imageSize;
                 if (settings.backgroundImageData) this.backgroundManager.backgroundImageData = settings.backgroundImageData;
+                if (settings.backgroundOutsideLayerOrder) this.backgroundManager.backgroundOutsideLayerOrder = settings.backgroundOutsideLayerOrder;
 
                 if (settings.uploadedImages) {
                     this.uploadedImages = settings.uploadedImages;
@@ -5641,6 +5653,8 @@ class DrawingBoard {
                 // Restore strokes for selection support
                 if (settings.strokes && settings.strokes.length > 0) {
                     this.drawingEngine.strokes = settings.strokes;
+                } else {
+                    this.drawingEngine.strokes = [];
                 }
 
                 // Restore stamped images for selection support
@@ -5667,12 +5681,16 @@ class DrawingBoard {
                     this.drawingEngine.stampedImages = [];
                 }
 
+                this.drawingEngine.objectGroups = settings.objectGroups || [];
+
                 // Link selection manager to text manager for selection to work
                 if (this.insertTextManager) {
                     this.selectionManager.setTextManager(this.insertTextManager);
                 }
 
                 this.drawingEngine.syncLayerCounter(this.insertTextManager?.textObjects || []);
+                this.drawingEngine.cleanupGroups(this.insertTextManager?.textObjects || []);
+                this.drawingEngine.updateOffCanvasImageMirrors(this.insertTextManager?.textObjects || []);
             }
 
             // Restore pages

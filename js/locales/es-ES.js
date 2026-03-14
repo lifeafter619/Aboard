@@ -173,7 +173,9 @@ window.translations = {
         layerFront: 'Traer al frente',
         layerBack: 'Enviar al fondo',
         layerUp: 'Subir una capa',
-        layerDown: 'Bajar una capa'
+        layerDown: 'Bajar una capa',
+        group: 'Agrupar',
+        ungroup: 'Desagrupar'
     },
 
     // Line Style Modal
@@ -243,7 +245,9 @@ window.translations = {
         layerFront: 'Traer al frente',
         layerBack: 'Enviar al fondo',
         layerUp: 'Subir una capa',
-        layerDown: 'Bajar una capa'
+        layerDown: 'Bajar una capa',
+        group: 'Agrupar',
+        ungroup: 'Desagrupar'
     },
 
     // Page Navigation

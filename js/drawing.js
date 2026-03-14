@@ -59,6 +59,10 @@ class DrawingEngine {
         this.stampedImages = [];
         this.selectedImageIndex = null;
         this.layerCounter = 1;
+        this.objectIdCounter = 1;
+        this.groupCounter = 1;
+        this.objectGroups = [];
+        this.offCanvasImageLayer = null;
         
         // Canvas scaling and panning
         this.canvasScale = parseFloat(localStorage.getItem('canvasScale')) || 1.0;
@@ -95,6 +99,368 @@ class DrawingEngine {
     setPenMultiLineSpacing(spacing) {
         this.penMultiLineSpacing = Math.max(5, Math.min(50, spacing));
         localStorage.setItem('penMultiLineSpacing', this.penMultiLineSpacing);
+    }
+
+    getNextObjectId() {
+        return `obj-${this.objectIdCounter++}`;
+    }
+
+    getNextGroupId() {
+        return `group-${this.groupCounter++}`;
+    }
+
+    parseCounterValue(value, prefix) {
+        if (typeof value !== 'string' || !value.startsWith(prefix)) return 0;
+        const numeric = parseInt(value.slice(prefix.length), 10);
+        return Number.isFinite(numeric) ? numeric : 0;
+    }
+
+    ensureObjectId(item) {
+        if (!item) return null;
+        if (!item.objectId) {
+            item.objectId = this.getNextObjectId();
+        } else {
+            this.objectIdCounter = Math.max(
+                this.objectIdCounter,
+                this.parseCounterValue(item.objectId, 'obj-') + 1
+            );
+        }
+        if (typeof item.groupId === 'undefined') {
+            item.groupId = null;
+        }
+        return item.objectId;
+    }
+
+    ensureGroup(group) {
+        if (!group) return null;
+        if (!group.id) {
+            group.id = this.getNextGroupId();
+        } else {
+            this.groupCounter = Math.max(
+                this.groupCounter,
+                this.parseCounterValue(group.id, 'group-') + 1
+            );
+        }
+        if (!Array.isArray(group.memberIds)) {
+            group.memberIds = [];
+        }
+        if (!Number.isFinite(group.layerOrder)) {
+            group.layerOrder = this.getNextLayerOrder();
+        } else {
+            this.layerCounter = Math.max(this.layerCounter, group.layerOrder + 1);
+        }
+        return group;
+    }
+
+    getGroupById(groupId) {
+        if (!groupId) return null;
+        return this.objectGroups.find(group => group?.id === groupId) || null;
+    }
+
+    getObjectRefById(objectId, textObjects = []) {
+        if (!objectId) return null;
+        const collections = [
+            { type: 'stroke', items: this.strokes },
+            { type: 'image', items: this.stampedImages },
+            { type: 'text', items: textObjects || [] }
+        ];
+        for (const collection of collections) {
+            for (let index = 0; index < collection.items.length; index++) {
+                const item = collection.items[index];
+                if (!item) continue;
+                this.ensureObjectId(item);
+                if (item.objectId === objectId) {
+                    return {
+                        type: collection.type,
+                        index,
+                        item,
+                        objectId
+                    };
+                }
+            }
+        }
+        return null;
+    }
+
+    getGroupMembers(groupOrId, textObjects = []) {
+        const group = typeof groupOrId === 'string'
+            ? this.getGroupById(groupOrId)
+            : groupOrId;
+        if (!group) return [];
+        return (group.memberIds || [])
+            .map(objectId => this.getObjectRefById(objectId, textObjects))
+            .filter(Boolean)
+            .sort((a, b) => {
+                const layerDiff = (a.item.layerOrder || 0) - (b.item.layerOrder || 0);
+                if (layerDiff !== 0) return layerDiff;
+                return a.index - b.index;
+            });
+    }
+
+    removeObjectFromGroups(objectId) {
+        if (!objectId) return;
+        this.objectGroups = this.objectGroups
+            .map(group => {
+                if (!group?.memberIds?.includes(objectId)) return group;
+                group.memberIds = group.memberIds.filter(id => id !== objectId);
+                return group;
+            })
+            .filter(group => group?.memberIds?.length >= 2);
+    }
+
+    cleanupGroups(textObjects = []) {
+        const validObjectIds = new Set();
+        [this.strokes, this.stampedImages, textObjects || []].forEach(collection => {
+            collection.forEach(item => {
+                if (!item) return;
+                validObjectIds.add(this.ensureObjectId(item));
+            });
+        });
+
+        this.objectGroups = this.objectGroups
+            .map(group => {
+                this.ensureGroup(group);
+                group.memberIds = [...new Set((group.memberIds || []).filter(id => validObjectIds.has(id)))];
+                return group;
+            })
+            .filter(group => group.memberIds.length >= 2);
+
+        const validGroupIds = new Set(this.objectGroups.map(group => group.id));
+        [this.strokes, this.stampedImages, textObjects || []].forEach(collection => {
+            collection.forEach(item => {
+                if (!item) return;
+                this.ensureObjectId(item);
+                if (item.groupId && !validGroupIds.has(item.groupId)) {
+                    item.groupId = null;
+                }
+            });
+        });
+    }
+
+    getCanvasLogicalBounds() {
+        const dpr = window.devicePixelRatio || 1;
+        return {
+            x: 0,
+            y: 0,
+            width: this.canvas.width / dpr,
+            height: this.canvas.height / dpr
+        };
+    }
+
+    rectsIntersect(a, b) {
+        if (!a || !b) return false;
+        return a.x < b.x + b.width &&
+            a.x + a.width > b.x &&
+            a.y < b.y + b.height &&
+            a.y + a.height > b.y;
+    }
+
+    getBoundsFromPoints(points) {
+        if (!points?.length) return null;
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        points.forEach(point => {
+            if (!point) return;
+            minX = Math.min(minX, point.x);
+            minY = Math.min(minY, point.y);
+            maxX = Math.max(maxX, point.x);
+            maxY = Math.max(maxY, point.y);
+        });
+        if (!Number.isFinite(minX)) return null;
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
+    }
+
+    rotatePoint(point, centerX, centerY, angleDeg) {
+        const angleRad = angleDeg * Math.PI / 180;
+        const cos = Math.cos(angleRad);
+        const sin = Math.sin(angleRad);
+        const relX = point.x - centerX;
+        const relY = point.y - centerY;
+        return {
+            x: centerX + relX * cos - relY * sin,
+            y: centerY + relX * sin + relY * cos
+        };
+    }
+
+    getImageCornerPoints(img) {
+        if (!img) return [];
+        const points = [
+            { x: img.x, y: img.y },
+            { x: img.x + img.width, y: img.y },
+            { x: img.x + img.width, y: img.y + img.height },
+            { x: img.x, y: img.y + img.height }
+        ];
+        const rotation = img.rotation || 0;
+        if (!rotation) return points;
+        const centerX = img.x + img.width / 2;
+        const centerY = img.y + img.height / 2;
+        return points.map(point => this.rotatePoint(point, centerX, centerY, rotation));
+    }
+
+    getImageVisualBounds(img) {
+        return this.getBoundsFromPoints(this.getImageCornerPoints(img));
+    }
+
+    getTopLevelRenderableBounds(renderable, textObjects = []) {
+        if (!renderable) return null;
+        if (renderable.type === 'group') {
+            const points = [];
+            renderable.members?.forEach(member => {
+                if (member.type === 'stroke') {
+                    const bounds = this.getStrokeBounds(member.item);
+                    if (bounds) {
+                        points.push(
+                            { x: bounds.x, y: bounds.y },
+                            { x: bounds.x + bounds.width, y: bounds.y },
+                            { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
+                            { x: bounds.x, y: bounds.y + bounds.height }
+                        );
+                    }
+                } else if (member.type === 'image') {
+                    points.push(...this.getImageCornerPoints(member.item));
+                } else if (member.type === 'text') {
+                    const item = member.item;
+                    const bounds = {
+                        x: item.x,
+                        y: item.y,
+                        width: item.width || 0,
+                        height: item.height || 0
+                    };
+                    points.push(
+                        { x: bounds.x, y: bounds.y },
+                        { x: bounds.x + bounds.width, y: bounds.y },
+                        { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
+                        { x: bounds.x, y: bounds.y + bounds.height }
+                    );
+                }
+            });
+            return this.getBoundsFromPoints(points);
+        }
+        if (renderable.type === 'stroke') {
+            return this.getStrokeBounds(renderable.item);
+        }
+        if (renderable.type === 'image') {
+            return this.getImageVisualBounds(renderable.item);
+        }
+        if (renderable.type === 'text') {
+            return {
+                x: renderable.item.x,
+                y: renderable.item.y,
+                width: renderable.item.width || 0,
+                height: renderable.item.height || 0
+            };
+        }
+        return null;
+    }
+
+    getMaxLayerOrder(textObjects = [], includeGroups = true) {
+        let maxLayerOrder = 0;
+        [this.strokes, this.stampedImages, textObjects || []].forEach(collection => {
+            collection.forEach(item => {
+                if (Number.isFinite(item?.layerOrder)) {
+                    maxLayerOrder = Math.max(maxLayerOrder, item.layerOrder);
+                }
+            });
+        });
+        if (includeGroups) {
+            this.objectGroups.forEach(group => {
+                if (Number.isFinite(group?.layerOrder)) {
+                    maxLayerOrder = Math.max(maxLayerOrder, group.layerOrder);
+                }
+            });
+        }
+        return maxLayerOrder;
+    }
+
+    ensureOffCanvasImageLayer() {
+        if (this.offCanvasImageLayer && document.body.contains(this.offCanvasImageLayer)) {
+            return this.offCanvasImageLayer;
+        }
+        const transformLayer = document.getElementById('transform-layer');
+        if (!transformLayer) return null;
+        let layer = document.getElementById('off-canvas-image-layer');
+        if (!layer) {
+            layer = document.createElement('div');
+            layer.id = 'off-canvas-image-layer';
+            layer.style.position = 'absolute';
+            layer.style.inset = '0';
+            layer.style.pointerEvents = 'none';
+            layer.style.zIndex = '2';
+            transformLayer.appendChild(layer);
+        }
+        this.offCanvasImageLayer = layer;
+        return layer;
+    }
+
+    updateOffCanvasImageMirrors(textObjects = []) {
+        const layer = this.ensureOffCanvasImageLayer();
+        if (!layer) return;
+
+        const canvasBounds = this.getCanvasLogicalBounds();
+        const usedIds = new Set();
+
+        this.stampedImages.forEach(img => {
+            if (!img?.imageElement) return;
+            this.ensureObjectId(img);
+            const bounds = this.getImageVisualBounds(img);
+            const isOutsideCanvas = !!bounds && !this.rectsIntersect(bounds, canvasBounds);
+            img.wasOutsideCanvas = !!img.wasOutsideCanvas;
+
+            if (!isOutsideCanvas) {
+                img.wasOutsideCanvas = false;
+                return;
+            }
+
+            if (!img.wasOutsideCanvas) {
+                img.layerOrder = this.getMaxLayerOrder(textObjects, true) + 1;
+            }
+            img.wasOutsideCanvas = true;
+
+            usedIds.add(img.objectId);
+            let mirror = layer.querySelector(`[data-object-id="${img.objectId}"]`);
+            if (!mirror) {
+                mirror = document.createElement('img');
+                mirror.dataset.objectId = img.objectId;
+                mirror.style.position = 'absolute';
+                mirror.style.transformOrigin = 'center center';
+                mirror.style.pointerEvents = 'auto';
+                mirror.style.userSelect = 'none';
+                mirror.draggable = false;
+                mirror.addEventListener('mousedown', event => {
+                    event.stopPropagation();
+                    window.drawingBoard?.setTool?.('select');
+                    window.drawingBoard?.selectionManager?.selectObjectById?.(img.objectId);
+                });
+                layer.appendChild(mirror);
+            }
+
+            const topLevelOrder = img.groupId
+                ? (this.getGroupById(img.groupId)?.layerOrder || img.layerOrder || 1)
+                : (img.layerOrder || 1);
+            const scaleX = img.flipHorizontal ? -1 : 1;
+            const scaleY = img.flipVertical ? -1 : 1;
+
+            mirror.src = img.imageSrc || img.imageElement.src;
+            mirror.style.left = `${img.x}px`;
+            mirror.style.top = `${img.y}px`;
+            mirror.style.width = `${img.width}px`;
+            mirror.style.height = `${img.height}px`;
+            mirror.style.zIndex = String(1000 + topLevelOrder);
+            mirror.style.transform = `rotate(${img.rotation || 0}deg) scale(${scaleX}, ${scaleY})`;
+        });
+
+        Array.from(layer.querySelectorAll('[data-object-id]')).forEach(node => {
+            if (!usedIds.has(node.dataset.objectId)) {
+                node.remove();
+            }
+        });
     }
     
     getPosition(e) {
@@ -670,7 +1036,9 @@ class DrawingEngine {
                     penType: this.penType,
                     tool: this.currentTool,
                     rotation: 0, // Initialize rotation property
-                    layerOrder: this.getNextLayerOrder()
+                    layerOrder: this.getNextLayerOrder(),
+                    objectId: this.getNextObjectId(),
+                    groupId: null
                 });
             }
             
@@ -721,6 +1089,8 @@ class DrawingEngine {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.clearStrokes();
         this.clearStampedImages();
+        this.objectGroups = [];
+        this.updateOffCanvasImageMirrors();
     }
     
     setTool(tool) {
@@ -926,7 +1296,9 @@ class DrawingEngine {
             penType: stroke.penType,
             tool: stroke.tool,
             rotation: stroke.rotation || 0,
-            layerOrder: this.getNextLayerOrder()
+            layerOrder: this.getNextLayerOrder(),
+            objectId: this.getNextObjectId(),
+            groupId: null
         };
         
         this.strokes.push(copiedStroke);
@@ -945,11 +1317,13 @@ class DrawingEngine {
         
         const stroke = this.strokes[this.selectedStrokeIndex];
         if (!stroke) return false;
-        
+
         // Remove stroke from array
+        this.removeObjectFromGroups(stroke.objectId);
         this.strokes.splice(this.selectedStrokeIndex, 1);
         this.selectedStrokeIndex = null;
-        
+        this.cleanupGroups();
+
         return true;
     }
     
@@ -1012,32 +1386,54 @@ class DrawingEngine {
     // Stamped image management
     addStampedImage(imageData) {
         if (!imageData) return;
+        this.ensureObjectId(imageData);
+        imageData.groupId = imageData.groupId || null;
         if (!Number.isFinite(imageData.layerOrder)) {
             imageData.layerOrder = this.getNextLayerOrder();
         } else {
             this.layerCounter = Math.max(this.layerCounter, imageData.layerOrder + 1);
         }
         this.stampedImages.push(imageData);
+        this.updateOffCanvasImageMirrors();
     }
 
     getNextLayerOrder() {
         return this.layerCounter++;
     }
 
-    syncLayerCounter(textObjects = []) {
+    syncLayerCounter(textObjects = [], groups = this.objectGroups) {
         let maxLayerOrder = 0;
+        let maxObjectId = 0;
+        let maxGroupId = 0;
+
         [this.strokes, this.stampedImages, textObjects || []].forEach(collection => {
             collection.forEach(item => {
-                if (Number.isFinite(item?.layerOrder)) {
+                if (!item) return;
+                this.ensureObjectId(item);
+                if (Number.isFinite(item.layerOrder)) {
                     maxLayerOrder = Math.max(maxLayerOrder, item.layerOrder);
                 }
+                maxObjectId = Math.max(maxObjectId, this.parseCounterValue(item.objectId, 'obj-'));
             });
         });
+
+        (groups || []).forEach(group => {
+            if (!group) return;
+            this.ensureGroup(group);
+            if (Number.isFinite(group.layerOrder)) {
+                maxLayerOrder = Math.max(maxLayerOrder, group.layerOrder);
+            }
+            maxGroupId = Math.max(maxGroupId, this.parseCounterValue(group.id, 'group-'));
+        });
+
         this.layerCounter = Math.max(this.layerCounter, maxLayerOrder + 1, 1);
+        this.objectIdCounter = Math.max(this.objectIdCounter, maxObjectId + 1, 1);
+        this.groupCounter = Math.max(this.groupCounter, maxGroupId + 1, 1);
     }
 
     ensureLayerOrder(item) {
         if (!item) return 0;
+        this.ensureObjectId(item);
         if (!Number.isFinite(item.layerOrder)) {
             item.layerOrder = this.getNextLayerOrder();
         } else {
@@ -1047,6 +1443,7 @@ class DrawingEngine {
     }
 
     getRenderableObjects(textObjects = []) {
+        this.cleanupGroups(textObjects);
         const renderables = [];
         let fallbackOrder = 0;
 
@@ -1055,6 +1452,7 @@ class DrawingEngine {
                 type: 'stroke',
                 index,
                 item: stroke,
+                objectId: this.ensureObjectId(stroke),
                 layerOrder: this.ensureLayerOrder(stroke),
                 fallbackOrder: fallbackOrder++
             });
@@ -1065,6 +1463,7 @@ class DrawingEngine {
                 type: 'image',
                 index,
                 item: image,
+                objectId: this.ensureObjectId(image),
                 layerOrder: this.ensureLayerOrder(image),
                 fallbackOrder: fallbackOrder++
             });
@@ -1075,12 +1474,38 @@ class DrawingEngine {
                 type: 'text',
                 index,
                 item: textObj,
+                objectId: this.ensureObjectId(textObj),
                 layerOrder: this.ensureLayerOrder(textObj),
                 fallbackOrder: fallbackOrder++
             });
         });
 
-        return renderables.sort((a, b) => {
+        const groupedObjectIds = new Set();
+        const topLevelRenderables = [];
+
+        this.objectGroups.forEach(group => {
+            this.ensureGroup(group);
+            const members = this.getGroupMembers(group, textObjects);
+            if (members.length < 2) return;
+            members.forEach(member => groupedObjectIds.add(member.objectId));
+            topLevelRenderables.push({
+                type: 'group',
+                groupId: group.id,
+                item: group,
+                objectId: group.id,
+                members,
+                layerOrder: group.layerOrder,
+                fallbackOrder: fallbackOrder++
+            });
+        });
+
+        renderables.forEach(renderable => {
+            if (!renderable.item.groupId || !groupedObjectIds.has(renderable.objectId)) {
+                topLevelRenderables.push(renderable);
+            }
+        });
+
+        return topLevelRenderables.sort((a, b) => {
             if (a.layerOrder === b.layerOrder) {
                 return a.fallbackOrder - b.fallbackOrder;
             }
@@ -1088,10 +1513,117 @@ class DrawingEngine {
         });
     }
 
+    normalizeTopLevelLayerOrders(textObjects = [], orderedRenderables = null) {
+        const renderables = orderedRenderables || this.getRenderableObjects(textObjects);
+        renderables.forEach((renderable, index) => {
+            if (renderable.type === 'group') {
+                renderable.item.layerOrder = index + 1;
+            } else {
+                renderable.item.layerOrder = index + 1;
+            }
+        });
+        this.syncLayerCounter(textObjects);
+    }
+
+    groupObjects(objectIds, textObjects = []) {
+        const uniqueIds = [...new Set(objectIds || [])];
+        if (uniqueIds.length < 2) return null;
+
+        const topLevelRenderables = this.getRenderableObjects(textObjects);
+        const selectedRenderables = topLevelRenderables.filter(renderable =>
+            renderable.type !== 'group' && uniqueIds.includes(renderable.objectId) && !renderable.item.groupId
+        );
+
+        if (selectedRenderables.length < 2) {
+            return null;
+        }
+
+        const selectedIds = new Set(selectedRenderables.map(renderable => renderable.objectId));
+        const memberIds = [...selectedRenderables]
+            .sort((a, b) => {
+                if (a.layerOrder === b.layerOrder) {
+                    return a.fallbackOrder - b.fallbackOrder;
+                }
+                return a.layerOrder - b.layerOrder;
+            })
+            .map(renderable => renderable.objectId);
+
+        const group = this.ensureGroup({
+            id: this.getNextGroupId(),
+            memberIds,
+            layerOrder: this.getNextLayerOrder()
+        });
+
+        selectedRenderables.forEach(renderable => {
+            renderable.item.groupId = group.id;
+        });
+        this.objectGroups.push(group);
+
+        const highestSelectedIndex = Math.max(
+            ...selectedRenderables.map(renderable => topLevelRenderables.indexOf(renderable))
+        );
+        const insertIndex = topLevelRenderables
+            .slice(0, highestSelectedIndex + 1)
+            .filter(renderable => !selectedIds.has(renderable.objectId))
+            .length;
+
+        const reordered = topLevelRenderables.filter(renderable => !selectedIds.has(renderable.objectId));
+        reordered.splice(insertIndex, 0, {
+            type: 'group',
+            groupId: group.id,
+            item: group,
+            objectId: group.id,
+            members: this.getGroupMembers(group, textObjects),
+            layerOrder: group.layerOrder,
+            fallbackOrder: highestSelectedIndex
+        });
+
+        this.normalizeTopLevelLayerOrders(textObjects, reordered);
+        return group;
+    }
+
+    ungroupObjects(groupId, textObjects = []) {
+        const group = this.getGroupById(groupId);
+        if (!group) return [];
+
+        const topLevelRenderables = this.getRenderableObjects(textObjects);
+        const groupRenderable = topLevelRenderables.find(renderable => renderable.type === 'group' && renderable.groupId === groupId);
+        if (!groupRenderable) return [];
+
+        const members = this.getGroupMembers(group, textObjects);
+        members.forEach(member => {
+            member.item.groupId = null;
+        });
+
+        this.objectGroups = this.objectGroups.filter(item => item.id !== groupId);
+
+        const reordered = [];
+        topLevelRenderables.forEach(renderable => {
+            if (renderable.type === 'group' && renderable.groupId === groupId) {
+                reordered.push(...members);
+            } else {
+                reordered.push(renderable);
+            }
+        });
+
+        this.normalizeTopLevelLayerOrders(textObjects, reordered);
+        return members;
+    }
+
     renderScene(textManager = null) {
         const renderables = this.getRenderableObjects(textManager?.textObjects || []);
         renderables.forEach(renderable => {
-            if (renderable.type === 'stroke') {
+            if (renderable.type === 'group') {
+                renderable.members.forEach(member => {
+                    if (member.type === 'stroke') {
+                        this.redrawStroke(member.item);
+                    } else if (member.type === 'image') {
+                        this.redrawSingleStampedImage(member.item);
+                    } else if (member.type === 'text' && textManager?.drawTextObject) {
+                        textManager.drawTextObject(member.item);
+                    }
+                });
+            } else if (renderable.type === 'stroke') {
                 this.redrawStroke(renderable.item);
             } else if (renderable.type === 'image') {
                 this.redrawSingleStampedImage(renderable.item);
@@ -1099,6 +1631,7 @@ class DrawingEngine {
                 textManager.drawTextObject(renderable.item);
             }
         });
+        this.updateOffCanvasImageMirrors(textManager?.textObjects || []);
     }
     
     redrawStampedImages() {
@@ -1133,6 +1666,7 @@ class DrawingEngine {
     clearStampedImages() {
         this.stampedImages = [];
         this.selectedImageIndex = null;
+        this.updateOffCanvasImageMirrors();
     }
 
     findImageAtPoint(x, y) {
@@ -1173,6 +1707,7 @@ class DrawingEngine {
         if (!img) return false;
         const copy = {
             imageElement: img.imageElement,
+            imageSrc: img.imageSrc || img.imageElement?.src || null,
             x: img.x + this.COPY_OFFSET,
             y: img.y + this.COPY_OFFSET,
             width: img.width,
@@ -1180,10 +1715,13 @@ class DrawingEngine {
             rotation: img.rotation || 0,
             flipHorizontal: img.flipHorizontal || false,
             flipVertical: img.flipVertical || false,
-            layerOrder: this.getNextLayerOrder()
+            layerOrder: this.getNextLayerOrder(),
+            objectId: this.getNextObjectId(),
+            groupId: null
         };
         this.stampedImages.push(copy);
         this.selectedImageIndex = this.stampedImages.length - 1;
+        this.updateOffCanvasImageMirrors();
         return true;
     }
 
@@ -1191,8 +1729,11 @@ class DrawingEngine {
         if (this.selectedImageIndex === null) return false;
         const img = this.stampedImages[this.selectedImageIndex];
         if (!img) return false;
+        this.removeObjectFromGroups(img.objectId);
         this.stampedImages.splice(this.selectedImageIndex, 1);
         this.selectedImageIndex = null;
+        this.cleanupGroups();
+        this.updateOffCanvasImageMirrors();
         return true;
     }
 }

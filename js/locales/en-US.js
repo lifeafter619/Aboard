@@ -181,7 +181,9 @@ window.translations = {
         layerFront: 'Bring to Front',
         layerBack: 'Send to Back',
         layerUp: 'Move Forward',
-        layerDown: 'Move Backward'
+        layerDown: 'Move Backward',
+        group: 'Group',
+        ungroup: 'Ungroup'
     },
 
     // Line Style Modal
@@ -254,7 +256,9 @@ window.translations = {
         layerFront: 'Bring to Front',
         layerBack: 'Send to Back',
         layerUp: 'Move Forward',
-        layerDown: 'Move Backward'
+        layerDown: 'Move Backward',
+        group: 'Group',
+        ungroup: 'Ungroup'
     },
 
     // Page Navigation

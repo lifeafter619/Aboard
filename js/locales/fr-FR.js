@@ -173,7 +173,9 @@ window.translations = {
         layerFront: 'Mettre au premier plan',
         layerBack: 'Envoyer à l’arrière',
         layerUp: 'Avancer d’un niveau',
-        layerDown: 'Reculer d’un niveau'
+        layerDown: 'Reculer d’un niveau',
+        group: 'Grouper',
+        ungroup: 'Dissocier'
     },
 
     // Line Style Modal
@@ -243,7 +245,9 @@ window.translations = {
         layerFront: 'Mettre au premier plan',
         layerBack: 'Envoyer à l’arrière',
         layerUp: 'Avancer d’un niveau',
-        layerDown: 'Reculer d’un niveau'
+        layerDown: 'Reculer d’un niveau',
+        group: 'Grouper',
+        ungroup: 'Dissocier'
     },
 
     // Page Navigation

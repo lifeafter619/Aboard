@@ -175,7 +175,9 @@ window.translations = {
         layerFront: 'In den Vordergrund',
         layerBack: 'In den Hintergrund',
         layerUp: 'Eine Ebene nach vorne',
-        layerDown: 'Eine Ebene nach hinten'
+        layerDown: 'Eine Ebene nach hinten',
+        group: 'Gruppieren',
+        ungroup: 'Gruppierung aufheben'
     },
 
     // Line Style Modal
@@ -245,7 +247,9 @@ window.translations = {
         layerFront: 'In den Vordergrund',
         layerBack: 'In den Hintergrund',
         layerUp: 'Eine Ebene nach vorne',
-        layerDown: 'Eine Ebene nach hinten'
+        layerDown: 'Eine Ebene nach hinten',
+        group: 'Gruppieren',
+        ungroup: 'Gruppierung aufheben'
     },
 
     // Page Navigation

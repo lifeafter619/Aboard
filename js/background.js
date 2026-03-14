@@ -31,6 +31,8 @@ class BackgroundManager {
             flipHorizontal: false,
             flipVertical: false
         };
+        this.backgroundOutsideLayerOrder = 1;
+        this.backgroundWasOutsideCanvas = false;
         
         // Load saved transform if exists
         const savedTransform = localStorage.getItem('imageTransform');
@@ -76,6 +78,8 @@ class BackgroundManager {
             height: null,
             transform: null,
             transformOrigin: null,
+            pointerEvents: null,
+            zIndex: null,
             gifSettingsDisplay: null
         };
         this.backgroundUiStateCache = null;
@@ -109,6 +113,71 @@ class BackgroundManager {
             !!this.backgroundImageData &&
             this.imageTransform.width > 0 &&
             this.imageTransform.height > 0;
+    }
+
+    getCanvasLogicalBounds() {
+        const dpr = window.devicePixelRatio || 1;
+        return {
+            x: 0,
+            y: 0,
+            width: this.bgCanvas.width / dpr,
+            height: this.bgCanvas.height / dpr
+        };
+    }
+
+    rectsIntersect(a, b) {
+        if (!a || !b) return false;
+        return a.x < b.x + b.width &&
+            a.x + a.width > b.x &&
+            a.y < b.y + b.height &&
+            a.y + a.height > b.y;
+    }
+
+    isBackgroundImageOutsideCanvas() {
+        const bounds = this.getBackgroundImageVisualBounds();
+        return !!bounds && !this.rectsIntersect(bounds, this.getCanvasLogicalBounds());
+    }
+
+    applyOutsideLayerAction(action, drawingEngine, textObjects = []) {
+        if (!this.isBackgroundImageOutsideCanvas()) return false;
+
+        const outsideRenderables = drawingEngine.getRenderableObjects(textObjects || []).filter(renderable => {
+            if (renderable.type === 'stroke') return false;
+            const bounds = drawingEngine.getTopLevelRenderableBounds(renderable, textObjects || []);
+            return !!bounds && !drawingEngine.rectsIntersect(bounds, drawingEngine.getCanvasLogicalBounds());
+        });
+        const orders = outsideRenderables
+            .map(renderable => renderable.layerOrder || 0)
+            .sort((a, b) => a - b);
+        const currentOrder = this.backgroundOutsideLayerOrder || (orders[orders.length - 1] || 0) + 1;
+        let nextOrder = currentOrder;
+
+        switch (action) {
+            case 'bring-to-front':
+                nextOrder = (orders[orders.length - 1] || 0) + 1;
+                break;
+            case 'send-to-back':
+                nextOrder = (orders[0] || 0) - 1;
+                break;
+            case 'move-forward': {
+                const higherOrder = orders.find(order => order > currentOrder);
+                nextOrder = higherOrder !== undefined ? higherOrder + 1 : currentOrder;
+                break;
+            }
+            case 'move-backward': {
+                const lowerOrders = orders.filter(order => order < currentOrder);
+                nextOrder = lowerOrders.length ? lowerOrders[lowerOrders.length - 1] - 1 : currentOrder;
+                break;
+            }
+            default:
+                return false;
+        }
+
+        if (nextOrder === currentOrder) return false;
+        this.backgroundOutsideLayerOrder = nextOrder;
+
+        this.drawBackground();
+        return true;
     }
 
     getBackgroundImageTransform() {
@@ -261,6 +330,12 @@ class BackgroundManager {
                 containerElement.style.position = 'absolute';
                 containerElement.style.pointerEvents = 'none';
                 containerElement.style.zIndex = '0'; // Same as bgCanvas
+                containerElement.addEventListener('mousedown', (event) => {
+                    if (!this.isBackgroundImageOutsideCanvas()) return;
+                    event.stopPropagation();
+                    window.drawingBoard?.setTool?.('select');
+                    window.drawingBoard?.selectionManager?.selectBackgroundImage?.();
+                });
 
                 // Append to transform-layer
                 const transformLayer = document.getElementById('transform-layer');
@@ -364,10 +439,28 @@ class BackgroundManager {
                 }
             }
 
+            const isOutsideCanvas = this.isBackgroundImageOutsideCanvas();
+            if (isOutsideCanvas && !this.backgroundWasOutsideCanvas) {
+                const maxLayerOrder = window.drawingBoard?.drawingEngine?.getMaxLayerOrder?.(
+                    window.drawingBoard?.insertTextManager?.textObjects || [],
+                    true
+                ) || 0;
+                this.backgroundOutsideLayerOrder = maxLayerOrder + 1;
+            }
+            this.backgroundWasOutsideCanvas = isOutsideCanvas;
+            this.setStyleIfChanged(containerElement, 'pointerEvents', isOutsideCanvas ? 'auto' : 'none', 'pointerEvents');
+            this.setStyleIfChanged(
+                containerElement,
+                'zIndex',
+                isOutsideCanvas ? String(1000 + (this.backgroundOutsideLayerOrder || 1)) : '0',
+                'zIndex'
+            );
+
         } else {
             if (containerElement) {
                 this.setStyleIfChanged(containerElement, 'display', 'none');
             }
+            this.backgroundWasOutsideCanvas = false;
             const gifSettingsBtn = document.getElementById('bg-gif-settings-btn');
             if (gifSettingsBtn) {
                 this.setStyleIfChanged(gifSettingsBtn, 'display', 'none', 'gifSettingsDisplay');
@@ -829,6 +922,8 @@ class BackgroundManager {
             flipHorizontal: false,
             flipVertical: false
         };
+        this.backgroundWasOutsideCanvas = false;
+        this.backgroundOutsideLayerOrder = 1;
 
         localStorage.removeItem('backgroundImageData');
         localStorage.removeItem('imageTransform');
