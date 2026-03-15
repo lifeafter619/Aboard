@@ -50,6 +50,7 @@ class TimeDisplayControls {
                 this.timeDisplayManager.showFullscreen();
             });
         }
+
     }
     
     toggleTimeDisplayArea() {
@@ -62,23 +63,21 @@ class TimeDisplayControls {
     
     showTimeDisplayArea() {
         this.timeDisplayArea.classList.add('show');
-        
-        // Position time-display-area above the "小功能" area (feature-area)
-        // Fixed: Use proper inset positioning instead of transform for better accuracy
-        const featureArea = document.getElementById('feature-area');
-        if (featureArea && featureArea.classList.contains('show')) {
-            const featureRect = featureArea.getBoundingClientRect();
-            const timeDisplayHeight = this.timeDisplayArea.offsetHeight || 200; // Estimate if not rendered yet
-            
-            // Position above the feature area using inset (top, right, bottom, left)
-            // Calculate top position: feature area top - time display height - gap
-            const topPosition = featureRect.top - timeDisplayHeight - 10;
-            
-            this.timeDisplayArea.style.transform = 'none';
-            this.timeDisplayArea.style.top = `${topPosition}px`;
-            this.timeDisplayArea.style.left = `${featureRect.left}px`;
-            this.timeDisplayArea.style.right = 'auto';
-            this.timeDisplayArea.style.bottom = 'auto';
+        window.drawingBoard?.bringElementToFront(this.timeDisplayArea);
+
+        // First open: center above the trigger button with a small gap.
+        // If user has dragged it before, keep user position.
+        if (this.timeDisplayArea.dataset.userDragged !== 'true') {
+            const triggerBtn = document.getElementById('time-display-feature-btn');
+            if (triggerBtn) {
+                const btnRect = triggerBtn.getBoundingClientRect();
+                const gap = 16;
+                this.timeDisplayArea.style.left = `${btnRect.left + (btnRect.width / 2)}px`;
+                this.timeDisplayArea.style.top = `${btnRect.top - gap}px`;
+                this.timeDisplayArea.style.right = 'auto';
+                this.timeDisplayArea.style.bottom = 'auto';
+                this.timeDisplayArea.style.transform = 'translate(-50%, -100%)';
+            }
         }
         
         // Also show the time display if not already shown

@@ -284,7 +284,8 @@ class ExportManager {
         if (scope === 'specific') {
             const selectedButtons = document.querySelectorAll('.project-page-selection-buttons .page-selection-btn.selected');
             if (selectedButtons.length === 0) {
-                alert('请至少选择一个页面');
+                const msg = window.i18n?.t('export.selectAtLeastOnePage') || '请至少选择一个页面进行导出';
+                window.appDialog?.showAlert(msg, 'warning');
                 return;
             }
             selectedPages = Array.from(selectedButtons).map(btn => parseInt(btn.dataset.pageNum));
@@ -426,7 +427,7 @@ class ExportManager {
         // Get selected page buttons
         const selectedButtons = document.querySelectorAll('.page-selection-btn.selected');
         if (selectedButtons.length === 0) {
-            alert(window.i18n.t('export.selectAtLeastOnePage') || '请至少选择一个页面进行导出');
+            window.appDialog?.showAlert(window.i18n.t('export.selectAtLeastOnePage') || '请至少选择一个页面进行导出', 'warning');
             return;
         }
         
@@ -469,4 +470,8 @@ class ExportManager {
         // Start exporting from the first selected page
         exportPage(0);
     }
+}
+
+if (typeof window !== 'undefined') {
+    window.ExportManager = ExportManager;
 }

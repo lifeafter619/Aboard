@@ -66,7 +66,7 @@ class InsertImageManager {
                     <div class="resize-handle left" data-handle="left"></div>
 
                     <!-- Rotation handle -->
-                    <div class="rotate-handle" id="insert-image-rotate-handle">
+                    <div class="rotate-handle" id="insert-image-rotate-handle" data-i18n-title="imageControls.rotate">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                             <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                         </svg>
@@ -88,13 +88,20 @@ class InsertImageManager {
 
                     <!-- Control toolbar -->
                     <div class="image-controls-toolbar">
-                        <button id="insert-image-cancel-btn" class="image-control-btn image-cancel-btn" title="Cancel">
+                        <button id="insert-image-help-btn" class="image-control-btn image-help-btn" type="button" data-help-key="help.features.insertImage" data-i18n-title="common.help" title="${window.i18n.t('common.help')}">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
+                                <line x1="12" y1="17" x2="12" y2="17"></line>
+                            </svg>
+                        </button>
+                        <button id="insert-image-cancel-btn" class="image-control-btn image-cancel-btn" data-i18n-title="common.cancel">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
                             </svg>
                         </button>
-                        <button id="insert-image-confirm-btn" class="image-control-btn image-done-btn" title="Confirm">
+                        <button id="insert-image-confirm-btn" class="image-control-btn image-done-btn" data-i18n-title="imageControls.confirm">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
@@ -108,6 +115,13 @@ class InsertImageManager {
 
         this.overlay = document.getElementById('insert-image-overlay');
         this.controlBox = document.getElementById('insert-image-box');
+        this.rotateHandle = document.getElementById('insert-image-rotate-handle');
+        this.flipHorizontalHandle = document.getElementById('insert-image-flip-horizontal');
+        this.flipVerticalHandle = document.getElementById('insert-image-flip-vertical');
+        this.toolbar = this.controlBox.querySelector('.image-controls-toolbar');
+        window.i18n?.applyTranslations?.();
+        window.drawingBoard?.helpSystem?.bindDataHelpButtons?.();
+        window.drawingBoard?.helpSystem?.refreshHelpButtonLabels?.();
     }
 
     setupEventListeners() {
@@ -125,6 +139,7 @@ class InsertImageManager {
         const handleDragStart = (e) => {
             // Stop propagation to prevent drawing on canvas
             e.stopPropagation();
+            e.preventDefault?.();
 
             if (e.target === this.controlBox || e.target.closest('.image-controls-box') === this.controlBox) {
                 if (!e.target.classList.contains('resize-handle') &&
@@ -140,45 +155,48 @@ class InsertImageManager {
         };
 
         this.controlBox.addEventListener('mousedown', handleDragStart);
+        this.controlBox.addEventListener('pointerdown', handleDragStart);
         this.controlBox.addEventListener('touchstart', handleDragStart, { passive: false });
 
         // Resize handles
         this.controlBox.querySelectorAll('.resize-handle').forEach(handle => {
             const startResize = (e) => {
                 e.stopPropagation();
-                if (e.type === 'touchstart') e.preventDefault();
+                e.preventDefault?.();
                 this.startResize(e, handle.dataset.handle);
             };
             handle.addEventListener('mousedown', startResize);
+            handle.addEventListener('pointerdown', startResize);
             handle.addEventListener('touchstart', startResize, { passive: false });
         });
 
         // Rotation handle
-        const rotateHandle = document.getElementById('insert-image-rotate-handle');
         const startRotate = (e) => {
             e.stopPropagation();
-            if (e.type === 'touchstart') e.preventDefault();
+            e.preventDefault?.();
             this.startRotate(e);
         };
-        rotateHandle.addEventListener('mousedown', startRotate);
-        rotateHandle.addEventListener('touchstart', startRotate, { passive: false });
+        this.rotateHandle.addEventListener('mousedown', startRotate);
+        this.rotateHandle.addEventListener('pointerdown', startRotate);
+        this.rotateHandle.addEventListener('touchstart', startRotate, { passive: false });
 
         // Flip horizontal handle
-        const flipHorizontalHandle = document.getElementById('insert-image-flip-horizontal');
-        flipHorizontalHandle.addEventListener('click', (e) => {
+        this.flipHorizontalHandle.addEventListener('click', (e) => {
             e.stopPropagation();
             this.toggleFlipHorizontal();
         });
 
         // Flip vertical handle
-        const flipVerticalHandle = document.getElementById('insert-image-flip-vertical');
-        flipVerticalHandle.addEventListener('click', (e) => {
+        this.flipVerticalHandle.addEventListener('click', (e) => {
             e.stopPropagation();
             this.toggleFlipVertical();
         });
 
         // Global move/up events
         const handleMove = (e) => {
+            if ((this.isDragging || this.isResizing || this.isRotating) && e.type === 'touchmove') {
+                e.preventDefault();
+            }
             if (this.isDragging) this.drag(e);
             else if (this.isResizing) this.resize(e);
             else if (this.isRotating) this.rotate(e);
@@ -191,9 +209,13 @@ class InsertImageManager {
         };
 
         document.addEventListener('mousemove', handleMove);
+        document.addEventListener('pointermove', handleMove);
         document.addEventListener('touchmove', handleMove, { passive: false });
         document.addEventListener('mouseup', handleEnd);
+        document.addEventListener('pointerup', handleEnd);
         document.addEventListener('touchend', handleEnd);
+        document.addEventListener('pointercancel', handleEnd);
+        document.addEventListener('touchcancel', handleEnd);
 
         // Buttons
         document.getElementById('insert-image-confirm-btn').addEventListener('click', () => this.confirmImage());
@@ -350,6 +372,133 @@ class InsertImageManager {
         this.updateControlBox();
     }
 
+    clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+    }
+
+    updateAdaptiveControlsLayout(boxWidth, boxHeight) {
+        const safeWidth = Math.max(boxWidth, 1);
+        const safeHeight = Math.max(boxHeight, 1);
+        const minSide = Math.max(Math.min(safeWidth, safeHeight), 1);
+
+        const resizeHandleSize = this.clamp(minSide * 0.18, 10, 12);
+        this.controlBox.style.setProperty('--resize-handle-size', `${resizeHandleSize}px`);
+        this.controlBox.style.setProperty('--resize-handle-offset', `${-(resizeHandleSize / 2)}px`);
+
+        const floatingSize = this.clamp(minSide * 0.28, 20, 36);
+        const floatingIconSize = this.clamp(floatingSize * 0.56, 12, 20);
+        const floatingGap = this.clamp(floatingSize * 0.2, 4, 10);
+        const inset = this.clamp(minSide * 0.08, 4, 10);
+        const outsideTop = safeHeight >= floatingSize * 2.5 ? -(floatingSize + 8) : inset;
+        const insideTop = inset;
+        const rowSpan = floatingSize * 3 + floatingGap * 2;
+        const doubleSpan = floatingSize * 2 + floatingGap;
+        const centerX = safeWidth / 2;
+        const stackX = this.clamp(
+            safeWidth - (floatingSize / 2) - inset,
+            floatingSize / 2,
+            Math.max(floatingSize / 2, safeWidth - (floatingSize / 2))
+        );
+
+        let positions;
+        if (safeWidth >= rowSpan + inset * 2) {
+            positions = [
+                { left: centerX - (floatingSize + floatingGap), top: outsideTop },
+                { left: centerX, top: outsideTop },
+                { left: centerX + (floatingSize + floatingGap), top: outsideTop }
+            ];
+        } else if (safeWidth >= doubleSpan + inset * 2) {
+            positions = [
+                { left: centerX, top: outsideTop },
+                { left: centerX - ((floatingSize + floatingGap) / 2), top: insideTop },
+                { left: centerX + ((floatingSize + floatingGap) / 2), top: insideTop }
+            ];
+        } else {
+            positions = [
+                { left: stackX, top: insideTop },
+                { left: stackX, top: insideTop + floatingSize + floatingGap },
+                { left: stackX, top: insideTop + (floatingSize + floatingGap) * 2 }
+            ];
+        }
+
+        [
+            { element: this.rotateHandle, position: positions[0] },
+            { element: this.flipHorizontalHandle, position: positions[1] },
+            { element: this.flipVerticalHandle, position: positions[2] }
+        ].forEach(({ element, position }) => {
+            if (!element || !position) return;
+
+            element.style.left = `${position.left}px`;
+            element.style.top = `${position.top}px`;
+            element.style.width = `${floatingSize}px`;
+            element.style.height = `${floatingSize}px`;
+            element.style.setProperty('--handle-connector-top', `${floatingSize}px`);
+            element.style.setProperty('--handle-connector-height', `${Math.max(8, Math.round(floatingSize * 0.35))}px`);
+
+            const icon = element.querySelector('svg');
+            if (icon) {
+                icon.style.width = `${floatingIconSize}px`;
+                icon.style.height = `${floatingIconSize}px`;
+            }
+        });
+
+        this.controlBox.style.setProperty('--floating-control-size', `${floatingSize}px`);
+        this.controlBox.style.setProperty('--floating-control-icon-size', `${floatingIconSize}px`);
+
+        if (!this.toolbar) return;
+
+        const toolbarButtons = Array.from(this.toolbar.querySelectorAll('.image-control-btn'));
+        const toolbarButtonSize = this.clamp(Math.min(safeWidth * 0.3, minSide * 0.42), 20, 44);
+        const toolbarGap = this.clamp(toolbarButtonSize * 0.18, 4, 8);
+        const toolbarPaddingX = this.clamp(toolbarButtonSize * 0.22, 4, 10);
+        const toolbarPaddingY = this.clamp(toolbarButtonSize * 0.18, 4, 10);
+        const toolbarHorizontalWidth = (toolbarButtonSize * toolbarButtons.length) + (toolbarGap * Math.max(toolbarButtons.length - 1, 0)) + toolbarPaddingX * 2;
+        const toolbarTwoColWidth = (toolbarButtonSize * Math.min(toolbarButtons.length, 2)) + (toolbarGap * Math.max(Math.min(toolbarButtons.length, 2) - 1, 0)) + toolbarPaddingX * 2;
+
+        toolbarButtons.forEach((button) => {
+            button.style.width = `${toolbarButtonSize}px`;
+            button.style.height = `${toolbarButtonSize}px`;
+
+            const icon = button.querySelector('svg');
+            if (icon) {
+                const toolbarIconSize = this.clamp(toolbarButtonSize * 0.45, 10, 20);
+                icon.style.width = `${toolbarIconSize}px`;
+                icon.style.height = `${toolbarIconSize}px`;
+            }
+        });
+
+        this.controlBox.style.setProperty('--toolbar-button-size', `${toolbarButtonSize}px`);
+        this.controlBox.style.setProperty('--toolbar-gap', `${toolbarGap}px`);
+        this.controlBox.style.setProperty('--toolbar-padding-x', `${toolbarPaddingX}px`);
+        this.controlBox.style.setProperty('--toolbar-padding-y', `${toolbarPaddingY}px`);
+
+        this.toolbar.style.left = `${centerX}px`;
+        this.toolbar.style.bottom = safeHeight >= toolbarButtonSize * 2.5
+            ? `${-(toolbarButtonSize + toolbarPaddingY + 10)}px`
+            : `${inset}px`;
+        this.toolbar.style.transform = 'translateX(-50%)';
+        this.toolbar.style.display = 'flex';
+        this.toolbar.style.flexDirection = 'row';
+        this.toolbar.style.justifyContent = 'center';
+        this.toolbar.style.alignItems = 'center';
+        this.toolbar.style.justifyItems = '';
+        this.toolbar.style.gridTemplateColumns = '';
+        this.toolbar.style.width = 'auto';
+
+        if (safeWidth < toolbarHorizontalWidth + inset * 2) {
+            this.toolbar.style.bottom = `${inset}px`;
+
+            if (safeWidth >= toolbarTwoColWidth + inset * 2 && toolbarButtons.length > 2) {
+                this.toolbar.style.display = 'grid';
+                this.toolbar.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
+                this.toolbar.style.justifyItems = 'center';
+                this.toolbar.style.width = `${Math.max(toolbarTwoColWidth, Math.min(safeWidth - inset * 2, toolbarHorizontalWidth))}px`;
+            } else {
+                this.toolbar.style.flexDirection = 'column';
+            }
+        }
+    }
+
     updateControlBox() {
         if (!this.isActive) return;
 
@@ -382,6 +531,8 @@ class InsertImageManager {
         this.controlBox.style.width = `${screenWidth}px`;
         this.controlBox.style.height = `${screenHeight}px`;
         this.controlBox.style.transform = `rotate(${this.imageRotation}deg)`;
+
+        this.updateAdaptiveControlsLayout(screenWidth, screenHeight);
         
         // Apply flip to the internal image preview using a separate inner element
         // Create or update an inner preview element for flip
@@ -460,13 +611,16 @@ class InsertImageManager {
         // Track the stamped image so it can be redrawn during selection operations
         this.drawingEngine.addStampedImage({
             imageElement: this.currentImage,
+            imageSrc: this.currentImage.src,
             x: this.imagePosition.x,
             y: this.imagePosition.y,
             width: this.imageSize.width,
             height: this.imageSize.height,
             rotation: this.imageRotation,
             flipHorizontal: this.flipHorizontal,
-            flipVertical: this.flipVertical
+            flipVertical: this.flipVertical,
+            objectId: this.drawingEngine.getNextObjectId(),
+            groupId: null
         });
 
         // Save history

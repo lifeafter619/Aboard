@@ -129,7 +129,7 @@ class ProjectManager {
             return true;
         } catch (e) {
             console.error('Export failed:', e);
-            alert('导出项目失败: ' + e.message);
+            window.appDialog?.showAlert('导出项目失败: ' + e.message, 'error');
             return false;
         }
     }
@@ -151,7 +151,8 @@ class ProjectManager {
             }
 
             // Confirm overwrite
-            if (!confirm('导入项目将覆盖当前画布内容，是否继续？')) {
+            const confirmed = await window.appDialog?.showConfirm('导入项目将覆盖当前画布内容，是否继续？');
+            if (!confirmed) {
                 return;
             }
 
@@ -249,11 +250,15 @@ class ProjectManager {
             // Save to storage
             this.drawingBoard.saveSessionDebounced();
 
-            alert('项目导入成功');
+            window.appDialog?.showAlert('项目导入成功', 'success');
 
         } catch (e) {
             console.error('Import failed:', e);
-            alert('导入失败: ' + e.message);
+            window.appDialog?.showAlert('导入失败: ' + e.message, 'error');
         }
     }
+}
+
+if (typeof window !== 'undefined') {
+    window.ProjectManager = ProjectManager;
 }

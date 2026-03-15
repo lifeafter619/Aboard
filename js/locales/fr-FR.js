@@ -18,7 +18,9 @@ window.translations = {
         no: 'Non',
         ok: 'OK',
         apply: 'Appliquer',
-        reset: 'Réinitialiser'
+        reset: 'Réinitialiser',
+        restoreSize: 'Rétablir la taille',
+        keepCentered: 'Garder centré'
     },
 
     // Recovery dialog
@@ -32,7 +34,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - Tableau Blanc Minimaliste',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: 'Veuillez faire pivoter l’écran',
+        rotateScreenTip: 'Le mode portrait est détecté. Pour une mise en page correcte et une barre d’outils complète, passez en paysage.'
     },
 
     // Toolbar
@@ -53,6 +57,7 @@ window.translations = {
         zoomOut: 'Dézoomer (-)',
         zoomIn: 'Zoomer (+)',
         fullscreen: 'Plein écran (F11)',
+        exitFullscreen: 'Quitter le plein écran (F11)',
         zoomPlaceholder: 'Niveau de zoom (Entrer pourcentage)'
     },
 
@@ -66,6 +71,7 @@ window.translations = {
             ballpoint: 'Stylo à bille',
             fountain: 'Stylo-plume',
             brush: 'Pinceau',
+            marker: 'Marqueur',
             color: 'Couleur',
             colorAndSize: 'Couleur et taille',
             colorPicker: 'Sélecteur de couleur',
@@ -167,7 +173,9 @@ window.translations = {
         layerFront: 'Mettre au premier plan',
         layerBack: 'Envoyer à l’arrière',
         layerUp: 'Avancer d’un niveau',
-        layerDown: 'Reculer d’un niveau'
+        layerDown: 'Reculer d’un niveau',
+        group: 'Grouper',
+        ungroup: 'Dissocier'
     },
 
     // Line Style Modal
@@ -237,7 +245,9 @@ window.translations = {
         layerFront: 'Mettre au premier plan',
         layerBack: 'Envoyer à l’arrière',
         layerUp: 'Avancer d’un niveau',
-        layerDown: 'Reculer d’un niveau'
+        layerDown: 'Reculer d’un niveau',
+        group: 'Grouper',
+        ungroup: 'Dissocier'
     },
 
     // Page Navigation
@@ -252,6 +262,10 @@ window.translations = {
     // Settings
     settings: {
         title: 'Paramètres',
+        exportSuccess: 'Configuration exportée avec succès',
+        importSuccess: 'Configuration importée avec succès',
+        importError: 'Fichier de configuration invalide',
+        importNoChange: 'Aucune modification de configuration détectée',
         tabs: {
             general: 'Général',
             display: 'Affichage',
@@ -319,6 +333,8 @@ window.translations = {
             },
             edgeSnap: 'Activer l\'alignement des bords',
             edgeSnapHint: 'Aligner automatiquement les panneaux de contrôle sur les bords de l\'écran',
+            morePanelBehaviorLabel: 'Comportement du panneau Plus',
+            keepMorePanelOpenHint: 'Garder le panneau Plus ouvert après clic sur une fonction',
             // Toolbar customization
             toolbarCustomization: 'Personnalisation de la barre d\'outils',
             toolbarCustomizationHint: 'Sélectionnez les outils à afficher, glissez pour réorganiser',
@@ -448,6 +464,19 @@ window.translations = {
         },
         more: {
             title: 'Plus de paramètres',
+            cacheCleanupLabel: 'Nettoyage du cache',
+            cacheCleanupHint: 'Voir l\'utilisation du cache et nettoyer par catégorie (avec confirmation avant suppression)',
+            clearSettingsCache: 'Effacer le cache des paramètres',
+            clearCanvasCache: 'Effacer le cache du canvas',
+            clearOtherCache: 'Effacer les autres caches',
+            cacheSizeCalculating: 'Calcul en cours...',
+            clearSelectedCache: 'Effacer le cache sélectionné',
+            morePanelBehaviorLabel: 'Comportement du panneau Plus',
+            keepMorePanelOpenHint: 'Garder le panneau Plus ouvert après clic sur une fonction',
+            selectCacheType: 'Veuillez sélectionner au moins un type de cache.',
+            confirmClearTitle: 'Confirmer le nettoyage',
+            confirmClearSelectedCache: 'Sélectionnez les éléments de cache à effacer :',
+            clearLocalDataConfirmSuffix: 'Continuer ?',
             description: 'Pour les paramètres d\'affichage de l\'heure, cliquez sur la zone de l\'heure en bas à droite',
             showTimeDisplay: 'Afficher l\'heure et la date',
             showTimeDisplayHint: 'Afficher l\'heure et la date actuelles dans le coin supérieur droit',

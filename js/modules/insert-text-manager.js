@@ -121,7 +121,7 @@ class InsertTextManager {
             if (window.toastManager) {
                 window.toastManager.show(msg, 'error');
             } else {
-                alert(msg);
+                window.appDialog?.showAlert(msg, 'error');
             }
             return;
         }
@@ -134,7 +134,7 @@ class InsertTextManager {
             if (window.toastManager) {
                 window.toastManager.show(msg, 'error');
             } else {
-                alert(msg);
+                window.appDialog?.showAlert(msg, 'error');
             }
             return;
         }
@@ -322,7 +322,7 @@ class InsertTextManager {
                     <div class="resize-handle bottom-right" data-handle="bottom-right"></div>
 
                     <!-- Rotation Handle -->
-                    <div class="rotate-handle" id="insert-text-rotate-handle">
+                    <div class="rotate-handle" id="insert-text-rotate-handle" data-i18n-title="imageControls.rotate">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                             <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                         </svg>
@@ -330,19 +330,19 @@ class InsertTextManager {
 
                     <!-- Toolbar -->
                     <div class="text-controls-toolbar">
-                        <button id="insert-text-edit-btn" class="text-control-btn text-edit-btn" title="Edit Text">
+                        <button id="insert-text-edit-btn" class="text-control-btn text-edit-btn" data-i18n-title="common.edit">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
                         </button>
-                        <button id="insert-text-cancel-btn" class="text-control-btn text-cancel-btn" title="Cancel">
+                        <button id="insert-text-cancel-btn" class="text-control-btn text-cancel-btn" data-i18n-title="common.cancel">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
                             </svg>
                         </button>
-                        <button id="insert-text-confirm-btn" class="text-control-btn text-done-btn" title="Confirm">
+                        <button id="insert-text-confirm-btn" class="text-control-btn text-done-btn" data-i18n-title="common.confirm">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
@@ -357,6 +357,8 @@ class InsertTextManager {
         this.overlay = document.getElementById('insert-text-overlay');
         this.controlBox = document.getElementById('insert-text-box');
         this.textContentDiv = document.getElementById('insert-text-content');
+        this.rotateHandle = document.getElementById('insert-text-rotate-handle');
+        this.toolbar = this.controlBox.querySelector('.text-controls-toolbar');
 
         if (window.i18n) {
             window.i18n.applyTranslations();
@@ -370,23 +372,21 @@ class InsertTextManager {
         const select = document.getElementById('insert-text-font-select');
         if (!select) return;
 
-        const fonts = [
-            { value: 'sans-serif', label: 'settings.general.fonts.sansSerif' },
-            { value: 'serif', label: 'settings.general.fonts.serif' },
-            { value: 'monospace', label: 'settings.general.fonts.monospace' },
-            { value: 'cursive', label: 'settings.general.fonts.cursive' },
-            { value: 'Microsoft YaHei', label: 'settings.general.fonts.yahei' },
-            { value: 'SimSun', label: 'settings.general.fonts.simsun' },
-            { value: 'SimHei', label: 'settings.general.fonts.simhei' },
-            { value: 'KaiTi', label: 'settings.general.fonts.kaiti' },
-            { value: 'FangSong', label: 'settings.general.fonts.fangsong' },
-            { value: 'Arial', label: 'settings.general.fonts.arial' },
-            { value: 'Times New Roman', label: 'settings.general.fonts.timesNewRoman' },
-            { value: 'Courier New', label: 'settings.general.fonts.courier' },
-            { value: 'Verdana', label: 'settings.general.fonts.verdana' },
-            { value: 'Georgia', label: 'settings.general.fonts.georgia' },
-            { value: 'Impact', label: 'settings.general.fonts.impact' }
-        ];
+        const settingsManager = window.drawingBoard?.settingsManager;
+        const managedFontOptions = settingsManager && typeof settingsManager.getManagedFontOptions === 'function'
+            ? settingsManager.getManagedFontOptions()
+            : null;
+        const managedFonts = managedFontOptions
+            ? managedFontOptions.filter(font => font.visible).map(font => ({ value: font.value, label: font.label }))
+            : null;
+        const fonts = (managedFonts && managedFonts.length > 0)
+            ? managedFonts
+            : [
+                { value: 'sans-serif', label: 'settings.general.fonts.sansSerif' },
+                { value: 'serif', label: 'settings.general.fonts.serif' },
+                { value: 'monospace', label: 'settings.general.fonts.monospace' },
+                { value: 'cursive', label: 'settings.general.fonts.cursive' }
+            ];
 
         select.innerHTML = '';
         
@@ -395,23 +395,14 @@ class InsertTextManager {
             const option = document.createElement('option');
             option.value = font.value;
             // Use translation if available
-            option.textContent = window.i18n ? window.i18n.t(font.label) : font.value;
+            option.textContent = window.i18n && font.label.startsWith('settings.')
+                ? window.i18n.t(font.label)
+                : font.label;
             select.appendChild(option);
         });
 
-        // Add custom fonts if any
-        if (this.customFonts.length > 0) {
-            const optgroup = document.createElement('optgroup');
-            optgroup.label = window.i18n ? window.i18n.t('tools.text.customFonts') : 'Custom Fonts';
-            
-            this.customFonts.forEach(font => {
-                const option = document.createElement('option');
-                option.value = font.name;
-                option.textContent = font.name;
-                optgroup.appendChild(option);
-            });
-            
-            select.appendChild(optgroup);
+        if (window.drawingBoard?.settingsManager?.customFonts) {
+            this.customFonts = window.drawingBoard.settingsManager.customFonts;
         }
     }
 
@@ -470,6 +461,9 @@ class InsertTextManager {
         const fontSelect = document.getElementById('insert-text-font-select');
         fontSelect.addEventListener('change', (e) => {
             this.textConfig.fontFamily = e.target.value;
+            if (this.isActive) {
+                this.updateOverlay();
+            }
         });
 
         // Font Upload
@@ -477,7 +471,19 @@ class InsertTextManager {
         if (fontUpload) {
             fontUpload.addEventListener('change', (e) => {
                 if (e.target.files && e.target.files[0]) {
-                    this.handleFontUpload(e.target.files[0]);
+                    if (window.drawingBoard?.settingsManager) {
+                        window.drawingBoard.settingsManager.handleFontUpload(e.target.files[0]);
+                        this.customFonts = window.drawingBoard.settingsManager.customFonts;
+                        this.populateFonts();
+                        const select = document.getElementById('insert-text-font-select');
+                        const uploadedName = e.target.files[0].name.replace(/\.[^/.]+$/, '');
+                        if (select && [...select.options].some(opt => opt.value === uploadedName)) {
+                            select.value = uploadedName;
+                            this.textConfig.fontFamily = uploadedName;
+                        }
+                    } else {
+                        this.handleFontUpload(e.target.files[0]);
+                    }
                 }
             });
         }
@@ -569,28 +575,30 @@ class InsertTextManager {
         };
 
         this.controlBox.addEventListener('mousedown', handleDragStart);
+        this.controlBox.addEventListener('pointerdown', handleDragStart);
         this.controlBox.addEventListener('touchstart', handleDragStart, { passive: false });
 
         // Resize Handles
         this.controlBox.querySelectorAll('.resize-handle').forEach(handle => {
             const startResize = (e) => {
                 e.stopPropagation();
-                if (e.type === 'touchstart') e.preventDefault();
+                e.preventDefault?.();
                 this.startResize(e, handle.dataset.handle);
             };
             handle.addEventListener('mousedown', startResize);
+            handle.addEventListener('pointerdown', startResize);
             handle.addEventListener('touchstart', startResize, { passive: false });
         });
 
         // Rotate Handle
-        const rotateHandle = document.getElementById('insert-text-rotate-handle');
         const startRotate = (e) => {
             e.stopPropagation();
-            if (e.type === 'touchstart') e.preventDefault();
+            e.preventDefault?.();
             this.startRotate(e);
         };
-        rotateHandle.addEventListener('mousedown', startRotate);
-        rotateHandle.addEventListener('touchstart', startRotate, { passive: false });
+        this.rotateHandle.addEventListener('mousedown', startRotate);
+        this.rotateHandle.addEventListener('pointerdown', startRotate);
+        this.rotateHandle.addEventListener('touchstart', startRotate, { passive: false });
 
         // Overlay Toolbar
         document.getElementById('insert-text-cancel-btn').addEventListener('click', () => this.cancelOverlay());
@@ -602,6 +610,9 @@ class InsertTextManager {
 
         // Global Move/Up
         const handleMove = (e) => {
+            if ((this.isDragging || this.isResizing || this.isRotating) && e.type === 'touchmove') {
+                e.preventDefault();
+            }
             if (this.isDragging) this.drag(e);
             else if (this.isResizing) this.resize(e);
             else if (this.isRotating) this.rotate(e);
@@ -614,9 +625,13 @@ class InsertTextManager {
         };
 
         document.addEventListener('mousemove', handleMove);
+        document.addEventListener('pointermove', handleMove);
         document.addEventListener('touchmove', handleMove, { passive: false });
         document.addEventListener('mouseup', handleEnd);
+        document.addEventListener('pointerup', handleEnd);
         document.addEventListener('touchend', handleEnd);
+        document.addEventListener('pointercancel', handleEnd);
+        document.addEventListener('touchcancel', handleEnd);
     }
 
     trigger() {
@@ -842,6 +857,9 @@ class InsertTextManager {
         this.textContentDiv.textContent = this.textConfig.text;
 
         this.controlBox.style.transform = `rotate(${this.textRotation}deg)`;
+
+        const boxRect = this.controlBox.getBoundingClientRect();
+        this.updateAdaptiveControlsLayout(boxRect.width, boxRect.height);
     }
 
     cancelOverlay() {
@@ -861,7 +879,7 @@ class InsertTextManager {
         // Measure text dimensions at base (unscaled) font size so that
         // width/height are consistent with scale multiplication elsewhere.
         this.ctx.save();
-        this.ctx.font = `${fontStyle} ${fontWeight} ${effectiveFontSize}px ${this.textConfig.fontFamily}`;
+        this.ctx.font = `${fontStyle} ${fontWeight} ${effectiveFontSize}px ${this.normalizeFontFamilyForCanvas(this.textConfig.fontFamily)}`;
         this.ctx.textBaseline = 'top';
         
         const lines = this.textConfig.text.split('\n');
@@ -891,6 +909,15 @@ class InsertTextManager {
             decorationWidth: this.textConfig.decorationWidth || this.DEFAULT_DECORATION_WIDTH,
             rotation: this.textRotation,
             scale: 1,
+            layerOrder: this.editingTextIndex !== null && this.textObjects[this.editingTextIndex]
+                ? (this.textObjects[this.editingTextIndex].layerOrder ?? this.drawingEngine?.getNextLayerOrder?.())
+                : (this.drawingEngine?.getNextLayerOrder?.() ?? Date.now()),
+            objectId: this.editingTextIndex !== null && this.textObjects[this.editingTextIndex]
+                ? (this.textObjects[this.editingTextIndex].objectId ?? this.drawingEngine?.getNextObjectId?.())
+                : (this.drawingEngine?.getNextObjectId?.() ?? `obj-${Date.now()}`),
+            groupId: this.editingTextIndex !== null && this.textObjects[this.editingTextIndex]
+                ? (this.textObjects[this.editingTextIndex].groupId ?? null)
+                : null,
             width: maxWidth + 8, // Include padding
             height: lines.length * baseLineHeight + 8
         };
@@ -926,7 +953,7 @@ class InsertTextManager {
         const fontSize = textObj.fontSize;
         const fontStyle = textObj.italic ? 'italic' : 'normal';
         const fontWeight = textObj.bold ? 'bold' : 'normal';
-        this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${textObj.fontFamily}`;
+        this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${this.normalizeFontFamilyForCanvas(textObj.fontFamily)}`;
         this.ctx.textBaseline = 'top';
         this.ctx.fillStyle = textObj.color;
         
@@ -1072,7 +1099,7 @@ class InsertTextManager {
         const padding = 4;
         
         this.ctx.save();
-        this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${textObj.fontFamily}`;
+        this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${this.normalizeFontFamilyForCanvas(textObj.fontFamily)}`;
         
         const lines = textObj.text.split('\n');
         const lineHeight = fontSize * 1.2;
@@ -1083,12 +1110,15 @@ class InsertTextManager {
         });
         this.ctx.restore();
         
-        return {
+        const bounds = {
             x: textObj.x,
             y: textObj.y,
             width: maxWidth + padding * 2,
             height: lines.length * lineHeight + padding * 2
         };
+        textObj.width = bounds.width;
+        textObj.height = bounds.height;
+        return bounds;
     }
     
     // Copy selected text object
@@ -1100,7 +1130,10 @@ class InsertTextManager {
         const copy = {
             ...textObj,
             x: textObj.x + 20,
-            y: textObj.y + 20
+            y: textObj.y + 20,
+            layerOrder: this.drawingEngine?.getNextLayerOrder?.() ?? Date.now(),
+            objectId: this.drawingEngine?.getNextObjectId?.() ?? `obj-${Date.now()}`,
+            groupId: null
         };
         this.textObjects.push(copy);
         this.selectedTextIndex = this.textObjects.length - 1;
@@ -1167,6 +1200,18 @@ class InsertTextManager {
         if (!textObj.decorationColor) textObj.decorationColor = textObj.color || '#000000';
         if (!textObj.decorationWidth) textObj.decorationWidth = this.DEFAULT_DECORATION_WIDTH;
     }
+
+    normalizeFontFamilyForCanvas(fontFamily) {
+        if (!fontFamily || typeof fontFamily !== 'string') return 'sans-serif';
+        return fontFamily.split(',')
+            .map(part => part.trim())
+            .filter(Boolean)
+            .map(part => {
+                const normalized = part.replace(/^["']|["']$/g, '').trim();
+                return !/\s/.test(normalized) ? normalized : `"${normalized}"`;
+            })
+            .join(', ');
+    }
     
     // Get all text objects (for serialization)
     getTextObjects() {
@@ -1176,7 +1221,18 @@ class InsertTextManager {
     // Set text objects (for deserialization)
     setTextObjects(objects) {
         this.textObjects = objects || [];
-        this.textObjects.forEach(textObj => this.normalizeTextObjectScale(textObj));
+        this.textObjects.forEach(textObj => {
+            this.normalizeTextObjectScale(textObj);
+            if (this.drawingEngine?.ensureObjectId) {
+                this.drawingEngine.ensureObjectId(textObj);
+            }
+            if (typeof textObj.groupId === 'undefined') {
+                textObj.groupId = null;
+            }
+        });
+        if (this.drawingEngine?.syncLayerCounter) {
+            this.drawingEngine.syncLayerCounter(this.textObjects);
+        }
     }
     
     // Clear all text objects
@@ -1190,13 +1246,9 @@ class InsertTextManager {
         // Clear and redraw canvas contents
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Redraw stamped images
-        if (this.drawingEngine) {
-            this.drawingEngine.redrawStampedImages();
-            // Redraw all strokes
-            for (const stroke of this.drawingEngine.strokes) {
-                this.drawingEngine.redrawStroke(stroke);
-            }
+        if (this.drawingEngine?.renderScene) {
+            this.drawingEngine.renderScene(this);
+            return;
         }
         
         // Redraw all text objects
@@ -1215,6 +1267,97 @@ class InsertTextManager {
         const rect = this.canvas.getBoundingClientRect();
         const logicalWidth = this.canvas.width / window.devicePixelRatio;
         return rect.width / logicalWidth;
+    }
+
+    clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+    }
+
+    updateAdaptiveControlsLayout(boxWidth, boxHeight) {
+        const safeWidth = Math.max(boxWidth, 1);
+        const safeHeight = Math.max(boxHeight, 1);
+        const minSide = Math.max(Math.min(safeWidth, safeHeight), 1);
+
+        const resizeHandleSize = this.clamp(minSide * 0.22, 12, 20);
+        this.controlBox.style.setProperty('--resize-handle-size', `${resizeHandleSize}px`);
+        this.controlBox.style.setProperty('--resize-handle-offset', `${-(resizeHandleSize / 2)}px`);
+
+        const floatingSize = this.clamp(minSide * 0.34, 24, 52);
+        const floatingIconSize = this.clamp(floatingSize * 0.46, 12, 22);
+        const inset = this.clamp(minSide * 0.1, 4, 12);
+        const handleTop = safeHeight >= floatingSize * 2.5 ? -(floatingSize + 8) : inset;
+        const handleLeft = safeWidth >= floatingSize * 2.5
+            ? safeWidth / 2
+            : this.clamp(safeWidth - (floatingSize / 2) - inset, floatingSize / 2, Math.max(floatingSize / 2, safeWidth - (floatingSize / 2)));
+
+        if (this.rotateHandle) {
+            this.rotateHandle.style.left = `${handleLeft}px`;
+            this.rotateHandle.style.top = `${handleTop}px`;
+            this.rotateHandle.style.width = `${floatingSize}px`;
+            this.rotateHandle.style.height = `${floatingSize}px`;
+            this.rotateHandle.style.setProperty('--handle-connector-top', `${floatingSize}px`);
+            this.rotateHandle.style.setProperty('--handle-connector-height', `${Math.max(8, Math.round(floatingSize * 0.4))}px`);
+
+            const icon = this.rotateHandle.querySelector('svg');
+            if (icon) {
+                icon.style.width = `${floatingIconSize}px`;
+                icon.style.height = `${floatingIconSize}px`;
+            }
+        }
+
+        this.controlBox.style.setProperty('--floating-control-size', `${floatingSize}px`);
+        this.controlBox.style.setProperty('--floating-control-icon-size', `${floatingIconSize}px`);
+
+        if (!this.toolbar) return;
+
+        const toolbarButtons = Array.from(this.toolbar.querySelectorAll('.text-control-btn'));
+        const toolbarButtonSize = this.clamp(Math.min(safeWidth * 0.3, minSide * 0.44), 20, 40);
+        const toolbarGap = this.clamp(toolbarButtonSize * 0.18, 4, 8);
+        const toolbarPaddingX = this.clamp(toolbarButtonSize * 0.22, 4, 10);
+        const toolbarPaddingY = this.clamp(toolbarButtonSize * 0.18, 4, 10);
+        const toolbarHorizontalWidth = (toolbarButtonSize * toolbarButtons.length) + (toolbarGap * Math.max(toolbarButtons.length - 1, 0)) + toolbarPaddingX * 2;
+        const toolbarTwoColWidth = (toolbarButtonSize * Math.min(toolbarButtons.length, 2)) + (toolbarGap * Math.max(Math.min(toolbarButtons.length, 2) - 1, 0)) + toolbarPaddingX * 2;
+
+        toolbarButtons.forEach((button) => {
+            button.style.width = `${toolbarButtonSize}px`;
+            button.style.height = `${toolbarButtonSize}px`;
+            const icon = button.querySelector('svg');
+            if (icon) {
+                const toolbarIconSize = this.clamp(toolbarButtonSize * 0.45, 10, 20);
+                icon.style.width = `${toolbarIconSize}px`;
+                icon.style.height = `${toolbarIconSize}px`;
+            }
+        });
+
+        this.controlBox.style.setProperty('--toolbar-button-size', `${toolbarButtonSize}px`);
+        this.controlBox.style.setProperty('--toolbar-gap', `${toolbarGap}px`);
+        this.controlBox.style.setProperty('--toolbar-padding-x', `${toolbarPaddingX}px`);
+        this.controlBox.style.setProperty('--toolbar-padding-y', `${toolbarPaddingY}px`);
+
+        this.toolbar.style.left = `${safeWidth / 2}px`;
+        this.toolbar.style.bottom = safeHeight >= toolbarButtonSize * 2.5
+            ? `${-(toolbarButtonSize + toolbarPaddingY + 10)}px`
+            : `${inset}px`;
+        this.toolbar.style.transform = 'translateX(-50%)';
+        this.toolbar.style.display = 'flex';
+        this.toolbar.style.flexDirection = 'row';
+        this.toolbar.style.justifyContent = 'center';
+        this.toolbar.style.alignItems = 'center';
+        this.toolbar.style.width = 'auto';
+        this.toolbar.style.gridTemplateColumns = '';
+        this.toolbar.style.justifyItems = '';
+
+        if (safeWidth < toolbarHorizontalWidth + inset * 2) {
+            this.toolbar.style.bottom = `${inset}px`;
+            if (safeWidth >= toolbarTwoColWidth + inset * 2 && toolbarButtons.length > 2) {
+                this.toolbar.style.display = 'grid';
+                this.toolbar.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
+                this.toolbar.style.justifyItems = 'center';
+                this.toolbar.style.width = `${Math.max(toolbarTwoColWidth, Math.min(safeWidth - inset * 2, toolbarHorizontalWidth))}px`;
+            } else {
+                this.toolbar.style.flexDirection = 'column';
+            }
+        }
     }
 
     startDrag(e) {
@@ -1309,4 +1452,8 @@ class InsertTextManager {
     stopRotate() {
         this.isRotating = false;
     }
+}
+
+if (typeof window !== 'undefined') {
+    window.InsertTextManager = InsertTextManager;
 }

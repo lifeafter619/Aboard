@@ -10,6 +10,7 @@
     cursor: default;
     transition: box-shadow 0.2s;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    touch-action: none;
 }
 
 .scoreboard-widget.dragging {
@@ -44,8 +45,8 @@
 }
 
 .scoreboard-icon-btn {
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
     border: none;
     border-radius: 6px;
     background-color: transparent;
@@ -130,8 +131,8 @@
 }
 
 .score-btn {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border: 1px solid #ddd;
     border-radius: 50%;
     background-color: #fff;
@@ -166,8 +167,8 @@
     position: absolute;
     top: 0;
     right: 0;
-    width: 20px;
-    height: 20px;
+    width: 28px;
+    height: 28px;
     border: none;
     border-radius: 50%;
     background-color: transparent;
@@ -235,7 +236,9 @@
 
 /* Touch device improvements */
 @media (hover: none) and (pointer: coarse) {
-    .score-btn {
+    .score-btn,
+    .scoreboard-icon-btn,
+    .score-remove-btn {
         min-height: var(--touch-target-size);
         min-width: var(--touch-target-size);
     }

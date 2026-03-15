@@ -3,38 +3,56 @@
  * dynamically loads scripts when needed
  */
 class ScriptLoader {
+    static pendingLoads = new Map();
+
     static load(src) {
-        return new Promise((resolve, reject) => {
-            // Check if script is already loaded
-            if (document.querySelector(`script[src="${src}"]`)) {
-                // If loaded but not executed? We assume if tag exists it's loading or loaded.
-                // We could check if global variable exists, but src is generic.
-                // Ideally we track load state.
-                // For simplicity, if tag exists, we assume it's loaded or will trigger existing listeners?
-                // But we can't attach new listener to existing script tag easily if already loaded.
-                // Better check if the global it provides exists?
-                // But we don't know the global here.
+        if (this.pendingLoads.has(src)) {
+            return this.pendingLoads.get(src);
+        }
 
-                // Let's assume if it exists, it's fine.
-                // Real implementation might need a registry.
-                resolve();
-                return;
-            }
+        const existingScript = Array.from(document.scripts).find(
+            (script) => script.getAttribute('src') === src
+        );
 
-            const script = document.createElement('script');
-            script.src = src;
-            script.async = true;
+        if (existingScript?.dataset.loaded === 'true') {
+            return Promise.resolve();
+        }
 
-            script.onload = () => {
+        const promise = new Promise((resolve, reject) => {
+            const script = existingScript || document.createElement('script');
+
+            const cleanup = () => {
+                script.removeEventListener('load', handleLoad);
+                script.removeEventListener('error', handleError);
+            };
+
+            const handleLoad = () => {
+                script.dataset.loaded = 'true';
+                cleanup();
                 resolve();
             };
 
-            script.onerror = () => {
+            const handleError = () => {
+                cleanup();
+                this.pendingLoads.delete(src);
+                if (!existingScript) {
+                    script.remove();
+                }
                 reject(new Error(`Failed to load script: ${src}`));
             };
 
-            document.body.appendChild(script);
+            script.addEventListener('load', handleLoad, { once: true });
+            script.addEventListener('error', handleError, { once: true });
+
+            if (!existingScript) {
+                script.src = src;
+                script.async = true;
+                document.head.appendChild(script);
+            }
         });
+
+        this.pendingLoads.set(src, promise);
+        return promise;
     }
 }
 

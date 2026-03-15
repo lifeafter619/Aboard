@@ -45,6 +45,7 @@
 
 /* Feature buttons - medium sized rounded squares */
 .feature-btn {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;

@@ -222,6 +222,16 @@
     justify-content: flex-start;
     white-space: pre-wrap;
     padding: 4px;
+    --resize-handle-size: 16px;
+    --resize-handle-offset: -8px;
+    --floating-control-size: 44px;
+    --floating-control-icon-size: 20px;
+    --handle-connector-top: 44px;
+    --handle-connector-height: 20px;
+    --toolbar-button-size: 36px;
+    --toolbar-gap: 8px;
+    --toolbar-padding-y: 8px;
+    --toolbar-padding-x: 8px;
 }
 
 /* Internal text element to hold the content */
@@ -238,18 +248,18 @@
     position: absolute;
     background-color: var(--theme-color);
     border: 2px solid white;
-    width: 16px;
-    height: 16px;
+    width: var(--resize-handle-size);
+    height: var(--resize-handle-size);
     border-radius: 50%;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     pointer-events: all;
     z-index: 10;
 }
 
-#insert-text-box .resize-handle.top-left { top: -8px; left: -8px; cursor: nw-resize; }
-#insert-text-box .resize-handle.top-right { top: -8px; right: -8px; cursor: ne-resize; }
-#insert-text-box .resize-handle.bottom-left { bottom: -8px; left: -8px; cursor: sw-resize; }
-#insert-text-box .resize-handle.bottom-right { bottom: -8px; right: -8px; cursor: se-resize; }
+#insert-text-box .resize-handle.top-left { top: var(--resize-handle-offset); left: var(--resize-handle-offset); cursor: nw-resize; }
+#insert-text-box .resize-handle.top-right { top: var(--resize-handle-offset); right: var(--resize-handle-offset); cursor: ne-resize; }
+#insert-text-box .resize-handle.bottom-left { bottom: var(--resize-handle-offset); left: var(--resize-handle-offset); cursor: sw-resize; }
+#insert-text-box .resize-handle.bottom-right { bottom: var(--resize-handle-offset); right: var(--resize-handle-offset); cursor: se-resize; }
 
 /* Rotation Handle */
 #insert-text-box .rotate-handle {
@@ -257,8 +267,8 @@
     top: -50px;
     left: 50%;
     transform: translateX(-50%);
-    width: 44px;
-    height: 44px;
+    width: var(--floating-control-size);
+    height: var(--floating-control-size);
     background-color: var(--theme-color);
     border-radius: 50%;
     cursor: grab;
@@ -283,10 +293,10 @@
 #insert-text-box .rotate-handle::after {
     content: '';
     position: absolute;
-    top: 44px;
+    top: var(--handle-connector-top);
     left: 50%;
     width: 2px;
-    height: 20px;
+    height: var(--handle-connector-height);
     background-color: var(--theme-color);
     transform: translateX(-50%);
     pointer-events: none;
@@ -295,27 +305,26 @@
 /* Toolbar */
 #insert-text-box .text-controls-toolbar {
     position: absolute;
-    --text-toolbar-button-size: clamp(24px, calc(var(--toolbar-button-size, 48px) * 0.45 + 0.2vw), 36px);
-    --text-toolbar-gap: clamp(4px, calc(var(--text-toolbar-button-size) * 0.15), 8px);
-    --text-toolbar-padding: clamp(6px, calc(var(--text-toolbar-button-size) * 0.2), 10px);
-    bottom: calc(var(--text-toolbar-button-size) * -1.45);
+    bottom: calc(var(--toolbar-button-size) * -1.45);
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: var(--text-toolbar-gap);
-    padding: var(--text-toolbar-padding);
+    gap: var(--toolbar-gap);
+    padding: var(--toolbar-padding-y) var(--toolbar-padding-x);
     background-color: white;
-    border-radius: calc(var(--text-toolbar-button-size) * 0.25);
+    border-radius: calc(var(--toolbar-button-size) * 0.25);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     pointer-events: all;
     z-index: 10;
+    max-width: calc(100% - 8px);
+    box-sizing: border-box;
 }
 
 #insert-text-box .text-control-btn {
-    width: var(--text-toolbar-button-size);
-    height: var(--text-toolbar-button-size);
+    width: var(--toolbar-button-size);
+    height: var(--toolbar-button-size);
     border: none;
-    border-radius: calc(var(--text-toolbar-button-size) * 0.22);
+    border-radius: calc(var(--toolbar-button-size) * 0.22);
     background-color: #f0f0f0;
     cursor: pointer;
     display: flex;
@@ -323,6 +332,12 @@
     justify-content: center;
     transition: all 0.2s ease;
     color: #333;
+}
+
+#insert-text-box .rotate-handle svg,
+#insert-text-box .text-control-btn svg {
+    width: var(--floating-control-icon-size);
+    height: var(--floating-control-icon-size);
 }
 
 #insert-text-box .text-control-btn:hover {
@@ -404,35 +419,16 @@
         font-size: 16px;
     }
     
-    #insert-text-box .resize-handle {
-        width: 20px;
-        height: 20px;
-    }
-    
-    #insert-text-box .resize-handle.top-left { top: -10px; left: -10px; }
-    #insert-text-box .resize-handle.top-right { top: -10px; right: -10px; }
-    #insert-text-box .resize-handle.bottom-left { bottom: -10px; left: -10px; }
-    #insert-text-box .resize-handle.bottom-right { bottom: -10px; right: -10px; }
-    
-    #insert-text-box .rotate-handle {
-        width: 52px;
-        height: 52px;
-        top: -60px;
-    }
-    
-    #insert-text-box .rotate-handle::after {
-        top: 52px;
-        height: 24px;
-    }
-    
-    #insert-text-box .text-controls-toolbar {
-        bottom: -60px;
-        gap: 8px;
-        padding: 10px;
-    }
-    
-    #insert-text-box .text-control-btn {
-        width: 40px;
-        height: 40px;
+    #insert-text-box {
+        --resize-handle-size: 20px;
+        --resize-handle-offset: -10px;
+        --floating-control-size: 52px;
+        --floating-control-icon-size: 22px;
+        --handle-connector-top: 52px;
+        --handle-connector-height: 24px;
+        --toolbar-button-size: 40px;
+        --toolbar-gap: 8px;
+        --toolbar-padding-y: 10px;
+        --toolbar-padding-x: 10px;
     }
 }

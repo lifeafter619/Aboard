@@ -113,6 +113,11 @@ class ShapeInsertionManager {
                 this.ctx.globalAlpha = 0.85;
                 this.ctx.lineWidth = penSize * 1.5;
                 break;
+            case 'marker':
+                this.ctx.globalAlpha = 0.45;
+                this.ctx.lineWidth = penSize * 2.2;
+                this.ctx.lineCap = 'square';
+                break;
             case 'normal':
             default:
                 this.ctx.globalAlpha = 1.0;
@@ -197,6 +202,11 @@ class ShapeInsertionManager {
                 this.ctx.globalAlpha = 0.85;
                 this.ctx.lineWidth = penSize * 1.5;
                 break;
+            case 'marker':
+                this.ctx.globalAlpha = 0.45;
+                this.ctx.lineWidth = penSize * 2.2;
+                this.ctx.lineCap = 'square';
+                break;
             case 'normal':
             default:
                 this.ctx.globalAlpha = 1.0;
@@ -268,6 +278,11 @@ class ShapeInsertionManager {
             case 'brush':
                 this.ctx.globalAlpha = 0.85;
                 this.ctx.lineWidth = (shapeObj.strokeWidth || shapeObj.size) * 1.5;
+                break;
+            case 'marker':
+                this.ctx.globalAlpha = 0.45;
+                this.ctx.lineWidth = (shapeObj.strokeWidth || shapeObj.size) * 2.2;
+                this.ctx.lineCap = 'square';
                 break;
             case 'normal':
             default:

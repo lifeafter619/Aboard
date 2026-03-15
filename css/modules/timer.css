@@ -477,6 +477,11 @@
     will-change: transform, left, top;
 }
 
+.timer-display-widget button {
+    min-height: var(--touch-target-size);
+    min-width: var(--touch-target-size);
+}
+
 .timer-display-widget.dragging {
     cursor: grabbing;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
@@ -534,8 +539,13 @@
     color: #fff;
 }
 
-.timer-display-widget.fullscreen .timer-close-btn {
+.timer-display-widget.fullscreen .timer-close-btn,
+.timer-display-widget.fullscreen .timer-help-btn {
     color: #fff;
+}
+
+.timer-display-widget.fullscreen .timer-help-btn:hover {
+    color: #5ac8fa;
 }
 
 .timer-display-widget.fullscreen .timer-close-btn:hover {
@@ -596,13 +606,20 @@
     cursor: move;
 }
 
+.timer-display-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
 .timer-display-mode {
     font-size: 13px;
     font-weight: 600;
     color: #666;
 }
 
-.timer-close-btn {
+.timer-close-btn,
+.timer-help-btn {
     padding: 4px;
     border: none;
     background: transparent;
@@ -614,12 +631,21 @@
     transition: all 0.2s ease;
 }
 
-.timer-close-btn:hover {
-    color: #ff3b30;
+.timer-close-btn:hover,
+.timer-help-btn:hover {
     transform: scale(1.1);
 }
 
-.timer-close-btn svg {
+.timer-help-btn:hover {
+    color: var(--theme-color);
+}
+
+.timer-close-btn:hover {
+    color: #ff3b30;
+}
+
+.timer-close-btn svg,
+.timer-help-btn svg {
     width: 18px;
     height: 18px;
 }

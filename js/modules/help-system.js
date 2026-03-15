@@ -8,23 +8,40 @@ class HelpSystem {
             'pen-config': 'help.tools.pen',
             'shape-config': 'help.tools.shape',
             'eraser-config': 'help.tools.eraser',
+            'select-config': 'help.tools.select',
             'background-config': 'help.background',
+            'settings-modal': 'help.settings',
+            'time-display-area': 'help.features.timeDisplay',
             'timer-settings-modal': 'help.features.timer',
             'random-picker-settings-modal': 'help.features.randomPicker',
-            'scoreboard-feature-btn': 'help.features.scoreboard',
             'teaching-tools-modal': 'help.features.teachingTools',
+            // time-display-area help is injected into panel title by HelpSystem.
             'time-display-settings-modal': 'help.features.timeDisplay',
-            'time-display-area': 'help.features.timeDisplay',
-            'insert-text-modal': 'help.features.insertText'
+            'insert-text-modal': 'help.features.insertText',
+            'line-style-modal': 'help.tools.lineStyle'
         };
+
     }
 
     init() {
         // Inject help buttons into config panels
         this.injectHelpButtons();
+        this.injectIntoSpecialPanels();
+        this.bindDataHelpButtons();
+        this.removeUnsupportedFeatureButtonHelpButtons();
+        this.refreshHelpButtonLabels();
 
         // Listen for dynamic modals
         this.observeModals();
+
+        window.addEventListener('localeChanged', () => {
+            this.injectHelpButtons();
+            this.injectIntoSpecialPanels();
+            this.checkExistingModals();
+            this.bindDataHelpButtons();
+            this.removeUnsupportedFeatureButtonHelpButtons();
+            this.refreshHelpButtonLabels();
+        });
     }
 
     injectHelpButtons() {
@@ -38,29 +55,70 @@ class HelpSystem {
                 if (firstGroup) {
                     const label = firstGroup.querySelector('label');
                     if (label) {
-                        label.style.display = 'flex';
-                        label.style.alignItems = 'center';
-                        label.style.justifyContent = 'flex-start';
-                        label.style.width = '100%';
-                        // Prevent clicking label from triggering the button (which is valid for labels containing buttons)
-                        label.style.pointerEvents = 'none';
-                        btn.style.pointerEvents = 'auto';
-                        btn.style.marginLeft = '8px';
-                        label.appendChild(btn);
+                        this.attachHelpButtonToInlineContainer(label, btn);
                     }
                 }
             }
         });
     }
 
+    injectIntoSpecialPanels() {
+        const timeDisplayArea = document.getElementById('time-display-area');
+        if (timeDisplayArea) {
+            this.injectIntoPanel(timeDisplayArea);
+        }
+    }
+
+    bindDataHelpButtons() {
+        document.querySelectorAll('[data-help-key]').forEach((btn) => {
+            this.bindHelpButton(btn);
+        });
+    }
+
+    bindHelpButton(btn) {
+        if (!btn || btn.dataset.helpBound === 'true') {
+            return;
+        }
+
+        btn.dataset.helpBound = 'true';
+
+        btn.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+        });
+
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const helpKey = btn.dataset.helpKey;
+            if (helpKey) {
+                this.showHelp(helpKey);
+            }
+        });
+
+        if (btn.tagName === 'BUTTON' || btn.getAttribute('role') === 'button') {
+            btn.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const helpKey = btn.dataset.helpKey;
+                    if (helpKey) {
+                        this.showHelp(helpKey);
+                    }
+                }
+            });
+        }
+    }
+
     observeModals() {
         // List of modal IDs that should have help buttons
         const helpModalIds = [
+            'settings-modal',
             'random-picker-settings-modal',
             'timer-settings-modal',
             'teaching-tools-modal',
             'time-display-settings-modal',
-            'insert-text-modal'
+            'insert-text-modal',
+            'line-style-modal'
         ];
         
         // MutationObserver to detect when settings modals are created/shown
@@ -92,15 +150,12 @@ class HelpSystem {
     }
     
     checkExistingModals() {
-        const modalIds = ['random-picker-settings-modal', 'timer-settings-modal', 'teaching-tools-modal', 'time-display-settings-modal', 'insert-text-modal'];
+        const modalIds = ['settings-modal', 'random-picker-settings-modal', 'timer-settings-modal', 'teaching-tools-modal', 'time-display-settings-modal', 'insert-text-modal', 'line-style-modal'];
         modalIds.forEach(id => {
             const modal = document.getElementById(id);
             if (modal) this.injectIntoModal(modal);
         });
         
-        // Also inject into the time display area (not a modal but a panel)
-        const timeDisplayArea = document.getElementById('time-display-area');
-        if (timeDisplayArea) this.injectIntoPanel(timeDisplayArea);
     }
     
     checkAndInjectModal(modalId) {
@@ -112,8 +167,10 @@ class HelpSystem {
 
     injectIntoModal(modal) {
         if (this.helpMap[modal.id] && !modal.querySelector('.help-btn')) {
-            // Try standard .modal-header or specific .timer-modal-header
-            const header = modal.querySelector('.modal-header') || modal.querySelector('.timer-modal-header');
+            // Try standard .modal-header or specific custom modal headers
+            const header = modal.querySelector('.modal-header')
+                || modal.querySelector('.timer-modal-header')
+                || modal.querySelector('.line-style-modal-header');
             if (header) {
                 const btn = this.createHelpButton(this.helpMap[modal.id]);
                 btn.style.marginLeft = '8px';
@@ -123,13 +180,11 @@ class HelpSystem {
                 // Find the h2 title element and insert help button after it
                 const h2 = header.querySelector('h2');
                 if (h2) {
-                    // Wrap h2 text with span if not already wrapped
                     if (!h2.querySelector('.help-btn')) {
-                        // Make h2 a flex container to align title and help button
-                        h2.style.display = 'flex';
-                        h2.style.alignItems = 'center';
-                        h2.style.gap = '8px';
-                        h2.appendChild(btn);
+                        this.attachHelpButtonToInlineContainer(h2, btn, {
+                            display: 'inline-flex',
+                            width: 'auto'
+                        });
                     }
                 } else {
                     // Fallback: insert before close button
@@ -151,42 +206,124 @@ class HelpSystem {
                 const label = firstGroup.querySelector('label');
                 if (label && !label.querySelector('.help-btn')) {
                     const btn = this.createHelpButton(this.helpMap[panel.id]);
-                    label.style.display = 'flex';
-                    label.style.alignItems = 'center';
-                    label.style.justifyContent = 'flex-start';
-                    label.style.width = '100%';
-                    // Prevent clicking label from triggering the button
-                    label.style.pointerEvents = 'none';
-                    btn.style.pointerEvents = 'auto';
-                    btn.style.marginLeft = '8px';
-                    label.appendChild(btn);
+                    this.attachHelpButtonToInlineContainer(label, btn);
                 }
             }
         }
     }
 
+    ensureInlineTextWrapper(container) {
+        if (!container) {
+            return null;
+        }
+
+        let wrapper = Array.from(container.children).find(child => child.classList?.contains('help-inline-text'));
+        if (wrapper) {
+            return wrapper;
+        }
+
+        const hasOwnTranslation = container.hasAttribute('data-i18n');
+        const hasNonHelpElementChildren = Array.from(container.children).some(
+            child => !child.classList?.contains('help-btn')
+        );
+
+        if (!hasOwnTranslation && hasNonHelpElementChildren) {
+            return null;
+        }
+
+        wrapper = document.createElement('span');
+        wrapper.className = 'help-inline-text';
+
+        if (hasOwnTranslation) {
+            wrapper.setAttribute('data-i18n', container.getAttribute('data-i18n'));
+            container.removeAttribute('data-i18n');
+        }
+
+        while (container.firstChild) {
+            wrapper.appendChild(container.firstChild);
+        }
+
+        container.appendChild(wrapper);
+        return wrapper;
+    }
+
+    attachHelpButtonToInlineContainer(container, btn, options = {}) {
+        const {
+            display = 'flex',
+            width = '100%'
+        } = options;
+
+        if (container.tagName === 'LABEL') {
+            let wrapper = container.parentElement;
+            if (!wrapper || !wrapper.classList.contains('help-inline-container')) {
+                wrapper = document.createElement('div');
+                wrapper.className = 'help-inline-container';
+                container.parentNode.insertBefore(wrapper, container);
+                wrapper.appendChild(container);
+            }
+
+            wrapper.style.display = display;
+            wrapper.style.alignItems = 'center';
+            wrapper.style.justifyContent = 'flex-start';
+            wrapper.style.gap = '8px';
+            if (width) {
+                wrapper.style.width = width;
+            }
+
+            container.style.marginBottom = '0';
+            container.style.flex = '1 1 auto';
+            btn.style.marginLeft = '0';
+            wrapper.appendChild(btn);
+            return;
+        }
+
+        this.ensureInlineTextWrapper(container);
+        container.style.display = display;
+        container.style.alignItems = 'center';
+        container.style.justifyContent = 'flex-start';
+        container.style.gap = '8px';
+        if (width) {
+            container.style.width = width;
+        }
+        btn.style.marginLeft = '0';
+        container.appendChild(btn);
+    }
+
     createHelpButton(helpKey) {
         const btn = document.createElement('button');
-        btn.className = 'help-btn';
-        btn.innerHTML = '?';
-        btn.style.cssText = 'width:24px;height:24px;border-radius:50%;border:1px solid #ddd;background:#f5f5f5;color:#666;font-size:14px;cursor:pointer;margin-left:8px;display:inline-flex;align-items:center;justify-content:center;transition:all 0.2s;';
-        btn.title = window.i18n.t('common.help') || 'Help';
-
-        btn.onmouseover = () => {
-            btn.style.background = '#e0e0e0';
-            btn.style.borderColor = '#ccc';
-        };
-        btn.onmouseout = () => {
-            btn.style.background = '#f5f5f5';
-            btn.style.borderColor = '#ddd';
-        };
-
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.showHelp(helpKey);
-        });
-
+        btn.className = 'help-btn color-picker-icon-btn';
+        btn.type = 'button';
+        btn.dataset.helpKey = helpKey;
+        btn.setAttribute('data-i18n-title', 'common.help');
+        btn.setAttribute('aria-label', window.i18n?.t('common.help') || 'Help');
+        btn.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
+                <line x1="12" y1="17" x2="12" y2="17"></line>
+            </svg>
+        `;
+        btn.style.cssText = 'width:28px;height:28px;margin-left:8px;flex-shrink:0;';
+        this.bindHelpButton(btn);
         return btn;
+    }
+
+    removeUnsupportedFeatureButtonHelpButtons() {
+        document.querySelectorAll('#feature-area .feature-btn .help-btn').forEach((btn) => {
+            btn.remove();
+        });
+    }
+
+    refreshHelpButtonLabels() {
+        const helpLabel = window.i18n?.t('common.help') || 'Help';
+        const helpButtons = document.querySelectorAll(
+            '.help-btn, .random-picker-help-btn, .scoreboard-help-btn, .timer-help-btn, .image-help-btn'
+        );
+
+        helpButtons.forEach((btn) => {
+            btn.title = helpLabel;
+            btn.setAttribute('aria-label', helpLabel);
+        });
     }
 
     showHelp(key) {
@@ -201,17 +338,27 @@ class HelpSystem {
             // Set highest z-index to ensure help modal is always on top
             modal.style.zIndex = '99999';
             modal.innerHTML = `
-                <div class="modal-content" style="max-width:500px;">
+                <div class="modal-content help-modal-content">
                     <div class="modal-header">
                         <h2>${window.i18n.t('common.help')}</h2>
                         <button class="modal-close-btn">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
-                    <div class="modal-body help-content" style="white-space: pre-wrap; line-height: 1.6; font-size: 14px; color: #333;"></div>
+                    <div class="modal-body">
+                        <div class="help-content"></div>
+                    </div>
                 </div>
             `;
             document.body.appendChild(modal);
+
+            window.drawingBoard?.registerResizableModal?.({
+                key: 'helpModal',
+                selector: '#help-modal .help-modal-content',
+                minWidth: 420,
+                minHeight: 320
+            });
+            window.drawingBoard?.syncResizableModalState?.(modalId);
 
             modal.querySelector('.modal-close-btn').addEventListener('click', () => {
                 modal.classList.remove('show');
@@ -227,7 +374,9 @@ class HelpSystem {
 
         // Parse simple markdown-like syntax using RichTextParser
         let formattedContent = window.RichTextParser ? window.RichTextParser.parse(content) : content;
-        modal.querySelector('.help-content').innerHTML = formattedContent;
+        const helpContentElement = modal.querySelector('.help-content');
+        helpContentElement.innerHTML = formattedContent;
+        helpContentElement.scrollTop = 0;
         modal.classList.add('show');
     }
 }

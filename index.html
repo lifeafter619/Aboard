@@ -131,6 +131,14 @@
                         </svg>
                         <span data-i18n="tools.pen.brush">Brush</span>
                     </button>
+                    <button class="pen-type-btn" data-pen-type="marker">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 3l7 7-3 3-7-7z"></path>
+                            <path d="M4 14l7 7"></path>
+                            <path d="M3 21l6-2-4-4z"></path>
+                        </svg>
+                        <span data-i18n="tools.pen.marker">Marker</span>
+                    </button>
                 </div>
                 <!-- Line Style button below pen type -->
                 <button id="pen-line-style-settings-btn" class="open-line-style-btn">
@@ -297,7 +305,7 @@
         <!-- Background configuration -->
         <div id="background-config" class="config-panel">
             <div class="config-group config-group-compact">
-                <label>背景颜色</label>
+                <label data-i18n="background.color">背景颜色</label>
                 <div class="color-picker-row">
                     <div class="color-picker-main">
                         <button class="color-btn active" data-bg-color="#ffffff" style="background-color: #ffffff; border: 1px solid #ccc;"></button>
@@ -321,7 +329,7 @@
                 </label>
             </div>
             <div class="config-group config-group-compact">
-                <label>背景图案</label>
+                <label data-i18n="background.pattern">背景图案</label>
                 <div class="button-size-options pattern-grid-compact" id="pattern-grid">
                     <button class="pattern-option-btn active" data-pattern="blank">空白</button>
                     <button class="pattern-option-btn" data-pattern="dots">点阵</button>
@@ -336,16 +344,16 @@
                             <polyline points="17 8 12 3 7 8"></polyline>
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
-                        <span class="upload-text">上传</span>
+                        <span class="upload-text" data-i18n="background.upload">上传</span>
                     </button>
                     <input type="file" id="bg-image-upload" accept="image/*" style="display: none;">
                 </div>
                 <div class="compact-sliders">
                     <div class="compact-slider-item" id="pattern-density-group" style="display: none;">
-                        <label>密度：当前 <span id="pattern-density-value">100</span>%</label>
+                        <label><span data-i18n="background.densityLabel">密度：当前</span> <span id="pattern-density-value">100</span>%</label>
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <input type="range" id="pattern-density-slider" min="20" max="300" value="100" class="slider slider-compact" style="flex: 1;">
-                            <button id="move-origin-btn" class="icon-btn" title="移动坐标原点">
+                            <button id="move-origin-btn" class="icon-btn" title="移动坐标原点" data-i18n-title="background.moveCoordinateOrigin">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M12 2v20M2 12h20"></path>
                                     <circle cx="12" cy="12" r="3"></circle>
@@ -354,7 +362,7 @@
                         </div>
                     </div>
                     <div class="compact-slider-item" id="image-size-group" style="display: none;">
-                        <label>大小：当前 <span id="bg-image-size-value">100</span>%</label>
+                        <label><span data-i18n="background.sizeLabel">大小：当前</span> <span id="bg-image-size-value">100</span>%</label>
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <input type="range" id="bg-image-size-slider" min="10" max="200" value="100" class="slider slider-compact" style="flex: 1;">
                             <button id="bg-gif-settings-btn" class="icon-btn" title="GIF设置" style="display: none;">
@@ -363,7 +371,7 @@
                                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                                 </svg>
                             </button>
-                            <button id="bg-image-playback-btn" class="icon-btn" title="播放/暂停">
+                            <button id="bg-image-playback-btn" class="icon-btn" title="播放/暂停" style="display: none;">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="6" y="4" width="4" height="16"></rect>
                                     <rect x="14" y="4" width="4" height="16"></rect>
@@ -415,10 +423,6 @@
 
     <!-- Time Display Area (independent, draggable, with edge snapping) -->
     <div id="time-display-area">
-        <!-- Drag handle for time display area -->
-        <div class="panel-drag-handle" data-i18n-title="common.dragToMove">
-            <span class="drag-handle-dots">⋮⋮</span>
-        </div>
         <!-- Close button for time display area -->
         <button id="time-display-area-close-btn" class="config-close-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -428,7 +432,7 @@
         </button>
         
         <div class="config-group">
-            <label data-i18n="timeDisplay.options">Time Display Options</label>
+            <label><span data-i18n="timeDisplay.options">Time Display Options</span></label>
             <div class="time-display-options-row">
                 <div class="time-display-checkboxes">
                     <label class="checkbox-label">
@@ -655,11 +659,11 @@
                                     <option value="sans-serif">黑体（无衬线体）</option>
                                     <option value="monospace">等宽字体</option>
                                     <option value="cursive">手写体</option>
-                                    <option value="Microsoft YaHei">微软雅黑</option>
-                                    <option value="SimSun">宋体</option>
-                                    <option value="SimHei">黑体</option>
+                                    <option value="Noto Sans SC">思源黑体</option>
+                                    <option value="Noto Serif SC">思源宋体</option>
+                                    <option value="LXGW WenKai">霞鹜文楷</option>
                                     <option value="KaiTi">楷体</option>
-                                    <option value="FangSong">仿宋</option>
+                                    <option value="STXingkai">华文行楷（手写）</option>
                                 </select>
                                 <label class="font-upload-btn" for="global-font-upload" role="button" tabindex="0" data-i18n-title="tools.text.uploadFont" aria-label="Upload custom font">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -670,6 +674,8 @@
                                     <input type="file" id="global-font-upload" accept=".ttf,.otf,.woff,.woff2" style="display: none;">
                                 </label>
                             </div>
+                            <p class="settings-hint" data-i18n="settings.general.fontManagementHint">字体管理：支持排序、显示开关、重命名与预览</p>
+                            <div id="font-management-list" class="font-management-list"></div>
                         </div>
                         <div class="settings-group">
                             <label class="checkbox-label">
@@ -684,6 +690,13 @@
                                 <span data-i18n="settings.general.touchZoom">触控缩放</span>
                             </label>
                             <p class="settings-hint" data-i18n="settings.general.touchZoomHint">允许使用双指捏合手势缩放画布</p>
+                        </div>
+                        <div class="settings-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="keep-more-panel-open-checkbox">
+                                <span data-i18n="settings.general.morePanelBehaviorLabel">更多功能面板行为</span>
+                            </label>
+                            <p class="settings-hint" data-i18n="settings.general.keepMorePanelOpenHint">点击“更多”中的功能按钮后默认不关闭“更多”框</p>
                         </div>
                         
                         <!-- Toolbar customization -->
@@ -831,11 +844,11 @@
                             <p class="settings-hint" data-i18n="settings.display.showFullscreenBtnHint">勾选后，在缩放控件旁显示全屏按钮</p>
                         </div>
                         <div class="settings-group">
-                            <label><span data-i18n="settings.display.toolbarSizeLabel">工具栏大小：当前</span> <span id="toolbar-size-value">65</span>px</label>
+                            <label><span data-i18n="settings.display.toolbarSizeLabel">工具栏大小：当前</span> <span id="toolbar-size-value">60</span>px</label>
                             <p class="settings-hint" data-i18n="settings.display.toolbarSizeHint">调整底部工具栏的大小</p>
                             <div style="display: flex; gap: 10px; align-items: center;">
-                                <input type="range" id="toolbar-size-slider" min="30" max="100" value="65" class="slider" step="5" style="flex: 1;">
-                                <input type="number" id="toolbar-size-input" min="30" max="100" value="50" step="5" style="width: 60px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                <input type="range" id="toolbar-size-slider" min="30" max="100" value="60" class="slider" step="5" style="flex: 1;">
+                                <input type="number" id="toolbar-size-input" min="30" max="100" value="60" step="5" style="width: 60px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
                             </div>
                         </div>
                         <div class="settings-group">
@@ -1076,8 +1089,13 @@
                             </div>
                         </div>
                         <div class="settings-group">
-                            <label data-i18n="settings.more.localDataLabel">本地数据</label>
-                            <p class="settings-hint" data-i18n="settings.more.localDataHint">清空本地缓存、画布内容和设置，并恢复首次加载状态</p>
+                            <label data-i18n="settings.more.cacheCleanupLabel">缓存清理</label>
+                            <p class="settings-hint" data-i18n="settings.more.cacheCleanupHint">可查看缓存占用并按类别清理（清理前会二次确认）</p>
+                            <div class="settings-cache-options">
+                                <label class="checkbox-label"><input type="checkbox" id="clear-settings-cache-checkbox"><span><span data-i18n="settings.more.clearSettingsCache">清除设置项缓存</span>（<span id="settings-cache-size" data-i18n="settings.more.cacheSizeCalculating">计算中...</span>）</span></label>
+                                <label class="checkbox-label"><input type="checkbox" id="clear-canvas-cache-checkbox"><span><span data-i18n="settings.more.clearCanvasCache">清除画布缓存</span>（<span id="canvas-cache-size" data-i18n="settings.more.cacheSizeCalculating">计算中...</span>）</span></label>
+                                <label class="checkbox-label"><input type="checkbox" id="clear-other-cache-checkbox"><span><span data-i18n="settings.more.clearOtherCache">清除其他缓存</span>（<span id="other-cache-size" data-i18n="settings.more.cacheSizeCalculating">计算中...</span>）</span></label>
+                            </div>
                             <div class="button-size-options button-size-options-2">
                                 <button id="clear-local-cache-btn" class="pattern-option-btn" style="display: flex; align-items: center; justify-content: center; gap: 5px;">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1085,7 +1103,7 @@
                                         <path d="M8 6V4h8v2"></path>
                                         <path d="M19 6l-1 14H6L5 6"></path>
                                     </svg>
-                                    <span data-i18n="settings.more.clearLocalDataButton">清空本地缓存</span>
+                                    <span data-i18n="settings.more.clearSelectedCache">清理所选缓存</span>
                                 </button>
                             </div>
                         </div>
@@ -1769,7 +1787,7 @@
                     <div class="sound-checkbox">
                         <input type="checkbox" id="timer-sound-checkbox">
                         <label for="timer-sound-checkbox" data-i18n="timer.playSound">倒计时结束时播放提示音</label>
-                        <button id="timer-sound-preview-btn" class="sound-preview-inline-btn" data-i18n="timer.preview">试听</button>
+                        <button id="timer-sound-preview-btn" class="sound-preview-inline-btn" data-i18n="timer.preview">预览</button>
                     </div>
                     
                     <div class="sound-settings-content" id="sound-settings-content" style="display: none;">
@@ -1883,6 +1901,13 @@
         </div>
     </div>
 
+    <div id="portrait-orientation-overlay" aria-live="polite">
+        <div class="overlay-content">
+            <div class="overlay-title" data-i18n="app.rotateScreenTitle">请旋转屏幕</div>
+            <div class="overlay-tip" data-i18n="app.rotateScreenTip">检测到当前为竖屏模式。为获得正常排版与完整工具栏，请横屏使用。</div>
+        </div>
+    </div>
+
     <script src="js/drawing.js" defer></script>
     <script src="js/history.js" defer></script>
     <script src="js/background.js" defer></script>
@@ -1894,25 +1919,20 @@
     <script src="js/time-display.js" defer></script>
     <script src="js/modules/time-display-controls.js" defer></script>
     <script src="js/modules/time-display-settings.js" defer></script>
-    <script src="js/modules/timer.js" defer></script>
     <script src="js/modules/edge-drawing.js" defer></script>
     <script src="js/modules/teaching-tools.js" defer></script>
     <script src="js/modules/shape-drawing.js" defer></script>
     <script src="js/modules/line-style-modal.js" defer></script>
-    <script src="js/modules/random-picker.js" defer></script>
-    <script src="js/modules/scoreboard.js" defer></script>
+    <script src="js/modules/dialog-manager.js" defer></script>
     <script src="js/modules/settings-manager.js" defer></script>
     <script src="js/announcement.js" defer></script>
-    <script src="js/export.js" defer></script>
     <script src="js/modules/i18n.js" defer></script>
     <script src="js/modules/rich-text-parser.js" defer></script>
-    <script src="js/modules/insert-text-manager.js" defer></script>
     <script src="js/modules/script-loader.js" defer></script>
     <script src="js/modules/gif-manager.js" defer></script>
     <script src="js/modules/browser-check.js" defer></script>
     <script src="js/modules/help-system.js" defer></script>
     <script src="js/modules/storage-manager.js" defer></script>
-    <script src="js/modules/project-manager.js" defer></script>
     <script src="js/modules/toast-manager.js" defer></script>
     <script src="js/modules/pwa-manager.js" defer></script>
     <script src="js/main.js" defer></script>

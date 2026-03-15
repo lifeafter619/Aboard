@@ -149,12 +149,21 @@ class TimerInstance {
         display.innerHTML = `
             <div class="timer-display-header">
                 <div class="timer-display-mode">${modeText}</div>
-                <button class="timer-close-btn" title="${window.i18n.t('common.close')}">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
+                <div class="timer-display-header-actions">
+                    <button class="timer-help-btn" type="button" data-help-key="help.features.timer" data-i18n-title="common.help" title="${window.i18n.t('common.help')}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
+                            <line x1="12" y1="17" x2="12" y2="17"></line>
+                        </svg>
+                    </button>
+                    <button class="timer-close-btn" type="button" title="${window.i18n.t('common.close')}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
             </div>
             ${titleHTML}
             <div class="timer-display-time">00:00:00</div>
@@ -207,6 +216,8 @@ class TimerInstance {
         
         document.body.appendChild(display);
         this.displayElement = display;
+        window.drawingBoard?.helpSystem?.bindDataHelpButtons?.();
+        window.drawingBoard?.helpSystem?.refreshHelpButtonLabels?.();
         
         // Apply custom colors
         display.style.backgroundColor = this.bgColor;
@@ -279,6 +290,7 @@ class TimerInstance {
     setupDragging() {
         // Unified handler for mouse and touch start
         const handleStart = (e) => {
+            if (typeof e.button === 'number' && e.button !== 0) return;
             // Don't start dragging if clicking on interactive elements
             if (e.target.closest('button') || e.target.closest('input')) return;
             
@@ -300,11 +312,17 @@ class TimerInstance {
         // Allow dragging from the entire widget
         // Add both mouse and touch event listeners for better touch device support
         this.displayElement.addEventListener('mousedown', handleStart);
+        this.displayElement.addEventListener('pointerdown', handleStart);
         this.displayElement.addEventListener('touchstart', handleStart, { passive: false });
         
         // Unified handler for mouse and touch move
         const handleMove = (e) => {
             if (!this.isDragging) return;
+            if ((e.type === 'mousemove' || e.type === 'pointermove') && typeof e.buttons === 'number' && e.buttons === 0) {
+                handleEnd();
+                return;
+            }
+            if (e.type === 'touchmove') e.preventDefault();
             
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -358,10 +376,13 @@ class TimerInstance {
         
         // Add both mouse and touch event listeners
         document.addEventListener('mousemove', this.mouseMoveHandler);
+        document.addEventListener('pointermove', this.mouseMoveHandler);
         document.addEventListener('mouseup', this.mouseUpHandler);
+        document.addEventListener('pointerup', this.mouseUpHandler);
         document.addEventListener('touchmove', this.mouseMoveHandler, { passive: false });
         document.addEventListener('touchend', this.mouseUpHandler);
         document.addEventListener('touchcancel', this.mouseUpHandler);
+        document.addEventListener('pointercancel', this.mouseUpHandler);
     }
     
     startTimerLoop() {
@@ -937,7 +958,7 @@ class TimerManager {
             btn.innerHTML = `
                 ${displayName}
                 <div style="display: flex; gap: 4px;">
-                    <button class="sound-preview-btn" title="试听">
+                    <button class="sound-preview-btn" title="预览">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polygon points="5 3 19 12 5 21 5 3"></polygon>
                         </svg>
@@ -1296,6 +1317,7 @@ class TimerManager {
         
         const modal = document.getElementById('timer-settings-modal');
         if (modal) {
+            window.drawingBoard?.syncResizableModalState?.('timer-settings-modal');
             modal.classList.add('show');
             
             // Reset to defaults
@@ -1355,6 +1377,7 @@ class TimerManager {
         
         const modal = document.getElementById('timer-settings-modal');
         if (modal) {
+            window.drawingBoard?.syncResizableModalState?.('timer-settings-modal');
             modal.classList.add('show');
             
             // Set mode based on timer
@@ -1611,14 +1634,14 @@ class TimerManager {
         // Reset all preview button states
         if (this.currentPreviewButton) {
             if (this.currentPreviewButton.id === 'timer-sound-preview-btn') {
-                this.currentPreviewButton.textContent = window.i18n.t('common.preview') || '试听';
+                this.currentPreviewButton.textContent = window.i18n.t('common.preview') || '预览';
             } else {
                 this.currentPreviewButton.innerHTML = `
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polygon points="5 3 19 12 5 21 5 3"></polygon>
                     </svg>
                 `;
-                this.currentPreviewButton.title = window.i18n.t('common.preview') || '试听';
+                this.currentPreviewButton.title = window.i18n.t('common.preview') || '预览';
             }
             this.currentPreviewButton = null;
         }
@@ -1705,4 +1728,8 @@ class TimerManager {
             });
         }
     }
+}
+
+if (typeof window !== 'undefined') {
+    window.TimerManager = TimerManager;
 }

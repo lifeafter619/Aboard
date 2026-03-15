@@ -21,9 +21,11 @@ window.translations = {
         reset: '重置',
         start: '开始',
         stop: '停止',
-        preview: '试听',
+        preview: '预览',
         settings: '设置',
-        dragToMove: '拖动以移动'
+        dragToMove: '拖动以移动',
+        restoreSize: '\u6062\u590d\u5927\u5c0f',
+        keepCentered: '\u4fdd\u6301\u5c45\u4e2d'
     },
 
     // Recovery dialog
@@ -37,7 +39,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - 简约白板',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: '请旋转屏幕',
+        rotateScreenTip: '检测到当前为竖屏模式。为获得正常排版与完整工具栏，请横屏使用。'
     },
 
     // Toolbar
@@ -58,6 +62,7 @@ window.translations = {
         zoomOut: '缩小 (-)',
         zoomIn: '放大 (+)',
         fullscreen: '全屏 (F11)',
+        exitFullscreen: '退出全屏 (F11)',
         zoomPlaceholder: '缩放比例 (输入百分比)'
     },
 
@@ -71,6 +76,7 @@ window.translations = {
             ballpoint: '圆珠笔',
             fountain: '钢笔',
             brush: '毛笔',
+            marker: '马克笔',
             color: '颜色',
             colorAndSize: '颜色与粗细',
             colorPicker: '取色器',
@@ -175,7 +181,9 @@ window.translations = {
         layerFront: '置于顶层',
         layerBack: '置于底层',
         layerUp: '上移一层',
-        layerDown: '下移一层'
+        layerDown: '下移一层',
+        group: '组合',
+        ungroup: '取消组合'
     },
 
     // Line Style Modal
@@ -248,7 +256,9 @@ window.translations = {
         layerFront: '置于顶层',
         layerBack: '置于底层',
         layerUp: '上移一层',
-        layerDown: '下移一层'
+        layerDown: '下移一层',
+        group: '组合',
+        ungroup: '取消组合'
     },
 
     // Page Navigation
@@ -327,12 +337,27 @@ window.translations = {
             languageHint: '选择界面语言',
             globalFont: '全局字体',
             globalFontHint: '选择应用程序使用的字体',
+            fontManagementHint: '字体管理：支持排序、显示开关、重命名与预览',
+            showFont: '显示字体',
+            fontPreviewSample: '中文字体预览 ABC abc 123',
             fonts: {
                 system: '系统默认',
                 serif: '宋体（衬线体）',
                 sansSerif: '黑体（无衬线体）',
                 monospace: '等宽字体',
                 cursive: '手写体',
+                notoSansSC: '思源黑体',
+                notoSerifSC: '思源宋体',
+                lxgwWenKai: '霞鹜文楷',
+                sourceHanSansSC: '思源黑体 CN',
+                sourceHanSerifSC: '思源宋体 CN',
+                inter: 'Inter',
+                roboto: 'Roboto',
+                openSans: 'Open Sans',
+                lora: 'Lora',
+                jetBrainsMono: 'JetBrains Mono',
+                kaiTi: '楷体',
+                stXingkai: '华文行楷（手写）',
                 // 中文字体
                 yahei: '微软雅黑',
                 simsun: '宋体',
@@ -353,6 +378,8 @@ window.translations = {
             edgeSnapHint: '拖动控制面板时自动吸附到屏幕边缘',
             touchZoom: '触控缩放',
             touchZoomHint: '允许双指捏合缩放画布',
+            morePanelBehaviorLabel: '更多功能面板行为',
+            keepMorePanelOpenHint: '点击“更多”中的功能按钮后默认不关闭“更多”框',
             // Toolbar customization
             toolbarCustomization: '工具栏自定义',
             toolbarCustomizationHint: '选择要在工具栏中显示的工具，拖动可调整顺序',
@@ -488,6 +515,19 @@ window.translations = {
         },
         more: {
             title: '更多设置',
+            cacheCleanupLabel: '缓存清理',
+            cacheCleanupHint: '可查看缓存占用并按类别清理（清理前会二次确认）',
+            clearSettingsCache: '清除设置项缓存',
+            clearCanvasCache: '清除画布缓存',
+            clearOtherCache: '清除其他缓存',
+            cacheSizeCalculating: '计算中...',
+            clearSelectedCache: '清理所选缓存',
+            morePanelBehaviorLabel: '更多功能面板行为',
+            keepMorePanelOpenHint: '点击“更多”中的功能按钮后默认不关闭“更多”框',
+            selectCacheType: '请先选择要清理的缓存类型',
+            confirmClearTitle: '\u786e\u8ba4\u6e05\u7406',
+            confirmClearSelectedCache: '\u8bf7\u9009\u62e9\u8981\u6e05\u7406\u7684\u7f13\u5b58\u9879\uff1a',
+            clearLocalDataConfirmSuffix: '确定继续吗？',
             showTimeDisplay: '显示时间和日期',
             showTimeDisplayHint: '在右上角显示当前时间和日期',
             localDataLabel: '本地数据',
@@ -675,7 +715,7 @@ window.translations = {
         fullscreenFontSizeLabel: '全屏字体大小：当前',
         soundSettings: '声音设置',
         playSound: '倒计时结束时播放提示音',
-        preview: '试听',
+        preview: '预览',
         moreSettings: '更多设置',
         playbackSpeed: '播放倍速',
         loopPlayback: '循环播放',

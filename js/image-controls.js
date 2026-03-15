@@ -57,7 +57,7 @@ class ImageControls {
                     <div class="resize-handle left" data-handle="left"></div>
                     
                     <!-- Rotation handle -->
-                    <div class="rotate-handle" id="rotate-handle">
+                    <div class="rotate-handle" id="rotate-handle" data-i18n-title="imageControls.rotate">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                             <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                         </svg>
@@ -77,8 +77,20 @@ class ImageControls {
                         </svg>
                     </div>
                     
-                    <!-- Control toolbar with only confirm button -->
+                    <!-- Control toolbar -->
                     <div class="image-controls-toolbar">
+                        <button id="image-copy-btn" class="image-control-btn" type="button" data-i18n-title="selection.copy">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+                        <button id="image-delete-btn" class="image-control-btn image-cancel-btn" type="button" data-i18n-title="selection.delete">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
                         <button id="image-done-btn" class="image-control-btn image-done-btn" data-i18n-title="imageControls.confirm">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <polyline points="20 6 9 17 4 12"></polyline>
@@ -93,11 +105,19 @@ class ImageControls {
         
         this.overlay = document.getElementById('image-controls-overlay');
         this.controlBox = document.getElementById('image-controls-box');
+        this.rotateHandle = document.getElementById('rotate-handle');
+        this.flipHorizontalHandle = document.getElementById('flip-horizontal-handle');
+        this.flipVerticalHandle = document.getElementById('flip-vertical-handle');
+        this.toolbar = this.controlBox.querySelector('.image-controls-toolbar');
+        window.i18n?.applyTranslations?.();
     }
     
     setupEventListeners() {
-        // Drag image
-        this.controlBox.addEventListener('mousedown', (e) => {
+        const handleDragStart = (e) => {
+            e.stopPropagation();
+            if (e.type !== 'mousemove') {
+                e.preventDefault?.();
+            }
             if (e.target === this.controlBox || e.target.closest('.image-controls-box') === this.controlBox) {
                 if (!e.target.classList.contains('resize-handle') && 
                     !e.target.classList.contains('rotate-handle') &&
@@ -109,36 +129,48 @@ class ImageControls {
                     this.startDrag(e);
                 }
             }
-        });
+        };
+
+        this.controlBox.addEventListener('mousedown', handleDragStart);
+        this.controlBox.addEventListener('pointerdown', handleDragStart);
+        this.controlBox.addEventListener('touchstart', handleDragStart, { passive: false });
         
         // Resize handles
         this.controlBox.querySelectorAll('.resize-handle').forEach(handle => {
-            handle.addEventListener('mousedown', (e) => {
+            const startResize = (e) => {
                 e.stopPropagation();
+                e.preventDefault?.();
                 this.startResize(e, handle.dataset.handle);
-            });
+            };
+            handle.addEventListener('mousedown', startResize);
+            handle.addEventListener('pointerdown', startResize);
+            handle.addEventListener('touchstart', startResize, { passive: false });
         });
         
         // Rotation handle
-        document.getElementById('rotate-handle').addEventListener('mousedown', (e) => {
+        const startRotate = (e) => {
             e.stopPropagation();
+            e.preventDefault?.();
             this.startRotate(e);
-        });
+        };
+        this.rotateHandle.addEventListener('mousedown', startRotate);
+        this.rotateHandle.addEventListener('pointerdown', startRotate);
+        this.rotateHandle.addEventListener('touchstart', startRotate, { passive: false });
         
         // Flip horizontal handle
-        document.getElementById('flip-horizontal-handle').addEventListener('click', (e) => {
+        this.flipHorizontalHandle.addEventListener('click', (e) => {
             e.stopPropagation();
             this.toggleFlipHorizontal();
         });
         
         // Flip vertical handle
-        document.getElementById('flip-vertical-handle').addEventListener('click', (e) => {
+        this.flipVerticalHandle.addEventListener('click', (e) => {
             e.stopPropagation();
             this.toggleFlipVertical();
         });
         
-        // Global mouse events
-        document.addEventListener('mousemove', (e) => {
+        // Global move events
+        const handleMove = (e) => {
             if (this.isDragging) {
                 this.drag(e);
             } else if (this.isResizing) {
@@ -146,15 +178,50 @@ class ImageControls {
             } else if (this.isRotating) {
                 this.rotate(e);
             }
-        });
+        };
+
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('pointermove', handleMove);
+        document.addEventListener('touchmove', (e) => {
+            if (this.isDragging || this.isResizing || this.isRotating) {
+                e.preventDefault();
+                handleMove(e);
+            }
+        }, { passive: false });
         
-        document.addEventListener('mouseup', () => {
+        const handleEnd = () => {
             this.stopDrag();
             this.stopResize();
             this.stopRotate();
-        });
+        };
+        document.addEventListener('mouseup', handleEnd);
+        document.addEventListener('pointerup', handleEnd);
+        document.addEventListener('touchend', handleEnd);
+        document.addEventListener('pointercancel', handleEnd);
+        document.addEventListener('touchcancel', handleEnd);
         
-        // Toolbar button - only confirm button
+        [document.getElementById('image-copy-btn'), document.getElementById('image-delete-btn'), document.getElementById('image-done-btn')]
+            .forEach(btn => {
+                btn.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                });
+                btn.addEventListener('pointerdown', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                });
+            });
+
+        document.getElementById('image-copy-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            this.copyImageToCanvas();
+        });
+        document.getElementById('image-delete-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            this.deleteImage();
+        });
         document.getElementById('image-done-btn').addEventListener('click', () => this.confirmImage());
     }
     
@@ -204,7 +271,7 @@ class ImageControls {
             this.imagePosition.x = existingTransform.x;
             this.imagePosition.y = existingTransform.y;
             this.imageRotation = existingTransform.rotation || 0;
-            this.imageScale = existingTransform.scale || 1.0;
+            this.imageScale = 1.0;
             this.flipHorizontal = existingTransform.flipHorizontal || false;
             this.flipVertical = existingTransform.flipVertical || false;
         } else {
@@ -253,6 +320,167 @@ class ImageControls {
         this.isConfirmed = false;
         localStorage.removeItem('backgroundImageConfirmed');
     }
+
+    copyImageToCanvas() {
+        const drawingBoard = window.drawingBoard;
+        const bgImage = this.backgroundManager.backgroundImage;
+        if (!drawingBoard || !bgImage) return false;
+
+        drawingBoard.ctx.save();
+        const centerX = this.imagePosition.x + this.imageSize.width / 2;
+        const centerY = this.imagePosition.y + this.imageSize.height / 2;
+        drawingBoard.ctx.translate(centerX, centerY);
+        drawingBoard.ctx.rotate(this.imageRotation * Math.PI / 180);
+        drawingBoard.ctx.scale(this.flipHorizontal ? -1 : 1, this.flipVertical ? -1 : 1);
+        drawingBoard.ctx.drawImage(
+            bgImage,
+            -this.imageSize.width / 2,
+            -this.imageSize.height / 2,
+            this.imageSize.width,
+            this.imageSize.height
+        );
+        drawingBoard.ctx.restore();
+
+        drawingBoard.drawingEngine?.addStampedImage({
+            imageElement: bgImage,
+            imageSrc: this.backgroundManager.backgroundImageData,
+            x: this.imagePosition.x,
+            y: this.imagePosition.y,
+            width: this.imageSize.width,
+            height: this.imageSize.height,
+            rotation: this.imageRotation,
+            flipHorizontal: this.flipHorizontal,
+            flipVertical: this.flipVertical
+        });
+
+        drawingBoard.historyManager?.saveState();
+        return true;
+    }
+
+    deleteImage() {
+        this.backgroundManager.clearBackgroundImage();
+        this.resetConfirmation();
+        this.hideControls();
+        window.drawingBoard?.updateBackgroundUI?.();
+    }
+
+    clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+    }
+
+    updateAdaptiveControlsLayout(boxWidth, boxHeight) {
+        const safeWidth = Math.max(boxWidth, 1);
+        const safeHeight = Math.max(boxHeight, 1);
+        const minSide = Math.max(Math.min(safeWidth, safeHeight), 1);
+
+        const resizeHandleSize = this.clamp(minSide * 0.18, 10, 12);
+        this.controlBox.style.setProperty('--resize-handle-size', `${resizeHandleSize}px`);
+        this.controlBox.style.setProperty('--resize-handle-offset', `${-(resizeHandleSize / 2)}px`);
+
+        const floatingSize = this.clamp(minSide * 0.28, 20, 36);
+        const floatingIconSize = this.clamp(floatingSize * 0.56, 12, 20);
+        const floatingGap = this.clamp(floatingSize * 0.2, 4, 10);
+        const inset = this.clamp(minSide * 0.08, 4, 10);
+        const outsideTop = safeHeight >= floatingSize * 2.5 ? -(floatingSize + 8) : inset;
+        const insideTop = inset;
+        const rowSpan = floatingSize * 3 + floatingGap * 2;
+        const doubleSpan = floatingSize * 2 + floatingGap;
+        const centerX = safeWidth / 2;
+        let leftPosition;
+        let centerPosition;
+        let rightPosition;
+        if (safeWidth >= rowSpan + inset * 2) {
+            leftPosition = { left: centerX - (floatingSize + floatingGap), top: outsideTop };
+            centerPosition = { left: centerX, top: outsideTop };
+            rightPosition = { left: centerX + (floatingSize + floatingGap), top: outsideTop };
+        } else if (safeWidth >= doubleSpan + inset * 2) {
+            centerPosition = { left: centerX, top: outsideTop };
+            leftPosition = { left: centerX - ((floatingSize + floatingGap) / 2), top: insideTop };
+            rightPosition = { left: centerX + ((floatingSize + floatingGap) / 2), top: insideTop };
+        } else {
+            const sideOffset = this.clamp(floatingSize * 0.75, floatingSize * 0.55, Math.max(floatingSize * 0.75, (safeWidth / 2) - (floatingSize / 2)));
+            centerPosition = { left: centerX, top: insideTop };
+            leftPosition = { left: this.clamp(centerX - sideOffset, floatingSize / 2, safeWidth - floatingSize / 2), top: insideTop + floatingSize + floatingGap };
+            rightPosition = { left: this.clamp(centerX + sideOffset, floatingSize / 2, safeWidth - floatingSize / 2), top: insideTop + floatingSize + floatingGap };
+        }
+
+        [
+            { element: this.flipHorizontalHandle, position: leftPosition },
+            { element: this.rotateHandle, position: centerPosition },
+            { element: this.flipVerticalHandle, position: rightPosition }
+        ].forEach(({ element, position }) => {
+            if (!element || !position) return;
+
+            element.style.left = `${position.left}px`;
+            element.style.top = `${position.top}px`;
+            element.style.width = `${floatingSize}px`;
+            element.style.height = `${floatingSize}px`;
+            element.style.setProperty('--handle-connector-top', `${floatingSize}px`);
+            element.style.setProperty('--handle-connector-height', `${Math.max(8, Math.round(floatingSize * 0.35))}px`);
+
+            const icon = element.querySelector('svg');
+            if (icon) {
+                icon.style.width = `${floatingIconSize}px`;
+                icon.style.height = `${floatingIconSize}px`;
+            }
+        });
+
+        this.controlBox.style.setProperty('--floating-control-size', `${floatingSize}px`);
+        this.controlBox.style.setProperty('--floating-control-icon-size', `${floatingIconSize}px`);
+
+        if (!this.toolbar) return;
+
+        const toolbarButtons = Array.from(this.toolbar.querySelectorAll('.image-control-btn'));
+        const toolbarButtonSize = this.clamp(Math.min(safeWidth * 0.3, minSide * 0.42), 20, 44);
+        const toolbarGap = this.clamp(toolbarButtonSize * 0.18, 4, 8);
+        const toolbarPaddingX = this.clamp(toolbarButtonSize * 0.22, 4, 10);
+        const toolbarPaddingY = this.clamp(toolbarButtonSize * 0.18, 4, 10);
+        const toolbarHorizontalWidth = (toolbarButtonSize * toolbarButtons.length) + (toolbarGap * Math.max(toolbarButtons.length - 1, 0)) + toolbarPaddingX * 2;
+        const toolbarTwoColWidth = (toolbarButtonSize * Math.min(toolbarButtons.length, 2)) + (toolbarGap * Math.max(Math.min(toolbarButtons.length, 2) - 1, 0)) + toolbarPaddingX * 2;
+
+        toolbarButtons.forEach((button) => {
+            button.style.width = `${toolbarButtonSize}px`;
+            button.style.height = `${toolbarButtonSize}px`;
+
+            const icon = button.querySelector('svg');
+            if (icon) {
+                const toolbarIconSize = this.clamp(toolbarButtonSize * 0.45, 10, 20);
+                icon.style.width = `${toolbarIconSize}px`;
+                icon.style.height = `${toolbarIconSize}px`;
+            }
+        });
+
+        this.controlBox.style.setProperty('--toolbar-button-size', `${toolbarButtonSize}px`);
+        this.controlBox.style.setProperty('--toolbar-gap', `${toolbarGap}px`);
+        this.controlBox.style.setProperty('--toolbar-padding-x', `${toolbarPaddingX}px`);
+        this.controlBox.style.setProperty('--toolbar-padding-y', `${toolbarPaddingY}px`);
+
+        this.toolbar.style.left = `${centerX}px`;
+        this.toolbar.style.bottom = safeHeight >= toolbarButtonSize * 2.5
+            ? `${-(toolbarButtonSize + toolbarPaddingY + 10)}px`
+            : `${inset}px`;
+        this.toolbar.style.transform = 'translateX(-50%)';
+        this.toolbar.style.display = 'flex';
+        this.toolbar.style.flexDirection = 'row';
+        this.toolbar.style.justifyContent = 'center';
+        this.toolbar.style.alignItems = 'center';
+        this.toolbar.style.justifyItems = '';
+        this.toolbar.style.gridTemplateColumns = '';
+        this.toolbar.style.width = 'auto';
+
+        if (safeWidth < toolbarHorizontalWidth + inset * 2) {
+            this.toolbar.style.bottom = `${inset}px`;
+
+            if (safeWidth >= toolbarTwoColWidth + inset * 2 && toolbarButtons.length > 2) {
+                this.toolbar.style.display = 'grid';
+                this.toolbar.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
+                this.toolbar.style.justifyItems = 'center';
+                this.toolbar.style.width = `${Math.max(toolbarTwoColWidth, Math.min(safeWidth - inset * 2, toolbarHorizontalWidth))}px`;
+            } else {
+                this.toolbar.style.flexDirection = 'column';
+            }
+        }
+    }
     
     updateControlBox() {
         const canvas = this.backgroundManager.bgCanvas;
@@ -281,6 +509,8 @@ class ImageControls {
         this.controlBox.style.width = `${actualWidth}px`;
         this.controlBox.style.height = `${actualHeight}px`;
         this.controlBox.style.transform = `rotate(${this.imageRotation}deg)`;
+
+        this.updateAdaptiveControlsLayout(actualWidth, actualHeight);
         
         // Update background image with current transformations
         this.applyImageTransform();
@@ -294,10 +524,32 @@ class ImageControls {
             width: this.imageSize.width,
             height: this.imageSize.height,
             rotation: this.imageRotation,
-            scale: this.imageScale,
+            scale: 1,
             flipHorizontal: this.flipHorizontal,
             flipVertical: this.flipVertical
         });
+    }
+
+    getClientPos(e) {
+        if (e.touches && e.touches.length > 0) {
+            return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+        return { x: e.clientX, y: e.clientY };
+    }
+
+    getControlBoxCenter() {
+        const canvas = this.backgroundManager.bgCanvas;
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        const logicalWidth = canvas.width / dpr;
+        const logicalHeight = canvas.height / dpr;
+        const scaleX = rect.width / logicalWidth;
+        const scaleY = rect.height / logicalHeight;
+
+        return {
+            x: rect.left + (this.imagePosition.x + this.imageSize.width / 2) * scaleX,
+            y: rect.top + (this.imagePosition.y + this.imageSize.height / 2) * scaleY
+        };
     }
     
     toggleFlipHorizontal() {
@@ -322,7 +574,7 @@ class ImageControls {
     
     startDrag(e) {
         this.isDragging = true;
-        this.dragStartPos = { x: e.clientX, y: e.clientY };
+        this.dragStartPos = this.getClientPos(e);
         this.dragStartImagePos = { ...this.imagePosition };
         this.controlBox.style.cursor = 'grabbing';
     }
@@ -337,8 +589,9 @@ class ImageControls {
         const logicalWidth = canvas.width / dpr;
         const scaleX = rect.width / logicalWidth;
         
-        const deltaX = (e.clientX - this.dragStartPos.x) / scaleX;
-        const deltaY = (e.clientY - this.dragStartPos.y) / scaleX; // Use same scale for both axes
+        const pos = this.getClientPos(e);
+        const deltaX = (pos.x - this.dragStartPos.x) / scaleX;
+        const deltaY = (pos.y - this.dragStartPos.y) / scaleX; // Use same scale for both axes
         
         this.imagePosition.x = this.dragStartImagePos.x + deltaX;
         this.imagePosition.y = this.dragStartImagePos.y + deltaY;
@@ -354,7 +607,7 @@ class ImageControls {
     startResize(e, handle) {
         this.isResizing = true;
         this.resizeHandle = handle;
-        this.resizeStartPos = { x: e.clientX, y: e.clientY };
+        this.resizeStartPos = this.getClientPos(e);
         this.resizeStartSize = { ...this.imageSize };
         this.dragStartImagePos = { ...this.imagePosition };
     }
@@ -369,8 +622,9 @@ class ImageControls {
         const logicalWidth = canvas.width / dpr;
         const scaleX = rect.width / logicalWidth;
         
-        const deltaX = (e.clientX - this.resizeStartPos.x) / scaleX;
-        const deltaY = (e.clientY - this.resizeStartPos.y) / scaleX; // Use same scale for both axes
+        const pos = this.getClientPos(e);
+        const deltaX = (pos.x - this.resizeStartPos.x) / scaleX;
+        const deltaY = (pos.y - this.resizeStartPos.y) / scaleX; // Use same scale for both axes
         
         const aspectRatio = this.resizeStartSize.width / this.resizeStartSize.height;
         
@@ -421,22 +675,18 @@ class ImageControls {
     
     startRotate(e) {
         this.isRotating = true;
-        const rect = this.controlBox.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        
-        this.rotateStartAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+        const center = this.getControlBoxCenter();
+        const pos = this.getClientPos(e);
+        this.rotateStartAngle = Math.atan2(pos.y - center.y, pos.x - center.x) * 180 / Math.PI;
         this.rotateStartRotation = this.imageRotation;
     }
     
     rotate(e) {
         if (!this.isRotating) return;
-        
-        const rect = this.controlBox.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        
-        const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+
+        const center = this.getControlBoxCenter();
+        const pos = this.getClientPos(e);
+        const currentAngle = Math.atan2(pos.y - center.y, pos.x - center.x) * 180 / Math.PI;
         const angleDelta = currentAngle - this.rotateStartAngle;
         
         this.imageRotation = this.rotateStartRotation + angleDelta;
@@ -526,7 +776,7 @@ class ImageControls {
             width: this.imageSize.width,
             height: this.imageSize.height,
             rotation: this.imageRotation,
-            scale: this.imageScale
+            scale: 1
         };
     }
 }

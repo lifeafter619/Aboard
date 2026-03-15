@@ -1,8 +1,11 @@
-const CACHE_NAME = 'aboard-v1';
-const urlsToCache = [
+const CORE_CACHE_NAME = 'aboard-core-v3';
+const RUNTIME_CACHE_NAME = 'aboard-runtime-v3';
+const RUNTIME_CACHE_MAX_ENTRIES = 24;
+const RUNTIME_CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'worker', 'image', 'font', 'manifest']);
+const RUNTIME_CACHEABLE_EXTENSIONS = /\.(?:css|gif|ico|jpe?g|js|json|png|svg|webp|woff2?)$/i;
+const CORE_ASSETS = [
   './',
   './index.html',
-  './version.txt',
   './manifest.json',
   './img/icon.svg',
   './css/style.css',
@@ -16,6 +19,7 @@ const urlsToCache = [
   './css/modules/random-picker.css',
   './css/modules/scoreboard.css',
   './css/modules/insert-image.css',
+  './css/modules/insert-text.css',
   './css/modules/project.css',
   './css/modules/toast.css',
   './css/modules/diff.css',
@@ -25,20 +29,18 @@ const urlsToCache = [
   './js/image-controls.js',
   './js/insert-image.js',
   './js/stroke-controls.js',
+  './js/selection.js',
   './js/collapsible.js',
   './js/time-display.js',
   './js/modules/time-display-controls.js',
   './js/modules/time-display-settings.js',
-  './js/modules/timer.js',
   './js/modules/edge-drawing.js',
   './js/modules/teaching-tools.js',
   './js/modules/shape-drawing.js',
   './js/modules/line-style-modal.js',
-  './js/modules/random-picker.js',
-  './js/modules/scoreboard.js',
+  './js/modules/dialog-manager.js',
   './js/modules/settings-manager.js',
   './js/announcement.js',
-  './js/export.js',
   './js/modules/i18n.js',
   './js/modules/rich-text-parser.js',
   './js/modules/script-loader.js',
@@ -46,19 +48,92 @@ const urlsToCache = [
   './js/modules/browser-check.js',
   './js/modules/help-system.js',
   './js/modules/storage-manager.js',
-  './js/modules/project-manager.js',
   './js/modules/toast-manager.js',
-  './js/main.js',
-  './js/modules/pwa-manager.js'
+  './js/modules/pwa-manager.js',
+  './js/main.js'
 ];
+
+function isSameOrigin(requestUrl) {
+  return requestUrl.origin === self.location.origin;
+}
+
+function isRangeRequest(request) {
+  return request.headers.has('range');
+}
+
+function isRuntimeCacheableRequest(request, url) {
+  if (request.mode === 'navigate' || isRangeRequest(request)) {
+    return false;
+  }
+
+  if (request.destination) {
+    return RUNTIME_CACHEABLE_DESTINATIONS.has(request.destination);
+  }
+
+  return RUNTIME_CACHEABLE_EXTENSIONS.test(url.pathname);
+}
+
+function canStoreResponse(response) {
+  return response && response.status === 200 && response.type !== 'error';
+}
+
+async function trimRuntimeCache(cache) {
+  const keys = await cache.keys();
+  const overflow = keys.length - RUNTIME_CACHE_MAX_ENTRIES;
+  if (overflow <= 0) {
+    return;
+  }
+
+  await Promise.all(keys.slice(0, overflow).map(request => cache.delete(request)));
+}
+
+async function storeRuntimeResponse(cache, request, response) {
+  if (!canStoreResponse(response)) {
+    return;
+  }
+
+  try {
+    await cache.put(request, response.clone());
+    await trimRuntimeCache(cache);
+  } catch (error) {
+    console.warn('Skipping Cache Storage write for request:', request.url, error);
+  }
+}
+
+async function networkFirst(request) {
+  const cache = await caches.open(RUNTIME_CACHE_NAME);
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      await storeRuntimeResponse(cache, request, response);
+    }
+    return response;
+  } catch (error) {
+    const cached = await cache.match(request);
+    if (cached) {
+      return cached;
+    }
+    throw error;
+  }
+}
+
+async function cacheFirst(request) {
+  const cache = await caches.open(RUNTIME_CACHE_NAME);
+  const cached = await cache.match(request);
+  if (cached) {
+    return cached;
+  }
+
+  const response = await fetch(request);
+  if (response && response.ok) {
+    await storeRuntimeResponse(cache, request, response);
+  }
+  return response;
+}
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
+    caches.open(CORE_CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS))
   );
 });
 
@@ -69,28 +144,52 @@ self.addEventListener('message', event => {
 });
 
 self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
+  const cacheWhitelist = [CORE_CACHE_NAME, RUNTIME_CACHE_NAME];
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    caches.keys().then(cacheNames => Promise.all(
+      cacheNames.map(cacheName => {
+        if (!cacheWhitelist.includes(cacheName)) {
+          return caches.delete(cacheName);
+        }
+        return Promise.resolve();
+      })
+    )).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
+  const { request } = event;
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  const url = new URL(request.url);
+  if (!isSameOrigin(url)) {
+    return;
+  }
+
+  if (isRangeRequest(request)) {
+    return;
+  }
+
+  if (url.pathname === '/api/version' || url.pathname.endsWith('/version.txt')) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(async () => {
+        const cache = await caches.open(CORE_CACHE_NAME);
+        return cache.match('./index.html');
       })
-  );
+    );
+    return;
+  }
+
+  if (!isRuntimeCacheableRequest(request, url)) {
+    return;
+  }
+
+  event.respondWith(cacheFirst(request));
 });

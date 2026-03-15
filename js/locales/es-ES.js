@@ -18,7 +18,9 @@ window.translations = {
         no: 'No',
         ok: 'OK',
         apply: 'Aplicar',
-        reset: 'Restablecer'
+        reset: 'Restablecer',
+        restoreSize: 'Restablecer tamaño',
+        keepCentered: 'Mantener centrado'
     },
 
     // Recovery dialog
@@ -32,7 +34,9 @@ window.translations = {
     // App Title
     app: {
         title: 'Aboard - Pizarra Minimalista',
-        name: 'Aboard'
+        name: 'Aboard',
+        rotateScreenTitle: 'Gira la pantalla',
+        rotateScreenTip: 'Se detectó el modo vertical. Para un diseño correcto y la barra de herramientas completa, usa el modo horizontal.'
     },
 
     // Toolbar
@@ -53,6 +57,7 @@ window.translations = {
         zoomOut: 'Alejar (-)',
         zoomIn: 'Acercar (+)',
         fullscreen: 'Pantalla completa (F11)',
+        exitFullscreen: 'Salir de pantalla completa (F11)',
         zoomPlaceholder: 'Nivel de zoom (Introducir porcentaje)'
     },
 
@@ -66,6 +71,7 @@ window.translations = {
             ballpoint: 'Bolígrafo de bola',
             fountain: 'Pluma estilográfica',
             brush: 'Pincel',
+            marker: 'Marcador',
             color: 'Color',
             colorAndSize: 'Color y tamaño',
             colorPicker: 'Selector de color',
@@ -167,7 +173,9 @@ window.translations = {
         layerFront: 'Traer al frente',
         layerBack: 'Enviar al fondo',
         layerUp: 'Subir una capa',
-        layerDown: 'Bajar una capa'
+        layerDown: 'Bajar una capa',
+        group: 'Agrupar',
+        ungroup: 'Desagrupar'
     },
 
     // Line Style Modal
@@ -237,7 +245,9 @@ window.translations = {
         layerFront: 'Traer al frente',
         layerBack: 'Enviar al fondo',
         layerUp: 'Subir una capa',
-        layerDown: 'Bajar una capa'
+        layerDown: 'Bajar una capa',
+        group: 'Agrupar',
+        ungroup: 'Desagrupar'
     },
 
     // Page Navigation
@@ -252,6 +262,10 @@ window.translations = {
     // Settings
     settings: {
         title: 'Configuración',
+        exportSuccess: 'Configuración exportada correctamente',
+        importSuccess: 'Configuración importada correctamente',
+        importError: 'Archivo de configuración inválido',
+        importNoChange: 'No se detectaron cambios en la configuración',
         tabs: {
             general: 'General',
             display: 'Pantalla',
@@ -319,6 +333,8 @@ window.translations = {
             },
             edgeSnap: 'Habilitar ajuste de borde',
             edgeSnapHint: 'Ajustar automáticamente los paneles de control a los bordes de la pantalla',
+            morePanelBehaviorLabel: 'Comportamiento del panel Más',
+            keepMorePanelOpenHint: 'Mantener abierto el panel Más después de pulsar funciones',
             // Toolbar customization
             toolbarCustomization: 'Personalización de la barra de herramientas',
             toolbarCustomizationHint: 'Seleccione herramientas para mostrar, arrastre para reordenar',
@@ -448,6 +464,19 @@ window.translations = {
         },
         more: {
             title: 'Más configuraciones',
+            cacheCleanupLabel: 'Limpieza de caché',
+            cacheCleanupHint: 'Ver uso de caché y limpiar por categoría (con confirmación antes de borrar)',
+            clearSettingsCache: 'Limpiar caché de configuración',
+            clearCanvasCache: 'Limpiar caché del lienzo',
+            clearOtherCache: 'Limpiar otra caché',
+            cacheSizeCalculating: 'Calculando...',
+            clearSelectedCache: 'Limpiar caché seleccionada',
+            morePanelBehaviorLabel: 'Comportamiento del panel Más',
+            keepMorePanelOpenHint: 'Mantener abierto el panel Más después de pulsar funciones',
+            selectCacheType: 'Seleccione al menos un tipo de caché.',
+            confirmClearTitle: 'Confirmar limpieza',
+            confirmClearSelectedCache: 'Seleccione los elementos de caché que desea limpiar:',
+            clearLocalDataConfirmSuffix: '¿Continuar?',
             description: 'Para la configuración de visualización de hora, haga clic en el área de hora en la esquina inferior derecha',
             showTimeDisplay: 'Mostrar hora y fecha',
             showTimeDisplayHint: 'Mostrar la hora y fecha actuales en la esquina superior derecha',

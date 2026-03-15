@@ -286,6 +286,7 @@ class TimeDisplaySettingsModal {
     
     show() {
         if (this.modal) {
+            window.drawingBoard?.syncResizableModalState?.('time-display-settings-modal');
             this.modal.classList.add('show');
             this.syncSettings();
         }

@@ -11,7 +11,10 @@ class DrawingEngine {
         this.currentColor = '#000000';
         this.penSize = 5;
         this.penType = localStorage.getItem('penType') || 'normal';
-        this.eraserSize = 20;
+        const storedEraserSize = parseInt(localStorage.getItem('eraserSize'), 10);
+        this.eraserSize = Number.isFinite(storedEraserSize)
+            ? this.normalizeEraserSize(storedEraserSize)
+            : this.getAdaptiveDefaultEraserSize();
         this.eraserShape = localStorage.getItem('eraserShape') || 'circle';
         this.currentTool = 'pen';
         
@@ -55,6 +58,11 @@ class DrawingEngine {
         // Stamped images storage (for redraw support)
         this.stampedImages = [];
         this.selectedImageIndex = null;
+        this.layerCounter = 1;
+        this.objectIdCounter = 1;
+        this.groupCounter = 1;
+        this.objectGroups = [];
+        this.offCanvasImageLayer = null;
         
         // Canvas scaling and panning
         this.canvasScale = parseFloat(localStorage.getItem('canvasScale')) || 1.0;
@@ -92,6 +100,370 @@ class DrawingEngine {
         this.penMultiLineSpacing = Math.max(5, Math.min(50, spacing));
         localStorage.setItem('penMultiLineSpacing', this.penMultiLineSpacing);
     }
+
+    getNextObjectId() {
+        return `obj-${this.objectIdCounter++}`;
+    }
+
+    getNextGroupId() {
+        return `group-${this.groupCounter++}`;
+    }
+
+    parseCounterValue(value, prefix) {
+        if (typeof value !== 'string' || !value.startsWith(prefix)) return 0;
+        const numeric = parseInt(value.slice(prefix.length), 10);
+        return Number.isFinite(numeric) ? numeric : 0;
+    }
+
+    ensureObjectId(item) {
+        if (!item) return null;
+        if (!item.objectId) {
+            item.objectId = this.getNextObjectId();
+        } else {
+            this.objectIdCounter = Math.max(
+                this.objectIdCounter,
+                this.parseCounterValue(item.objectId, 'obj-') + 1
+            );
+        }
+        if (typeof item.groupId === 'undefined') {
+            item.groupId = null;
+        }
+        return item.objectId;
+    }
+
+    ensureGroup(group) {
+        if (!group) return null;
+        if (!group.id) {
+            group.id = this.getNextGroupId();
+        } else {
+            this.groupCounter = Math.max(
+                this.groupCounter,
+                this.parseCounterValue(group.id, 'group-') + 1
+            );
+        }
+        if (!Array.isArray(group.memberIds)) {
+            group.memberIds = [];
+        }
+        if (!Number.isFinite(group.layerOrder)) {
+            group.layerOrder = this.getNextLayerOrder();
+        } else {
+            this.layerCounter = Math.max(this.layerCounter, group.layerOrder + 1);
+        }
+        return group;
+    }
+
+    getGroupById(groupId) {
+        if (!groupId) return null;
+        return this.objectGroups.find(group => group?.id === groupId) || null;
+    }
+
+    getObjectRefById(objectId, textObjects = []) {
+        if (!objectId) return null;
+        const collections = [
+            { type: 'stroke', items: this.strokes },
+            { type: 'image', items: this.stampedImages },
+            { type: 'text', items: textObjects || [] }
+        ];
+        for (const collection of collections) {
+            for (let index = 0; index < collection.items.length; index++) {
+                const item = collection.items[index];
+                if (!item) continue;
+                this.ensureObjectId(item);
+                if (item.objectId === objectId) {
+                    return {
+                        type: collection.type,
+                        index,
+                        item,
+                        objectId
+                    };
+                }
+            }
+        }
+        return null;
+    }
+
+    getGroupMembers(groupOrId, textObjects = []) {
+        const group = typeof groupOrId === 'string'
+            ? this.getGroupById(groupOrId)
+            : groupOrId;
+        if (!group) return [];
+        return (group.memberIds || [])
+            .map(objectId => this.getObjectRefById(objectId, textObjects))
+            .filter(Boolean)
+            .sort((a, b) => {
+                const layerDiff = (a.item.layerOrder || 0) - (b.item.layerOrder || 0);
+                if (layerDiff !== 0) return layerDiff;
+                return a.index - b.index;
+            });
+    }
+
+    removeObjectFromGroups(objectId) {
+        if (!objectId) return;
+        this.objectGroups = this.objectGroups
+            .map(group => {
+                if (!group?.memberIds?.includes(objectId)) return group;
+                group.memberIds = group.memberIds.filter(id => id !== objectId);
+                return group;
+            })
+            .filter(group => group?.memberIds?.length >= 2);
+    }
+
+    cleanupGroups(textObjects = []) {
+        const validObjectIds = new Set();
+        [this.strokes, this.stampedImages, textObjects || []].forEach(collection => {
+            collection.forEach(item => {
+                if (!item) return;
+                validObjectIds.add(this.ensureObjectId(item));
+            });
+        });
+
+        this.objectGroups = this.objectGroups
+            .map(group => {
+                this.ensureGroup(group);
+                group.memberIds = [...new Set((group.memberIds || []).filter(id => validObjectIds.has(id)))];
+                return group;
+            })
+            .filter(group => group.memberIds.length >= 2);
+
+        const validGroupIds = new Set(this.objectGroups.map(group => group.id));
+        [this.strokes, this.stampedImages, textObjects || []].forEach(collection => {
+            collection.forEach(item => {
+                if (!item) return;
+                this.ensureObjectId(item);
+                if (item.groupId && !validGroupIds.has(item.groupId)) {
+                    item.groupId = null;
+                }
+            });
+        });
+    }
+
+    getCanvasLogicalBounds() {
+        const dpr = window.devicePixelRatio || 1;
+        return {
+            x: 0,
+            y: 0,
+            width: this.canvas.width / dpr,
+            height: this.canvas.height / dpr
+        };
+    }
+
+    rectsIntersect(a, b) {
+        if (!a || !b) return false;
+        return a.x < b.x + b.width &&
+            a.x + a.width > b.x &&
+            a.y < b.y + b.height &&
+            a.y + a.height > b.y;
+    }
+
+    getBoundsFromPoints(points) {
+        if (!points?.length) return null;
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        points.forEach(point => {
+            if (!point) return;
+            minX = Math.min(minX, point.x);
+            minY = Math.min(minY, point.y);
+            maxX = Math.max(maxX, point.x);
+            maxY = Math.max(maxY, point.y);
+        });
+        if (!Number.isFinite(minX)) return null;
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
+    }
+
+    rotatePoint(point, centerX, centerY, angleDeg) {
+        const angleRad = angleDeg * Math.PI / 180;
+        const cos = Math.cos(angleRad);
+        const sin = Math.sin(angleRad);
+        const relX = point.x - centerX;
+        const relY = point.y - centerY;
+        return {
+            x: centerX + relX * cos - relY * sin,
+            y: centerY + relX * sin + relY * cos
+        };
+    }
+
+    getImageCornerPoints(img) {
+        if (!img) return [];
+        const points = [
+            { x: img.x, y: img.y },
+            { x: img.x + img.width, y: img.y },
+            { x: img.x + img.width, y: img.y + img.height },
+            { x: img.x, y: img.y + img.height }
+        ];
+        const rotation = img.rotation || 0;
+        if (!rotation) return points;
+        const centerX = img.x + img.width / 2;
+        const centerY = img.y + img.height / 2;
+        return points.map(point => this.rotatePoint(point, centerX, centerY, rotation));
+    }
+
+    getImageVisualBounds(img) {
+        return this.getBoundsFromPoints(this.getImageCornerPoints(img));
+    }
+
+    getTopLevelRenderableBounds(renderable, textObjects = []) {
+        if (!renderable) return null;
+        if (renderable.type === 'group') {
+            const points = [];
+            renderable.members?.forEach(member => {
+                if (member.type === 'stroke') {
+                    const bounds = this.getStrokeBounds(member.item);
+                    if (bounds) {
+                        points.push(
+                            { x: bounds.x, y: bounds.y },
+                            { x: bounds.x + bounds.width, y: bounds.y },
+                            { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
+                            { x: bounds.x, y: bounds.y + bounds.height }
+                        );
+                    }
+                } else if (member.type === 'image') {
+                    points.push(...this.getImageCornerPoints(member.item));
+                } else if (member.type === 'text') {
+                    const item = member.item;
+                    const bounds = {
+                        x: item.x,
+                        y: item.y,
+                        width: item.width || 0,
+                        height: item.height || 0
+                    };
+                    points.push(
+                        { x: bounds.x, y: bounds.y },
+                        { x: bounds.x + bounds.width, y: bounds.y },
+                        { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
+                        { x: bounds.x, y: bounds.y + bounds.height }
+                    );
+                }
+            });
+            return this.getBoundsFromPoints(points);
+        }
+        if (renderable.type === 'stroke') {
+            return this.getStrokeBounds(renderable.item);
+        }
+        if (renderable.type === 'image') {
+            return this.getImageVisualBounds(renderable.item);
+        }
+        if (renderable.type === 'text') {
+            return {
+                x: renderable.item.x,
+                y: renderable.item.y,
+                width: renderable.item.width || 0,
+                height: renderable.item.height || 0
+            };
+        }
+        return null;
+    }
+
+    getMaxLayerOrder(textObjects = [], includeGroups = true) {
+        let maxLayerOrder = 0;
+        [this.strokes, this.stampedImages, textObjects || []].forEach(collection => {
+            collection.forEach(item => {
+                if (Number.isFinite(item?.layerOrder)) {
+                    maxLayerOrder = Math.max(maxLayerOrder, item.layerOrder);
+                }
+            });
+        });
+        if (includeGroups) {
+            this.objectGroups.forEach(group => {
+                if (Number.isFinite(group?.layerOrder)) {
+                    maxLayerOrder = Math.max(maxLayerOrder, group.layerOrder);
+                }
+            });
+        }
+        return maxLayerOrder;
+    }
+
+    ensureOffCanvasImageLayer() {
+        if (this.offCanvasImageLayer && document.body.contains(this.offCanvasImageLayer)) {
+            return this.offCanvasImageLayer;
+        }
+        const transformLayer = document.getElementById('transform-layer');
+        if (!transformLayer) return null;
+        let layer = document.getElementById('off-canvas-image-layer');
+        if (!layer) {
+            layer = document.createElement('div');
+            layer.id = 'off-canvas-image-layer';
+            layer.style.position = 'absolute';
+            layer.style.inset = '0';
+            layer.style.pointerEvents = 'none';
+            layer.style.zIndex = '2';
+            transformLayer.appendChild(layer);
+        }
+        this.offCanvasImageLayer = layer;
+        return layer;
+    }
+
+    updateOffCanvasImageMirrors(textObjects = []) {
+        const layer = this.ensureOffCanvasImageLayer();
+        if (!layer) return;
+
+        const canvasBounds = this.getCanvasLogicalBounds();
+        const usedIds = new Set();
+
+        this.stampedImages.forEach(img => {
+            if (!img?.imageElement) return;
+            this.ensureObjectId(img);
+            const bounds = this.getImageVisualBounds(img);
+            const isOutsideCanvas = !!bounds && !this.rectsIntersect(bounds, canvasBounds);
+            img.wasOutsideCanvas = !!img.wasOutsideCanvas;
+
+            if (!isOutsideCanvas) {
+                img.wasOutsideCanvas = false;
+                return;
+            }
+
+            if (!img.wasOutsideCanvas) {
+                img.layerOrder = this.getMaxLayerOrder(textObjects, true) + 1;
+            }
+            img.wasOutsideCanvas = true;
+
+            usedIds.add(img.objectId);
+            let mirror = layer.querySelector(`[data-object-id="${img.objectId}"]`);
+            if (!mirror) {
+                mirror = document.createElement('img');
+                mirror.dataset.objectId = img.objectId;
+                mirror.style.position = 'absolute';
+                mirror.style.transformOrigin = 'center center';
+                mirror.style.pointerEvents = 'auto';
+                mirror.style.userSelect = 'none';
+                mirror.draggable = false;
+                const handleMirrorSelect = (event) => {
+                    event.stopPropagation();
+                    window.drawingBoard?.setTool?.('select');
+                    window.drawingBoard?.selectionManager?.selectObjectById?.(img.objectId);
+                };
+                mirror.addEventListener('mousedown', handleMirrorSelect);
+                mirror.addEventListener('pointerdown', handleMirrorSelect);
+                layer.appendChild(mirror);
+            }
+
+            const topLevelOrder = img.groupId
+                ? (this.getGroupById(img.groupId)?.layerOrder || img.layerOrder || 1)
+                : (img.layerOrder || 1);
+            const scaleX = img.flipHorizontal ? -1 : 1;
+            const scaleY = img.flipVertical ? -1 : 1;
+
+            mirror.src = img.imageSrc || img.imageElement.src;
+            mirror.style.left = `${img.x}px`;
+            mirror.style.top = `${img.y}px`;
+            mirror.style.width = `${img.width}px`;
+            mirror.style.height = `${img.height}px`;
+            mirror.style.zIndex = String(1000 + topLevelOrder);
+            mirror.style.transform = `rotate(${img.rotation || 0}deg) scale(${scaleX}, ${scaleY})`;
+        });
+
+        Array.from(layer.querySelectorAll('[data-object-id]')).forEach(node => {
+            if (!usedIds.has(node.dataset.objectId)) {
+                node.remove();
+            }
+        });
+    }
     
     getPosition(e) {
         const rect = this.canvas.getBoundingClientRect();
@@ -108,6 +480,15 @@ class DrawingEngine {
         y = Math.max(0, Math.min(y, this.canvas.offsetHeight));
         
         return { x, y };
+    }
+
+    getViewportScale() {
+        const rect = this.canvas.getBoundingClientRect();
+        if (!rect || !rect.width || !this.canvas.offsetWidth) {
+            return Math.max(0.01, this.canvasScale || 1);
+        }
+
+        return Math.max(0.01, rect.width / this.canvas.offsetWidth);
     }
     
     applyLineStyle() {
@@ -150,6 +531,10 @@ class DrawingEngine {
                     this.ctx.globalAlpha = 0.85;
                     this.ctx.lineWidth = this.penSize * 1.5;
                     break;
+                case 'marker':
+                    this.ctx.globalAlpha = 0.45;
+                    this.ctx.lineWidth = this.penSize * 2.2;
+                    break;
                 case 'normal':
                 default:
                     this.ctx.globalAlpha = 1.0;
@@ -161,15 +546,16 @@ class DrawingEngine {
         } else if (this.currentTool === 'eraser') {
             this.ctx.globalCompositeOperation = 'destination-out';
             this.ctx.strokeStyle = 'rgba(0,0,0,1)';
-            this.ctx.lineWidth = this.eraserSize;
+            this.ctx.fillStyle = 'rgba(0,0,0,1)';
+            // Always match the visible dashed eraser cursor size (WYSIWYG).
+            // Use real-time viewport scale from DOM geometry instead of cached canvasScale.
+            this.ctx.lineWidth = this.getCanvasEraserSize();
             this.ctx.globalAlpha = 1.0;
             this.ctx.setLineDash([]); // Always solid for eraser
             
             // Set line cap/join based on eraser shape
-            // Use 'square' for rectangle to match the visual cursor behavior
-            // 'square' extends line by half lineWidth, matching the eraser border edge
             if (this.eraserShape === 'rectangle') {
-                this.ctx.lineCap = 'square';
+                this.ctx.lineCap = 'butt';
                 this.ctx.lineJoin = 'miter';
             } else {
                 this.ctx.lineCap = 'round';
@@ -213,8 +599,10 @@ class DrawingEngine {
         
         this.setupDrawingContext();
         
-        // For dashed/dotted lines, draw initial dot
-        if (this.penLineStyle === 'dotted' || this.penLineStyle === 'dashed') {
+        if (this.currentTool === 'eraser' && this.eraserShape === 'rectangle') {
+            this.eraseRectangleAtPoint(pos);
+        } else if (this.penLineStyle === 'dotted' || this.penLineStyle === 'dashed') {
+            // For dashed/dotted lines, draw initial dot
             this.ctx.beginPath();
             this.ctx.arc(pos.x, pos.y, this.penSize / 2, 0, Math.PI * 2);
             this.ctx.fill();
@@ -267,12 +655,24 @@ class DrawingEngine {
         }
         
         if (validPoints.length === 0) return;
+
+        if (this.currentTool === 'eraser' && this.eraserShape === 'rectangle') {
+            const startIndex = this.points.length - validPoints.length;
+            for (let i = 0; i < validPoints.length; i++) {
+                const currIndex = startIndex + i;
+                if (currIndex === 0) continue;
+                this.eraseRectangleSegment(this.points[currIndex - 1], this.points[currIndex]);
+            }
+            return;
+        }
         
         // Apply line style before drawing
-        this.applyLineStyle();
+        if (this.currentTool === 'pen') {
+            this.applyLineStyle();
+        }
         
         // Check if we can use batch drawing (Normal pen)
-        const complexBrushes = ['pencil', 'brush', 'fountain', 'ballpoint'];
+        const complexBrushes = ['pencil', 'brush', 'fountain', 'ballpoint', 'marker'];
         const isComplex = complexBrushes.includes(this.penType) || this.penLineStyle === 'multi';
 
         if (!isComplex) {
@@ -326,6 +726,8 @@ class DrawingEngine {
                     this.drawPencilStroke(prevPoint, currPoint, distance);
                 } else if (this.penType === 'fountain') {
                     this.drawFountainStroke(prevPoint, currPoint, distance);
+                } else if (this.penType === 'marker') {
+                    this.drawMarkerStroke(prevPoint, currPoint, distance);
                 }
             }
         }
@@ -597,6 +999,25 @@ class DrawingEngine {
         this.ctx.restore();
         this.setupDrawingContext(); // Restore original context settings
     }
+
+    drawMarkerStroke(prevPoint, currPoint, distance) {
+        const minWidth = this.penSize * 1.6;
+        const maxWidth = this.penSize * 2.3;
+        const speedFactor = Math.min(distance / 15, 1);
+        const markerWidth = maxWidth - speedFactor * (maxWidth - minWidth);
+
+        this.ctx.save();
+        this.ctx.globalAlpha = 0.4;
+        this.ctx.lineWidth = markerWidth;
+        this.ctx.lineCap = 'square';
+        this.ctx.lineJoin = 'round';
+        this.ctx.beginPath();
+        this.ctx.moveTo(prevPoint.x, prevPoint.y);
+        this.ctx.lineTo(currPoint.x, currPoint.y);
+        this.ctx.stroke();
+        this.ctx.restore();
+        this.setupDrawingContext();
+    }
     
     stopDrawing() {
         if (this.isDrawing) {
@@ -610,13 +1031,18 @@ class DrawingEngine {
             
             // Save the stroke if it has points
             if (this.points.length > 0) {
+                const isEraserStroke = this.currentTool === 'eraser';
                 this.strokes.push({
                     points: [...this.points],
-                    color: this.currentColor,
-                    size: this.penSize,
+                    color: isEraserStroke ? 'rgba(0,0,0,1)' : this.currentColor,
+                    size: isEraserStroke ? this.getCanvasEraserSize() : this.penSize,
                     penType: this.penType,
                     tool: this.currentTool,
-                    rotation: 0 // Initialize rotation property
+                    eraserShape: isEraserStroke ? this.eraserShape : null,
+                    rotation: 0, // Initialize rotation property
+                    layerOrder: this.getNextLayerOrder(),
+                    objectId: this.getNextObjectId(),
+                    groupId: null
                 });
             }
             
@@ -667,6 +1093,8 @@ class DrawingEngine {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.clearStrokes();
         this.clearStampedImages();
+        this.objectGroups = [];
+        this.updateOffCanvasImageMirrors();
     }
     
     setTool(tool) {
@@ -686,13 +1114,82 @@ class DrawingEngine {
         localStorage.setItem('penType', type);
     }
     
-    setEraserSize(size) {
-        this.eraserSize = size;
+    normalizeEraserSize(size) {
+        const numericSize = Math.round(parseFloat(size));
+        if (!Number.isFinite(numericSize)) {
+            return 20;
+        }
+        return Math.max(10, Math.min(150, numericSize));
+    }
+
+    getAdaptiveDefaultEraserSize() {
+        const viewportShortEdge = Math.max(0, Math.min(window.innerWidth || 0, window.innerHeight || 0));
+        const screenShortEdge = Math.max(
+            viewportShortEdge,
+            Math.min(window.screen?.availWidth || viewportShortEdge, window.screen?.availHeight || viewportShortEdge)
+        );
+        const referenceShortEdge = (viewportShortEdge * 0.7) + (screenShortEdge * 0.3);
+        return Math.max(16, Math.min(30, Math.round(referenceShortEdge * 0.022)));
+    }
+
+    hasStoredEraserSizePreference() {
+        return localStorage.getItem('eraserSize') !== null;
+    }
+
+    refreshAdaptiveEraserSize() {
+        if (this.hasStoredEraserSizePreference()) {
+            return false;
+        }
+        this.eraserSize = this.getAdaptiveDefaultEraserSize();
+        return true;
+    }
+
+    setEraserSize(size, options = {}) {
+        const { persist = true } = options;
+        this.eraserSize = this.normalizeEraserSize(size);
+        if (persist) {
+            localStorage.setItem('eraserSize', String(this.eraserSize));
+        }
     }
     
     setEraserShape(shape) {
         this.eraserShape = shape;
         localStorage.setItem('eraserShape', shape);
+    }
+
+    getCanvasEraserSize() {
+        return this.eraserSize / this.getViewportScale();
+    }
+
+    eraseRectangleAtPoint(point, size = this.getCanvasEraserSize()) {
+        const halfSize = size / 2;
+        this.ctx.fillRect(point.x - halfSize, point.y - halfSize, size, size);
+    }
+
+    eraseRectangleSegment(startPoint, endPoint, size = this.getCanvasEraserSize()) {
+        const halfSize = size / 2;
+        const dx = endPoint.x - startPoint.x;
+        const dy = endPoint.y - startPoint.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance === 0) {
+            this.eraseRectangleAtPoint(startPoint, size);
+            return;
+        }
+
+        // Sample axis-aligned squares along the path so the actual erasing area
+        // matches the visible square cursor and feels as continuous as the circle eraser.
+        const step = Math.max(1, size * 0.22);
+        const steps = Math.max(1, Math.ceil(distance / step));
+
+        this.ctx.beginPath();
+        for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            const x = startPoint.x + dx * t;
+            const y = startPoint.y + dy * t;
+            this.ctx.rect(x - halfSize, y - halfSize, size, size);
+        }
+        this.ctx.fill();
     }
     
     // Stroke selection methods
@@ -800,7 +1297,10 @@ class DrawingEngine {
             size: stroke.size,
             penType: stroke.penType,
             tool: stroke.tool,
-            rotation: stroke.rotation || 0
+            rotation: stroke.rotation || 0,
+            layerOrder: this.getNextLayerOrder(),
+            objectId: this.getNextObjectId(),
+            groupId: null
         };
         
         this.strokes.push(copiedStroke);
@@ -819,11 +1319,13 @@ class DrawingEngine {
         
         const stroke = this.strokes[this.selectedStrokeIndex];
         if (!stroke) return false;
-        
+
         // Remove stroke from array
+        this.removeObjectFromGroups(stroke.objectId);
         this.strokes.splice(this.selectedStrokeIndex, 1);
         this.selectedStrokeIndex = null;
-        
+        this.cleanupGroups();
+
         return true;
     }
     
@@ -835,31 +1337,69 @@ class DrawingEngine {
         this.ctx.lineJoin = 'round';
         this.ctx.globalCompositeOperation = 'source-over';
         this.ctx.strokeStyle = stroke.color;
+        this.ctx.fillStyle = stroke.color;
         this.ctx.lineWidth = stroke.size;
+
+        if (stroke.tool === 'eraser') {
+            this.ctx.globalCompositeOperation = 'destination-out';
+            this.ctx.strokeStyle = 'rgba(0,0,0,1)';
+            this.ctx.fillStyle = 'rgba(0,0,0,1)';
+            this.ctx.globalAlpha = 1.0;
+
+            if ((stroke.eraserShape || 'circle') === 'rectangle') {
+                this.ctx.lineCap = 'butt';
+                this.ctx.lineJoin = 'miter';
+
+                if (stroke.points.length > 0) {
+                    this.eraseRectangleAtPoint(stroke.points[0], stroke.size);
+                    for (let i = 1; i < stroke.points.length; i++) {
+                        this.eraseRectangleSegment(stroke.points[i - 1], stroke.points[i], stroke.size);
+                    }
+                }
+
+                this.ctx.restore();
+                return;
+            }
+        }
         
         // Apply pen type settings
-        switch(stroke.penType) {
-            case 'pencil':
-                this.ctx.globalAlpha = 0.7;
-                break;
-            case 'ballpoint':
-                this.ctx.globalAlpha = 0.9;
-                break;
-            case 'fountain':
-                this.ctx.globalAlpha = 1.0;
-                break;
-            case 'brush':
-                this.ctx.globalAlpha = 0.85;
-                this.ctx.lineWidth = stroke.size * 1.5;
-                break;
-            case 'normal':
-            default:
-                this.ctx.globalAlpha = 1.0;
-                break;
+        if (stroke.tool !== 'eraser') {
+            switch(stroke.penType) {
+                case 'pencil':
+                    this.ctx.globalAlpha = 0.7;
+                    break;
+                case 'ballpoint':
+                    this.ctx.globalAlpha = 0.9;
+                    break;
+                case 'fountain':
+                    this.ctx.globalAlpha = 1.0;
+                    break;
+                case 'brush':
+                    this.ctx.globalAlpha = 0.85;
+                    this.ctx.lineWidth = stroke.size * 1.5;
+                    break;
+                case 'marker':
+                    this.ctx.globalAlpha = 0.45;
+                    this.ctx.lineWidth = stroke.size * 2.2;
+                    this.ctx.lineCap = 'square';
+                    break;
+                case 'normal':
+                default:
+                    this.ctx.globalAlpha = 1.0;
+                    break;
+            }
         }
         
         // Draw the stroke
         if (stroke.points.length > 0) {
+            if (stroke.tool === 'eraser' && stroke.points.length === 1) {
+                this.ctx.beginPath();
+                this.ctx.arc(stroke.points[0].x, stroke.points[0].y, stroke.size / 2, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.restore();
+                return;
+            }
+
             this.ctx.beginPath();
             this.ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
             
@@ -880,37 +1420,288 @@ class DrawingEngine {
     
     // Stamped image management
     addStampedImage(imageData) {
+        if (!imageData) return;
+        this.ensureObjectId(imageData);
+        imageData.groupId = imageData.groupId || null;
+        if (!Number.isFinite(imageData.layerOrder)) {
+            imageData.layerOrder = this.getNextLayerOrder();
+        } else {
+            this.layerCounter = Math.max(this.layerCounter, imageData.layerOrder + 1);
+        }
         this.stampedImages.push(imageData);
+        this.updateOffCanvasImageMirrors();
+    }
+
+    getNextLayerOrder() {
+        return this.layerCounter++;
+    }
+
+    syncLayerCounter(textObjects = [], groups = this.objectGroups) {
+        let maxLayerOrder = 0;
+        let maxObjectId = 0;
+        let maxGroupId = 0;
+
+        [this.strokes, this.stampedImages, textObjects || []].forEach(collection => {
+            collection.forEach(item => {
+                if (!item) return;
+                this.ensureObjectId(item);
+                if (Number.isFinite(item.layerOrder)) {
+                    maxLayerOrder = Math.max(maxLayerOrder, item.layerOrder);
+                }
+                maxObjectId = Math.max(maxObjectId, this.parseCounterValue(item.objectId, 'obj-'));
+            });
+        });
+
+        (groups || []).forEach(group => {
+            if (!group) return;
+            this.ensureGroup(group);
+            if (Number.isFinite(group.layerOrder)) {
+                maxLayerOrder = Math.max(maxLayerOrder, group.layerOrder);
+            }
+            maxGroupId = Math.max(maxGroupId, this.parseCounterValue(group.id, 'group-'));
+        });
+
+        this.layerCounter = Math.max(this.layerCounter, maxLayerOrder + 1, 1);
+        this.objectIdCounter = Math.max(this.objectIdCounter, maxObjectId + 1, 1);
+        this.groupCounter = Math.max(this.groupCounter, maxGroupId + 1, 1);
+    }
+
+    ensureLayerOrder(item) {
+        if (!item) return 0;
+        this.ensureObjectId(item);
+        if (!Number.isFinite(item.layerOrder)) {
+            item.layerOrder = this.getNextLayerOrder();
+        } else {
+            this.layerCounter = Math.max(this.layerCounter, item.layerOrder + 1);
+        }
+        return item.layerOrder;
+    }
+
+    getRenderableObjects(textObjects = []) {
+        this.cleanupGroups(textObjects);
+        const renderables = [];
+        let fallbackOrder = 0;
+
+        this.strokes.forEach((stroke, index) => {
+            renderables.push({
+                type: 'stroke',
+                index,
+                item: stroke,
+                objectId: this.ensureObjectId(stroke),
+                layerOrder: this.ensureLayerOrder(stroke),
+                fallbackOrder: fallbackOrder++
+            });
+        });
+
+        this.stampedImages.forEach((image, index) => {
+            renderables.push({
+                type: 'image',
+                index,
+                item: image,
+                objectId: this.ensureObjectId(image),
+                layerOrder: this.ensureLayerOrder(image),
+                fallbackOrder: fallbackOrder++
+            });
+        });
+
+        (textObjects || []).forEach((textObj, index) => {
+            renderables.push({
+                type: 'text',
+                index,
+                item: textObj,
+                objectId: this.ensureObjectId(textObj),
+                layerOrder: this.ensureLayerOrder(textObj),
+                fallbackOrder: fallbackOrder++
+            });
+        });
+
+        const groupedObjectIds = new Set();
+        const topLevelRenderables = [];
+
+        this.objectGroups.forEach(group => {
+            this.ensureGroup(group);
+            const members = this.getGroupMembers(group, textObjects);
+            if (members.length < 2) return;
+            members.forEach(member => groupedObjectIds.add(member.objectId));
+            topLevelRenderables.push({
+                type: 'group',
+                groupId: group.id,
+                item: group,
+                objectId: group.id,
+                members,
+                layerOrder: group.layerOrder,
+                fallbackOrder: fallbackOrder++
+            });
+        });
+
+        renderables.forEach(renderable => {
+            if (!renderable.item.groupId || !groupedObjectIds.has(renderable.objectId)) {
+                topLevelRenderables.push(renderable);
+            }
+        });
+
+        return topLevelRenderables.sort((a, b) => {
+            if (a.layerOrder === b.layerOrder) {
+                return a.fallbackOrder - b.fallbackOrder;
+            }
+            return a.layerOrder - b.layerOrder;
+        });
+    }
+
+    normalizeTopLevelLayerOrders(textObjects = [], orderedRenderables = null) {
+        const renderables = orderedRenderables || this.getRenderableObjects(textObjects);
+        renderables.forEach((renderable, index) => {
+            if (renderable.type === 'group') {
+                renderable.item.layerOrder = index + 1;
+            } else {
+                renderable.item.layerOrder = index + 1;
+            }
+        });
+        this.syncLayerCounter(textObjects);
+    }
+
+    groupObjects(objectIds, textObjects = []) {
+        const uniqueIds = [...new Set(objectIds || [])];
+        if (uniqueIds.length < 2) return null;
+
+        const topLevelRenderables = this.getRenderableObjects(textObjects);
+        const selectedRenderables = topLevelRenderables.filter(renderable =>
+            renderable.type !== 'group' && uniqueIds.includes(renderable.objectId) && !renderable.item.groupId
+        );
+
+        if (selectedRenderables.length < 2) {
+            return null;
+        }
+
+        const selectedIds = new Set(selectedRenderables.map(renderable => renderable.objectId));
+        const memberIds = [...selectedRenderables]
+            .sort((a, b) => {
+                if (a.layerOrder === b.layerOrder) {
+                    return a.fallbackOrder - b.fallbackOrder;
+                }
+                return a.layerOrder - b.layerOrder;
+            })
+            .map(renderable => renderable.objectId);
+
+        const group = this.ensureGroup({
+            id: this.getNextGroupId(),
+            memberIds,
+            layerOrder: this.getNextLayerOrder()
+        });
+
+        selectedRenderables.forEach(renderable => {
+            renderable.item.groupId = group.id;
+        });
+        this.objectGroups.push(group);
+
+        const highestSelectedIndex = Math.max(
+            ...selectedRenderables.map(renderable => topLevelRenderables.indexOf(renderable))
+        );
+        const insertIndex = topLevelRenderables
+            .slice(0, highestSelectedIndex + 1)
+            .filter(renderable => !selectedIds.has(renderable.objectId))
+            .length;
+
+        const reordered = topLevelRenderables.filter(renderable => !selectedIds.has(renderable.objectId));
+        reordered.splice(insertIndex, 0, {
+            type: 'group',
+            groupId: group.id,
+            item: group,
+            objectId: group.id,
+            members: this.getGroupMembers(group, textObjects),
+            layerOrder: group.layerOrder,
+            fallbackOrder: highestSelectedIndex
+        });
+
+        this.normalizeTopLevelLayerOrders(textObjects, reordered);
+        return group;
+    }
+
+    ungroupObjects(groupId, textObjects = []) {
+        const group = this.getGroupById(groupId);
+        if (!group) return [];
+
+        const topLevelRenderables = this.getRenderableObjects(textObjects);
+        const groupRenderable = topLevelRenderables.find(renderable => renderable.type === 'group' && renderable.groupId === groupId);
+        if (!groupRenderable) return [];
+
+        const members = this.getGroupMembers(group, textObjects);
+        members.forEach(member => {
+            member.item.groupId = null;
+        });
+
+        this.objectGroups = this.objectGroups.filter(item => item.id !== groupId);
+
+        const reordered = [];
+        topLevelRenderables.forEach(renderable => {
+            if (renderable.type === 'group' && renderable.groupId === groupId) {
+                reordered.push(...members);
+            } else {
+                reordered.push(renderable);
+            }
+        });
+
+        this.normalizeTopLevelLayerOrders(textObjects, reordered);
+        return members;
+    }
+
+    renderScene(textManager = null) {
+        const renderables = this.getRenderableObjects(textManager?.textObjects || []);
+        renderables.forEach(renderable => {
+            if (renderable.type === 'group') {
+                renderable.members.forEach(member => {
+                    if (member.type === 'stroke') {
+                        this.redrawStroke(member.item);
+                    } else if (member.type === 'image') {
+                        this.redrawSingleStampedImage(member.item);
+                    } else if (member.type === 'text' && textManager?.drawTextObject) {
+                        textManager.drawTextObject(member.item);
+                    }
+                });
+            } else if (renderable.type === 'stroke') {
+                this.redrawStroke(renderable.item);
+            } else if (renderable.type === 'image') {
+                this.redrawSingleStampedImage(renderable.item);
+            } else if (renderable.type === 'text' && textManager?.drawTextObject) {
+                textManager.drawTextObject(renderable.item);
+            }
+        });
+        this.updateOffCanvasImageMirrors(textManager?.textObjects || []);
     }
     
     redrawStampedImages() {
         for (const img of this.stampedImages) {
-            if (!img.imageElement) continue;
-            
-            this.ctx.save();
-            const centerX = img.x + img.width / 2;
-            const centerY = img.y + img.height / 2;
-            this.ctx.translate(centerX, centerY);
-            this.ctx.rotate(img.rotation * Math.PI / 180);
-            
-            const flipScaleX = img.flipHorizontal ? -1 : 1;
-            const flipScaleY = img.flipVertical ? -1 : 1;
-            this.ctx.scale(flipScaleX, flipScaleY);
-            
-            this.ctx.drawImage(
-                img.imageElement,
-                -img.width / 2,
-                -img.height / 2,
-                img.width,
-                img.height
-            );
-            this.ctx.restore();
+            this.redrawSingleStampedImage(img);
         }
+    }
+
+    redrawSingleStampedImage(img) {
+        if (!img?.imageElement) return;
+
+        this.ctx.save();
+        const centerX = img.x + img.width / 2;
+        const centerY = img.y + img.height / 2;
+        this.ctx.translate(centerX, centerY);
+        this.ctx.rotate((img.rotation || 0) * Math.PI / 180);
+
+        const flipScaleX = img.flipHorizontal ? -1 : 1;
+        const flipScaleY = img.flipVertical ? -1 : 1;
+        this.ctx.scale(flipScaleX, flipScaleY);
+
+        this.ctx.drawImage(
+            img.imageElement,
+            -img.width / 2,
+            -img.height / 2,
+            img.width,
+            img.height
+        );
+        this.ctx.restore();
     }
     
     clearStampedImages() {
         this.stampedImages = [];
         this.selectedImageIndex = null;
+        this.updateOffCanvasImageMirrors();
     }
 
     findImageAtPoint(x, y) {
@@ -951,16 +1742,21 @@ class DrawingEngine {
         if (!img) return false;
         const copy = {
             imageElement: img.imageElement,
+            imageSrc: img.imageSrc || img.imageElement?.src || null,
             x: img.x + this.COPY_OFFSET,
             y: img.y + this.COPY_OFFSET,
             width: img.width,
             height: img.height,
             rotation: img.rotation || 0,
             flipHorizontal: img.flipHorizontal || false,
-            flipVertical: img.flipVertical || false
+            flipVertical: img.flipVertical || false,
+            layerOrder: this.getNextLayerOrder(),
+            objectId: this.getNextObjectId(),
+            groupId: null
         };
         this.stampedImages.push(copy);
         this.selectedImageIndex = this.stampedImages.length - 1;
+        this.updateOffCanvasImageMirrors();
         return true;
     }
 
@@ -968,8 +1764,11 @@ class DrawingEngine {
         if (this.selectedImageIndex === null) return false;
         const img = this.stampedImages[this.selectedImageIndex];
         if (!img) return false;
+        this.removeObjectFromGroups(img.objectId);
         this.stampedImages.splice(this.selectedImageIndex, 1);
         this.selectedImageIndex = null;
+        this.cleanupGroups();
+        this.updateOffCanvasImageMirrors();
         return true;
     }
 }
