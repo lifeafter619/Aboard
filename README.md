@@ -1,5 +1,7 @@
 # Aboard
 
+![Aboard](https://socialify.git.ci/lifeafter619/Aboard/image?custom_description=%E4%B8%80%E4%B8%AA%E7%AE%80%E7%BA%A6%E7%9A%84web%E7%99%BD%E6%9D%BF%EF%BC%8C%E6%9B%B4%E9%80%82%E5%90%88%E8%80%81%E5%B8%88%E4%BD%93%E8%B4%A8+%0A%F0%9D%93%99%F0%9D%93%BE%F0%9D%93%BC%F0%9D%93%BD+%F0%9D%93%AA+%F0%9D%93%AB%F0%9D%93%B8%F0%9D%93%AA%F0%9D%93%BB%F0%9D%93%AD+%F0%9D%93%AF%F0%9D%93%B8%F0%9D%93%BB+%F0%9D%93%BD%F0%9D%93%AE%F0%9D%93%AA%F0%9D%93%AC%F0%9D%93%B1%F0%9D%93%AE%F0%9D%93%BB%F0%9D%93%BC.&description=1&font=Bitter&forks=1&issues=1&language=1&name=1&owner=1&pattern=Brick+Wall&pulls=1&stargazers=1&theme=Auto)
+
 <div align="center">
 
 [简体中文](README.md) | [繁體中文](public/README.zh-TW.md) | [English](public/README.en.md)
@@ -22,15 +24,82 @@
 
 一个面向课堂、演示与触控大屏场景的轻量网页白板。它尽量保持部署简单、上手直接、功能实用，适合“打开即用”和继续二次开发两种使用方式。
 
+## 摘要
+**大一小登的AI-Agent项目**，目标是想做一个**功能简单、部署简单，使用极其简单且符合直觉**的白板，主要是为**国内的初高中一体机教学使用设计**
+
+由于本人实际开发能力薄弱，所以本项目大量运用了**AI-Agent技术**（就是调用GitHub Agent功能来帮助我开发和高效推进功能的实现），所以代码可能没有“人味”，也可能存在**相当多不合理的bug和开发方式**，**望大佬您轻喷**
+
+您可以在下面的**Demo链接**中快速体验本项目，也可以前往**我的博客**看看我做这个项目的前因后果。
+
+**如果大佬您觉得好的话，请给我点个star🌟吧~~~大学生真的很需要这个**
+
 ## 特色概览
 - 常用白板能力齐全：画笔、形状、橡皮、背景、插图、插字、选择编辑。
 - 课堂辅助功能完整：时间显示、计时器、随机点名、计分板、教具等。
 - 体验偏向真实教学场景：分页画布、自动保存恢复、PWA、多语言、配置导入导出。
-- 响应式与触控做了专门优化：
-  - 浮动面板支持拖拽、缩放与大屏操作；
-  - 橡皮擦默认大小会跟随视口调整；
-  - 图片、选区、笔迹、文字等编辑控件会随目标尺寸自动调整位置和大小；
-  - 小对象场景下，手柄会在保证最小可点尺寸的前提下收缩并尽量移入对象内部。
+- 响应式与触控做了专门优化。
+
+```mermaid
+graph LR
+    A[Aboard Project]
+    A --> D[在线Demo]
+    A --> E[博客文章]
+    
+    click D "https://aboard.pp.ua" "在线演示"
+    click E "https://66619.eu.org/article/aboard" "技术文章"
+```
+## 当前分支和部署版本
+
+```mermaid
+graph LR
+    A[Aboard Project]
+    A --> B[main分支]
+    A --> C[dev/preview分支]
+    A --> D[dev/stable分支]
+    A --> E[copilot/xxx分支]
+    B --> F[branch Demo/主版本]
+    C --> G[branch Demo/最新测试版]
+    D --> H[branch Demo/稳定测试版]
+    E --> I[PR中Vercel提供临时链接]
+
+    click F "https://aboard.pp.ua" "主"
+    click G "https://dev-aboard.619.pp.ua" "最新测试"
+    click H "https://dev.aboard.pp.ua" "最新测试"
+```
+
+## 功能预览
+<table cellpadding="10">
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <img src="public/main.png" alt="主界面" width="94%" /><br>
+      <sub><strong>功能：主界面</strong></sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="public/timer.png" alt="时间与计时功能" width="94%" /><br>
+      <sub><strong>功能：时间与计时功能</strong></sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <img src="public/settings.png" alt="设置面板" width="94%" /><br>
+      <sub><strong>功能：设置面板</strong></sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="public/teaching_tools.png" alt="教具功能" width="94%" /><br>
+      <sub><strong>功能：教具功能</strong></sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <img src="public/other_tools.png" alt="其他工具" width="94%" /><br>
+      <sub><strong>功能：其他工具</strong></sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="public/announcement.png" alt="公告功能" width="94%" /><br>
+      <sub><strong>功能：公告功能</strong></sub>
+    </td>
+  </tr>
+</table>
 
 ## 快速开始
 - 在线体验：<https://aboard.pp.ua>
@@ -42,7 +111,7 @@
 - 架构设计：[`docs/zh-CN/architecture.md`](docs/zh-CN/architecture.md)
 - 进阶说明：[`docs/zh-CN/advanced.md`](docs/zh-CN/advanced.md)
 - 英文文档：[`public/README.en.md`](public/README.en.md)
-- 繁体文档：[`public/README.zh-TW.md`](public/README.zh-TW.md)
+- 繁体中文文档：[`public/README.zh-TW.md`](public/README.zh-TW.md)
 
 ## 响应式与触控说明
 - 项目默认按触控优先设计，主要交互按钮尽量维持不少于 `44px` 的可触达面积。
@@ -57,8 +126,20 @@
 - `css/style.css` 与 `css/modules/`：主样式与分模块样式。
 - `server.js` / `sw.js`：本地服务、版本接口与离线缓存。
 
-## 适合谁
-- 需要在教室一体机、平板、大屏或浏览器中快速批注与展示的人。
-- 想要一个不依赖重型框架、方便继续改造的白板项目的人。
+## 部署
+### 部署到 Vercel
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/lifeafter619/Aboard)
+
+### 部署到 GitHub Pages
+1. Fork 本仓库到你的 GitHub 账号
+2. 进入仓库设置 (Settings)
+3. 在 Pages 选项中，选择 Source 为 `main` 分支
+4. 点击 Save，等待部署完成
+5. 访问 `https://你的用户名.github.io/Aboard`
+
+
+### 部署到 Cloudflare Pages
+
+[![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/lifeafter619/Aboard)
 
 如果这个项目对你有帮助，欢迎点个 Star。
