@@ -645,6 +645,15 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     padding-right: 4px; /* Ensure space for close button */
 }
 
+.modal-draggable-header {
+    cursor: move;
+    user-select: none;
+}
+
+.modal-draggable-header button {
+    cursor: pointer;
+}
+
 .modal-header h2 {
     font-size: 20px;
     font-weight: 600;
@@ -718,6 +727,10 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     user-select: none;
 }
 
+.resizable-modal-content.modal-dragging {
+    user-select: none;
+}
+
 .modal-resize-handle {
     position: absolute;
     width: 18px;
@@ -764,6 +777,51 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     right: 4px;
     bottom: 4px;
     cursor: nwse-resize;
+}
+
+.help-inline-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+}
+
+.help-inline-container > label {
+    flex: 1 1 auto;
+    margin-bottom: 0;
+}
+
+.help-modal-content {
+    width: min(520px, 92vw);
+    max-width: min(520px, 92vw);
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.help-modal-content .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.help-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding-right: 6px;
+    line-height: 1.7;
+    font-size: 14px;
+    color: #333;
+}
+
+.help-content > div {
+    margin-bottom: 6px;
+}
+
+.help-content a {
+    color: var(--theme-color, #007aff);
 }
 
 /* Settings layout with sidebar */

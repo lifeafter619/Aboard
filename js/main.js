@@ -18,6 +18,7 @@ const RENDER_SCALE_APPLY_THRESHOLD = 0.05;
 const MAX_DYNAMIC_BACKING_DIMENSION = 8192;
 const MAX_DYNAMIC_BACKING_PIXELS = 64 * 1024 * 1024;
 const PANEL_DRAG_START_THRESHOLD = 8;
+const MODAL_DRAG_START_THRESHOLD = 8;
 const MODAL_RESIZE_EDGE_MARGIN = 20;
 const MODAL_RESIZE_MIN_WIDTH = 360;
 const MODAL_RESIZE_MIN_HEIGHT = 280;
@@ -160,6 +161,7 @@ class DrawingBoard {
         this.pendingPanelDrag = null;
         this.featureWidgetZIndex = 1200;
         this.modalResizeState = null;
+        this.modalDragState = null;
         this.cacheSizeRequestToken = 0;
         
         // Coordinate origin dragging state
@@ -386,6 +388,12 @@ class DrawingBoard {
                 selector: '#random-picker-settings-modal .random-picker-modal-content',
                 minWidth: 440,
                 minHeight: 360
+            },
+            {
+                key: 'helpModal',
+                selector: '#help-modal .help-modal-content',
+                minWidth: 420,
+                minHeight: 320
             }
         ];
     }
@@ -428,6 +436,12 @@ class DrawingBoard {
         const header = content.querySelector('.modal-header, .timer-modal-header');
         const title = header?.querySelector('h2');
         if (header && title) {
+            header.classList.add('modal-draggable-header');
+            if (header.dataset.modalDragBound !== 'true') {
+                header.dataset.modalDragBound = 'true';
+                header.addEventListener('pointerdown', (event) => this.startModalDrag(event, content, header));
+            }
+
             let titleGroup = header.querySelector('.modal-title-group');
             if (!titleGroup) {
                 titleGroup = document.createElement('div');
@@ -472,7 +486,7 @@ class DrawingBoard {
 
     syncResizableModalState(target) {
         const content = typeof target === 'string'
-            ? document.querySelector(`#${target} .settings-modal-content, #${target} .timer-modal-content, #${target} .random-picker-modal-content`)
+            ? document.querySelector(`#${target} .settings-modal-content, #${target} .timer-modal-content, #${target} .random-picker-modal-content, #${target} .help-modal-content`)
             : target;
         if (!content) {
             return;
@@ -487,6 +501,116 @@ class DrawingBoard {
             this.restoreDefaultModalLayout(content);
         }
         this.updateModalHeaderActionButtons(content);
+    }
+
+    startModalDrag(event, content, header) {
+        if (!content || !header) {
+            return;
+        }
+
+        if (event.pointerType === 'mouse' && event.button !== 0) {
+            return;
+        }
+
+        if (event.target?.closest('.modal-resize-handle, button, input, select, textarea, a, [contenteditable="true"]')) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const startRect = content.getBoundingClientRect();
+        this.modalDragState = {
+            content,
+            header,
+            pointerId: Number.isFinite(event.pointerId) ? event.pointerId : null,
+            startX: event.clientX,
+            startY: event.clientY,
+            offsetX: event.clientX - startRect.left,
+            offsetY: event.clientY - startRect.top,
+            width: startRect.width,
+            height: startRect.height,
+            keepCentered: this.settingsManager.getModalCenterPreference(content.dataset.modalResizeKey),
+            hasStarted: false,
+            moveHandler: null,
+            endHandler: null
+        };
+
+        const moveHandler = (moveEvent) => this.handleModalDrag(moveEvent);
+        const endHandler = (endEvent) => this.finishModalDrag(endEvent);
+        this.modalDragState.moveHandler = moveHandler;
+        this.modalDragState.endHandler = endHandler;
+
+        document.addEventListener('pointermove', moveHandler);
+        document.addEventListener('pointerup', endHandler);
+        document.addEventListener('pointercancel', endHandler);
+    }
+
+    handleModalDrag(event) {
+        const state = this.modalDragState;
+        if (!state?.content) {
+            return;
+        }
+
+        if (state.pointerId !== null && event.pointerId !== state.pointerId) {
+            return;
+        }
+
+        if (event.pointerType === 'mouse' && event.buttons === 0) {
+            this.finishModalDrag(event);
+            return;
+        }
+
+        const dx = event.clientX - state.startX;
+        const dy = event.clientY - state.startY;
+
+        if (!state.hasStarted) {
+            if (Math.hypot(dx, dy) < MODAL_DRAG_START_THRESHOLD) {
+                return;
+            }
+
+            state.hasStarted = true;
+
+            if (state.keepCentered) {
+                this.settingsManager.setModalCenterPreference(state.content.dataset.modalResizeKey, false);
+                this.updateModalHeaderActionButtons(state.content);
+            }
+
+            this.applyCustomModalLayout(state.content, state.width, state.height, false);
+            state.content.classList.add('modal-dragging');
+        }
+
+        event.preventDefault();
+
+        let left = event.clientX - state.offsetX;
+        let top = event.clientY - state.offsetY;
+
+        const maxLeft = Math.max(MODAL_RESIZE_EDGE_MARGIN, window.innerWidth - MODAL_RESIZE_EDGE_MARGIN - state.width);
+        const maxTop = Math.max(MODAL_RESIZE_EDGE_MARGIN, window.innerHeight - MODAL_RESIZE_EDGE_MARGIN - state.height);
+
+        left = Math.min(maxLeft, Math.max(MODAL_RESIZE_EDGE_MARGIN, left));
+        top = Math.min(maxTop, Math.max(MODAL_RESIZE_EDGE_MARGIN, top));
+
+        state.content.style.left = `${Math.round(left)}px`;
+        state.content.style.top = `${Math.round(top)}px`;
+    }
+
+    finishModalDrag(event = null) {
+        const state = this.modalDragState;
+        if (!state?.content) {
+            return;
+        }
+
+        if (event && state.pointerId !== null && event.pointerId !== state.pointerId) {
+            return;
+        }
+
+        document.removeEventListener('pointermove', state.moveHandler);
+        document.removeEventListener('pointerup', state.endHandler);
+        document.removeEventListener('pointercancel', state.endHandler);
+
+        state.content.classList.remove('modal-dragging');
+        this.modalDragState = null;
     }
 
     updateModalHeaderActionButtons(content) {
@@ -2865,6 +2989,10 @@ class DrawingBoard {
         
         // Unified start handler for mouse and touch events
         const handleDragStart = (e, element) => {
+            if (typeof e.button === 'number' && e.button !== 0) {
+                return;
+            }
+
             // Always allow dragging from the drag handle
             const isDragHandle = e.target.closest('.panel-drag-handle');
             
@@ -2912,6 +3040,11 @@ class DrawingBoard {
         
         // Unified move handler for mouse and touch events
         const handleDragMove = (e) => {
+            if ((e.type === 'mousemove' || e.type === 'pointermove') && typeof e.buttons === 'number' && e.buttons === 0) {
+                handleDragEnd();
+                return;
+            }
+
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
@@ -3082,7 +3215,10 @@ class DrawingBoard {
         
         // Add both mouse and touch event listeners for better touch device support
         document.addEventListener('mousemove', handleDragMove);
+        document.addEventListener('pointermove', handleDragMove);
         document.addEventListener('mouseup', handleDragEnd);
+        document.addEventListener('pointerup', handleDragEnd);
+        document.addEventListener('pointercancel', handleDragEnd);
         document.addEventListener('touchmove', handleDragMove, { passive: false });
         document.addEventListener('touchend', handleDragEnd);
         document.addEventListener('touchcancel', handleDragEnd);

@@ -253,6 +253,30 @@ class HelpSystem {
             width = '100%'
         } = options;
 
+        if (container.tagName === 'LABEL') {
+            let wrapper = container.parentElement;
+            if (!wrapper || !wrapper.classList.contains('help-inline-container')) {
+                wrapper = document.createElement('div');
+                wrapper.className = 'help-inline-container';
+                container.parentNode.insertBefore(wrapper, container);
+                wrapper.appendChild(container);
+            }
+
+            wrapper.style.display = display;
+            wrapper.style.alignItems = 'center';
+            wrapper.style.justifyContent = 'flex-start';
+            wrapper.style.gap = '8px';
+            if (width) {
+                wrapper.style.width = width;
+            }
+
+            container.style.marginBottom = '0';
+            container.style.flex = '1 1 auto';
+            btn.style.marginLeft = '0';
+            wrapper.appendChild(btn);
+            return;
+        }
+
         this.ensureInlineTextWrapper(container);
         container.style.display = display;
         container.style.alignItems = 'center';
@@ -314,17 +338,27 @@ class HelpSystem {
             // Set highest z-index to ensure help modal is always on top
             modal.style.zIndex = '99999';
             modal.innerHTML = `
-                <div class="modal-content" style="max-width:500px;">
+                <div class="modal-content help-modal-content">
                     <div class="modal-header">
                         <h2>${window.i18n.t('common.help')}</h2>
                         <button class="modal-close-btn">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
-                    <div class="modal-body help-content" style="white-space: pre-wrap; line-height: 1.6; font-size: 14px; color: #333;"></div>
+                    <div class="modal-body">
+                        <div class="help-content"></div>
+                    </div>
                 </div>
             `;
             document.body.appendChild(modal);
+
+            window.drawingBoard?.registerResizableModal?.({
+                key: 'helpModal',
+                selector: '#help-modal .help-modal-content',
+                minWidth: 420,
+                minHeight: 320
+            });
+            window.drawingBoard?.syncResizableModalState?.(modalId);
 
             modal.querySelector('.modal-close-btn').addEventListener('click', () => {
                 modal.classList.remove('show');
@@ -340,7 +374,9 @@ class HelpSystem {
 
         // Parse simple markdown-like syntax using RichTextParser
         let formattedContent = window.RichTextParser ? window.RichTextParser.parse(content) : content;
-        modal.querySelector('.help-content').innerHTML = formattedContent;
+        const helpContentElement = modal.querySelector('.help-content');
+        helpContentElement.innerHTML = formattedContent;
+        helpContentElement.scrollTop = 0;
         modal.classList.add('show');
     }
 }

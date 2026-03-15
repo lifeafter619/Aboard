@@ -290,6 +290,7 @@ class TimerInstance {
     setupDragging() {
         // Unified handler for mouse and touch start
         const handleStart = (e) => {
+            if (typeof e.button === 'number' && e.button !== 0) return;
             // Don't start dragging if clicking on interactive elements
             if (e.target.closest('button') || e.target.closest('input')) return;
             
@@ -317,6 +318,10 @@ class TimerInstance {
         // Unified handler for mouse and touch move
         const handleMove = (e) => {
             if (!this.isDragging) return;
+            if ((e.type === 'mousemove' || e.type === 'pointermove') && typeof e.buttons === 'number' && e.buttons === 0) {
+                handleEnd();
+                return;
+            }
             if (e.type === 'touchmove') e.preventDefault();
             
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;

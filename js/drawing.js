@@ -1031,12 +1031,14 @@ class DrawingEngine {
             
             // Save the stroke if it has points
             if (this.points.length > 0) {
+                const isEraserStroke = this.currentTool === 'eraser';
                 this.strokes.push({
                     points: [...this.points],
-                    color: this.currentColor,
-                    size: this.penSize,
+                    color: isEraserStroke ? 'rgba(0,0,0,1)' : this.currentColor,
+                    size: isEraserStroke ? this.getCanvasEraserSize() : this.penSize,
                     penType: this.penType,
                     tool: this.currentTool,
+                    eraserShape: isEraserStroke ? this.eraserShape : null,
                     rotation: 0, // Initialize rotation property
                     layerOrder: this.getNextLayerOrder(),
                     objectId: this.getNextObjectId(),
@@ -1159,21 +1161,19 @@ class DrawingEngine {
         return this.eraserSize / this.getViewportScale();
     }
 
-    eraseRectangleAtPoint(point) {
-        const size = this.getCanvasEraserSize();
+    eraseRectangleAtPoint(point, size = this.getCanvasEraserSize()) {
         const halfSize = size / 2;
         this.ctx.fillRect(point.x - halfSize, point.y - halfSize, size, size);
     }
 
-    eraseRectangleSegment(startPoint, endPoint) {
-        const size = this.getCanvasEraserSize();
+    eraseRectangleSegment(startPoint, endPoint, size = this.getCanvasEraserSize()) {
         const halfSize = size / 2;
         const dx = endPoint.x - startPoint.x;
         const dy = endPoint.y - startPoint.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance === 0) {
-            this.eraseRectangleAtPoint(startPoint);
+            this.eraseRectangleAtPoint(startPoint, size);
             return;
         }
 
@@ -1337,36 +1337,69 @@ class DrawingEngine {
         this.ctx.lineJoin = 'round';
         this.ctx.globalCompositeOperation = 'source-over';
         this.ctx.strokeStyle = stroke.color;
+        this.ctx.fillStyle = stroke.color;
         this.ctx.lineWidth = stroke.size;
+
+        if (stroke.tool === 'eraser') {
+            this.ctx.globalCompositeOperation = 'destination-out';
+            this.ctx.strokeStyle = 'rgba(0,0,0,1)';
+            this.ctx.fillStyle = 'rgba(0,0,0,1)';
+            this.ctx.globalAlpha = 1.0;
+
+            if ((stroke.eraserShape || 'circle') === 'rectangle') {
+                this.ctx.lineCap = 'butt';
+                this.ctx.lineJoin = 'miter';
+
+                if (stroke.points.length > 0) {
+                    this.eraseRectangleAtPoint(stroke.points[0], stroke.size);
+                    for (let i = 1; i < stroke.points.length; i++) {
+                        this.eraseRectangleSegment(stroke.points[i - 1], stroke.points[i], stroke.size);
+                    }
+                }
+
+                this.ctx.restore();
+                return;
+            }
+        }
         
         // Apply pen type settings
-        switch(stroke.penType) {
-            case 'pencil':
-                this.ctx.globalAlpha = 0.7;
-                break;
-            case 'ballpoint':
-                this.ctx.globalAlpha = 0.9;
-                break;
-            case 'fountain':
-                this.ctx.globalAlpha = 1.0;
-                break;
-            case 'brush':
-                this.ctx.globalAlpha = 0.85;
-                this.ctx.lineWidth = stroke.size * 1.5;
-                break;
-            case 'marker':
-                this.ctx.globalAlpha = 0.45;
-                this.ctx.lineWidth = stroke.size * 2.2;
-                this.ctx.lineCap = 'square';
-                break;
-            case 'normal':
-            default:
-                this.ctx.globalAlpha = 1.0;
-                break;
+        if (stroke.tool !== 'eraser') {
+            switch(stroke.penType) {
+                case 'pencil':
+                    this.ctx.globalAlpha = 0.7;
+                    break;
+                case 'ballpoint':
+                    this.ctx.globalAlpha = 0.9;
+                    break;
+                case 'fountain':
+                    this.ctx.globalAlpha = 1.0;
+                    break;
+                case 'brush':
+                    this.ctx.globalAlpha = 0.85;
+                    this.ctx.lineWidth = stroke.size * 1.5;
+                    break;
+                case 'marker':
+                    this.ctx.globalAlpha = 0.45;
+                    this.ctx.lineWidth = stroke.size * 2.2;
+                    this.ctx.lineCap = 'square';
+                    break;
+                case 'normal':
+                default:
+                    this.ctx.globalAlpha = 1.0;
+                    break;
+            }
         }
         
         // Draw the stroke
         if (stroke.points.length > 0) {
+            if (stroke.tool === 'eraser' && stroke.points.length === 1) {
+                this.ctx.beginPath();
+                this.ctx.arc(stroke.points[0].x, stroke.points[0].y, stroke.size / 2, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.restore();
+                return;
+            }
+
             this.ctx.beginPath();
             this.ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
             

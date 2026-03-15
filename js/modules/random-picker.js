@@ -100,6 +100,7 @@ class RandomPickerInstance {
         const header = this.element.querySelector('.random-picker-header');
 
         const startDrag = (e) => {
+            if (typeof e.button === 'number' && e.button !== 0) return;
             if (e.target.closest('.random-picker-close-btn')) return;
             // Stop propagation to prevent drawing
             e.stopPropagation();
@@ -119,6 +120,10 @@ class RandomPickerInstance {
 
         const doDrag = (e) => {
             if (!this.isDragging) return;
+            if ((e.type === 'mousemove' || e.type === 'pointermove') && typeof e.buttons === 'number' && e.buttons === 0) {
+                stopDrag();
+                return;
+            }
             if (e.type === 'touchmove') e.preventDefault();
 
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
