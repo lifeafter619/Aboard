@@ -334,19 +334,28 @@ class SelectionManager {
                             </div>
                         </div>
                         <button id="selection-group-btn" class="image-control-btn" data-i18n-title="selection.group" title="Group" style="display:none;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="3" width="7" height="7" rx="1"></rect>
-                                <rect x="14" y="3" width="7" height="7" rx="1"></rect>
-                                <rect x="8.5" y="14" width="7" height="7" rx="1"></rect>
-                                <path d="M10 7h4M7 10v4M17 10v4M10 17h4"></path>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="5" height="5" rx="1"></rect>
+                                <rect x="16" y="3" width="5" height="5" rx="1"></rect>
+                                <rect x="9.5" y="16" width="5" height="5" rx="1"></rect>
+                                <circle cx="12" cy="11" r="1.75"></circle>
+                                <path d="M8 5.5 10.7 9"></path>
+                                <path d="M16 5.5 13.3 9"></path>
+                                <path d="M12 16 12 12.75"></path>
                             </svg>
                         </button>
                         <button id="selection-ungroup-btn" class="image-control-btn" data-i18n-title="selection.ungroup" title="Ungroup" style="display:none;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="3" width="7" height="7" rx="1"></rect>
-                                <rect x="14" y="3" width="7" height="7" rx="1"></rect>
-                                <rect x="8.5" y="14" width="7" height="7" rx="1"></rect>
-                                <path d="M10 7h4M7 10v4M17 10v4"></path>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="11" r="1.75"></circle>
+                                <rect x="3" y="3" width="5" height="5" rx="1"></rect>
+                                <rect x="16" y="3" width="5" height="5" rx="1"></rect>
+                                <rect x="9.5" y="16" width="5" height="5" rx="1"></rect>
+                                <path d="M10.8 9.8 8 6.2"></path>
+                                <path d="M13.2 9.8 16 6.2"></path>
+                                <path d="M12 12.2 12 15.8"></path>
+                                <path d="M6.4 6.2 8 6.2 8 7.8"></path>
+                                <path d="M17.6 6.2 16 6.2 16 7.8"></path>
+                                <path d="M10.5 14.2 12 15.8 13.5 14.2"></path>
                             </svg>
                         </button>
                         <button id="selection-delete-btn" class="image-control-btn image-cancel-btn" data-i18n-title="selection.delete" title="Delete">
