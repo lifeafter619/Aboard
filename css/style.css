@@ -793,9 +793,10 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .help-modal-content {
-    width: min(520px, 92vw);
-    max-width: min(520px, 92vw);
-    min-height: 320px;
+    width: min(480px, 92vw);
+    max-width: min(480px, 92vw);
+    min-height: 0;
+    max-height: min(72vh, calc(100vh - 24px));
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -804,20 +805,36 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 .help-modal-content .modal-body {
     flex: 1 1 auto;
     min-height: 0;
+    justify-content: center;
 }
 
 .help-content {
     flex: 1 1 auto;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
     overflow: auto;
-    padding-right: 6px;
-    line-height: 1.7;
+    padding: 2px 6px 2px 0;
+    text-align: left;
+    line-height: 1.75;
     font-size: 14px;
-    color: #333;
+    color: #2f3542;
+    word-break: break-word;
 }
 
 .help-content > div {
-    margin-bottom: 6px;
+    width: 100%;
+    margin: 0;
+}
+
+.help-content > div + div {
+    margin-top: 6px;
+}
+
+.help-content b {
+    color: #1f2d3d;
 }
 
 .help-content a {

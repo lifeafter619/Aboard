@@ -1595,6 +1595,10 @@ class DrawingBoard {
                             moveOriginBtn.style.display = 'none';
                         }
                     }
+
+                    if (pattern !== 'coordinate') {
+                        this.disableCoordinateOriginDragMode();
+                    }
                     
                     // Save page background in paginated mode
                     if (!this.settingsManager.infiniteCanvas) {
@@ -1748,16 +1752,12 @@ class DrawingBoard {
         // Move Coordinate Origin Button
         const moveOriginBtn = document.getElementById('move-origin-btn');
         if (moveOriginBtn) {
-            moveOriginBtn.addEventListener('click', (e) => {
+            moveOriginBtn.addEventListener('click', () => {
                 // Toggle the button active state
                 const isActive = moveOriginBtn.classList.contains('active');
                 
                 if (isActive) {
-                    // Turn off the mode
-                    moveOriginBtn.classList.remove('active');
-                    this.isCoordinateOriginDragMode = false;
-                    this.isDraggingCoordinateOrigin = false;
-                    this.canvas.style.cursor = 'crosshair';
+                    this.disableCoordinateOriginDragMode();
                 } else {
                     // Enable coordinate origin drag mode
                     moveOriginBtn.classList.add('active');
@@ -3402,6 +3402,10 @@ class DrawingBoard {
         const configArea = document.getElementById('config-area');
         const featureArea = document.getElementById('feature-area');
         const previousTool = this.drawingEngine.currentTool;
+
+        if (this.isCoordinateOriginDragMode && tool !== 'background') {
+            this.disableCoordinateOriginDragMode({ keepCursor: true });
+        }
         
         // Check if we're clicking the same tool button again (toggle behavior)
         const isSameTool = (previousTool === tool);
@@ -3465,6 +3469,38 @@ class DrawingBoard {
             // For other tools (like pan, select), just hide panels
             configArea.classList.remove('show');
             featureArea.classList.remove('show');
+        }
+    }
+
+    disableCoordinateOriginDragMode(options = {}) {
+        const { keepCursor = false } = options;
+        const moveOriginBtn = document.getElementById('move-origin-btn');
+
+        if (moveOriginBtn) {
+            moveOriginBtn.classList.remove('active');
+        }
+
+        this.isCoordinateOriginDragMode = false;
+        this.isDraggingCoordinateOrigin = false;
+
+        if (keepCursor) {
+            return;
+        }
+
+        switch (this.drawingEngine.currentTool) {
+            case 'pan':
+                this.canvas.style.cursor = 'grab';
+                break;
+            case 'background':
+            case 'more':
+                this.canvas.style.cursor = 'default';
+                break;
+            case 'eraser':
+                this.canvas.style.cursor = 'pointer';
+                break;
+            default:
+                this.canvas.style.cursor = 'crosshair';
+                break;
         }
     }
     
