@@ -6,7 +6,6 @@
     "start": "node server.js"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0",
     "serve": "^14.0.0"
   }
 }

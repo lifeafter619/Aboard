@@ -72,6 +72,7 @@ class GifManager {
         container.style.position = 'absolute';
         container.style.pointerEvents = 'auto'; // Enable interaction
         container.style.cursor = 'move';
+        container.style.touchAction = 'none';
 
         // Initial position (center if not specified)
         const x = options.x !== undefined ? options.x : window.innerWidth / 2 - 100;
@@ -217,6 +218,9 @@ class GifManager {
         controls.style.display = 'none'; // Show on hover/active
         controls.style.gap = '5px';
         controls.style.zIndex = '1001';
+        if (window.matchMedia?.('(hover: none) and (pointer: coarse)').matches) {
+            controls.style.display = 'flex';
+        }
 
         // Play/Pause
         const playBtn = document.createElement('button');
@@ -226,6 +230,8 @@ class GifManager {
         playBtn.style.background = 'transparent';
         playBtn.style.cursor = 'pointer';
         playBtn.style.fontSize = '16px';
+        playBtn.style.minWidth = '36px';
+        playBtn.style.minHeight = '36px';
         playBtn.onclick = (e) => {
             e.stopPropagation();
             this.togglePlay(id);
@@ -240,6 +246,8 @@ class GifManager {
         settingsBtn.style.background = 'transparent';
         settingsBtn.style.cursor = 'pointer';
         settingsBtn.style.fontSize = '16px';
+        settingsBtn.style.minWidth = '36px';
+        settingsBtn.style.minHeight = '36px';
         settingsBtn.onclick = (e) => {
             e.stopPropagation();
             this.openSettings(id);
@@ -254,6 +262,8 @@ class GifManager {
         deleteBtn.style.background = 'transparent';
         deleteBtn.style.cursor = 'pointer';
         deleteBtn.style.fontSize = '16px';
+        deleteBtn.style.minWidth = '36px';
+        deleteBtn.style.minHeight = '36px';
         deleteBtn.onclick = (e) => {
             e.stopPropagation();
             this.removeGif(id);
@@ -263,8 +273,10 @@ class GifManager {
         container.appendChild(controls);
 
         // Hover events
-        container.addEventListener('mouseenter', () => controls.style.display = 'flex');
-        container.addEventListener('mouseleave', () => controls.style.display = 'none');
+        if (!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches) {
+            container.addEventListener('mouseenter', () => controls.style.display = 'flex');
+            container.addEventListener('mouseleave', () => controls.style.display = 'none');
+        }
 
         // Store control references
         if(this.gifs.has(id)) {
@@ -279,20 +291,22 @@ class GifManager {
         const handle = document.createElement('div');
         handle.className = 'gif-resize-handle';
         handle.style.position = 'absolute';
-        handle.style.width = '15px';
-        handle.style.height = '15px';
-        handle.style.right = '0';
-        handle.style.bottom = '0';
+        handle.style.width = '20px';
+        handle.style.height = '20px';
+        handle.style.right = '-4px';
+        handle.style.bottom = '-4px';
         handle.style.cursor = 'nwse-resize';
         handle.style.background = 'rgba(255, 255, 255, 0.5)';
         handle.style.border = '1px solid #333';
         handle.style.zIndex = '1001';
-        handle.style.display = 'none'; // Show on hover
+        handle.style.display = window.matchMedia?.('(hover: none) and (pointer: coarse)').matches ? 'block' : 'none'; // Show on hover
 
         container.appendChild(handle);
 
-        container.addEventListener('mouseenter', () => handle.style.display = 'block');
-        container.addEventListener('mouseleave', () => handle.style.display = 'none');
+        if (!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches) {
+            container.addEventListener('mouseenter', () => handle.style.display = 'block');
+            container.addEventListener('mouseleave', () => handle.style.display = 'none');
+        }
     }
 
     _updatePlayButton(id) {
@@ -367,6 +381,8 @@ class GifManager {
         };
 
         const onMove = (e) => {
+            if (!isDragging) return;
+            if (e.type === 'touchmove') e.preventDefault();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
@@ -384,22 +400,31 @@ class GifManager {
 
             // Remove temp listeners
             document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('pointermove', onMove);
             document.removeEventListener('touchmove', onMove);
             document.removeEventListener('mouseup', onUp);
+            document.removeEventListener('pointerup', onUp);
             document.removeEventListener('touchend', onUp);
+            document.removeEventListener('pointercancel', onUp);
+            document.removeEventListener('touchcancel', onUp);
         };
 
         const onDownWrapper = (e) => {
             onDown(e);
             if (isDragging) {
                 document.addEventListener('mousemove', onMove);
+                document.addEventListener('pointermove', onMove);
                 document.addEventListener('touchmove', onMove, { passive: false });
                 document.addEventListener('mouseup', onUp);
+                document.addEventListener('pointerup', onUp);
                 document.addEventListener('touchend', onUp);
+                document.addEventListener('pointercancel', onUp);
+                document.addEventListener('touchcancel', onUp);
             }
         };
 
         element.addEventListener('mousedown', onDownWrapper);
+        element.addEventListener('pointerdown', onDownWrapper);
         element.addEventListener('touchstart', onDownWrapper, { passive: false });
     }
 
@@ -429,6 +454,7 @@ class GifManager {
 
         const onMove = (e) => {
             if (!isResizing) return;
+            if (e.type === 'touchmove') e.preventDefault();
 
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -463,9 +489,13 @@ class GifManager {
                 this.saveState();
 
                 document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('pointermove', onMove);
                 document.removeEventListener('touchmove', onMove);
                 document.removeEventListener('mouseup', onUp);
+                document.removeEventListener('pointerup', onUp);
                 document.removeEventListener('touchend', onUp);
+                document.removeEventListener('pointercancel', onUp);
+                document.removeEventListener('touchcancel', onUp);
             }
         };
 
@@ -473,13 +503,18 @@ class GifManager {
             onDown(e);
             if (isResizing) {
                 document.addEventListener('mousemove', onMove);
+                document.addEventListener('pointermove', onMove);
                 document.addEventListener('touchmove', onMove, { passive: false });
                 document.addEventListener('mouseup', onUp);
+                document.addEventListener('pointerup', onUp);
                 document.addEventListener('touchend', onUp);
+                document.addEventListener('pointercancel', onUp);
+                document.addEventListener('touchcancel', onUp);
             }
         };
 
         handle.addEventListener('mousedown', onDownWrapper);
+        handle.addEventListener('pointerdown', onDownWrapper);
         handle.addEventListener('touchstart', onDownWrapper, { passive: false });
     }
 }

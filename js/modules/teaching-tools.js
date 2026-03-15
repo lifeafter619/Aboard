@@ -612,6 +612,8 @@ class TeachingToolsManager {
         this._boundHandlers = {
             mouseMove: (e) => this.handleMouseMove(e),
             mouseUp: (e) => this.handleMouseUp(e),
+            pointerMove: (e) => this.handleMouseMove(e),
+            pointerUp: (e) => this.handleMouseUp(e),
             touchMove: (e) => this.handleTouchMove(e),
             touchEnd: (e) => this.handleTouchEnd(e),
             click: (e) => {
@@ -625,10 +627,14 @@ class TeachingToolsManager {
         // Mouse events for dragging/resizing tools
         document.addEventListener('mousemove', this._boundHandlers.mouseMove);
         document.addEventListener('mouseup', this._boundHandlers.mouseUp);
+        document.addEventListener('pointermove', this._boundHandlers.pointerMove);
+        document.addEventListener('pointerup', this._boundHandlers.pointerUp);
+        document.addEventListener('pointercancel', this._boundHandlers.pointerUp);
         
         // Touch events for pinch zoom on tools
         document.addEventListener('touchmove', this._boundHandlers.touchMove, { passive: false });
         document.addEventListener('touchend', this._boundHandlers.touchEnd);
+        document.addEventListener('touchcancel', this._boundHandlers.touchEnd);
         
         // Click outside to deselect
         document.addEventListener('click', this._boundHandlers.click);
@@ -990,6 +996,45 @@ class TeachingToolsManager {
         document.body.appendChild(overlay);
         tool.overlay = overlay;
     }
+
+    clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+    }
+
+    updateToolOverlayControlsLayout(tool, overlay) {
+        if (!overlay) return;
+        const safeWidth = Math.max(overlay.offsetWidth || 1, 1);
+        const safeHeight = Math.max(overlay.offsetHeight || 1, 1);
+        const minSide = Math.max(Math.min(safeWidth, safeHeight), 1);
+
+        const handleSize = this.clamp(minSide * 0.14, 10, 18);
+        const rotateSize = this.clamp(minSide * 0.22, 24, 36);
+        const deleteSize = this.clamp(minSide * 0.22, 24, 36);
+        const iconSize = this.clamp(rotateSize * 0.55, 14, 18);
+        const inset = this.clamp(minSide * 0.08, 4, 10);
+        const outsideTop = safeHeight >= rotateSize * 2.4 ? -(rotateSize + 10) : inset;
+        const centerX = safeWidth / 2;
+        const deleteRight = safeWidth >= deleteSize * 2.2 ? -Math.round(deleteSize * 0.25) : inset;
+
+        overlay.style.setProperty('--tt-handle-size', `${handleSize}px`);
+        overlay.style.setProperty('--tt-handle-offset', `${-(handleSize / 2)}px`);
+        overlay.style.setProperty('--tt-rotate-size', `${rotateSize}px`);
+        overlay.style.setProperty('--tt-delete-size', `${deleteSize}px`);
+        overlay.style.setProperty('--tt-control-top', `${outsideTop}px`);
+        overlay.style.setProperty('--tt-control-icon-size', `${iconSize}px`);
+        overlay.style.setProperty('--tt-delete-right', `${deleteRight}px`);
+
+        const rotateHandle = overlay.querySelector('.teaching-tool-rotate-handle');
+        const deleteBtn = overlay.querySelector('.teaching-tool-delete-btn');
+        if (rotateHandle) {
+            rotateHandle.style.left = `${centerX}px`;
+        }
+        if (deleteBtn && safeWidth < deleteSize * 2.2) {
+            deleteBtn.style.top = `${inset}px`;
+        } else if (deleteBtn) {
+            deleteBtn.style.top = '';
+        }
+    }
     
     setupToolOverlayEvents(tool, overlay) {
         // Prevent default touch behavior
@@ -1055,7 +1100,7 @@ class TeachingToolsManager {
         }, { passive: false });
         
         // Mouse drag - single click only moves, doesn't select for editing
-        overlay.addEventListener('mousedown', (e) => {
+        const startOverlayDrag = (e) => {
             // For set squares, check if click is in the free-drawing area (bottom-right)
             if (tool.type === 'setSquare' && this.isPointInSetSquareFreeArea(e.clientX, e.clientY, tool)) {
                 // Allow the event to pass through for free drawing
@@ -1086,7 +1131,9 @@ class TeachingToolsManager {
             const canvasCoords = this.screenToCanvasCoords(e.clientX, e.clientY);
             this.dragOffset.x = canvasCoords.x - tool.x;
             this.dragOffset.y = canvasCoords.y - tool.y;
-        });
+        };
+        overlay.addEventListener('mousedown', startOverlayDrag);
+        overlay.addEventListener('pointerdown', startOverlayDrag);
         
         // Double-click to select and show controls
         overlay.addEventListener('dblclick', (e) => {
@@ -1102,7 +1149,7 @@ class TeachingToolsManager {
         
         // Resize handles - only work if tool is already selected
         overlay.querySelectorAll('.teaching-tool-resize-handle').forEach(handle => {
-            handle.addEventListener('mousedown', (e) => {
+            const startResize = (e) => {
                 if (this.selectedTool !== tool) return;
                 
                 e.preventDefault();
@@ -1119,11 +1166,14 @@ class TeachingToolsManager {
                     mouseX: e.clientX,
                     mouseY: e.clientY
                 };
-            });
+            };
+            handle.addEventListener('mousedown', startResize);
+            handle.addEventListener('pointerdown', startResize);
         });
         
         // Rotate handle - only works if tool is already selected
-        overlay.querySelector('.teaching-tool-rotate-handle').addEventListener('mousedown', (e) => {
+        const rotateHandle = overlay.querySelector('.teaching-tool-rotate-handle');
+        const startRotate = (e) => {
             if (this.selectedTool !== tool) return;
             
             e.preventDefault();
@@ -1136,7 +1186,9 @@ class TeachingToolsManager {
             const centerX = tool.x + tool.width / 2;
             const centerY = tool.y + tool.height / 2;
             this.rotateStart = Math.atan2(e.clientY - rect.top - centerY, e.clientX - rect.left - centerX);
-        });
+        };
+        rotateHandle.addEventListener('mousedown', startRotate);
+        rotateHandle.addEventListener('pointerdown', startRotate);
         
         // Delete button - only works if tool is already selected
         overlay.querySelector('.teaching-tool-delete-btn').addEventListener('click', (e) => {
@@ -1169,6 +1221,7 @@ class TeachingToolsManager {
         overlay.style.transform = `rotate(${tool.rotation}deg)`;
         overlay.style.transformOrigin = 'center center';
         overlay.style.zIndex = '100';
+        this.updateToolOverlayControlsLayout(tool, overlay);
         
         // Show/hide controls based on selection
         const isSelected = this.selectedTool === tool;

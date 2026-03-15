@@ -311,11 +311,13 @@ class TimerInstance {
         // Allow dragging from the entire widget
         // Add both mouse and touch event listeners for better touch device support
         this.displayElement.addEventListener('mousedown', handleStart);
+        this.displayElement.addEventListener('pointerdown', handleStart);
         this.displayElement.addEventListener('touchstart', handleStart, { passive: false });
         
         // Unified handler for mouse and touch move
         const handleMove = (e) => {
             if (!this.isDragging) return;
+            if (e.type === 'touchmove') e.preventDefault();
             
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -369,10 +371,13 @@ class TimerInstance {
         
         // Add both mouse and touch event listeners
         document.addEventListener('mousemove', this.mouseMoveHandler);
+        document.addEventListener('pointermove', this.mouseMoveHandler);
         document.addEventListener('mouseup', this.mouseUpHandler);
+        document.addEventListener('pointerup', this.mouseUpHandler);
         document.addEventListener('touchmove', this.mouseMoveHandler, { passive: false });
         document.addEventListener('touchend', this.mouseUpHandler);
         document.addEventListener('touchcancel', this.mouseUpHandler);
+        document.addEventListener('pointercancel', this.mouseUpHandler);
     }
     
     startTimerLoop() {

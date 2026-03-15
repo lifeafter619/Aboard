@@ -2580,13 +2580,16 @@ class DrawingBoard {
             }
         });
 
-        document.addEventListener('mousedown', (e) => {
+        const bringFloatingPanelToFront = (e) => {
             if (!(e.target instanceof Element)) return;
             const floatingPanel = e.target.closest('.feature-widget, .timer-display-widget, #feature-area, #config-area, #time-display-area');
             if (floatingPanel) {
                 this.bringElementToFront(floatingPanel);
             }
-        });
+        };
+
+        document.addEventListener('mousedown', bringFloatingPanelToFront);
+        document.addEventListener('pointerdown', bringFloatingPanelToFront);
     }
 
     setupModalInteractionLock() {
@@ -2899,9 +2902,11 @@ class DrawingBoard {
         };
         
         [historyControls, configArea, timeDisplayArea, featureArea, toolbar, paginationControls].filter(Boolean).forEach(element => {
-            // Mouse events
+            // Pointer events for mouse, pen, and touch
+            element.addEventListener('pointerdown', (e) => handleDragStart(e, element));
+            // Mouse fallback for environments without Pointer Events
             element.addEventListener('mousedown', (e) => handleDragStart(e, element));
-            // Touch events - improve compatibility with large-screen touch devices
+            // Touch fallback - improve compatibility with large-screen touch devices
             element.addEventListener('touchstart', (e) => handleDragStart(e, element), { passive: false });
         });
         

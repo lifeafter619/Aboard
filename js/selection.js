@@ -284,7 +284,7 @@ class SelectionManager {
                     <div class="resize-handle left" data-handle="left"></div>
                     
                     <!-- Rotation handle -->
-                    <div class="rotate-handle" id="selection-rotate-handle">
+                    <div class="rotate-handle" id="selection-rotate-handle" data-i18n-title="imageControls.rotate">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                             <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                         </svg>
@@ -380,6 +380,10 @@ class SelectionManager {
         this.controlBox = document.getElementById('selection-controls-box');
         this.layerMenu = document.getElementById('selection-layer-menu');
         this.layerButton = document.getElementById('selection-layer-btn');
+        this.rotateHandle = document.getElementById('selection-rotate-handle');
+        this.rotate90Handle = document.getElementById('selection-rotate90-handle');
+        this.flipHHandle = document.getElementById('selection-flip-h-handle');
+        this.toolbar = this.controlBox.querySelector('.selection-action-toolbar');
         
         // Box selection rectangle overlay
         this.boxSelectDiv = document.createElement('div');
@@ -397,6 +401,8 @@ class SelectionManager {
         this.lassoPath.setAttribute('stroke-dasharray', '6 4');
         this.lassoSvg.appendChild(this.lassoPath);
         document.body.appendChild(this.lassoSvg);
+
+        window.i18n?.applyTranslations?.();
         
         this.setupEventListeners();
     }
@@ -462,19 +468,18 @@ class SelectionManager {
         });
         
         // Rotation handle
-        const rotateHandle = document.getElementById('selection-rotate-handle');
-        if (rotateHandle) {
-            rotateHandle.addEventListener('mousedown', (e) => {
+        if (this.rotateHandle) {
+            this.rotateHandle.addEventListener('mousedown', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 this.startRotate(e);
             });
-            rotateHandle.addEventListener('pointerdown', (e) => {
+            this.rotateHandle.addEventListener('pointerdown', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 this.startRotate(e);
             });
-            rotateHandle.addEventListener('touchstart', (e) => {
+            this.rotateHandle.addEventListener('touchstart', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 this.startRotate(e);
@@ -546,8 +551,8 @@ class SelectionManager {
         const editBtn = document.getElementById('selection-edit-btn');
         const groupBtn = document.getElementById('selection-group-btn');
         const ungroupBtn = document.getElementById('selection-ungroup-btn');
-        const rotate90Handle = document.getElementById('selection-rotate90-handle');
-        const flipHHandle = document.getElementById('selection-flip-h-handle');
+        const rotate90Handle = this.rotate90Handle;
+        const flipHHandle = this.flipHHandle;
         const layerBtn = document.getElementById('selection-layer-btn');
         const layerMenu = document.getElementById('selection-layer-menu');
         
@@ -647,6 +652,8 @@ class SelectionManager {
         }
         if (!this.layerMenuOutsideListenerAttached) {
             document.addEventListener('mousedown', this.layerMenuOutsideListener);
+            document.addEventListener('pointerdown', this.layerMenuOutsideListener);
+            document.addEventListener('touchstart', this.layerMenuOutsideListener, { passive: true });
             this.layerMenuOutsideListenerAttached = true;
         }
     }
@@ -933,6 +940,143 @@ class SelectionManager {
         this.controlBox.classList.remove('text-selection-only');
         this.hideLayerMenu();
     }
+
+    clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+    }
+
+    updateAdaptiveControlsLayout(boxWidth, boxHeight) {
+        const safeWidth = Math.max(boxWidth, 1);
+        const safeHeight = Math.max(boxHeight, 1);
+        const minSide = Math.max(Math.min(safeWidth, safeHeight), 1);
+
+        const resizeHandleSize = this.clamp(minSide * 0.18, 10, 12);
+        this.controlBox.style.setProperty('--resize-handle-size', `${resizeHandleSize}px`);
+        this.controlBox.style.setProperty('--resize-handle-offset', `${-(resizeHandleSize / 2)}px`);
+
+        const floatingSize = this.clamp(minSide * 0.28, 20, 36);
+        const floatingIconSize = this.clamp(floatingSize * 0.56, 12, 20);
+        const floatingGap = this.clamp(floatingSize * 0.2, 4, 10);
+        const inset = this.clamp(minSide * 0.08, 4, 10);
+        const outsideTop = safeHeight >= floatingSize * 2.5 ? -(floatingSize + 8) : inset;
+        const insideTop = inset;
+        const rowSpan = floatingSize * 3 + floatingGap * 2;
+        const doubleSpan = floatingSize * 2 + floatingGap;
+        const centerX = safeWidth / 2;
+        const stackX = this.clamp(
+            safeWidth - (floatingSize / 2) - inset,
+            floatingSize / 2,
+            Math.max(floatingSize / 2, safeWidth - (floatingSize / 2))
+        );
+
+        let positions;
+        if (safeWidth >= rowSpan + inset * 2) {
+            positions = [
+                { left: centerX - (floatingSize + floatingGap), top: outsideTop },
+                { left: centerX, top: outsideTop },
+                { left: centerX + (floatingSize + floatingGap), top: outsideTop }
+            ];
+        } else if (safeWidth >= doubleSpan + inset * 2) {
+            positions = [
+                { left: centerX, top: outsideTop },
+                { left: centerX - ((floatingSize + floatingGap) / 2), top: insideTop },
+                { left: centerX + ((floatingSize + floatingGap) / 2), top: insideTop }
+            ];
+        } else {
+            positions = [
+                { left: stackX, top: insideTop },
+                { left: stackX, top: insideTop + floatingSize + floatingGap },
+                { left: stackX, top: insideTop + (floatingSize + floatingGap) * 2 }
+            ];
+        }
+
+        [
+            { element: this.rotateHandle, position: positions[0] },
+            { element: this.rotate90Handle, position: positions[1] },
+            { element: this.flipHHandle, position: positions[2] }
+        ].forEach(({ element, position }) => {
+            if (!element || !position) return;
+
+            element.style.left = `${position.left}px`;
+            element.style.top = `${position.top}px`;
+            element.style.width = `${floatingSize}px`;
+            element.style.height = `${floatingSize}px`;
+            element.style.setProperty('--handle-connector-top', `${floatingSize}px`);
+            element.style.setProperty('--handle-connector-height', `${Math.max(8, Math.round(floatingSize * 0.35))}px`);
+
+            const icon = element.querySelector('svg');
+            if (icon) {
+                icon.style.width = `${floatingIconSize}px`;
+                icon.style.height = `${floatingIconSize}px`;
+            }
+        });
+
+        this.controlBox.style.setProperty('--floating-control-size', `${floatingSize}px`);
+        this.controlBox.style.setProperty('--floating-control-icon-size', `${floatingIconSize}px`);
+
+        if (!this.toolbar) return;
+
+        const toolbarItems = Array.from(this.toolbar.children).filter((item) => {
+            if (getComputedStyle(item).display === 'none') return false;
+            if (item.classList.contains('selection-layer-menu-wrapper')) {
+                const trigger = item.querySelector('.image-control-btn');
+                return !!trigger && getComputedStyle(trigger).display !== 'none';
+            }
+            return true;
+        });
+        const toolbarButtons = Array.from(this.toolbar.querySelectorAll('.image-control-btn'));
+        const visibleCount = Math.max(toolbarItems.length, 1);
+        const toolbarButtonSize = this.clamp(Math.min(safeWidth * 0.22, minSide * 0.36), 20, 44);
+        const toolbarGap = this.clamp(toolbarButtonSize * 0.18, 4, 8);
+        const toolbarPaddingX = this.clamp(toolbarButtonSize * 0.22, 4, 10);
+        const toolbarPaddingY = this.clamp(toolbarButtonSize * 0.18, 4, 10);
+        const toolbarHorizontalWidth = (toolbarButtonSize * visibleCount) + (toolbarGap * Math.max(visibleCount - 1, 0)) + toolbarPaddingX * 2;
+        const toolbarGridColumns = visibleCount >= 4 ? 3 : 2;
+        const toolbarGridWidth = (toolbarButtonSize * Math.min(visibleCount, toolbarGridColumns)) + (toolbarGap * Math.max(Math.min(visibleCount, toolbarGridColumns) - 1, 0)) + toolbarPaddingX * 2;
+
+        toolbarButtons.forEach((button) => {
+            button.style.width = `${toolbarButtonSize}px`;
+            button.style.height = `${toolbarButtonSize}px`;
+
+            const icon = button.querySelector('svg');
+            if (icon) {
+                const toolbarIconSize = this.clamp(toolbarButtonSize * 0.45, 10, 20);
+                icon.style.width = `${toolbarIconSize}px`;
+                icon.style.height = `${toolbarIconSize}px`;
+            }
+        });
+
+        this.controlBox.style.setProperty('--toolbar-button-size', `${toolbarButtonSize}px`);
+        this.controlBox.style.setProperty('--toolbar-gap', `${toolbarGap}px`);
+        this.controlBox.style.setProperty('--toolbar-padding-x', `${toolbarPaddingX}px`);
+        this.controlBox.style.setProperty('--toolbar-padding-y', `${toolbarPaddingY}px`);
+
+        this.toolbar.style.left = `${centerX}px`;
+        this.toolbar.style.bottom = safeHeight >= toolbarButtonSize * 2.5
+            ? `${-(toolbarButtonSize + toolbarPaddingY + 10)}px`
+            : `${inset}px`;
+        this.toolbar.style.transform = 'translateX(-50%)';
+        this.toolbar.style.display = 'flex';
+        this.toolbar.style.flexDirection = 'row';
+        this.toolbar.style.flexWrap = 'nowrap';
+        this.toolbar.style.justifyContent = 'center';
+        this.toolbar.style.alignItems = 'center';
+        this.toolbar.style.justifyItems = '';
+        this.toolbar.style.gridTemplateColumns = '';
+        this.toolbar.style.width = 'auto';
+
+        if (safeWidth < toolbarHorizontalWidth + inset * 2) {
+            this.toolbar.style.bottom = `${inset}px`;
+            if (safeWidth >= toolbarGridWidth + inset * 2 && visibleCount > 2) {
+                this.toolbar.style.display = 'grid';
+                this.toolbar.style.gridTemplateColumns = `repeat(${toolbarGridColumns}, minmax(0, 1fr))`;
+                this.toolbar.style.justifyItems = 'center';
+                this.toolbar.style.width = `${Math.max(toolbarGridWidth, Math.min(safeWidth - inset * 2, toolbarHorizontalWidth))}px`;
+            } else {
+                this.toolbar.style.flexDirection = 'column';
+            }
+        }
+    }
     
     updateControlBox() {
         if (this.selectionType === null) return;
@@ -1005,6 +1149,8 @@ class SelectionManager {
         this.controlBox.style.height = `${actualHeight}px`;
         this.controlBox.style.transformOrigin = 'center center';
         this.controlBox.style.transform = `rotate(${rotation}deg)`;
+
+        this.updateAdaptiveControlsLayout(actualWidth, actualHeight);
     }
     
     // Drag handling

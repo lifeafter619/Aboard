@@ -301,6 +301,13 @@
     z-index: 100;
     pointer-events: auto;
     touch-action: none;
+    --tt-handle-size: 10px;
+    --tt-handle-offset: -5px;
+    --tt-rotate-size: 24px;
+    --tt-delete-size: 24px;
+    --tt-control-top: -35px;
+    --tt-control-icon-size: 14px;
+    --tt-delete-right: -10px;
 }
 
 .teaching-tool-overlay .teaching-tool-image-container {
@@ -328,8 +335,8 @@
 /* Word-style resize handles */
 .teaching-tool-resize-handle {
     position: absolute;
-    width: 10px;
-    height: 10px;
+    width: var(--tt-handle-size);
+    height: var(--tt-handle-size);
     background: #fff;
     border: 2px solid var(--theme-color, #007AFF);
     border-radius: 2px;
@@ -342,23 +349,23 @@
 }
 
 /* Handle positions */
-.handle-nw { top: -5px; left: -5px; cursor: nw-resize; }
-.handle-n { top: -5px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
-.handle-ne { top: -5px; right: -5px; cursor: ne-resize; }
-.handle-e { top: 50%; right: -5px; transform: translateY(-50%); cursor: e-resize; }
-.handle-se { bottom: -5px; right: -5px; cursor: se-resize; }
-.handle-s { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
-.handle-sw { bottom: -5px; left: -5px; cursor: sw-resize; }
-.handle-w { top: 50%; left: -5px; transform: translateY(-50%); cursor: w-resize; }
+.handle-nw { top: var(--tt-handle-offset); left: var(--tt-handle-offset); cursor: nw-resize; }
+.handle-n { top: var(--tt-handle-offset); left: 50%; transform: translateX(-50%); cursor: n-resize; }
+.handle-ne { top: var(--tt-handle-offset); right: var(--tt-handle-offset); cursor: ne-resize; }
+.handle-e { top: 50%; right: var(--tt-handle-offset); transform: translateY(-50%); cursor: e-resize; }
+.handle-se { bottom: var(--tt-handle-offset); right: var(--tt-handle-offset); cursor: se-resize; }
+.handle-s { bottom: var(--tt-handle-offset); left: 50%; transform: translateX(-50%); cursor: s-resize; }
+.handle-sw { bottom: var(--tt-handle-offset); left: var(--tt-handle-offset); cursor: sw-resize; }
+.handle-w { top: 50%; left: var(--tt-handle-offset); transform: translateY(-50%); cursor: w-resize; }
 
 /* Rotate handle */
 .teaching-tool-rotate-handle {
     position: absolute;
-    top: -35px;
+    top: var(--tt-control-top);
     left: 50%;
     transform: translateX(-50%);
-    width: 24px;
-    height: 24px;
+    width: var(--tt-rotate-size);
+    height: var(--tt-rotate-size);
     background: #fff;
     border: 2px solid var(--theme-color, #007AFF);
     border-radius: 50%;
@@ -374,8 +381,8 @@
 }
 
 .teaching-tool-rotate-handle svg {
-    width: 14px;
-    height: 14px;
+    width: var(--tt-control-icon-size);
+    height: var(--tt-control-icon-size);
     stroke: var(--theme-color, #007AFF);
 }
 
@@ -386,10 +393,10 @@
 /* Delete button */
 .teaching-tool-delete-btn {
     position: absolute;
-    top: -35px;
-    right: -10px;
-    width: 24px;
-    height: 24px;
+    top: var(--tt-control-top);
+    right: var(--tt-delete-right);
+    width: var(--tt-delete-size);
+    height: var(--tt-delete-size);
     background: #ff3b30;
     border-radius: 50%;
     display: none;
@@ -469,5 +476,17 @@
     
     .teaching-tool-label {
         font-size: 12px;
+    }
+}
+
+@media (hover: none) and (pointer: coarse) {
+    .teaching-tool-overlay {
+        --tt-handle-size: 14px;
+        --tt-handle-offset: -7px;
+        --tt-rotate-size: 32px;
+        --tt-delete-size: 32px;
+        --tt-control-top: -42px;
+        --tt-control-icon-size: 16px;
+        --tt-delete-right: -6px;
     }
 }

@@ -28,8 +28,8 @@
     position: absolute;
     background-color: var(--theme-color);
     border: 2px solid white;
-    width: 12px;
-    height: 12px;
+    width: var(--resize-handle-size);
+    height: var(--resize-handle-size);
     border-radius: 50%;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     pointer-events: all;
@@ -37,52 +37,52 @@
 }
 
 #insert-image-box .resize-handle.top-left {
-    top: -6px;
-    left: -6px;
+    top: var(--resize-handle-offset);
+    left: var(--resize-handle-offset);
     cursor: nw-resize;
 }
 
 #insert-image-box .resize-handle.top-right {
-    top: -6px;
-    right: -6px;
+    top: var(--resize-handle-offset);
+    right: var(--resize-handle-offset);
     cursor: ne-resize;
 }
 
 #insert-image-box .resize-handle.bottom-left {
-    bottom: -6px;
-    left: -6px;
+    bottom: var(--resize-handle-offset);
+    left: var(--resize-handle-offset);
     cursor: sw-resize;
 }
 
 #insert-image-box .resize-handle.bottom-right {
-    bottom: -6px;
-    right: -6px;
+    bottom: var(--resize-handle-offset);
+    right: var(--resize-handle-offset);
     cursor: se-resize;
 }
 
 #insert-image-box .resize-handle.top {
-    top: -6px;
+    top: var(--resize-handle-offset);
     left: 50%;
     transform: translateX(-50%);
     cursor: n-resize;
 }
 
 #insert-image-box .resize-handle.bottom {
-    bottom: -6px;
+    bottom: var(--resize-handle-offset);
     left: 50%;
     transform: translateX(-50%);
     cursor: s-resize;
 }
 
 #insert-image-box .resize-handle.left {
-    left: -6px;
+    left: var(--resize-handle-offset);
     top: 50%;
     transform: translateY(-50%);
     cursor: w-resize;
 }
 
 #insert-image-box .resize-handle.right {
-    right: -6px;
+    right: var(--resize-handle-offset);
     top: 50%;
     transform: translateY(-50%);
     cursor: e-resize;
@@ -94,8 +94,8 @@
     top: -40px;
     left: 50%;
     transform: translateX(-50%);
-    width: 36px;
-    height: 36px;
+    width: var(--floating-control-size);
+    height: var(--floating-control-size);
     background-color: var(--theme-color);
     border-radius: 50%;
     cursor: grab;
@@ -120,10 +120,10 @@
 #insert-image-box .rotate-handle::after {
     content: '';
     position: absolute;
-    top: 36px; /* connect to box */
+    top: var(--handle-connector-top); /* connect to box */
     left: 50%;
     width: 2px;
-    height: 20px; /* distance to box edge roughly */
+    height: var(--handle-connector-height); /* distance to box edge roughly */
     background-color: var(--theme-color);
     transform: translateX(-50%);
     pointer-events: none;
@@ -136,18 +136,20 @@
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: 8px;
-    padding: 10px;
+    gap: var(--toolbar-gap);
+    padding: var(--toolbar-padding-y) var(--toolbar-padding-x);
     background-color: white;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     pointer-events: all;
     z-index: 10;
+    max-width: calc(100% - 8px);
+    box-sizing: border-box;
 }
 
 #insert-image-box .image-control-btn {
-    width: var(--touch-target-size);
-    height: var(--touch-target-size);
+    width: var(--toolbar-button-size);
+    height: var(--toolbar-button-size);
     border: none;
     border-radius: 10px;
     background-color: #f0f0f0;
@@ -195,8 +197,8 @@
 #insert-image-box .flip-handle {
     position: absolute;
     top: -40px;
-    width: 32px;
-    height: 32px;
+    width: var(--floating-control-size);
+    height: var(--floating-control-size);
     background-color: var(--theme-color);
     border-radius: 50%;
     cursor: pointer;
@@ -235,13 +237,20 @@
 #insert-image-box .flip-handle::after {
     content: '';
     position: absolute;
-    top: 32px;
+    top: var(--handle-connector-top);
     left: 50%;
     width: 2px;
-    height: 12px;
+    height: var(--handle-connector-height);
     background-color: var(--theme-color);
     transform: translateX(-50%);
     pointer-events: none;
+}
+
+#insert-image-box .rotate-handle svg,
+#insert-image-box .flip-handle svg,
+#insert-image-box .image-control-btn svg {
+    width: var(--floating-control-icon-size);
+    height: var(--floating-control-icon-size);
 }
 
 #insert-image-box .flip-handle.active::after {

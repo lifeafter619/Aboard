@@ -205,6 +205,7 @@ class ScoreboardInstance {
             [minusBtn, plusBtn].forEach(btn => {
                 if (btn) {
                     btn.addEventListener('mousedown', e => e.stopPropagation());
+                    btn.addEventListener('pointerdown', e => e.stopPropagation());
                     btn.addEventListener('touchstart', e => e.stopPropagation());
                 }
             });
@@ -225,6 +226,7 @@ class ScoreboardInstance {
             const removeBtn = col.querySelector('.score-remove-btn');
             if (removeBtn) {
                 removeBtn.addEventListener('mousedown', e => e.stopPropagation());
+                removeBtn.addEventListener('pointerdown', e => e.stopPropagation());
                 removeBtn.addEventListener('touchstart', e => e.stopPropagation());
 
                 removeBtn.addEventListener('click', (e) => {
@@ -291,6 +293,7 @@ class ScoreboardInstance {
 
         const doDrag = (e) => {
             if (!this.isDragging) return;
+            if (e.type === 'touchmove') e.preventDefault();
 
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -336,13 +339,18 @@ class ScoreboardInstance {
         };
 
         header.addEventListener('mousedown', startDrag);
+        header.addEventListener('pointerdown', startDrag);
         header.addEventListener('touchstart', startDrag, { passive: false });
 
         document.addEventListener('mousemove', doDrag);
+        document.addEventListener('pointermove', doDrag);
         document.addEventListener('touchmove', doDrag, { passive: false });
 
         document.addEventListener('mouseup', stopDrag);
+        document.addEventListener('pointerup', stopDrag);
         document.addEventListener('touchend', stopDrag);
+        document.addEventListener('pointercancel', stopDrag);
+        document.addEventListener('touchcancel', stopDrag);
 
         // Buttons
         const btns = [
@@ -356,6 +364,7 @@ class ScoreboardInstance {
             if (!btn) return;
             // Stop propagation to prevent drawing
             btn.addEventListener('mousedown', e => e.stopPropagation());
+            btn.addEventListener('pointerdown', e => e.stopPropagation());
             btn.addEventListener('touchstart', e => e.stopPropagation());
         });
 

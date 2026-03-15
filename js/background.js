@@ -330,12 +330,16 @@ class BackgroundManager {
                 containerElement.style.position = 'absolute';
                 containerElement.style.pointerEvents = 'none';
                 containerElement.style.zIndex = '0'; // Same as bgCanvas
-                containerElement.addEventListener('mousedown', (event) => {
+                const handleBackgroundContainerDown = (event) => {
                     if (!this.isBackgroundImageOutsideCanvas()) return;
                     event.stopPropagation();
+                    event.preventDefault?.();
                     window.drawingBoard?.setTool?.('select');
                     window.drawingBoard?.selectionManager?.selectBackgroundImage?.();
-                });
+                };
+                containerElement.addEventListener('mousedown', handleBackgroundContainerDown);
+                containerElement.addEventListener('pointerdown', handleBackgroundContainerDown);
+                containerElement.addEventListener('touchstart', handleBackgroundContainerDown, { passive: false });
 
                 // Append to transform-layer
                 const transformLayer = document.getElementById('transform-layer');

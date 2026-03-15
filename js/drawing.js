@@ -433,11 +433,13 @@ class DrawingEngine {
                 mirror.style.pointerEvents = 'auto';
                 mirror.style.userSelect = 'none';
                 mirror.draggable = false;
-                mirror.addEventListener('mousedown', event => {
+                const handleMirrorSelect = (event) => {
                     event.stopPropagation();
                     window.drawingBoard?.setTool?.('select');
                     window.drawingBoard?.selectionManager?.selectObjectById?.(img.objectId);
-                });
+                };
+                mirror.addEventListener('mousedown', handleMirrorSelect);
+                mirror.addEventListener('pointerdown', handleMirrorSelect);
                 layer.appendChild(mirror);
             }
 

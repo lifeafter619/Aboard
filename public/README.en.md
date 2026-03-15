@@ -20,14 +20,17 @@
 
 </div>
 
-A lightweight web whiteboard built for teaching and presentation workflows. It aims to stay simple to deploy, intuitive to use, and practical on touch-enabled classroom screens.
+Aboard is a lightweight web whiteboard for teaching, presenting, and touch-enabled large-screen use. It tries to stay easy to deploy, quick to understand, and practical in real classroom workflows.
 
 ## Highlights
-- Multiple pen styles, shapes, eraser modes, background patterns, image insertion, text insertion, and selection editing.
-- Classroom helpers including clock display, timer, random picker, scoreboard, and teaching tools.
-- Paginated canvas, auto-save and restore, PWA support, configuration import/export, and multi-language UI.
-- Resizable utility windows support restore-size plus keep-centered behavior; cache cleanup supports per-item confirmation; eraser size now adapts to the viewport by default.
-- Mostly front-end architecture with readable modules, making follow-up customization straightforward.
+- Core whiteboard tools: pen, shapes, eraser, backgrounds, image insertion, text insertion, and selection editing.
+- Classroom helpers: clock display, timer, random picker, scoreboard, and teaching tools.
+- Practical app features: paginated canvas, auto-save and restore, PWA support, configuration import/export, and multi-language UI.
+- Responsive and touch-oriented refinements:
+  - floating panels are easier to drag and operate on large displays;
+  - eraser defaults adapt to the viewport;
+  - image, selection, stroke, and text overlays adapt to object size;
+  - very small objects can use compact controls with a minimum usable size instead of overflowing too far outside the target.
 
 ## Quick Start
 - Live demo: <https://aboard.pp.ua>
@@ -40,6 +43,12 @@ A lightweight web whiteboard built for teaching and presentation workflows. It a
 - Advanced notes: [`../docs/en/advanced.md`](../docs/en/advanced.md)
 - Simplified Chinese: [`../README.md`](../README.md)
 - Traditional Chinese: [`README.zh-TW.md`](README.zh-TW.md)
+
+## Responsive and Touch Notes
+- The UI follows touch-first constraints, and major controls try to keep at least a `44px` target size.
+- On 1366×768, 1080p, 2K, 4K, interactive whiteboards, and resized browser windows, toolbars, history controls, floating panels, and editing overlays try to remain visible and usable.
+- For very small images, selections, text boxes, or stroke objects, controls can reflow, move inward, and shrink with a lower bound to reduce overflow and missed taps.
+- If you extend the project, prefer existing responsive CSS variables, media-query patterns, and the `data-i18n-*` translation mechanism over hard-coded absolute layouts.
 
 ## Repository Map
 - `index.html`: main UI shell and static markup.
