@@ -293,6 +293,16 @@
     display: flex;
 }
 
+#time-display-settings-modal .timer-modal-header h2 {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-right: 12px;
+}
+
+#time-display-settings-modal .timer-modal-header h2 .help-inline-text {
+    min-width: 0;
+}
+
 /* Tab Navigation Styles */
 .timer-tab-nav {
     display: flex;
