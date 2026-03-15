@@ -2038,14 +2038,15 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     transform: translateX(-50%);
     width: var(--floating-control-size);
     height: var(--floating-control-size);
-    background-color: var(--theme-color);
+    --floating-handle-bg: var(--theme-color);
+    background-color: var(--floating-handle-bg);
     border-radius: 50%;
     cursor: grab;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    transition: all 0.2s ease;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
 }
 
 .rotate-handle:hover {
@@ -2063,14 +2064,15 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     top: -40px;
     width: var(--floating-control-size);
     height: var(--floating-control-size);
-    background-color: var(--theme-color);
+    --floating-handle-bg: var(--theme-color);
+    background-color: var(--floating-handle-bg);
     border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    transition: all 0.2s ease;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
     z-index: 10;
 }
 
@@ -2094,7 +2096,8 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .flip-handle.active {
-    background-color: #34C759;
+    --floating-handle-bg: #34C759;
+    background-color: var(--floating-handle-bg);
 }
 
 .flip-handle::after {
@@ -2104,13 +2107,13 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     left: 50%;
     width: 2px;
     height: var(--handle-connector-height);
-    background-color: var(--theme-color);
+    background-color: var(--floating-handle-bg);
     transform: translateX(-50%);
     pointer-events: none;
 }
 
 .flip-handle.active::after {
-    background-color: #34C759;
+    background-color: var(--floating-handle-bg);
 }
 
 /* Selection transform handles (rotate 90, flip) */
@@ -2119,14 +2122,15 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     top: -40px;
     width: var(--floating-control-size);
     height: var(--floating-control-size);
-    background-color: var(--theme-color);
+    --floating-handle-bg: var(--theme-color);
+    background-color: var(--floating-handle-bg);
     border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    transition: all 0.2s ease;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
     z-index: 10;
     pointer-events: all;
 }
@@ -2157,7 +2161,7 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     left: 50%;
     width: 2px;
     height: var(--handle-connector-height);
-    background-color: var(--theme-color);
+    background-color: var(--floating-handle-bg);
     transform: translateX(-50%);
     pointer-events: none;
 }
@@ -2239,8 +2243,25 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: background-color 0.12s ease, color 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
     color: #333;
+}
+
+#selection-rotate-handle {
+    --floating-handle-bg: #0A84FF;
+}
+
+#selection-rotate90-handle {
+    --floating-handle-bg: #FF9500;
+}
+
+#selection-flip-h-handle,
+#flip-horizontal-handle {
+    --floating-handle-bg: #34C759;
+}
+
+#flip-vertical-handle {
+    --floating-handle-bg: #AF52DE;
 }
 
 .rotate-handle svg,

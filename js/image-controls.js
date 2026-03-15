@@ -386,37 +386,28 @@ class ImageControls {
         const rowSpan = floatingSize * 3 + floatingGap * 2;
         const doubleSpan = floatingSize * 2 + floatingGap;
         const centerX = safeWidth / 2;
-        const stackX = this.clamp(
-            safeWidth - (floatingSize / 2) - inset,
-            floatingSize / 2,
-            Math.max(floatingSize / 2, safeWidth - (floatingSize / 2))
-        );
-
-        let positions;
+        let leftPosition;
+        let centerPosition;
+        let rightPosition;
         if (safeWidth >= rowSpan + inset * 2) {
-            positions = [
-                { left: centerX - (floatingSize + floatingGap), top: outsideTop },
-                { left: centerX, top: outsideTop },
-                { left: centerX + (floatingSize + floatingGap), top: outsideTop }
-            ];
+            leftPosition = { left: centerX - (floatingSize + floatingGap), top: outsideTop };
+            centerPosition = { left: centerX, top: outsideTop };
+            rightPosition = { left: centerX + (floatingSize + floatingGap), top: outsideTop };
         } else if (safeWidth >= doubleSpan + inset * 2) {
-            positions = [
-                { left: centerX, top: outsideTop },
-                { left: centerX - ((floatingSize + floatingGap) / 2), top: insideTop },
-                { left: centerX + ((floatingSize + floatingGap) / 2), top: insideTop }
-            ];
+            centerPosition = { left: centerX, top: outsideTop };
+            leftPosition = { left: centerX - ((floatingSize + floatingGap) / 2), top: insideTop };
+            rightPosition = { left: centerX + ((floatingSize + floatingGap) / 2), top: insideTop };
         } else {
-            positions = [
-                { left: stackX, top: insideTop },
-                { left: stackX, top: insideTop + floatingSize + floatingGap },
-                { left: stackX, top: insideTop + (floatingSize + floatingGap) * 2 }
-            ];
+            const sideOffset = this.clamp(floatingSize * 0.75, floatingSize * 0.55, Math.max(floatingSize * 0.75, (safeWidth / 2) - (floatingSize / 2)));
+            centerPosition = { left: centerX, top: insideTop };
+            leftPosition = { left: this.clamp(centerX - sideOffset, floatingSize / 2, safeWidth - floatingSize / 2), top: insideTop + floatingSize + floatingGap };
+            rightPosition = { left: this.clamp(centerX + sideOffset, floatingSize / 2, safeWidth - floatingSize / 2), top: insideTop + floatingSize + floatingGap };
         }
 
         [
-            { element: this.rotateHandle, position: positions[0] },
-            { element: this.flipHorizontalHandle, position: positions[1] },
-            { element: this.flipVerticalHandle, position: positions[2] }
+            { element: this.flipHorizontalHandle, position: leftPosition },
+            { element: this.rotateHandle, position: centerPosition },
+            { element: this.flipVerticalHandle, position: rightPosition }
         ].forEach(({ element, position }) => {
             if (!element || !position) return;
 

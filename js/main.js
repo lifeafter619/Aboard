@@ -394,6 +394,12 @@ class DrawingBoard {
                 selector: '#help-modal .help-modal-content',
                 minWidth: 420,
                 minHeight: 320
+            },
+            {
+                key: 'announcementModal',
+                selector: '#announcement-modal .announcement-modal-content',
+                minWidth: 420,
+                minHeight: 280
             }
         ];
     }
@@ -486,7 +492,7 @@ class DrawingBoard {
 
     syncResizableModalState(target) {
         const content = typeof target === 'string'
-            ? document.querySelector(`#${target} .settings-modal-content, #${target} .timer-modal-content, #${target} .random-picker-modal-content, #${target} .help-modal-content`)
+            ? document.querySelector(`#${target} .settings-modal-content, #${target} .timer-modal-content, #${target} .random-picker-modal-content, #${target} .help-modal-content, #${target} .announcement-modal-content`)
             : target;
         if (!content) {
             return;
@@ -930,6 +936,7 @@ class DrawingBoard {
         
         // Recalculate fit scale and re-center the canvas
         this.recalculateAndRecenterCanvas();
+        this.syncInteractiveOverlays();
     }
     
     setupEventListeners() {
@@ -1451,6 +1458,7 @@ class DrawingBoard {
         // Debounce resize handler for better performance
         let resizeTimeout;
         window.addEventListener('resize', () => {
+            this.syncInteractiveOverlays();
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(() => {
                 // Recalculate fit scale and re-center canvas for new viewport size
@@ -1466,6 +1474,7 @@ class DrawingBoard {
                 this.repositionModalsOnResize();
                 // Keep the adaptive default eraser size aligned with the current viewport.
                 this.refreshAdaptiveEraserSize();
+                this.syncInteractiveOverlays();
             }, 150); // 150ms debounce delay
         });
         
@@ -3073,7 +3082,7 @@ class DrawingBoard {
             const isConfigArea = this.draggedElement.id === 'config-area';
             const isTimeDisplayArea = this.draggedElement.id === 'time-display-area';
             const isFeatureArea = this.draggedElement.id === 'feature-area';
-            const shouldApplyVerticalLive = isToolbar || isConfigArea || isTimeDisplayArea || isFeatureArea;
+            const shouldApplyVerticalLive = isConfigArea || isTimeDisplayArea || isFeatureArea;
             
             let snappedToEdge = false;
             let isVertical = false;
@@ -3086,10 +3095,10 @@ class DrawingBoard {
             const currentHeight = currentRect.height;
             
             if (this.settingsManager.edgeSnapEnabled) {
-                const keepSnapLeft = this.dragSnapSide === 'left' && clientX <= edgeUnsnapDistance;
-                const keepSnapRight = this.dragSnapSide === 'right' && clientX >= windowWidth - edgeUnsnapDistance;
-                const canSnapLeft = clientX <= edgeSnapDistance;
-                const canSnapRight = clientX >= windowWidth - edgeSnapDistance;
+                const keepSnapLeft = this.dragSnapSide === 'left' && x <= edgeUnsnapDistance;
+                const keepSnapRight = this.dragSnapSide === 'right' && (x + currentWidth) >= windowWidth - edgeUnsnapDistance;
+                const canSnapLeft = x <= edgeSnapDistance;
+                const canSnapRight = (x + currentWidth) >= windowWidth - edgeSnapDistance;
                 
                 // Use explicit left/right snap state hysteresis to avoid oscillation near edge thresholds
                 if (keepSnapLeft || canSnapLeft) {
@@ -3169,31 +3178,15 @@ class DrawingBoard {
                 // Mark toolbar as user-positioned to prevent auto-repositioning
                 if (this.draggedElement.id === 'toolbar') {
                     this.draggedElement.classList.add('user-positioned');
-                    let toolbarLayoutChanged = false;
                     if (this.settingsManager.edgeSnapEnabled) {
                         const rect = this.draggedElement.getBoundingClientRect();
                         const nearLeftEdge = rect.left <= EDGE_SNAP_DISTANCE;
                         const nearRightEdge = (window.innerWidth - rect.right) <= EDGE_SNAP_DISTANCE;
-                        if (nearLeftEdge || nearRightEdge) {
-                            this.draggedElement.classList.add('vertical');
-                            toolbarLayoutChanged = true;
-                            if (nearLeftEdge) {
-                                this.draggedElement.style.left = `${PANEL_EDGE_MARGIN}px`;
-                            } else {
-                                const newRect = this.draggedElement.getBoundingClientRect();
-                                this.draggedElement.style.left = `${window.innerWidth - newRect.width - PANEL_EDGE_MARGIN}px`;
-                            }
-                            const snappedRect = this.draggedElement.getBoundingClientRect();
-                            this.draggedElementWidth = snappedRect.width;
-                            this.draggedElementHeight = snappedRect.height;
-                        } else {
-                            this.draggedElement.classList.remove('vertical');
-                            toolbarLayoutChanged = true;
+                        if (nearLeftEdge) {
+                            this.draggedElement.style.left = `${PANEL_EDGE_MARGIN}px`;
+                        } else if (nearRightEdge) {
+                            this.draggedElement.style.left = `${window.innerWidth - rect.width - PANEL_EDGE_MARGIN}px`;
                         }
-                    }
-                    if (toolbarLayoutChanged) {
-                        this.settingsManager.updateToolbarSize();
-                        this.positionConfigArea();
                     }
                 }
                 
@@ -4224,6 +4217,8 @@ class DrawingBoard {
         if (updateConfigScale) {
             this.updateConfigAreaScale();
         }
+
+        this.syncInteractiveOverlays();
     }
 
     revealToolbar() {
@@ -5548,6 +5543,16 @@ class DrawingBoard {
             // Ensure children don't have conflicting transforms
             this.canvas.style.transform = 'none';
             this.bgCanvas.style.transform = 'none';
+        }
+
+        this.syncInteractiveOverlays();
+    }
+
+    syncInteractiveOverlays() {
+        this.selectionManager?.updateControlBox?.();
+        this.strokeControls?.updateControlBox?.();
+        if (this.imageControls?.isActive) {
+            this.imageControls.updateControlBox();
         }
     }
     

@@ -8,6 +8,7 @@ class PWAManager {
         this.statusIndicator = null;
         this.statusText = null;
         this.installBtn = null;
+        this.shouldReloadOnControllerChange = false;
 
         // Announcement modal elements
         this.announcementStatusContainer = null;
@@ -314,7 +315,7 @@ class PWAManager {
                 // Handle controller change (reload page when new SW takes control)
                 let refreshing = false;
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    if (!refreshing) {
+                    if (!refreshing && this.shouldReloadOnControllerChange) {
                         refreshing = true;
                         window.location.reload();
                     }
@@ -386,6 +387,7 @@ class PWAManager {
         updateBtn.className = 'confirm-btn ok-btn';
         updateBtn.textContent = this.getTranslation('update');
         updateBtn.onclick = () => {
+            this.shouldReloadOnControllerChange = true;
             worker.postMessage({ type: 'SKIP_WAITING' });
             modal.classList.remove('show');
         };

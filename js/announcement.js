@@ -60,6 +60,14 @@ class AnnouncementManager {
     
     showModal() {
         if (!window.i18n) return;
+
+        if (window.drawingBoard?.syncResizableModalState) {
+            window.drawingBoard.syncResizableModalState('announcement-modal');
+        } else {
+            window.setTimeout(() => {
+                window.drawingBoard?.syncResizableModalState?.('announcement-modal');
+            }, 0);
+        }
         
         // Set title and content from i18n
         this.titleElement.textContent = window.i18n.t('settings.announcement.title');
