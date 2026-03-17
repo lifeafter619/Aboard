@@ -1928,6 +1928,104 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     margin-top: 15px;
 }
 
+#coordinate-tools-group {
+    margin-top: 12px;
+}
+
+.coordinate-tool-toggles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.coordinate-tool-toggles .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.coordinate-action-buttons {
+    margin-top: 10px;
+}
+
+.coordinate-hint-line {
+    margin: 8px 0 0;
+}
+
+.coordinate-point-count {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #666;
+}
+
+.coordinate-plot-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 8px;
+}
+
+#coordinate-expression-input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.coordinate-plot-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.coordinate-plot-item,
+.coordinate-empty-state {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #f7f7f7;
+    font-size: 13px;
+}
+
+.coordinate-plot-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+
+.coordinate-plot-expression {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.coordinate-plot-remove {
+    border: none;
+    background: transparent;
+    color: #999;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+.coordinate-plot-remove:hover {
+    color: #e11d48;
+}
+
 /* Image Controls Overlay */
 .image-controls-overlay {
     position: fixed;

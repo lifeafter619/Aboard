@@ -462,6 +462,7 @@ class I18n {
             'english-lines': 'background.english4line',
             'music-staff': 'background.musicStaff',
             'coordinate': 'background.coordinate',
+            'polar': 'background.polar',
             'image': 'background.upload'
         };
         
@@ -1016,6 +1017,7 @@ class I18n {
             'english-lines': 'background.english4line',
             'music-staff': 'background.musicStaff',
             'coordinate': 'background.coordinate',
+            'polar': 'background.polar',
             'image': 'background.image'
         };
         

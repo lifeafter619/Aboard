@@ -169,6 +169,7 @@ class DrawingBoard {
         // Coordinate origin dragging state
         this.isDraggingCoordinateOrigin = false;
         this.isCoordinateOriginDragMode = false; // Mode activated by button click
+        this.isCoordinatePointMode = false;
         this.coordinateOriginDragStart = { x: 0, y: 0 };
         
         // Uploaded images storage
@@ -1028,8 +1029,20 @@ class DrawingBoard {
                 }
             }
             
+            if (this.isCoordinatePointMode && this.backgroundManager.supportsMovableOrigin()) {
+                const rect = this.bgCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                this.backgroundManager.addCoordinatePoint(x, y);
+                this.savePageBackground(this.currentPage);
+                this.updateBackgroundUI();
+                this.showCoordinateToast('background.pointAdded', '已添加坐标点', 'success');
+                return;
+            }
+
             // Check if clicking on coordinate origin point (in coordinate origin drag mode or background mode)
-            if (this.backgroundManager.backgroundPattern === 'coordinate') {
+            if (this.backgroundManager.supportsMovableOrigin()) {
                 const rect = this.bgCanvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
@@ -1197,7 +1210,7 @@ class DrawingBoard {
         this.canvas.addEventListener('dblclick', (e) => {
             // In pan mode, double-click to select coordinate origin
             if (this.drawingEngine.currentTool === 'pan' && 
-                this.backgroundManager.backgroundPattern === 'coordinate') {
+                this.backgroundManager.supportsMovableOrigin()) {
                 const rect = this.bgCanvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
@@ -1587,28 +1600,11 @@ class DrawingBoard {
                     document.getElementById('bg-image-upload').click();
                 } else {
                     this.backgroundManager.setBackgroundPattern(pattern);
-                    document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(b => b.classList.remove('active'));
-                    e.currentTarget.classList.add('active');
-                    document.getElementById('image-size-group').style.display = 'none';
-                    
-                    // Show/hide pattern density slider based on pattern
-                    const patternDensityGroup = document.getElementById('pattern-density-group');
-                    const moveOriginBtn = document.getElementById('move-origin-btn');
-                    if (pattern !== 'blank' && pattern !== 'image') {
-                        patternDensityGroup.style.display = 'flex';
-                        // Only show move-origin-btn for coordinate pattern
-                        if (moveOriginBtn) {
-                            moveOriginBtn.style.display = pattern === 'coordinate' ? 'inline-flex' : 'none';
-                        }
-                    } else {
-                        patternDensityGroup.style.display = 'none';
-                        if (moveOriginBtn) {
-                            moveOriginBtn.style.display = 'none';
-                        }
-                    }
+                    this.updateBackgroundUI();
 
-                    if (pattern !== 'coordinate') {
+                    if (!this.backgroundManager.supportsMovableOrigin(pattern)) {
                         this.disableCoordinateOriginDragMode();
+                        this.setCoordinatePointMode(false);
                     }
                     
                     // Save page background in paginated mode
@@ -1631,11 +1627,8 @@ class DrawingBoard {
                     this.imageControls.resetConfirmation();
                     
                     await this.backgroundManager.setBackgroundImage(imageData);
-                    document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(b => b.classList.remove('active'));
-                    document.querySelector('.pattern-option-btn[data-pattern="image"]').classList.add('active');
-                    document.getElementById('image-size-group').style.display = 'flex';
-                    // Hide pattern density when image is uploaded
-                    document.getElementById('pattern-density-group').style.display = 'none';
+                    this.updateBackgroundUI();
+                    this.setCoordinatePointMode(false);
                     
                     // Save uploaded image
                     this.saveUploadedImage(imageData);
@@ -1770,6 +1763,7 @@ class DrawingBoard {
                 if (isActive) {
                     this.disableCoordinateOriginDragMode();
                 } else {
+                    this.setCoordinatePointMode(false);
                     // Enable coordinate origin drag mode
                     moveOriginBtn.classList.add('active');
                     this.isCoordinateOriginDragMode = true;
@@ -1777,6 +1771,98 @@ class DrawingBoard {
                     // Change cursor to indicate dragging is available
                     this.canvas.style.cursor = 'move';
                 }
+            });
+        }
+
+        const bindCoordinateOverlayCheckbox = (id, key) => {
+            const checkbox = document.getElementById(id);
+            if (!checkbox) return;
+            checkbox.addEventListener('change', (e) => {
+                this.backgroundManager.updateCoordinateOverlayOptions({ [key]: e.target.checked });
+                this.savePageBackground(this.currentPage);
+                this.updateBackgroundUI();
+            });
+        };
+
+        bindCoordinateOverlayCheckbox('coordinate-show-ticks', 'showTicks');
+        bindCoordinateOverlayCheckbox('coordinate-show-labels', 'showLabels');
+        bindCoordinateOverlayCheckbox('coordinate-show-point-labels', 'showPointLabels');
+        bindCoordinateOverlayCheckbox('coordinate-connect-points', 'connectPoints');
+        bindCoordinateOverlayCheckbox('coordinate-snap-grid', 'snapToGrid');
+
+        const coordinateAddPointBtn = document.getElementById('coordinate-add-point-btn');
+        if (coordinateAddPointBtn) {
+            coordinateAddPointBtn.addEventListener('click', () => {
+                const nextEnabled = !this.isCoordinatePointMode;
+                this.setCoordinatePointMode(nextEnabled);
+                if (nextEnabled) {
+                    this.showCoordinateToast('background.coordinateStatusAddPoint', '取点模式已开启，点击画布添加坐标点');
+                } else {
+                    this.showCoordinateToast('background.coordinateStatusAddPointOff', '取点模式已关闭');
+                }
+            });
+        }
+
+        const coordinateClearPointsBtn = document.getElementById('coordinate-clear-points-btn');
+        if (coordinateClearPointsBtn) {
+            coordinateClearPointsBtn.addEventListener('click', () => {
+                this.backgroundManager.clearCoordinatePoints();
+                this.savePageBackground(this.currentPage);
+                this.updateBackgroundUI();
+                this.showCoordinateToast('background.pointsCleared', '坐标点已清空', 'success');
+            });
+        }
+
+        const coordinateClearPlotsBtn = document.getElementById('coordinate-clear-plots-btn');
+        if (coordinateClearPlotsBtn) {
+            coordinateClearPlotsBtn.addEventListener('click', () => {
+                this.backgroundManager.clearCoordinatePlots(this.backgroundManager.backgroundPattern);
+                this.savePageBackground(this.currentPage);
+                this.updateBackgroundUI();
+                this.showCoordinateToast('background.plotsCleared', '函数图像已清空', 'success');
+            });
+        }
+
+        const coordinatePlotBtn = document.getElementById('coordinate-plot-btn');
+        const coordinateExpressionInput = document.getElementById('coordinate-expression-input');
+        const addCoordinatePlot = () => {
+            const expression = coordinateExpressionInput?.value?.trim();
+            if (!expression || !this.backgroundManager.supportsMovableOrigin()) return;
+
+            try {
+                this.backgroundManager.addCoordinatePlot(expression, this.backgroundManager.backgroundPattern);
+                coordinateExpressionInput.value = '';
+                this.savePageBackground(this.currentPage);
+                this.updateBackgroundUI();
+                this.showCoordinateToast('background.plotAdded', '函数图像已添加', 'success');
+            } catch (error) {
+                console.error('Failed to add coordinate plot:', error);
+                this.showCoordinateToast('background.plotError', '表达式无效，无法绘制', 'error');
+            }
+        };
+
+        if (coordinatePlotBtn) {
+            coordinatePlotBtn.addEventListener('click', addCoordinatePlot);
+        }
+
+        if (coordinateExpressionInput) {
+            coordinateExpressionInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCoordinatePlot();
+                }
+            });
+        }
+
+        const coordinatePlotList = document.getElementById('coordinate-plot-list');
+        if (coordinatePlotList) {
+            coordinatePlotList.addEventListener('click', (e) => {
+                const removeBtn = e.target.closest('[data-plot-remove]');
+                if (!removeBtn) return;
+
+                this.backgroundManager.removeCoordinatePlot(removeBtn.dataset.plotRemove);
+                this.savePageBackground(this.currentPage);
+                this.updateBackgroundUI();
             });
         }
         
@@ -3401,6 +3487,9 @@ class DrawingBoard {
         if (this.isCoordinateOriginDragMode && tool !== 'background') {
             this.disableCoordinateOriginDragMode({ keepCursor: true });
         }
+        if (this.isCoordinatePointMode && tool !== 'background') {
+            this.setCoordinatePointMode(false);
+        }
         
         // Check if we're clicking the same tool button again (toggle behavior)
         const isSameTool = (previousTool === tool);
@@ -3464,6 +3553,53 @@ class DrawingBoard {
             // For other tools (like pan, select), just hide panels
             configArea.classList.remove('show');
             featureArea.classList.remove('show');
+        }
+    }
+
+    showCoordinateToast(i18nKey, fallback, type = 'info') {
+        const message = window.i18n ? window.i18n.t(i18nKey) : fallback;
+        this.settingsManager?.toastManager?.show(message === i18nKey ? fallback : message, type);
+    }
+
+    escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    setCoordinatePointMode(enabled) {
+        this.isCoordinatePointMode = !!enabled && this.backgroundManager.supportsMovableOrigin();
+
+        const addPointBtn = document.getElementById('coordinate-add-point-btn');
+        if (addPointBtn) {
+            addPointBtn.classList.toggle('active', this.isCoordinatePointMode);
+        }
+
+        if (this.isCoordinatePointMode) {
+            if (this.drawingEngine.currentTool !== 'background') {
+                this.setTool('background');
+            }
+            this.disableCoordinateOriginDragMode({ keepCursor: true });
+            this.canvas.style.cursor = 'copy';
+        } else if (!this.isCoordinateOriginDragMode) {
+            switch (this.drawingEngine.currentTool) {
+                case 'pan':
+                    this.canvas.style.cursor = 'grab';
+                    break;
+                case 'background':
+                case 'more':
+                    this.canvas.style.cursor = 'default';
+                    break;
+                case 'eraser':
+                    this.canvas.style.cursor = 'pointer';
+                    break;
+                default:
+                    this.canvas.style.cursor = 'crosshair';
+                    break;
+            }
         }
     }
 
@@ -5163,6 +5299,9 @@ class DrawingBoard {
             bgOpacity: this.backgroundManager.bgOpacity,
             patternIntensity: this.backgroundManager.patternIntensity,
             patternDensity: this.backgroundManager.patternDensity,
+            coordinateOriginX: this.backgroundManager.coordinateOriginX,
+            coordinateOriginY: this.backgroundManager.coordinateOriginY,
+            coordinateOverlayState: this.backgroundManager.getCoordinateOverlayState(),
             backgroundImageData: this.backgroundManager.backgroundImageData,
             imageSize: this.backgroundManager.imageSize,
             // Enhanced background state
@@ -5192,6 +5331,7 @@ class DrawingBoard {
                 this.backgroundManager.coordinateOriginX = bg.coordinateOriginX;
                 this.backgroundManager.coordinateOriginY = bg.coordinateOriginY;
             }
+            this.backgroundManager.setCoordinateOverlayState(bg.coordinateOverlayState, { persist: false, redraw: false });
             if (bg.imageTransform) this.backgroundManager.imageTransform = bg.imageTransform;
             if (typeof bg.gifLoopCount !== 'undefined') this.backgroundManager.gifLoopCount = bg.gifLoopCount;
             if (typeof bg.backgroundOutsideLayerOrder !== 'undefined') {
@@ -5215,10 +5355,41 @@ class DrawingBoard {
         } else {
             // Use default/global background settings
             this.backgroundManager.drawBackground();
+            this.updateBackgroundUI();
         }
+    }
+
+    renderCoordinatePlotList(currentPattern) {
+        const plotList = document.getElementById('coordinate-plot-list');
+        if (!plotList) return;
+
+        const activePlots = this.backgroundManager
+            .getCoordinateOverlayState()
+            .plots
+            .filter(plot => plot.coordinateType === currentPattern);
+
+        if (activePlots.length === 0) {
+            const emptyText = window.i18n ? window.i18n.t('background.noPlots') : '暂无函数图像';
+            plotList.innerHTML = `<div class="coordinate-empty-state">${emptyText}</div>`;
+            return;
+        }
+
+        const deleteTitle = window.i18n ? window.i18n.t('selection.delete') : '删除';
+        plotList.innerHTML = activePlots.map(plot => `
+            <div class="coordinate-plot-item">
+                <span class="coordinate-plot-color" style="background:${plot.color};"></span>
+                <span class="coordinate-plot-expression">${plot.coordinateType === 'polar' ? 'r = ' : 'y = '}${this.escapeHtml(plot.expression)}</span>
+                <button type="button" class="coordinate-plot-remove" data-plot-remove="${this.escapeHtml(plot.id)}" title="${this.escapeHtml(deleteTitle)}">×</button>
+            </div>
+        `).join('');
     }
     
     updateBackgroundUI() {
+        const currentPattern = this.backgroundManager.backgroundPattern;
+        const activeUploadedImage = currentPattern === 'image'
+            ? this.uploadedImages.find(image => image.data === this.backgroundManager.backgroundImageData)
+            : null;
+
         // Update background color buttons
         document.querySelectorAll('.color-btn[data-bg-color]').forEach(btn => {
             if (btn.dataset.bgColor === this.backgroundManager.backgroundColor) {
@@ -5230,20 +5401,122 @@ class DrawingBoard {
         
         // Update pattern buttons
         document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(btn => {
-            if (btn.dataset.pattern === this.backgroundManager.backgroundPattern) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
+            const isPatternMatch = btn.dataset.pattern && btn.dataset.pattern === currentPattern;
+            const isUploadedMatch = activeUploadedImage && btn.dataset.imageId === activeUploadedImage.id;
+            btn.classList.toggle('active', !!(isPatternMatch || isUploadedMatch));
         });
         
         // Update custom color picker
-        document.getElementById('custom-bg-color-picker').value = this.backgroundManager.backgroundColor;
+        const customBgColorPicker = document.getElementById('custom-bg-color-picker');
+        if (customBgColorPicker) {
+            customBgColorPicker.value = this.backgroundManager.backgroundColor;
+        }
+
+        const patternDensitySlider = document.getElementById('pattern-density-slider');
+        const patternDensityValue = document.getElementById('pattern-density-value');
+        if (patternDensitySlider && patternDensityValue) {
+            const densityPercent = Math.round((this.backgroundManager.patternDensity ?? 1) * 100);
+            patternDensitySlider.value = densityPercent;
+            patternDensityValue.textContent = densityPercent;
+        }
+
+        const bgImageSizeSlider = document.getElementById('bg-image-size-slider');
+        const bgImageSizeValue = document.getElementById('bg-image-size-value');
+        if (bgImageSizeSlider && bgImageSizeValue) {
+            const sizePercent = Math.round((this.backgroundManager.imageSize ?? 1) * 100);
+            bgImageSizeSlider.value = sizePercent;
+            bgImageSizeValue.textContent = sizePercent;
+        }
+
+        const bgOpacitySlider = document.getElementById('bg-opacity-slider');
+        const bgOpacityValue = document.getElementById('bg-opacity-value');
+        const bgOpacityInput = document.getElementById('bg-opacity-input');
+        if (bgOpacitySlider && bgOpacityValue && bgOpacityInput) {
+            const opacityPercent = Math.round((this.backgroundManager.bgOpacity ?? 1) * 100);
+            bgOpacitySlider.value = opacityPercent;
+            bgOpacityValue.textContent = opacityPercent;
+            bgOpacityInput.value = opacityPercent;
+        }
+
+        const patternIntensitySlider = document.getElementById('pattern-intensity-slider');
+        const patternIntensityValue = document.getElementById('pattern-intensity-value');
+        const patternIntensityInput = document.getElementById('pattern-intensity-input');
+        if (patternIntensitySlider && patternIntensityValue && patternIntensityInput) {
+            const intensityPercent = Math.round((this.backgroundManager.patternIntensity ?? 0.5) * 100);
+            patternIntensitySlider.value = intensityPercent;
+            patternIntensityValue.textContent = intensityPercent;
+            patternIntensityInput.value = intensityPercent;
+        }
+
+        const patternDensityGroup = document.getElementById('pattern-density-group');
+        if (patternDensityGroup) {
+            patternDensityGroup.style.display = currentPattern !== 'blank' && currentPattern !== 'image' ? 'flex' : 'none';
+        }
+
+        const imageSizeGroup = document.getElementById('image-size-group');
+        if (imageSizeGroup) {
+            imageSizeGroup.style.display = currentPattern === 'image' ? 'flex' : 'none';
+        }
+
+        const coordinateToolsGroup = document.getElementById('coordinate-tools-group');
+        const coordinateState = this.backgroundManager.getCoordinateOverlayState();
+        const supportsCoordinateTools = this.backgroundManager.supportsMovableOrigin(currentPattern);
+
+        if (coordinateToolsGroup) {
+            coordinateToolsGroup.style.display = supportsCoordinateTools ? 'block' : 'none';
+        }
+
+        const toggleMap = {
+            'coordinate-show-ticks': coordinateState.showTicks,
+            'coordinate-show-labels': coordinateState.showLabels,
+            'coordinate-show-point-labels': coordinateState.showPointLabels,
+            'coordinate-connect-points': coordinateState.connectPoints,
+            'coordinate-snap-grid': coordinateState.snapToGrid
+        };
+
+        Object.entries(toggleMap).forEach(([id, value]) => {
+            const checkbox = document.getElementById(id);
+            if (checkbox) {
+                checkbox.checked = !!value;
+            }
+        });
+
+        const pointCountValue = document.getElementById('coordinate-point-count-value');
+        if (pointCountValue) {
+            pointCountValue.textContent = coordinateState.points.length;
+        }
+
+        const coordinatePlotHint = document.getElementById('coordinate-plot-hint');
+        if (coordinatePlotHint) {
+            const hintKey = currentPattern === 'polar' ? 'background.plotHintPolar' : 'background.plotHintCartesian';
+            const fallback = currentPattern === 'polar'
+                ? '极坐标：输入 r = f(theta)，theta 为弧度，deg 为角度'
+                : '直角坐标：输入 y = f(x)，可用 sin cos PI';
+            const translated = window.i18n ? window.i18n.t(hintKey) : fallback;
+            coordinatePlotHint.textContent = translated === hintKey ? fallback : translated;
+        }
+
+        const coordinateExpressionInput = document.getElementById('coordinate-expression-input');
+        if (coordinateExpressionInput) {
+            const placeholderKey = currentPattern === 'polar'
+                ? 'background.plotPlaceholderPolar'
+                : 'background.plotPlaceholderCartesian';
+            const fallback = currentPattern === 'polar' ? '如：2 * sin(4 * theta)' : '如：sin(x) + 2';
+            const translated = window.i18n ? window.i18n.t(placeholderKey) : fallback;
+            coordinateExpressionInput.placeholder = translated === placeholderKey ? fallback : translated;
+        }
+
+        this.renderCoordinatePlotList(currentPattern);
         
         // Update move-origin-btn visibility based on current pattern
         const moveOriginBtn = document.getElementById('move-origin-btn');
         if (moveOriginBtn) {
-            moveOriginBtn.style.display = this.backgroundManager.backgroundPattern === 'coordinate' ? 'inline-flex' : 'none';
+            moveOriginBtn.style.display = this.backgroundManager.supportsMovableOrigin(currentPattern) ? 'inline-flex' : 'none';
+        }
+
+        if (!this.backgroundManager.supportsMovableOrigin(currentPattern)) {
+            this.disableCoordinateOriginDragMode();
+            this.setCoordinatePointMode(false);
         }
     }
     
@@ -5626,10 +5899,7 @@ class DrawingBoard {
             btn.addEventListener('click', async () => {
                 this.imageControls.resetConfirmation();
                 await this.backgroundManager.setBackgroundImage(image.data);
-                document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                document.getElementById('image-size-group').style.display = 'flex';
-                document.getElementById('pattern-density-group').style.display = 'none';
+                this.updateBackgroundUI();
                 const imgData = this.backgroundManager.getImageData();
                 if (imgData) {
                     this.imageControls.showControls(imgData);
@@ -5657,6 +5927,7 @@ class DrawingBoard {
     stopDraggingCoordinateOrigin() {
         if (this.isDraggingCoordinateOrigin) {
             this.isDraggingCoordinateOrigin = false;
+            this.savePageBackground(this.currentPage);
             // Restore cursor based on current tool or mode
             if (this.isCoordinateOriginDragMode) {
                 this.canvas.style.cursor = 'move';
@@ -5701,6 +5972,9 @@ class DrawingBoard {
                 bgOpacity: this.backgroundManager.bgOpacity,
                 patternIntensity: this.backgroundManager.patternIntensity,
                 patternDensity: this.backgroundManager.patternDensity,
+                coordinateOriginX: this.backgroundManager.coordinateOriginX,
+                coordinateOriginY: this.backgroundManager.coordinateOriginY,
+                coordinateOverlayState: this.backgroundManager.getCoordinateOverlayState(),
                 imageSize: this.backgroundManager.imageSize,
                 backgroundImageData: this.backgroundManager.backgroundImageData,
                 backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder || 1,
@@ -5813,10 +6087,15 @@ class DrawingBoard {
                 if (settings.pageBackgrounds) this.pageBackgrounds = settings.pageBackgrounds;
                 if (settings.backgroundColor) this.backgroundManager.backgroundColor = settings.backgroundColor;
                 if (settings.backgroundPattern) this.backgroundManager.backgroundPattern = settings.backgroundPattern;
-                if (settings.bgOpacity) this.backgroundManager.bgOpacity = settings.bgOpacity;
-                if (settings.patternIntensity) this.backgroundManager.patternIntensity = settings.patternIntensity;
-                if (settings.patternDensity) this.backgroundManager.patternDensity = settings.patternDensity;
-                if (settings.imageSize) this.backgroundManager.imageSize = settings.imageSize;
+                if (typeof settings.bgOpacity !== 'undefined') this.backgroundManager.bgOpacity = settings.bgOpacity;
+                if (typeof settings.patternIntensity !== 'undefined') this.backgroundManager.patternIntensity = settings.patternIntensity;
+                if (typeof settings.patternDensity !== 'undefined') this.backgroundManager.patternDensity = settings.patternDensity;
+                if (typeof settings.coordinateOriginX !== 'undefined') {
+                    this.backgroundManager.coordinateOriginX = settings.coordinateOriginX;
+                    this.backgroundManager.coordinateOriginY = settings.coordinateOriginY;
+                }
+                this.backgroundManager.setCoordinateOverlayState(settings.coordinateOverlayState, { persist: false, redraw: false });
+                if (typeof settings.imageSize !== 'undefined') this.backgroundManager.imageSize = settings.imageSize;
                 if (settings.backgroundImageData) this.backgroundManager.backgroundImageData = settings.backgroundImageData;
                 if (settings.backgroundOutsideLayerOrder) this.backgroundManager.backgroundOutsideLayerOrder = settings.backgroundOutsideLayerOrder;
 

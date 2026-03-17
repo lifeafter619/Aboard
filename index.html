@@ -338,6 +338,7 @@
                     <button class="pattern-option-btn" data-pattern="english-lines">四线格</button>
                     <button class="pattern-option-btn" data-pattern="music-staff">五线谱</button>
                     <button class="pattern-option-btn" data-pattern="coordinate">坐标系</button>
+                    <button class="pattern-option-btn" data-pattern="polar">极坐标</button>
                     <button class="pattern-option-btn" data-pattern="image" id="image-pattern-btn">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 2px;">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -386,6 +387,30 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            <div class="config-group config-group-compact" id="coordinate-tools-group" style="display: none;">
+                <label data-i18n="background.coordinateTools">坐标辅助</label>
+                <div class="coordinate-tool-toggles">
+                    <label class="checkbox-label"><input type="checkbox" id="coordinate-show-ticks" checked><span data-i18n="background.showTicks">显示刻度</span></label>
+                    <label class="checkbox-label"><input type="checkbox" id="coordinate-show-labels" checked><span data-i18n="background.showLabels">显示标签</span></label>
+                    <label class="checkbox-label"><input type="checkbox" id="coordinate-show-point-labels" checked><span data-i18n="background.showPointLabels">显示点标签</span></label>
+                    <label class="checkbox-label"><input type="checkbox" id="coordinate-connect-points" checked><span data-i18n="background.connectPoints">点间连线</span></label>
+                    <label class="checkbox-label"><input type="checkbox" id="coordinate-snap-grid" checked><span data-i18n="background.snapToGrid">吸附网格</span></label>
+                </div>
+                <div class="button-size-options coordinate-action-buttons">
+                    <button id="coordinate-add-point-btn" type="button" class="pattern-option-btn" data-i18n="background.addPoint">取点</button>
+                    <button id="coordinate-clear-points-btn" type="button" class="pattern-option-btn" data-i18n="background.clearPoints">清空点</button>
+                    <button id="coordinate-clear-plots-btn" type="button" class="pattern-option-btn" data-i18n="background.clearPlots">清空图像</button>
+                </div>
+                <p class="settings-hint coordinate-hint-line" data-i18n="background.addPointHint">开启后点击画布添加坐标点</p>
+                <div class="coordinate-point-count"><span data-i18n="background.pointsCount">点数</span>：<span id="coordinate-point-count-value">0</span></div>
+                <label data-i18n="background.plotExpression">函数表达式</label>
+                <div class="coordinate-plot-input-row">
+                    <input type="text" id="coordinate-expression-input" data-i18n-placeholder="background.plotPlaceholderCartesian" placeholder="如：sin(x) + 2">
+                    <button id="coordinate-plot-btn" type="button" class="pattern-option-btn" data-i18n="background.plot">绘制</button>
+                </div>
+                <p class="settings-hint coordinate-hint-line" id="coordinate-plot-hint" data-i18n="background.plotHintCartesian">直角坐标：输入 y = f(x)，可用 sin cos PI</p>
+                <div id="coordinate-plot-list" class="coordinate-plot-list"></div>
             </div>
         </div>
 
@@ -993,6 +1018,10 @@
                                 <label class="checkbox-label">
                                     <input type="checkbox" class="pattern-pref-checkbox" data-pattern="coordinate" checked>
                                     <span data-i18n="background.coordinate">坐标系</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" class="pattern-pref-checkbox" data-pattern="polar" checked>
+                                    <span data-i18n="background.polar">极坐标</span>
                                 </label>
                                 <label class="checkbox-label">
                                     <input type="checkbox" class="pattern-pref-checkbox" data-pattern="image" checked>

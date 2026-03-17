@@ -68,6 +68,16 @@ class BackgroundManager {
         this.gifLoopCount = 0; // Default infinite
         this.currentGifLoop = 0;
 
+        this.coordinateOverlayCanvas = null;
+        this.coordinateOverlayCtx = null;
+        let savedCoordinateOverlayState = null;
+        try {
+            savedCoordinateOverlayState = JSON.parse(localStorage.getItem('coordinateOverlayState') || 'null');
+        } catch (error) {
+            console.warn('Failed to parse coordinate overlay state, using defaults:', error);
+        }
+        this.coordinateOverlayState = this.sanitizeCoordinateOverlayState(savedCoordinateOverlayState);
+
         // Cache the latest applied DOM state to reduce unnecessary style writes/reflows
         this.imageDomStateCache = {
             display: null,
@@ -276,6 +286,7 @@ class BackgroundManager {
         this.bgCtx.globalAlpha = 1.0;
         
         this.drawBackgroundPattern();
+        this.renderCoordinateOverlay();
         
         // Performance optimization: Avoid synchronous localStorage writes in draw loop
         // These are now handled in setters
@@ -313,6 +324,9 @@ class BackgroundManager {
                 break;
             case 'coordinate':
                 this.drawCoordinatePattern(dpr, patternColor);
+                break;
+            case 'polar':
+                this.drawPolarPattern(dpr, patternColor);
                 break;
         }
         
@@ -685,16 +699,733 @@ class BackgroundManager {
             }
         }
     }
+
+    supportsMovableOrigin(pattern = this.backgroundPattern) {
+        return pattern === 'coordinate' || pattern === 'polar';
+    }
+
+    getPatternOrigin(dpr = window.devicePixelRatio || 1) {
+        return {
+            centerX: (this.bgCanvas.width / 2) + (this.coordinateOriginX * dpr),
+            centerY: (this.bgCanvas.height / 2) + (this.coordinateOriginY * dpr)
+        };
+    }
+
+    getAdaptivePatternColor(opacityMultiplier = 1, minOpacity = 0) {
+        const alpha = Math.max(minOpacity, Math.min(this.patternIntensity * opacityMultiplier, 1));
+        return this.isLightBackground()
+            ? `rgba(0, 0, 0, ${alpha})`
+            : `rgba(255, 255, 255, ${alpha})`;
+    }
+
+    drawOriginPoint(centerX, centerY, dpr, fillColor = this.getPatternColor()) {
+        this.bgCtx.fillStyle = fillColor;
+        this.bgCtx.beginPath();
+        this.bgCtx.arc(centerX, centerY, 5 * dpr, 0, Math.PI * 2);
+        this.bgCtx.fill();
+        this.bgCtx.strokeStyle = this.backgroundColor;
+        this.bgCtx.lineWidth = 2 * dpr;
+        this.bgCtx.stroke();
+    }
+
+    getRayEndpoint(centerX, centerY, angleRad) {
+        const directionX = Math.cos(angleRad);
+        const directionY = -Math.sin(angleRad);
+        const intersections = [];
+
+        if (Math.abs(directionX) > 1e-6) {
+            intersections.push((0 - centerX) / directionX);
+            intersections.push((this.bgCanvas.width - centerX) / directionX);
+        }
+
+        if (Math.abs(directionY) > 1e-6) {
+            intersections.push((0 - centerY) / directionY);
+            intersections.push((this.bgCanvas.height - centerY) / directionY);
+        }
+
+        const validDistances = intersections.filter(distance => distance > 0);
+        const distance = validDistances.length > 0 ? Math.min(...validDistances) : 0;
+
+        return {
+            x: centerX + directionX * distance,
+            y: centerY + directionY * distance,
+            distance
+        };
+    }
+
+    drawArrowHead(startX, startY, endX, endY, dpr, color) {
+        const angle = Math.atan2(endY - startY, endX - startX);
+        const headSize = 10 * dpr;
+
+        this.bgCtx.save();
+        this.bgCtx.strokeStyle = color;
+        this.bgCtx.lineWidth = 2 * dpr;
+        this.bgCtx.beginPath();
+        this.bgCtx.moveTo(endX, endY);
+        this.bgCtx.lineTo(
+            endX - headSize * Math.cos(angle - Math.PI / 6),
+            endY - headSize * Math.sin(angle - Math.PI / 6)
+        );
+        this.bgCtx.moveTo(endX, endY);
+        this.bgCtx.lineTo(
+            endX - headSize * Math.cos(angle + Math.PI / 6),
+            endY - headSize * Math.sin(angle + Math.PI / 6)
+        );
+        this.bgCtx.stroke();
+        this.bgCtx.restore();
+    }
+
+    getPolarAngleStep() {
+        if (this.patternDensity >= 2.5) return 10;
+        if (this.patternDensity >= 1.6) return 15;
+        if (this.patternDensity >= 1.0) return 30;
+        if (this.patternDensity >= 0.6) return 45;
+        return 60;
+    }
+
+    getDefaultCoordinateOverlayState() {
+        return {
+            showTicks: true,
+            showLabels: true,
+            showPointLabels: true,
+            connectPoints: true,
+            snapToGrid: true,
+            points: [],
+            plots: []
+        };
+    }
+
+    sanitizeCoordinateOverlayState(state) {
+        const defaults = this.getDefaultCoordinateOverlayState();
+        const nextState = state && typeof state === 'object' ? state : {};
+
+        return {
+            ...defaults,
+            showTicks: nextState.showTicks !== false,
+            showLabels: nextState.showLabels !== false,
+            showPointLabels: nextState.showPointLabels !== false,
+            connectPoints: nextState.connectPoints !== false,
+            snapToGrid: nextState.snapToGrid !== false,
+            points: Array.isArray(nextState.points)
+                ? nextState.points
+                    .filter(point => Number.isFinite(point?.x) && Number.isFinite(point?.y))
+                    .map((point, index) => ({
+                        id: point.id || `pt-${Date.now()}-${index}`,
+                        x: this.roundToDecimals(point.x, 4),
+                        y: this.roundToDecimals(point.y, 4),
+                        color: point.color || this.getCoordinatePaletteColor(index)
+                    }))
+                : [],
+            plots: Array.isArray(nextState.plots)
+                ? nextState.plots
+                    .filter(plot => typeof plot?.expression === 'string' && plot.expression.trim())
+                    .map((plot, index) => ({
+                        id: plot.id || `plot-${Date.now()}-${index}`,
+                        expression: this.normalizePlotExpression(plot.expression, plot.coordinateType),
+                        coordinateType: plot.coordinateType === 'polar' ? 'polar' : 'coordinate',
+                        color: plot.color || this.getCoordinatePaletteColor(index + 2)
+                    }))
+                : []
+        };
+    }
+
+    persistCoordinateOverlayState() {
+        localStorage.setItem('coordinateOverlayState', JSON.stringify(this.coordinateOverlayState));
+    }
+
+    getCoordinateOverlayState() {
+        return JSON.parse(JSON.stringify(this.coordinateOverlayState));
+    }
+
+    setCoordinateOverlayState(state, options = {}) {
+        const { persist = true, redraw = true } = options;
+        this.coordinateOverlayState = this.sanitizeCoordinateOverlayState(state);
+
+        if (persist) {
+            this.persistCoordinateOverlayState();
+        }
+
+        if (redraw) {
+            this.renderCoordinateOverlay();
+        }
+    }
+
+    updateCoordinateOverlayOptions(partialState, options = {}) {
+        this.setCoordinateOverlayState({
+            ...this.coordinateOverlayState,
+            ...(partialState || {})
+        }, options);
+    }
+
+    getCoordinatePaletteColor(index = 0) {
+        const palette = ['#ef4444', '#2563eb', '#16a34a', '#d97706', '#7c3aed', '#db2777', '#0891b2'];
+        return palette[Math.abs(index) % palette.length];
+    }
+
+    roundToDecimals(value, decimals = 2) {
+        const factor = 10 ** decimals;
+        return Math.round(value * factor) / factor;
+    }
+
+    formatCoordinateValue(value, decimals = 2) {
+        if (!Number.isFinite(value)) return '';
+        let rounded = this.roundToDecimals(value, decimals);
+        if (Object.is(rounded, -0)) {
+            rounded = 0;
+        }
+        return String(rounded).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+    }
+
+    getCoordinateOverlayDpr() {
+        const logicalWidth = this.bgCanvas.clientWidth || 0;
+        if (logicalWidth > 0) {
+            return this.bgCanvas.width / logicalWidth;
+        }
+        return window.devicePixelRatio || 1;
+    }
+
+    getPatternOriginLogical(dpr = this.getCoordinateOverlayDpr()) {
+        return {
+            x: (this.bgCanvas.width / (2 * dpr)) + this.coordinateOriginX,
+            y: (this.bgCanvas.height / (2 * dpr)) + this.coordinateOriginY
+        };
+    }
+
+    getCoordinateUnitSize(pattern = this.backgroundPattern) {
+        if (pattern !== 'coordinate' && pattern !== 'polar') {
+            return 20;
+        }
+        return 20 / this.patternDensity;
+    }
+
+    mathToCanvasLogicalPoint(x, y, pattern = this.backgroundPattern) {
+        const origin = this.getPatternOriginLogical();
+        const unitSize = this.getCoordinateUnitSize(pattern);
+        return {
+            x: origin.x + x * unitSize,
+            y: origin.y - y * unitSize
+        };
+    }
+
+    canvasLogicalToMathPoint(canvasX, canvasY, options = {}) {
+        const { snap = this.coordinateOverlayState.snapToGrid, decimals = 2 } = options;
+        const origin = this.getPatternOriginLogical();
+        const unitSize = this.getCoordinateUnitSize();
+
+        let x = (canvasX - origin.x) / unitSize;
+        let y = (origin.y - canvasY) / unitSize;
+
+        if (snap) {
+            x = Math.round(x);
+            y = Math.round(y);
+        } else {
+            x = this.roundToDecimals(x, decimals);
+            y = this.roundToDecimals(y, decimals);
+        }
+
+        return { x, y };
+    }
+
+    ensureCoordinateOverlayCanvas() {
+        if (this.coordinateOverlayCanvas && document.body.contains(this.coordinateOverlayCanvas)) {
+            return this.coordinateOverlayCanvas;
+        }
+
+        const transformLayer = document.getElementById('transform-layer');
+        if (!transformLayer) return null;
+
+        let overlayCanvas = document.getElementById('coordinate-overlay-canvas');
+        if (!overlayCanvas) {
+            overlayCanvas = document.createElement('canvas');
+            overlayCanvas.id = 'coordinate-overlay-canvas';
+            overlayCanvas.style.position = 'absolute';
+            overlayCanvas.style.inset = '0';
+            overlayCanvas.style.width = '100%';
+            overlayCanvas.style.height = '100%';
+            overlayCanvas.style.pointerEvents = 'none';
+            overlayCanvas.style.zIndex = '0';
+
+            const gifLayer = document.getElementById('gif-layer');
+            if (gifLayer) {
+                transformLayer.insertBefore(overlayCanvas, gifLayer);
+            } else {
+                transformLayer.appendChild(overlayCanvas);
+            }
+        }
+
+        this.coordinateOverlayCanvas = overlayCanvas;
+        this.coordinateOverlayCtx = overlayCanvas.getContext('2d');
+        return overlayCanvas;
+    }
+
+    syncCoordinateOverlayCanvasSize() {
+        const overlayCanvas = this.ensureCoordinateOverlayCanvas();
+        if (!overlayCanvas || !this.coordinateOverlayCtx) return null;
+
+        const logicalWidth = this.bgCanvas.clientWidth || (this.bgCanvas.width / (window.devicePixelRatio || 1));
+        const logicalHeight = this.bgCanvas.clientHeight || (this.bgCanvas.height / (window.devicePixelRatio || 1));
+        const dpr = logicalWidth > 0 ? this.bgCanvas.width / logicalWidth : this.getCoordinateOverlayDpr();
+
+        if (overlayCanvas.width !== this.bgCanvas.width || overlayCanvas.height !== this.bgCanvas.height) {
+            overlayCanvas.width = this.bgCanvas.width;
+            overlayCanvas.height = this.bgCanvas.height;
+        }
+
+        overlayCanvas.style.width = `${logicalWidth}px`;
+        overlayCanvas.style.height = `${logicalHeight}px`;
+
+        this.coordinateOverlayCtx.setTransform(1, 0, 0, 1, 0, 0);
+        this.coordinateOverlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        this.coordinateOverlayCtx.scale(dpr, dpr);
+
+        return {
+            canvas: overlayCanvas,
+            ctx: this.coordinateOverlayCtx,
+            dpr,
+            logicalWidth,
+            logicalHeight
+        };
+    }
+
+    getCoordinateLabelInterval(unitSize) {
+        if (unitSize < 12) return 10;
+        if (unitSize < 18) return 5;
+        if (unitSize < 30) return 2;
+        return 1;
+    }
+
+    getPolarAngleLabelStep() {
+        const angleStep = this.getPolarAngleStep();
+        if (angleStep <= 10) return 30;
+        if (angleStep <= 15) return 45;
+        if (angleStep <= 30) return 45;
+        return 90;
+    }
+
+    normalizePlotExpression(expression, coordinateType = this.backgroundPattern) {
+        let normalized = String(expression || '').trim();
+        if (!normalized) return '';
+
+        if (coordinateType === 'polar') {
+            normalized = normalized.replace(/^r\s*=\s*/i, '');
+        } else {
+            normalized = normalized.replace(/^y\s*=\s*/i, '');
+        }
+
+        return normalized.trim();
+    }
+
+    createPlotEvaluator(expression) {
+        const normalized = this.normalizePlotExpression(expression).replace(/\^/g, '**');
+        return new Function('x', 'theta', 'deg', 'PI', 'E', `with (Math) { return (${normalized}); }`);
+    }
+
+    addCoordinatePoint(canvasX, canvasY, options = {}) {
+        const point = this.canvasLogicalToMathPoint(canvasX, canvasY, options);
+        const nextState = this.getCoordinateOverlayState();
+        nextState.points.push({
+            id: `pt-${Date.now()}-${nextState.points.length}`,
+            x: point.x,
+            y: point.y,
+            color: options.color || this.getCoordinatePaletteColor(nextState.points.length)
+        });
+        this.setCoordinateOverlayState(nextState);
+        return nextState.points[nextState.points.length - 1];
+    }
+
+    clearCoordinatePoints() {
+        this.updateCoordinateOverlayOptions({ points: [] });
+    }
+
+    addCoordinatePlot(expression, coordinateType = this.backgroundPattern, color = null) {
+        const normalizedExpression = this.normalizePlotExpression(expression, coordinateType);
+        if (!normalizedExpression) {
+            throw new Error('empty-expression');
+        }
+
+        const evaluator = this.createPlotEvaluator(normalizedExpression);
+        const sampleInputs = coordinateType === 'polar'
+            ? [[0, 0, 0], [0, Math.PI / 4, 45], [0, Math.PI / 2, 90]]
+            : [[-1, 0, 0], [0, 0, 0], [1, 0, 0]];
+
+        let canEvaluate = false;
+        for (const [x, theta, deg] of sampleInputs) {
+            try {
+                const result = evaluator(x, theta, deg, Math.PI, Math.E);
+                if (typeof result === 'number') {
+                    canEvaluate = true;
+                    break;
+                }
+            } catch (error) {
+                // Try next sample point so functions with partial domains can still be plotted.
+            }
+        }
+
+        if (!canEvaluate) {
+            throw new Error('invalid-expression');
+        }
+
+        const nextState = this.getCoordinateOverlayState();
+        const sameTypePlots = nextState.plots.filter(plot => plot.coordinateType === coordinateType);
+        nextState.plots.push({
+            id: `plot-${Date.now()}-${nextState.plots.length}`,
+            expression: normalizedExpression,
+            coordinateType: coordinateType === 'polar' ? 'polar' : 'coordinate',
+            color: color || this.getCoordinatePaletteColor(sameTypePlots.length + 1)
+        });
+        this.setCoordinateOverlayState(nextState);
+        return nextState.plots[nextState.plots.length - 1];
+    }
+
+    removeCoordinatePlot(plotId) {
+        this.updateCoordinateOverlayOptions({
+            plots: this.coordinateOverlayState.plots.filter(plot => plot.id !== plotId)
+        });
+    }
+
+    clearCoordinatePlots(coordinateType = this.backgroundPattern) {
+        this.updateCoordinateOverlayOptions({
+            plots: this.coordinateOverlayState.plots.filter(plot => plot.coordinateType !== coordinateType)
+        });
+    }
+
+    getPointDisplayLabel(point, index, pattern = this.backgroundPattern) {
+        if (pattern === 'polar') {
+            const radius = Math.sqrt((point.x ** 2) + (point.y ** 2));
+            const theta = (Math.atan2(point.y, point.x) * 180 / Math.PI + 360) % 360;
+            return `P${index + 1}(${this.formatCoordinateValue(radius)}, ${this.formatCoordinateValue(theta, 1)}°)`;
+        }
+
+        return `P${index + 1}(${this.formatCoordinateValue(point.x)}, ${this.formatCoordinateValue(point.y)})`;
+    }
+
+    renderCartesianTicksAndLabels(ctx, origin, unitSize, logicalWidth, logicalHeight) {
+        const { showTicks, showLabels } = this.coordinateOverlayState;
+        if (!showTicks && !showLabels) return;
+
+        const axisColor = this.getAdaptivePatternColor(0.82, 0.24);
+        const labelColor = this.getAdaptivePatternColor(0.76, 0.22);
+        const tickSize = 5;
+        const labelInterval = this.getCoordinateLabelInterval(unitSize);
+        const xMin = Math.ceil((0 - origin.x) / unitSize);
+        const xMax = Math.floor((logicalWidth - origin.x) / unitSize);
+        const yMin = Math.ceil((origin.y - logicalHeight) / unitSize);
+        const yMax = Math.floor(origin.y / unitSize);
+        const axisVisibleX = origin.y >= 0 && origin.y <= logicalHeight;
+        const axisVisibleY = origin.x >= 0 && origin.x <= logicalWidth;
+
+        ctx.save();
+        ctx.strokeStyle = axisColor;
+        ctx.fillStyle = labelColor;
+        ctx.lineWidth = 1;
+        ctx.font = `${Math.max(11, Math.min(14, unitSize * 0.55))}px sans-serif`;
+
+        if (showTicks && axisVisibleX) {
+            for (let x = xMin; x <= xMax; x++) {
+                if (x === 0) continue;
+                const px = origin.x + x * unitSize;
+                ctx.beginPath();
+                ctx.moveTo(px, origin.y - tickSize);
+                ctx.lineTo(px, origin.y + tickSize);
+                ctx.stroke();
+            }
+        }
+
+        if (showTicks && axisVisibleY) {
+            for (let y = yMin; y <= yMax; y++) {
+                if (y === 0) continue;
+                const py = origin.y - y * unitSize;
+                ctx.beginPath();
+                ctx.moveTo(origin.x - tickSize, py);
+                ctx.lineTo(origin.x + tickSize, py);
+                ctx.stroke();
+            }
+        }
+
+        if (showLabels && axisVisibleX) {
+            const labelY = Math.min(logicalHeight - 18, origin.y + 8);
+            ctx.textBaseline = 'top';
+            ctx.textAlign = 'center';
+            for (let x = xMin; x <= xMax; x++) {
+                if (x === 0 || x % labelInterval !== 0) continue;
+                const px = origin.x + x * unitSize;
+                ctx.fillText(this.formatCoordinateValue(x, 0), px, labelY);
+            }
+        }
+
+        if (showLabels && axisVisibleY) {
+            ctx.textBaseline = 'middle';
+            ctx.textAlign = origin.x > logicalWidth - 52 ? 'right' : 'left';
+            const labelX = origin.x > logicalWidth - 52 ? origin.x - 8 : origin.x + 8;
+            for (let y = yMin; y <= yMax; y++) {
+                if (y === 0 || y % labelInterval !== 0) continue;
+                const py = origin.y - y * unitSize;
+                ctx.fillText(this.formatCoordinateValue(y, 0), labelX, py);
+            }
+        }
+
+        if (showLabels && axisVisibleX && axisVisibleY) {
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText('0', origin.x + 6, origin.y + 6);
+        }
+
+        ctx.restore();
+    }
+
+    renderPolarTicksAndLabels(ctx, origin, unitSize, logicalWidth, logicalHeight) {
+        const { showTicks, showLabels } = this.coordinateOverlayState;
+        if (!showTicks && !showLabels) return;
+
+        const labelColor = this.getAdaptivePatternColor(0.76, 0.22);
+        const tickColor = this.getAdaptivePatternColor(0.82, 0.24);
+        const radiusInterval = this.getCoordinateLabelInterval(unitSize);
+        const safeRadius = Math.max(0, Math.min(origin.x, logicalWidth - origin.x, origin.y, logicalHeight - origin.y) - 18);
+        const maxRadiusUnits = Math.floor(Math.max(
+            Math.hypot(origin.x, origin.y),
+            Math.hypot(logicalWidth - origin.x, origin.y),
+            Math.hypot(origin.x, logicalHeight - origin.y),
+            Math.hypot(logicalWidth - origin.x, logicalHeight - origin.y)
+        ) / unitSize);
+        const angleStep = this.getPolarAngleLabelStep();
+
+        ctx.save();
+        ctx.strokeStyle = tickColor;
+        ctx.fillStyle = labelColor;
+        ctx.lineWidth = 1;
+        ctx.font = `${Math.max(11, Math.min(14, unitSize * 0.55))}px sans-serif`;
+
+        if (showTicks) {
+            for (let radius = 1; radius <= maxRadiusUnits; radius++) {
+                const px = origin.x + radius * unitSize;
+                if (px < 0 || px > logicalWidth) continue;
+                ctx.beginPath();
+                ctx.moveTo(px, origin.y - 4);
+                ctx.lineTo(px, origin.y + 4);
+                ctx.stroke();
+            }
+
+            if (safeRadius > 24) {
+                for (let angle = 0; angle < 360; angle += angleStep) {
+                    const rad = angle * Math.PI / 180;
+                    const cos = Math.cos(rad);
+                    const sin = Math.sin(rad);
+                    ctx.beginPath();
+                    ctx.moveTo(origin.x + (safeRadius - 6) * cos, origin.y - (safeRadius - 6) * sin);
+                    ctx.lineTo(origin.x + safeRadius * cos, origin.y - safeRadius * sin);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        if (showLabels) {
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'bottom';
+            for (let radius = radiusInterval; radius <= maxRadiusUnits; radius += radiusInterval) {
+                const px = origin.x + radius * unitSize;
+                if (px > logicalWidth - 12 || origin.y < 16 || origin.y > logicalHeight - 4) continue;
+                ctx.fillText(this.formatCoordinateValue(radius, 0), px + 4, origin.y - 6);
+            }
+
+            if (safeRadius > 28) {
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                for (let angle = 0; angle < 360; angle += angleStep) {
+                    const rad = angle * Math.PI / 180;
+                    const labelRadius = safeRadius - 14;
+                    ctx.fillText(
+                        `${angle}°`,
+                        origin.x + labelRadius * Math.cos(rad),
+                        origin.y - labelRadius * Math.sin(rad)
+                    );
+                }
+            }
+        }
+
+        ctx.restore();
+    }
+
+    renderCoordinatePlots(ctx, logicalWidth, logicalHeight) {
+        const activePlots = this.coordinateOverlayState.plots.filter(plot => plot.coordinateType === this.backgroundPattern);
+        if (activePlots.length === 0) return;
+
+        const origin = this.getPatternOriginLogical();
+        const unitSize = this.getCoordinateUnitSize();
+
+        activePlots.forEach(plot => {
+            try {
+                const evaluator = this.createPlotEvaluator(plot.expression);
+                ctx.save();
+                ctx.strokeStyle = plot.color;
+                ctx.lineWidth = 2.5;
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+
+                let hasSegment = false;
+                let isCurrentSegmentOpen = false;
+
+                if (plot.coordinateType === 'polar') {
+                    const totalSamples = 720;
+                    for (let i = 0; i <= totalSamples; i++) {
+                        const theta = (Math.PI * 2 * i) / totalSamples;
+                        const deg = theta * 180 / Math.PI;
+                        let radius;
+                        try {
+                            radius = evaluator(0, theta, deg, Math.PI, Math.E);
+                        } catch (error) {
+                            isCurrentSegmentOpen = false;
+                            continue;
+                        }
+
+                        if (!Number.isFinite(radius)) {
+                            isCurrentSegmentOpen = false;
+                            continue;
+                        }
+
+                        const x = radius * Math.cos(theta);
+                        const y = radius * Math.sin(theta);
+                        const point = this.mathToCanvasLogicalPoint(x, y, 'polar');
+
+                        if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+                            isCurrentSegmentOpen = false;
+                            continue;
+                        }
+
+                        if (!isCurrentSegmentOpen) {
+                            ctx.moveTo(point.x, point.y);
+                            isCurrentSegmentOpen = true;
+                        } else {
+                            ctx.lineTo(point.x, point.y);
+                        }
+                        hasSegment = true;
+                    }
+                } else {
+                    const xMin = (0 - origin.x) / unitSize;
+                    const xMax = (logicalWidth - origin.x) / unitSize;
+                    const totalSamples = Math.max(240, Math.min(1600, Math.round(logicalWidth)));
+                    let previousPoint = null;
+
+                    for (let i = 0; i <= totalSamples; i++) {
+                        const x = xMin + ((xMax - xMin) * i / totalSamples);
+                        let y;
+                        try {
+                            y = evaluator(x, 0, 0, Math.PI, Math.E);
+                        } catch (error) {
+                            previousPoint = null;
+                            isCurrentSegmentOpen = false;
+                            continue;
+                        }
+
+                        if (!Number.isFinite(y)) {
+                            previousPoint = null;
+                            isCurrentSegmentOpen = false;
+                            continue;
+                        }
+
+                        const point = this.mathToCanvasLogicalPoint(x, y, 'coordinate');
+                        const isLargeJump = previousPoint && Math.abs(point.y - previousPoint.y) > logicalHeight * 1.5;
+
+                        if (!isCurrentSegmentOpen || isLargeJump) {
+                            ctx.moveTo(point.x, point.y);
+                            isCurrentSegmentOpen = true;
+                        } else {
+                            ctx.lineTo(point.x, point.y);
+                        }
+
+                        previousPoint = point;
+                        hasSegment = true;
+                    }
+                }
+
+                if (hasSegment) {
+                    ctx.stroke();
+                }
+                ctx.restore();
+            } catch (error) {
+                console.warn('Failed to render coordinate plot:', plot.expression, error);
+            }
+        });
+    }
+
+    renderCoordinatePoints(ctx) {
+        const points = this.coordinateOverlayState.points;
+        if (points.length === 0) return;
+
+        const lineColor = this.getAdaptivePatternColor(0.74, 0.24);
+
+        ctx.save();
+
+        if (this.coordinateOverlayState.connectPoints && points.length > 1) {
+            ctx.beginPath();
+            points.forEach((point, index) => {
+                const canvasPoint = this.mathToCanvasLogicalPoint(point.x, point.y);
+                if (index === 0) {
+                    ctx.moveTo(canvasPoint.x, canvasPoint.y);
+                } else {
+                    ctx.lineTo(canvasPoint.x, canvasPoint.y);
+                }
+            });
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        points.forEach((point, index) => {
+            const canvasPoint = this.mathToCanvasLogicalPoint(point.x, point.y);
+
+            ctx.beginPath();
+            ctx.fillStyle = point.color || this.getCoordinatePaletteColor(index);
+            ctx.arc(canvasPoint.x, canvasPoint.y, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = this.backgroundColor;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            if (this.coordinateOverlayState.showPointLabels) {
+                ctx.fillStyle = point.color || this.getCoordinatePaletteColor(index);
+                ctx.font = '12px sans-serif';
+                ctx.textBaseline = 'bottom';
+                ctx.textAlign = 'left';
+                ctx.fillText(this.getPointDisplayLabel(point, index), canvasPoint.x + 8, canvasPoint.y - 8);
+            }
+        });
+
+        ctx.restore();
+    }
+
+    renderCoordinateOverlay() {
+        const overlayData = this.syncCoordinateOverlayCanvasSize();
+        if (!overlayData) return;
+
+        const { canvas, ctx, logicalWidth, logicalHeight } = overlayData;
+
+        if (!this.supportsMovableOrigin()) {
+            canvas.style.display = 'none';
+            return;
+        }
+
+        canvas.style.display = 'block';
+
+        const origin = this.getPatternOriginLogical();
+        const unitSize = this.getCoordinateUnitSize();
+
+        if (this.backgroundPattern === 'polar') {
+            this.renderPolarTicksAndLabels(ctx, origin, unitSize, logicalWidth, logicalHeight);
+        } else {
+            this.renderCartesianTicksAndLabels(ctx, origin, unitSize, logicalWidth, logicalHeight);
+        }
+
+        this.renderCoordinatePlots(ctx, logicalWidth, logicalHeight);
+        this.renderCoordinatePoints(ctx);
+    }
     
     drawCoordinatePattern(dpr, patternColor) {
-        // Coordinate system center is always at the exact center of the canvas
-        // The origin offset is applied relative to this center
-        const centerX = (this.bgCanvas.width / 2) + (this.coordinateOriginX * dpr);
-        const centerY = (this.bgCanvas.height / 2) + (this.coordinateOriginY * dpr);
+        const { centerX, centerY } = this.getPatternOrigin(dpr);
         const baseGridSize = 20 * dpr;
         const gridSize = baseGridSize / this.patternDensity;
         
-        this.bgCtx.strokeStyle = this.isLightBackground() ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+        this.bgCtx.strokeStyle = this.getAdaptivePatternColor(0.18, 0.08);
         this.bgCtx.lineWidth = 0.5 * dpr;
         
         // Draw grid lines
@@ -745,13 +1476,74 @@ class BackgroundManager {
         this.bgCtx.stroke();
         
         // Draw draggable origin point
-        this.bgCtx.fillStyle = patternColor;
+        this.drawOriginPoint(centerX, centerY, dpr, patternColor);
+    }
+
+    drawPolarPattern(dpr, patternColor) {
+        const { centerX, centerY } = this.getPatternOrigin(dpr);
+        const baseRadiusStep = 20 * dpr;
+        const radiusStep = baseRadiusStep / this.patternDensity;
+        const angleStep = this.getPolarAngleStep();
+        const minorColor = this.getAdaptivePatternColor(0.18, 0.07);
+        const majorColor = this.getAdaptivePatternColor(0.38, 0.14);
+        const maxRadius = Math.max(
+            Math.hypot(centerX, centerY),
+            Math.hypot(this.bgCanvas.width - centerX, centerY),
+            Math.hypot(centerX, this.bgCanvas.height - centerY),
+            Math.hypot(this.bgCanvas.width - centerX, this.bgCanvas.height - centerY)
+        );
+        const majorRingInterval = 5;
+        const majorAngleInterval = angleStep <= 15 ? 30 : angleStep <= 30 ? 45 : 90;
+
+        for (let ringIndex = 1, radius = radiusStep; radius < maxRadius; ringIndex++, radius += radiusStep) {
+            const isMajorRing = ringIndex % majorRingInterval === 0;
+            this.bgCtx.strokeStyle = isMajorRing ? majorColor : minorColor;
+            this.bgCtx.lineWidth = (isMajorRing ? 1 : 0.5) * dpr;
+            this.bgCtx.beginPath();
+            this.bgCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            this.bgCtx.stroke();
+        }
+
+        for (let angleDeg = 0; angleDeg < 360; angleDeg += angleStep) {
+            const angleRad = angleDeg * Math.PI / 180;
+            const endPoint = this.getRayEndpoint(centerX, centerY, angleRad);
+            const isAxis = angleDeg % 90 === 0;
+            const isMajorRay = angleDeg % majorAngleInterval === 0;
+
+            this.bgCtx.strokeStyle = isAxis ? patternColor : (isMajorRay ? majorColor : minorColor);
+            this.bgCtx.lineWidth = (isAxis ? 2 : isMajorRay ? 1 : 0.5) * dpr;
+            this.bgCtx.beginPath();
+            this.bgCtx.moveTo(centerX, centerY);
+            this.bgCtx.lineTo(endPoint.x, endPoint.y);
+            this.bgCtx.stroke();
+        }
+
+        const positiveXAxisEnd = this.getRayEndpoint(centerX, centerY, 0);
+        if (positiveXAxisEnd.distance > 0) {
+            this.drawArrowHead(centerX, centerY, positiveXAxisEnd.x, positiveXAxisEnd.y, dpr, patternColor);
+        }
+
+        const positiveYAxisEnd = this.getRayEndpoint(centerX, centerY, Math.PI / 2);
+        if (positiveYAxisEnd.distance > 0) {
+            this.drawArrowHead(centerX, centerY, positiveYAxisEnd.x, positiveYAxisEnd.y, dpr, patternColor);
+        }
+
+        const angleGuideRadius = Math.min(radiusStep * 1.5, 42 * dpr);
+        this.bgCtx.strokeStyle = majorColor;
+        this.bgCtx.lineWidth = 1 * dpr;
         this.bgCtx.beginPath();
-        this.bgCtx.arc(centerX, centerY, 5 * dpr, 0, Math.PI * 2);
-        this.bgCtx.fill();
-        this.bgCtx.strokeStyle = this.backgroundColor;
-        this.bgCtx.lineWidth = 2 * dpr;
+        this.bgCtx.arc(centerX, centerY, angleGuideRadius, 0, -Math.PI / 3, true);
         this.bgCtx.stroke();
+        this.drawArrowHead(
+            centerX + angleGuideRadius * Math.cos(-Math.PI / 3.1),
+            centerY + angleGuideRadius * Math.sin(-Math.PI / 3.1),
+            centerX + angleGuideRadius,
+            centerY,
+            dpr * 0.8,
+            majorColor
+        );
+
+        this.drawOriginPoint(centerX, centerY, dpr, patternColor);
     }
     
     isLightBackground() {
@@ -763,10 +1555,7 @@ class BackgroundManager {
     }
     
     getPatternColor() {
-        const baseOpacity = Math.min(this.patternIntensity, 1.0);
-        return this.isLightBackground() ? 
-            `rgba(0, 0, 0, ${baseOpacity})` : 
-            `rgba(255, 255, 255, ${baseOpacity})`;
+        return this.getAdaptivePatternColor(1);
     }
     
     setBackgroundColor(color) {
@@ -956,7 +1745,7 @@ class BackgroundManager {
         this.coordinateOriginY = y;
         localStorage.setItem('coordinateOriginX', x);
         localStorage.setItem('coordinateOriginY', y);
-        if (this.backgroundPattern === 'coordinate') {
+        if (this.supportsMovableOrigin()) {
             this.drawBackground();
         }
     }
@@ -969,14 +1758,10 @@ class BackgroundManager {
     }
     
     isPointNearCoordinateOrigin(canvasX, canvasY, threshold = 15) {
-        if (this.backgroundPattern !== 'coordinate') return false;
-        
-        const dpr = window.devicePixelRatio || 1;
-        // Center is always at exact canvas center (matching drawCoordinatePattern)
-        const centerX = (this.bgCanvas.width / (2 * dpr)) + this.coordinateOriginX;
-        const centerY = (this.bgCanvas.height / (2 * dpr)) + this.coordinateOriginY;
-        
-        const distance = Math.sqrt(Math.pow(canvasX - centerX, 2) + Math.pow(canvasY - centerY, 2));
+        if (!this.supportsMovableOrigin()) return false;
+
+        const { x, y } = this.getPatternOriginLogical();
+        const distance = Math.sqrt(Math.pow(canvasX - x, 2) + Math.pow(canvasY - y, 2));
         return distance < threshold;
     }
 }
