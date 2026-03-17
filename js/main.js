@@ -163,6 +163,8 @@ class DrawingBoard {
         this.modalResizeState = null;
         this.modalDragState = null;
         this.cacheSizeRequestToken = 0;
+        this.cacheSizeRetryScheduled = false;
+        this.cacheStorageSizeSnapshotKey = 'aboardCacheStorageSizeSnapshot';
         
         // Coordinate origin dragging state
         this.isDraggingCoordinateOrigin = false;
@@ -5967,46 +5969,182 @@ class DrawingBoard {
         return new Blob([`${key}${value || ''}`]).size;
     }
 
-    async getBrowserStorageEstimate() {
-        if (!navigator.storage?.estimate) {
-            return null;
+    async withTimeout(promise, timeoutMs, fallbackValue = null) {
+        let timerId = null;
+        try {
+            return await Promise.race([
+                Promise.resolve(promise),
+                new Promise(resolve => {
+                    timerId = window.setTimeout(() => resolve(fallbackValue), timeoutMs);
+                })
+            ]);
+        } finally {
+            if (timerId !== null) {
+                window.clearTimeout(timerId);
+            }
+        }
+    }
+
+    async waitForServiceWorkerCacheReady(timeoutMs = 2000) {
+        if (!('serviceWorker' in navigator)) {
+            return false;
+        }
+        if (navigator.serviceWorker.controller) {
+            return true;
         }
         try {
-            return await navigator.storage.estimate();
+            const readyResult = await this.withTimeout(
+                navigator.serviceWorker.ready.then(() => true).catch(() => false),
+                timeoutMs,
+                false
+            );
+            return !!readyResult;
         } catch (e) {
-            console.warn('Failed to read navigator.storage estimate:', e);
+            console.warn('Failed while waiting for Service Worker cache readiness:', e);
+            return false;
+        }
+    }
+
+    scheduleCacheSizeRetryWhenReady() {
+        if (this.cacheSizeRetryScheduled || !('serviceWorker' in navigator) || navigator.serviceWorker.controller) {
+            return;
+        }
+
+        this.cacheSizeRetryScheduled = true;
+        navigator.serviceWorker.ready
+            .then(() => {
+                this.cacheSizeRetryScheduled = false;
+                const settingsModal = document.getElementById('settings-modal');
+                if (settingsModal?.classList.contains('show')) {
+                    this.updateCacheSizeDisplay();
+                }
+            })
+            .catch(() => {
+                this.cacheSizeRetryScheduled = false;
+            });
+    }
+
+    getCacheStorageSizeSnapshot() {
+        try {
+            const raw = localStorage.getItem(this.cacheStorageSizeSnapshotKey);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            const bytes = Number(parsed?.bytes);
+            const fingerprint = typeof parsed?.fingerprint === 'string' ? parsed.fingerprint : '';
+            if (!Number.isFinite(bytes) || bytes < 0 || !fingerprint) {
+                return null;
+            }
+            return { fingerprint, bytes: Math.round(bytes) };
+        } catch (e) {
+            console.warn('Failed to read cache storage size snapshot:', e);
             return null;
         }
     }
 
-    async getCacheStorageUsageFallback() {
+    setCacheStorageSizeSnapshot(fingerprint, bytes) {
+        try {
+            const normalizedBytes = Math.max(0, Math.round(Number(bytes) || 0));
+            if (!fingerprint) {
+                localStorage.removeItem(this.cacheStorageSizeSnapshotKey);
+                return;
+            }
+            localStorage.setItem(this.cacheStorageSizeSnapshotKey, JSON.stringify({
+                fingerprint,
+                bytes: normalizedBytes
+            }));
+        } catch (e) {
+            console.warn('Failed to persist cache storage size snapshot:', e);
+        }
+    }
+
+    clearCacheStorageSizeSnapshot() {
+        try {
+            localStorage.removeItem(this.cacheStorageSizeSnapshotKey);
+        } catch (e) {
+            console.warn('Failed to clear cache storage size snapshot:', e);
+        }
+    }
+
+    async buildCacheStorageFingerprint() {
+        if (!('caches' in window)) {
+            return 'unsupported';
+        }
+        try {
+            const cacheNames = await caches.keys();
+            if (cacheNames.length === 0) {
+                return 'empty';
+            }
+            cacheNames.sort();
+            const parts = [];
+            for (const cacheName of cacheNames) {
+                const cache = await caches.open(cacheName);
+                const requests = await cache.keys();
+                const urls = requests.map(request => request.url).sort();
+                parts.push(`${cacheName}::${urls.length}::${urls.join('|')}`);
+            }
+            return parts.join('||');
+        } catch (e) {
+            console.warn('Failed to build Cache Storage fingerprint:', e);
+            return '';
+        }
+    }
+
+    async measureExactCacheStorageUsage() {
         let total = 0;
         if (!('caches' in window)) {
             return total;
         }
         try {
             const cacheKeys = await caches.keys();
-            for (const cacheName of cacheKeys) {
+            const totals = await Promise.all(cacheKeys.map(async (cacheName) => {
                 const cache = await caches.open(cacheName);
                 const requests = await cache.keys();
-                for (const request of requests) {
-                    const response = await cache.match(request);
-                    if (!response) {
-                        continue;
+                const responseSizes = await Promise.all(requests.map(async (request) => {
+                    try {
+                        const response = await cache.match(request);
+                        if (!response) {
+                            return 0;
+                        }
+                        const contentLength = Number(response.headers.get('content-length'));
+                        if (Number.isFinite(contentLength) && contentLength >= 0) {
+                            return contentLength;
+                        }
+                        const blob = await response.clone().blob();
+                        return blob.size;
+                    } catch (innerError) {
+                        console.warn('Failed to inspect cached response size:', request.url, innerError);
+                        return 0;
                     }
-                    const contentLength = Number(response.headers.get('content-length'));
-                    if (Number.isFinite(contentLength) && contentLength > 0) {
-                        total += contentLength;
-                        continue;
-                    }
-                    const blob = await response.clone().blob();
-                    total += blob.size;
-                }
-            }
+                }));
+                return responseSizes.reduce((sum, size) => sum + size, 0);
+            }));
+            total = totals.reduce((sum, size) => sum + size, 0);
         } catch (e) {
             console.warn('Failed to estimate Cache Storage size:', e);
         }
         return total;
+    }
+
+    async getExactCacheStorageUsage() {
+        if (!('caches' in window)) {
+            this.clearCacheStorageSizeSnapshot();
+            return 0;
+        }
+
+        const fingerprint = await this.buildCacheStorageFingerprint();
+        if (fingerprint === 'unsupported' || fingerprint === 'empty') {
+            this.setCacheStorageSizeSnapshot(fingerprint, 0);
+            return 0;
+        }
+
+        const snapshot = this.getCacheStorageSizeSnapshot();
+        if (snapshot && snapshot.fingerprint === fingerprint) {
+            return snapshot.bytes;
+        }
+
+        const measuredBytes = await this.measureExactCacheStorageUsage();
+        this.setCacheStorageSizeSnapshot(fingerprint, measuredBytes);
+        return measuredBytes;
     }
 
     formatBytes(bytes) {
@@ -6020,13 +6158,13 @@ class DrawingBoard {
     async getCacheSizeSummary() {
         const { settingsKeys, canvasKeys } = this.getCacheKeyGroups();
         const summary = { settings: 0, canvas: 0, other: 0 };
-        let localAndSessionTotal = 0;
+        const internalKeys = new Set([this.cacheStorageSizeSnapshotKey]);
 
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
+            if (!key || internalKeys.has(key)) continue;
             const val = localStorage.getItem(key);
             const size = this.getStorageEntrySize(key, val);
-            localAndSessionTotal += size;
             if (settingsKeys.has(key)) summary.settings += size;
             else if (canvasKeys.has(key)) summary.canvas += size;
             else summary.other += size;
@@ -6034,18 +6172,13 @@ class DrawingBoard {
 
         for (let i = 0; i < sessionStorage.length; i++) {
             const key = sessionStorage.key(i);
+            if (!key || internalKeys.has(key)) continue;
             const val = sessionStorage.getItem(key);
             const size = this.getStorageEntrySize(key, val);
-            localAndSessionTotal += size;
             if (settingsKeys.has(key)) summary.settings += size;
             else if (canvasKeys.has(key)) summary.canvas += size;
             else summary.other += size;
         }
-
-        const browserEstimate = await this.getBrowserStorageEstimate();
-        const usageDetails = browserEstimate?.usageDetails || {};
-        const estimatedIndexedDbUsage = Number.isFinite(usageDetails.indexedDB) ? usageDetails.indexedDB : null;
-        const estimatedCacheUsage = Number.isFinite(usageDetails.caches) ? usageDetails.caches : null;
 
         let indexedDbCanvasUsage = this.storageManager?.getSessionSizeEstimate?.() || 0;
         if (!indexedDbCanvasUsage) {
@@ -6059,23 +6192,22 @@ class DrawingBoard {
                 console.warn('Failed to estimate IndexedDB size:', e);
             }
         }
-        summary.canvas += estimatedIndexedDbUsage !== null
-            ? Math.max(indexedDbCanvasUsage, estimatedIndexedDbUsage)
-            : indexedDbCanvasUsage;
+        summary.canvas += indexedDbCanvasUsage;
 
-        const cacheUsage = estimatedCacheUsage !== null
-            ? estimatedCacheUsage
-            : await this.getCacheStorageUsageFallback();
-        summary.other += cacheUsage;
-
-        const browserUsage = Number.isFinite(browserEstimate?.usage) ? browserEstimate.usage : null;
-        if (browserUsage !== null) {
-            const knownUsage = localAndSessionTotal + (estimatedIndexedDbUsage ?? indexedDbCanvasUsage) + cacheUsage;
-            const residualUsage = Math.max(0, browserUsage - knownUsage);
-            if (residualUsage > 0) {
-                summary.other += residualUsage;
+        let cacheUsage = 0;
+        const shouldWaitForServiceWorker = 'serviceWorker' in navigator && !navigator.serviceWorker.controller;
+        if (shouldWaitForServiceWorker) {
+            const serviceWorkerReady = await this.waitForServiceWorkerCacheReady();
+            if (!serviceWorkerReady) {
+                this.scheduleCacheSizeRetryWhenReady();
             }
         }
+        cacheUsage = await this.withTimeout(
+            this.getExactCacheStorageUsage(),
+            2500,
+            this.getCacheStorageSizeSnapshot()?.bytes || 0
+        );
+        summary.other += cacheUsage;
 
         return summary;
     }
@@ -6149,6 +6281,7 @@ class DrawingBoard {
                 const cacheKeys = await caches.keys();
                 await Promise.all(cacheKeys.map(key => caches.delete(key)));
             }
+            this.setCacheStorageSizeSnapshot('empty', 0);
         }
     }
 
@@ -6182,6 +6315,7 @@ class DrawingBoard {
                 const cacheKeys = await caches.keys();
                 await Promise.all(cacheKeys.map(key => caches.delete(key)));
             }
+            this.setCacheStorageSizeSnapshot('empty', 0);
         } finally {
             this.isClearingLocalData = false;
         }
