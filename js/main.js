@@ -1794,6 +1794,21 @@ class DrawingBoard {
             });
         }
 
+        const coordinateToolsPopup = document.getElementById('coordinate-tools-popup');
+        const coordinateToolsPopupCloseBtn = document.getElementById('coordinate-tools-popup-close-btn');
+        if (coordinateToolsPopup) {
+            coordinateToolsPopup.addEventListener('click', (e) => {
+                if (e.target === coordinateToolsPopup) {
+                    this.toggleCoordinateSettingsPanel(false);
+                }
+            });
+        }
+        if (coordinateToolsPopupCloseBtn) {
+            coordinateToolsPopupCloseBtn.addEventListener('click', () => {
+                this.toggleCoordinateSettingsPanel(false);
+            });
+        }
+
         const coordinateAddPointBtn = document.getElementById('coordinate-add-point-btn');
         if (coordinateAddPointBtn) {
             coordinateAddPointBtn.addEventListener('click', () => {
@@ -3525,6 +3540,9 @@ class DrawingBoard {
         if (this.isCoordinatePointMode && tool !== 'background') {
             this.setCoordinatePointMode(false);
         }
+        if (tool !== 'background') {
+            this.toggleCoordinateSettingsPanel(false);
+        }
         
         // Check if we're clicking the same tool button again (toggle behavior)
         const isSameTool = (previousTool === tool);
@@ -3560,6 +3578,9 @@ class DrawingBoard {
             // If clicking the same tool and config is visible, toggle it off
             if (isSameTool && isConfigVisible) {
                 configArea.classList.remove('show');
+                if (tool === 'background') {
+                    this.toggleCoordinateSettingsPanel(false);
+                }
             } else {
                 // Show config panel and position it above toolbar
                 configArea.classList.add('show');
@@ -3624,6 +3645,16 @@ class DrawingBoard {
         this.isCoordinateSettingsExpanded = supportsCoordinateTools && (typeof force === 'boolean'
             ? force
             : !this.isCoordinateSettingsExpanded);
+
+        const popup = document.getElementById('coordinate-tools-popup');
+        const toggleBtn = document.getElementById('coordinate-settings-toggle-btn');
+        if (popup) {
+            popup.style.display = this.isCoordinateSettingsExpanded ? 'flex' : 'none';
+        }
+        if (toggleBtn) {
+            toggleBtn.classList.toggle('active', this.isCoordinateSettingsExpanded);
+            toggleBtn.setAttribute('aria-expanded', this.isCoordinateSettingsExpanded ? 'true' : 'false');
+        }
 
         if (!this.isCoordinateSettingsExpanded) {
             this.toggleCoordinateInputPanel(false);
@@ -3815,6 +3846,7 @@ class DrawingBoard {
     
     closeConfigPanel() {
         document.getElementById('config-area').classList.remove('show');
+        this.toggleCoordinateSettingsPanel(false);
         this.exitShapeMode();
     }
     
@@ -5605,7 +5637,8 @@ class DrawingBoard {
             imageSizeGroup.style.display = currentPattern === 'image' ? 'flex' : 'none';
         }
 
-        const coordinateSettingsEntry = document.getElementById('coordinate-settings-entry');
+        const coordinateSettingsToggleBtn = document.getElementById('coordinate-settings-toggle-btn');
+        const coordinateToolsPopup = document.getElementById('coordinate-tools-popup');
         const coordinateToolsGroup = document.getElementById('coordinate-tools-group');
         const coordinateState = this.backgroundManager.getCoordinateOverlayState();
         const supportsCoordinateTools = this.backgroundManager.supportsMovableOrigin(currentPattern);
@@ -5615,18 +5648,18 @@ class DrawingBoard {
             this.isCoordinateInputPanelVisible = false;
         }
 
-        if (coordinateSettingsEntry) {
-            coordinateSettingsEntry.style.display = supportsCoordinateTools ? 'block' : 'none';
+        if (coordinateSettingsToggleBtn) {
+            coordinateSettingsToggleBtn.style.display = supportsCoordinateTools ? 'inline-flex' : 'none';
+            coordinateSettingsToggleBtn.classList.toggle('active', supportsCoordinateTools && this.isCoordinateSettingsExpanded);
+            coordinateSettingsToggleBtn.setAttribute('aria-expanded', supportsCoordinateTools && this.isCoordinateSettingsExpanded ? 'true' : 'false');
+        }
+
+        if (coordinateToolsPopup) {
+            coordinateToolsPopup.style.display = supportsCoordinateTools && this.isCoordinateSettingsExpanded ? 'flex' : 'none';
         }
 
         if (coordinateToolsGroup) {
-            coordinateToolsGroup.style.display = supportsCoordinateTools && this.isCoordinateSettingsExpanded ? 'block' : 'none';
-        }
-
-        const coordinateSettingsToggleBtn = document.getElementById('coordinate-settings-toggle-btn');
-        if (coordinateSettingsToggleBtn) {
-            coordinateSettingsToggleBtn.classList.toggle('active', supportsCoordinateTools && this.isCoordinateSettingsExpanded);
-            coordinateSettingsToggleBtn.setAttribute('aria-expanded', supportsCoordinateTools && this.isCoordinateSettingsExpanded ? 'true' : 'false');
+            coordinateToolsGroup.style.display = supportsCoordinateTools ? 'flex' : 'none';
         }
 
         const toggleMap = {

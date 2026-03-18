@@ -1928,80 +1928,113 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     margin-top: 15px;
 }
 
-#coordinate-settings-entry {
-    margin-top: 12px;
-}
-
 .coordinate-settings-toggle-btn {
-    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 4px;
 }
 
-.coordinate-settings-toggle-arrow {
-    margin-left: auto;
-    transition: transform 0.2s ease;
+.coordinate-tools-popup {
+    position: fixed;
+    inset: 0;
+    z-index: 2100;
+    background: rgba(15, 23, 42, 0.18);
+    backdrop-filter: blur(2px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
 }
 
-.coordinate-settings-toggle-btn.active .coordinate-settings-toggle-arrow {
-    transform: rotate(180deg);
+.coordinate-tools-popup-dialog {
+    width: min(420px, calc(100vw - 32px));
+    max-height: min(82vh, 720px);
+    overflow: auto;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.22);
+    padding: 14px;
+}
+
+.coordinate-tools-popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #222;
+}
+
+.coordinate-tools-popup-close {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #666;
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.coordinate-tools-popup-close:hover {
+    background: #e5e7eb;
 }
 
 #coordinate-tools-group {
-    margin-top: 12px;
-    padding: 12px;
-    border: 1px solid #e8e8e8;
-    border-radius: 12px;
-    background: #fafafa;
+    gap: 6px;
 }
 
 .coordinate-tool-toggles {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    margin-top: 8px;
+    margin-top: 2px;
 }
 
 .coordinate-tool-toggles .checkbox-label {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 10px;
+    padding: 7px 9px;
     background: #f5f5f5;
     border-radius: 8px;
     cursor: pointer;
+    font-size: 12px;
 }
 
 .coordinate-action-buttons {
-    margin-top: 10px;
+    margin-top: 6px;
 }
 
 .coordinate-hint-line {
-    margin: 8px 0 0;
+    margin: 4px 0 0;
 }
 
 .coordinate-point-count {
-    margin-top: 8px;
-    font-size: 13px;
+    margin-top: 4px;
+    font-size: 12px;
     color: #666;
 }
 
 .coordinate-plot-input-row {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
-    margin-top: 8px;
+    margin-top: 4px;
 }
 
 #coordinate-expression-input {
     flex: 1;
     min-width: 0;
-    padding: 8px 10px;
+    padding: 7px 10px;
     border: 1px solid #ddd;
     border-radius: 8px;
     background: #fff;
+    font-size: 13px;
 }
 
 .coordinate-input-panel-toggle {
@@ -2011,17 +2044,17 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 .coordinate-keypad-panel {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 10px;
+    gap: 6px;
+    margin-top: 8px;
 }
 
 .coordinate-keypad-btn {
-    min-height: 38px;
-    padding: 8px 6px;
+    min-height: 34px;
+    padding: 6px 6px;
     border: 1px solid #ddd;
     border-radius: 8px;
     background: #fff;
-    font-size: 13px;
+    font-size: 12px;
     cursor: pointer;
     transition: background-color 0.2s ease, border-color 0.2s ease;
 }
@@ -2049,7 +2082,7 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin-top: 10px;
+    margin-top: 8px;
 }
 
 .coordinate-plot-item,
@@ -2057,10 +2090,10 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 10px;
+    padding: 7px 9px;
     border-radius: 8px;
     background: #f7f7f7;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .coordinate-plot-color {

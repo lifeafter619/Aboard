@@ -347,6 +347,13 @@
                         </svg>
                         <span class="upload-text" data-i18n="background.upload">上传</span>
                     </button>
+                    <button id="coordinate-settings-toggle-btn" type="button" class="pattern-option-btn coordinate-settings-toggle-btn" aria-expanded="false" style="display: none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                        <span data-i18n="background.coordinateTools">坐标辅助</span>
+                    </button>
                     <input type="file" id="bg-image-upload" accept="image/*" style="display: none;">
                 </div>
                 <div class="compact-sliders">
@@ -388,20 +395,13 @@
                     </div>
                 </div>
             </div>
-            <div class="coordinate-settings-entry" id="coordinate-settings-entry" style="display: none;">
-                <button id="coordinate-settings-toggle-btn" type="button" class="pattern-option-btn coordinate-settings-toggle-btn" aria-expanded="false">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                    </svg>
-                    <span data-i18n="background.coordinateTools">坐标辅助</span>
-                    <svg class="coordinate-settings-toggle-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                </button>
-            </div>
-            <div class="config-group config-group-compact" id="coordinate-tools-group" style="display: none;">
-                <label data-i18n="background.coordinateTools">坐标辅助</label>
+            <div id="coordinate-tools-popup" class="coordinate-tools-popup" style="display: none;">
+                <div class="coordinate-tools-popup-dialog">
+                    <div class="coordinate-tools-popup-header">
+                        <span data-i18n="background.coordinateTools">坐标辅助</span>
+                        <button id="coordinate-tools-popup-close-btn" type="button" class="coordinate-tools-popup-close" aria-label="Close">×</button>
+                    </div>
+                    <div class="config-group config-group-compact" id="coordinate-tools-group">
                 <div class="coordinate-tool-toggles">
                     <label class="checkbox-label"><input type="checkbox" id="coordinate-show-ticks" checked><span data-i18n="background.showTicks">显示刻度</span></label>
                     <label class="checkbox-label"><input type="checkbox" id="coordinate-show-labels" checked><span data-i18n="background.showLabels">显示标签</span></label>
@@ -461,6 +461,8 @@
                 </div>
                 <p class="settings-hint coordinate-hint-line" id="coordinate-plot-hint" data-i18n="background.plotHintCartesian">直角坐标：输入 y = f(x)，可用 sin cos PI</p>
                 <div id="coordinate-plot-list" class="coordinate-plot-list"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
