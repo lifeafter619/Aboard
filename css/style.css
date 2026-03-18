@@ -1956,8 +1956,42 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     padding-top: 12px;
 }
 
+.coordinate-point-modal-content {
+    max-width: 420px;
+    width: min(420px, 100%);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.coordinate-point-modal-content .modal-body {
+    gap: 12px;
+}
+
+.coordinate-keypad-modal {
+    align-items: flex-start;
+    padding-top: 56px;
+    z-index: 2100;
+}
+
+.coordinate-keypad-modal-content {
+    max-width: 460px;
+    width: min(460px, 100%);
+    max-height: calc(100vh - 72px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.coordinate-keypad-modal-content .modal-body {
+    gap: 12px;
+    min-height: 0;
+    overflow-y: auto;
+}
+
 #coordinate-tools-group {
-    gap: 6px;
+    gap: 10px;
     min-height: 0;
     overflow-y: auto;
     padding-right: 2px;
@@ -1983,6 +2017,10 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 
 .coordinate-action-buttons {
     margin-top: 6px;
+}
+
+.coordinate-point-action-buttons {
+    margin-top: 0;
 }
 
 .coordinate-hint-line {
@@ -2014,18 +2052,18 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 
 .coordinate-input-panel-toggle {
     flex-shrink: 0;
+    min-width: 88px;
 }
 
 .coordinate-keypad-panel {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 6px;
-    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .coordinate-keypad-btn {
-    min-height: 34px;
-    padding: 6px 6px;
+    min-height: 38px;
+    padding: 8px 6px;
     border: 1px solid #ddd;
     border-radius: 8px;
     background: #fff;
@@ -2039,17 +2077,59 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     border-color: var(--theme-color, #007bff);
 }
 
-.coordinate-keypad-btn.wide {
-    grid-column: span 2;
+.coordinate-keypad-top-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.coordinate-keypad-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 12px;
+    background: #f7f7f7;
+    border: 1px solid #ececec;
+}
+
+.coordinate-keypad-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+}
+
+.coordinate-keypad-grid {
+    display: grid;
+    gap: 8px;
+}
+
+.coordinate-keypad-grid-digits {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.coordinate-keypad-grid-operators,
+.coordinate-keypad-grid-variables {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.coordinate-keypad-grid-functions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 @media (max-width: 520px) {
-    .coordinate-keypad-panel {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
     .coordinate-tool-toggles {
         grid-template-columns: 1fr;
+    }
+
+    .coordinate-keypad-modal {
+        padding-top: 20px;
+    }
+
+    .coordinate-keypad-grid-operators,
+    .coordinate-keypad-grid-variables,
+    .coordinate-keypad-grid-functions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 

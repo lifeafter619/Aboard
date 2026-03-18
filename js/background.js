@@ -1015,9 +1015,119 @@ class BackgroundManager {
         return normalized.trim();
     }
 
-    createPlotEvaluator(expression) {
-        const normalized = this.normalizePlotExpression(expression).replace(/\^/g, '**');
-        return new Function('x', 'theta', 'deg', 'PI', 'E', `with (Math) { return (${normalized}); }`);
+    normalizePlotToken(token) {
+        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(token)) return token;
+
+        const lower = token.toLowerCase();
+        if (lower === 'pi') return 'PI';
+        if (lower === 'e') return 'E';
+        if (lower === 'x' || lower === 'theta' || lower === 'deg') return lower;
+        if (lower === 'ln') return 'log';
+        return lower;
+    }
+
+    isPlotNumberToken(token) {
+        return /^(?:\d+\.\d*|\.\d+|\d+)$/.test(token);
+    }
+
+    isPlotNamedValueToken(token) {
+        return token === 'x' || token === 'theta' || token === 'deg' || token === 'PI' || token === 'E';
+    }
+
+    isPlotIdentifierToken(token) {
+        return /^[A-Za-z_][A-Za-z0-9_]*$/.test(token);
+    }
+
+    shouldInsertImplicitMultiplication(previousToken, nextToken) {
+        if (!previousToken || !nextToken) return false;
+
+        const previousBlockedTokens = new Set(['+', '-', '*', '/', '^', '**', ',', '(']);
+        const nextBlockedTokens = new Set(['+', '-', '*', '/', '^', '**', ',', ')']);
+        if (previousBlockedTokens.has(previousToken) || nextBlockedTokens.has(nextToken)) {
+            return false;
+        }
+
+        const previousEndsValue = this.isPlotNumberToken(previousToken)
+            || previousToken === ')'
+            || this.isPlotNamedValueToken(previousToken);
+        const nextStartsValue = this.isPlotNumberToken(nextToken)
+            || nextToken === '('
+            || this.isPlotNamedValueToken(nextToken)
+            || (this.isPlotIdentifierToken(nextToken) && !this.isPlotNamedValueToken(nextToken));
+
+        return previousEndsValue && nextStartsValue;
+    }
+
+    tokenizePlotExpression(expression) {
+        const compactExpression = String(expression || '').replace(/\s+/g, '');
+        if (!compactExpression) return [];
+
+        const tokenPattern = /\d+\.\d*|\.\d+|\d+|PI|E|theta|deg|x|[A-Za-z_][A-Za-z0-9_]*|\*\*|[()+\-*/^,]/gi;
+        const tokens = [];
+        let currentIndex = 0;
+
+        while (currentIndex < compactExpression.length) {
+            tokenPattern.lastIndex = currentIndex;
+            const match = tokenPattern.exec(compactExpression);
+            if (!match || match.index !== currentIndex) {
+                throw new Error('invalid-expression');
+            }
+
+            tokens.push(this.normalizePlotToken(match[0]));
+            currentIndex = tokenPattern.lastIndex;
+        }
+
+        return tokens;
+    }
+
+    preparePlotExpression(expression, coordinateType = this.backgroundPattern) {
+        let normalized = this.normalizePlotExpression(expression, coordinateType);
+        if (!normalized) return '';
+
+        const replacements = [
+            [/π/gi, 'PI'],
+            [/θ/gi, 'theta'],
+            [/[（﹙［【]/g, '('],
+            [/[）﹚］】]/g, ')'],
+            [/[＋﹢]/g, '+'],
+            [/[－﹣−–—]/g, '-'],
+            [/[×✕✖＊·•]/g, '*'],
+            [/[÷／]/g, '/'],
+            [/[，、]/g, ','],
+            [/。/g, '.'],
+            [/＝/g, '='],
+            [/[＾˄]/g, '^']
+        ];
+
+        replacements.forEach(([pattern, value]) => {
+            normalized = normalized.replace(pattern, value);
+        });
+
+        const tokens = this.tokenizePlotExpression(normalized);
+        if (tokens.length === 0) {
+            throw new Error('empty-expression');
+        }
+
+        const preparedTokens = [];
+        tokens.forEach((token, index) => {
+            const previousToken = preparedTokens.length ? preparedTokens[preparedTokens.length - 1] : null;
+            if (this.shouldInsertImplicitMultiplication(previousToken, token)) {
+                preparedTokens.push('*');
+            }
+            preparedTokens.push(token === '^' ? '**' : token);
+        });
+
+        return preparedTokens.join('');
+    }
+
+    createPlotEvaluator(expression, coordinateType = this.backgroundPattern) {
+        const normalized = this.preparePlotExpression(expression, coordinateType);
+
+        try {
+            return new Function('x', 'theta', 'deg', 'PI', 'E', `with (Math) { return (${normalized}); }`);
+        } catch (error) {
+            throw new Error('invalid-expression');
+        }
     }
 
     addCoordinatePoint(canvasX, canvasY, options = {}) {
@@ -1043,7 +1153,8 @@ class BackgroundManager {
             throw new Error('empty-expression');
         }
 
-        const evaluator = this.createPlotEvaluator(normalizedExpression);
+        const preparedExpression = this.preparePlotExpression(normalizedExpression, coordinateType);
+        const evaluator = this.createPlotEvaluator(preparedExpression, coordinateType);
         const sampleInputs = coordinateType === 'polar'
             ? [[0, 0, 0], [0, Math.PI / 4, 45], [0, Math.PI / 2, 90]]
             : [[-1, 0, 0], [0, 0, 0], [1, 0, 0]];
@@ -1069,7 +1180,7 @@ class BackgroundManager {
         const sameTypePlots = nextState.plots.filter(plot => plot.coordinateType === coordinateType);
         nextState.plots.push({
             id: `plot-${Date.now()}-${nextState.plots.length}`,
-            expression: normalizedExpression,
+            expression: preparedExpression,
             coordinateType: coordinateType === 'polar' ? 'polar' : 'coordinate',
             color: color || this.getCoordinatePaletteColor(sameTypePlots.length + 1)
         });
@@ -1254,7 +1365,7 @@ class BackgroundManager {
 
         activePlots.forEach(plot => {
             try {
-                const evaluator = this.createPlotEvaluator(plot.expression);
+                const evaluator = this.createPlotEvaluator(plot.expression, plot.coordinateType);
                 ctx.save();
                 ctx.strokeStyle = plot.color;
                 ctx.lineWidth = 2.5;
