@@ -388,6 +388,18 @@
                     </div>
                 </div>
             </div>
+            <div class="coordinate-settings-entry" id="coordinate-settings-entry" style="display: none;">
+                <button id="coordinate-settings-toggle-btn" type="button" class="pattern-option-btn coordinate-settings-toggle-btn" aria-expanded="false">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    <span data-i18n="background.coordinateTools">坐标辅助</span>
+                    <svg class="coordinate-settings-toggle-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+            </div>
             <div class="config-group config-group-compact" id="coordinate-tools-group" style="display: none;">
                 <label data-i18n="background.coordinateTools">坐标辅助</label>
                 <div class="coordinate-tool-toggles">
@@ -407,7 +419,45 @@
                 <label data-i18n="background.plotExpression">函数表达式</label>
                 <div class="coordinate-plot-input-row">
                     <input type="text" id="coordinate-expression-input" data-i18n-placeholder="background.plotPlaceholderCartesian" placeholder="如：sin(x) + 2">
+                    <button id="coordinate-keypad-toggle-btn" type="button" class="icon-btn coordinate-input-panel-toggle" title="输入面板" aria-expanded="false">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                            <path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M10 13h.01M14 13h.01M18 13h.01"></path>
+                        </svg>
+                    </button>
                     <button id="coordinate-plot-btn" type="button" class="pattern-option-btn" data-i18n="background.plot">绘制</button>
+                </div>
+                <div id="coordinate-keypad-panel" class="coordinate-keypad-panel" style="display: none;">
+                    <button type="button" class="coordinate-keypad-btn wide" data-coordinate-action="clear">C</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-action="backspace">⌫</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="(">(</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert=")">)</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="+">+</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="-">-</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="*">×</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="/">÷</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="^">^</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="=">=</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-variable-btn data-insert-cartesian="x" data-insert-polar="theta">x</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="PI">π</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="E">e</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert=".">.</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="0">0</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="1">1</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="2">2</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="3">3</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="4">4</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="5">5</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="6">6</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="7">7</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="8">8</button>
+                    <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="9">9</button>
+                    <button type="button" class="coordinate-keypad-btn wide" data-coordinate-insert="sin(">sin</button>
+                    <button type="button" class="coordinate-keypad-btn wide" data-coordinate-insert="cos(">cos</button>
+                    <button type="button" class="coordinate-keypad-btn wide" data-coordinate-insert="tan(">tan</button>
+                    <button type="button" class="coordinate-keypad-btn wide" data-coordinate-insert="log(">log</button>
+                    <button type="button" class="coordinate-keypad-btn wide" data-coordinate-insert="sqrt(">sqrt</button>
+                    <button type="button" class="coordinate-keypad-btn wide" data-coordinate-insert="abs(">abs</button>
                 </div>
                 <p class="settings-hint coordinate-hint-line" id="coordinate-plot-hint" data-i18n="background.plotHintCartesian">直角坐标：输入 y = f(x)，可用 sin cos PI</p>
                 <div id="coordinate-plot-list" class="coordinate-plot-list"></div>

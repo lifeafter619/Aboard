@@ -1928,8 +1928,33 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     margin-top: 15px;
 }
 
+#coordinate-settings-entry {
+    margin-top: 12px;
+}
+
+.coordinate-settings-toggle-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.coordinate-settings-toggle-arrow {
+    margin-left: auto;
+    transition: transform 0.2s ease;
+}
+
+.coordinate-settings-toggle-btn.active .coordinate-settings-toggle-arrow {
+    transform: rotate(180deg);
+}
+
 #coordinate-tools-group {
     margin-top: 12px;
+    padding: 12px;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    background: #fafafa;
 }
 
 .coordinate-tool-toggles {
@@ -1977,6 +2002,47 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     border: 1px solid #ddd;
     border-radius: 8px;
     background: #fff;
+}
+
+.coordinate-input-panel-toggle {
+    flex-shrink: 0;
+}
+
+.coordinate-keypad-panel {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.coordinate-keypad-btn {
+    min-height: 38px;
+    padding: 8px 6px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.coordinate-keypad-btn:hover {
+    background: #f2f6ff;
+    border-color: var(--theme-color, #007bff);
+}
+
+.coordinate-keypad-btn.wide {
+    grid-column: span 2;
+}
+
+@media (max-width: 520px) {
+    .coordinate-keypad-panel {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .coordinate-tool-toggles {
+        grid-template-columns: 1fr;
+    }
 }
 
 .coordinate-plot-list {

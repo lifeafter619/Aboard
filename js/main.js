@@ -170,6 +170,8 @@ class DrawingBoard {
         this.isDraggingCoordinateOrigin = false;
         this.isCoordinateOriginDragMode = false; // Mode activated by button click
         this.isCoordinatePointMode = false;
+        this.isCoordinateSettingsExpanded = false;
+        this.isCoordinateInputPanelVisible = false;
         this.coordinateOriginDragStart = { x: 0, y: 0 };
         
         // Uploaded images storage
@@ -1030,11 +1032,8 @@ class DrawingBoard {
             }
             
             if (this.isCoordinatePointMode && this.backgroundManager.supportsMovableOrigin()) {
-                const rect = this.bgCanvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-
-                this.backgroundManager.addCoordinatePoint(x, y);
+                const point = this.getLogicalCanvasPointFromEvent(e);
+                this.backgroundManager.addCoordinatePoint(point.x, point.y);
                 this.savePageBackground(this.currentPage);
                 this.updateBackgroundUI();
                 this.showCoordinateToast('background.pointAdded', '已添加坐标点', 'success');
@@ -1043,9 +1042,8 @@ class DrawingBoard {
 
             // Check if clicking on coordinate origin point (in coordinate origin drag mode or background mode)
             if (this.backgroundManager.supportsMovableOrigin()) {
-                const rect = this.bgCanvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+                const point = this.getLogicalCanvasPointFromEvent(e);
+                const { x, y } = point;
                 
                 // Check if in coordinate origin drag mode (button clicked)
                 if (this.isCoordinateOriginDragMode) {
@@ -1211,9 +1209,8 @@ class DrawingBoard {
             // In pan mode, double-click to select coordinate origin
             if (this.drawingEngine.currentTool === 'pan' && 
                 this.backgroundManager.supportsMovableOrigin()) {
-                const rect = this.bgCanvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+                const point = this.getLogicalCanvasPointFromEvent(e);
+                const { x, y } = point;
                 
                 if (this.backgroundManager.isPointNearCoordinateOrigin(x, y)) {
                     this.isDraggingCoordinateOrigin = true;
@@ -1790,6 +1787,13 @@ class DrawingBoard {
         bindCoordinateOverlayCheckbox('coordinate-connect-points', 'connectPoints');
         bindCoordinateOverlayCheckbox('coordinate-snap-grid', 'snapToGrid');
 
+        const coordinateSettingsToggleBtn = document.getElementById('coordinate-settings-toggle-btn');
+        if (coordinateSettingsToggleBtn) {
+            coordinateSettingsToggleBtn.addEventListener('click', () => {
+                this.toggleCoordinateSettingsPanel();
+            });
+        }
+
         const coordinateAddPointBtn = document.getElementById('coordinate-add-point-btn');
         if (coordinateAddPointBtn) {
             coordinateAddPointBtn.addEventListener('click', () => {
@@ -1850,6 +1854,37 @@ class DrawingBoard {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     addCoordinatePlot();
+                }
+            });
+        }
+
+        const coordinateKeypadToggleBtn = document.getElementById('coordinate-keypad-toggle-btn');
+        if (coordinateKeypadToggleBtn) {
+            coordinateKeypadToggleBtn.addEventListener('click', () => {
+                this.toggleCoordinateInputPanel();
+            });
+        }
+
+        const coordinateKeypadPanel = document.getElementById('coordinate-keypad-panel');
+        if (coordinateKeypadPanel) {
+            coordinateKeypadPanel.addEventListener('click', (e) => {
+                const button = e.target.closest('[data-coordinate-action], [data-coordinate-insert], [data-coordinate-variable-btn]');
+                if (!button) return;
+
+                if (button.dataset.coordinateAction) {
+                    this.handleCoordinateExpressionAction(button.dataset.coordinateAction);
+                    return;
+                }
+
+                let value = button.dataset.coordinateInsert;
+                if (button.hasAttribute('data-coordinate-variable-btn')) {
+                    value = this.backgroundManager.backgroundPattern === 'polar'
+                        ? button.dataset.insertPolar
+                        : button.dataset.insertCartesian;
+                }
+
+                if (value) {
+                    this.insertCoordinateExpressionAtCursor(value);
                 }
             });
         }
@@ -2863,10 +2898,10 @@ class DrawingBoard {
             }
             
             // Zoom shortcuts
-            if (e.key === '+' || e.key === '=') {
+            if (!isEditableTarget && (e.key === '+' || e.key === '=')) {
                 e.preventDefault();
                 this.zoomIn();
-            } else if (e.key === '-' || e.key === '_') {
+            } else if (!isEditableTarget && (e.key === '-' || e.key === '_')) {
                 e.preventDefault();
                 this.zoomOut();
             }
@@ -3561,6 +3596,20 @@ class DrawingBoard {
         this.settingsManager?.toastManager?.show(message === i18nKey ? fallback : message, type);
     }
 
+    getLogicalCanvasPointFromEvent(e) {
+        if (this.drawingEngine?.getPosition) {
+            return this.drawingEngine.getPosition(e);
+        }
+
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = rect.width ? this.canvas.offsetWidth / rect.width : 1;
+        const scaleY = rect.height ? this.canvas.offsetHeight / rect.height : 1;
+        return {
+            x: Math.max(0, Math.min((e.clientX - rect.left) * scaleX, this.canvas.offsetWidth || rect.width || 0)),
+            y: Math.max(0, Math.min((e.clientY - rect.top) * scaleY, this.canvas.offsetHeight || rect.height || 0))
+        };
+    }
+
     escapeHtml(value) {
         return String(value)
             .replace(/&/g, '&amp;')
@@ -3568,6 +3617,104 @@ class DrawingBoard {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    toggleCoordinateSettingsPanel(force) {
+        const supportsCoordinateTools = this.backgroundManager.supportsMovableOrigin(this.backgroundManager.backgroundPattern);
+        this.isCoordinateSettingsExpanded = supportsCoordinateTools && (typeof force === 'boolean'
+            ? force
+            : !this.isCoordinateSettingsExpanded);
+
+        if (!this.isCoordinateSettingsExpanded) {
+            this.toggleCoordinateInputPanel(false);
+        }
+
+        this.updateBackgroundUI();
+    }
+
+    toggleCoordinateInputPanel(force) {
+        const supportsCoordinateTools = this.backgroundManager.supportsMovableOrigin(this.backgroundManager.backgroundPattern);
+        this.isCoordinateInputPanelVisible = supportsCoordinateTools && this.isCoordinateSettingsExpanded && (typeof force === 'boolean'
+            ? force
+            : !this.isCoordinateInputPanelVisible);
+
+        const keypadPanel = document.getElementById('coordinate-keypad-panel');
+        const keypadToggleBtn = document.getElementById('coordinate-keypad-toggle-btn');
+
+        if (keypadPanel) {
+            keypadPanel.style.display = this.isCoordinateInputPanelVisible ? 'grid' : 'none';
+        }
+
+        if (keypadToggleBtn) {
+            keypadToggleBtn.classList.toggle('active', this.isCoordinateInputPanelVisible);
+            keypadToggleBtn.setAttribute('aria-expanded', this.isCoordinateInputPanelVisible ? 'true' : 'false');
+        }
+
+        if (this.isCoordinateInputPanelVisible) {
+            this.syncCoordinateInputPanelButtons();
+        }
+    }
+
+    syncCoordinateInputPanelButtons() {
+        const variableBtn = document.querySelector('[data-coordinate-variable-btn]');
+        if (!variableBtn) return;
+
+        const isPolar = this.backgroundManager.backgroundPattern === 'polar';
+        variableBtn.textContent = isPolar ? 'θ' : 'x';
+        variableBtn.title = isPolar ? 'theta' : 'x';
+    }
+
+    insertCoordinateExpressionAtCursor(value) {
+        const input = document.getElementById('coordinate-expression-input');
+        if (!input) return;
+
+        input.focus();
+        const start = input.selectionStart ?? input.value.length;
+        const end = input.selectionEnd ?? input.value.length;
+
+        if (typeof input.setRangeText === 'function') {
+            input.setRangeText(value, start, end, 'end');
+            return;
+        }
+
+        input.value = `${input.value.slice(0, start)}${value}${input.value.slice(end)}`;
+        const nextCursor = start + value.length;
+        input.setSelectionRange(nextCursor, nextCursor);
+    }
+
+    handleCoordinateExpressionAction(action) {
+        const input = document.getElementById('coordinate-expression-input');
+        if (!input) return;
+
+        input.focus();
+        const start = input.selectionStart ?? input.value.length;
+        const end = input.selectionEnd ?? input.value.length;
+
+        if (action === 'clear') {
+            input.value = '';
+            input.setSelectionRange(0, 0);
+            return;
+        }
+
+        if (action === 'backspace') {
+            if (typeof input.setRangeText === 'function') {
+                if (start !== end) {
+                    input.setRangeText('', start, end, 'end');
+                } else if (start > 0) {
+                    input.setRangeText('', start - 1, start, 'end');
+                }
+                return;
+            }
+
+            if (start !== end) {
+                input.value = `${input.value.slice(0, start)}${input.value.slice(end)}`;
+                input.setSelectionRange(start, start);
+            } else if (start > 0) {
+                const nextCursor = start - 1;
+                input.value = `${input.value.slice(0, nextCursor)}${input.value.slice(start)}`;
+                input.setSelectionRange(nextCursor, nextCursor);
+            }
+        }
     }
 
     setCoordinatePointMode(enabled) {
@@ -5458,12 +5605,28 @@ class DrawingBoard {
             imageSizeGroup.style.display = currentPattern === 'image' ? 'flex' : 'none';
         }
 
+        const coordinateSettingsEntry = document.getElementById('coordinate-settings-entry');
         const coordinateToolsGroup = document.getElementById('coordinate-tools-group');
         const coordinateState = this.backgroundManager.getCoordinateOverlayState();
         const supportsCoordinateTools = this.backgroundManager.supportsMovableOrigin(currentPattern);
 
+        if (!supportsCoordinateTools) {
+            this.isCoordinateSettingsExpanded = false;
+            this.isCoordinateInputPanelVisible = false;
+        }
+
+        if (coordinateSettingsEntry) {
+            coordinateSettingsEntry.style.display = supportsCoordinateTools ? 'block' : 'none';
+        }
+
         if (coordinateToolsGroup) {
-            coordinateToolsGroup.style.display = supportsCoordinateTools ? 'block' : 'none';
+            coordinateToolsGroup.style.display = supportsCoordinateTools && this.isCoordinateSettingsExpanded ? 'block' : 'none';
+        }
+
+        const coordinateSettingsToggleBtn = document.getElementById('coordinate-settings-toggle-btn');
+        if (coordinateSettingsToggleBtn) {
+            coordinateSettingsToggleBtn.classList.toggle('active', supportsCoordinateTools && this.isCoordinateSettingsExpanded);
+            coordinateSettingsToggleBtn.setAttribute('aria-expanded', supportsCoordinateTools && this.isCoordinateSettingsExpanded ? 'true' : 'false');
         }
 
         const toggleMap = {
@@ -5506,6 +5669,8 @@ class DrawingBoard {
             coordinateExpressionInput.placeholder = translated === placeholderKey ? fallback : translated;
         }
 
+        this.syncCoordinateInputPanelButtons();
+        this.toggleCoordinateInputPanel(this.isCoordinateInputPanelVisible);
         this.renderCoordinatePlotList(currentPattern);
         
         // Update move-origin-btn visibility based on current pattern
@@ -5915,8 +6080,9 @@ class DrawingBoard {
     dragCoordinateOrigin(e) {
         if (!this.isDraggingCoordinateOrigin) return;
         
-        const deltaX = e.clientX - this.coordinateOriginDragStart.x;
-        const deltaY = e.clientY - this.coordinateOriginDragStart.y;
+        const viewportScale = this.drawingEngine?.getViewportScale?.() || 1;
+        const deltaX = (e.clientX - this.coordinateOriginDragStart.x) / viewportScale;
+        const deltaY = (e.clientY - this.coordinateOriginDragStart.y) / viewportScale;
         
         const origin = this.backgroundManager.getCoordinateOrigin();
         this.backgroundManager.setCoordinateOrigin(origin.x + deltaX, origin.y + deltaY);
