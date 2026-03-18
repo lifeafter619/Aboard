@@ -1589,7 +1589,7 @@ class DrawingBoard {
         });
         
         // Background pattern buttons
-        document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(btn => {
+        document.querySelectorAll('#pattern-grid .pattern-option-btn[data-pattern]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 // Use currentTarget to ensure we get the data from the button, not its children
                 const pattern = e.currentTarget.dataset.pattern;
@@ -5264,7 +5264,7 @@ class DrawingBoard {
         const patterns = this.settingsManager.getPatternPreferences();
         
         // Hide all pattern buttons first
-        patternGrid.querySelectorAll('.pattern-option-btn').forEach(btn => {
+        patternGrid.querySelectorAll('.pattern-option-btn[data-pattern]').forEach(btn => {
             const pattern = btn.dataset.pattern;
             if (patterns[pattern]) {
                 btn.style.display = 'block';
