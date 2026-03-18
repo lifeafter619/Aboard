@@ -164,6 +164,7 @@ window.translations = {
 
     selection: {
         edit: 'Modifier',
+        color: 'Couleur',
         copy: 'Copier',
         delete: 'Supprimer',
         done: 'Terminé',
@@ -175,7 +176,8 @@ window.translations = {
         layerUp: 'Avancer d’un niveau',
         layerDown: 'Reculer d’un niveau',
         group: 'Grouper',
-        ungroup: 'Dissocier'
+        ungroup: 'Dissocier',
+        position: 'Position'
     },
 
     // Line Style Modal
@@ -223,14 +225,16 @@ window.translations = {
         preference: 'Préférence de motif d\'arrière-plan',
         moveCoordinateOrigin: 'Déplacer l\'origine',
         moveCoordinateOriginHint: 'Cliquez puis faites glisser sur le canevas pour déplacer l\'origine des coordonnées',
-        coordinateTools: 'Outils de coordonnées',
+        coordinateTools: 'Réglages de coordonnées',
         showTicks: 'Afficher les graduations',
         showLabels: 'Afficher les étiquettes',
         showPointLabels: 'Étiquettes des points',
+        showOrigin: 'Afficher l'origine',
         connectPoints: 'Relier les points',
         snapToGrid: 'Aligner sur la grille',
         addPoint: 'Ajouter un point',
-        addPointHint: 'Activez puis cliquez sur le canevas pour ajouter des points',
+        drawPointLine: 'Tracer points et ligne',
+        addPointHint: 'Activez puis cliquez sur le canevas pour placer des points et les relier automatiquement',
         clearPoints: 'Effacer les points',
         clearPlots: 'Effacer les courbes',
         pointsCount: 'Points',
@@ -246,8 +250,10 @@ window.translations = {
         plotPlaceholderCartesian: 'ex. : sin(x) + 2',
         plotPlaceholderPolar: 'ex. : 2 * sin(4 * theta)',
         noPlots: 'Aucune courbe pour le moment',
-        coordinateStatusAddPoint: 'Mode point activé. Cliquez sur le canevas pour ajouter des points',
-        coordinateStatusAddPointOff: 'Mode point désactivé',
+        coordinateStatusAddPoint: 'Mode tracé points et lignes activé',
+        coordinateStatusAddPointOff: 'Mode tracé points et lignes désactivé',
+        connectPointsEnabled: 'Ligne des points activée',
+        connectPointsDisabled: 'Ligne des points désactivée',
         pointAdded: 'Point de coordonnées ajouté',
         pointsCleared: 'Points de coordonnées effacés',
         plotAdded: 'Courbe ajoutée',
@@ -270,6 +276,7 @@ window.translations = {
         delete: 'Supprimer',
         done: 'Terminé',
         edit: 'Modifier',
+        color: 'Couleur',
         rotate90: 'Rotation 90°',
         flipH: 'Retourner horizontalement',
         layer: 'Calque',
@@ -278,7 +285,8 @@ window.translations = {
         layerUp: 'Avancer d’un niveau',
         layerDown: 'Reculer d’un niveau',
         group: 'Grouper',
-        ungroup: 'Dissocier'
+        ungroup: 'Dissocier',
+        position: 'Position'
     },
 
     // Page Navigation

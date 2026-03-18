@@ -1791,7 +1791,7 @@ class DrawingBoard {
         bindCoordinateOverlayCheckbox('coordinate-show-ticks', 'showTicks');
         bindCoordinateOverlayCheckbox('coordinate-show-labels', 'showLabels');
         bindCoordinateOverlayCheckbox('coordinate-show-point-labels', 'showPointLabels');
-        bindCoordinateOverlayCheckbox('coordinate-connect-points', 'connectPoints');
+        bindCoordinateOverlayCheckbox('coordinate-show-origin', 'showOrigin');
         bindCoordinateOverlayCheckbox('coordinate-snap-grid', 'snapToGrid');
 
         const coordinateSettingsToggleBtn = document.getElementById('coordinate-settings-toggle-btn');
@@ -1856,9 +1856,9 @@ class DrawingBoard {
                 const nextEnabled = !this.isCoordinatePointMode;
                 this.setCoordinatePointMode(nextEnabled);
                 if (nextEnabled) {
-                    this.showCoordinateToast('background.coordinateStatusAddPoint', '取点模式已开启，点击画布添加坐标点');
+                    this.showCoordinateToast('background.coordinateStatusAddPoint', '绘制点线模式已开启，点击画布依次添加坐标点');
                 } else {
-                    this.showCoordinateToast('background.coordinateStatusAddPointOff', '取点模式已关闭');
+                    this.showCoordinateToast('background.coordinateStatusAddPointOff', '绘制点线模式已关闭');
                 }
             });
         }
@@ -3828,6 +3828,15 @@ class DrawingBoard {
     setCoordinatePointMode(enabled) {
         this.isCoordinatePointMode = !!enabled && this.backgroundManager.supportsMovableOrigin();
 
+        if (this.isCoordinatePointMode) {
+            const coordinateState = this.backgroundManager.getCoordinateOverlayState();
+            if (!coordinateState.connectPoints) {
+                this.backgroundManager.updateCoordinateOverlayOptions({ connectPoints: true });
+                this.savePageBackground(this.currentPage);
+                this.updateBackgroundUI();
+            }
+        }
+
         const addPointBtn = document.getElementById('coordinate-add-point-btn');
         if (addPointBtn) {
             addPointBtn.classList.toggle('active', this.isCoordinatePointMode);
@@ -5762,7 +5771,7 @@ class DrawingBoard {
             'coordinate-show-ticks': coordinateState.showTicks,
             'coordinate-show-labels': coordinateState.showLabels,
             'coordinate-show-point-labels': coordinateState.showPointLabels,
-            'coordinate-connect-points': coordinateState.connectPoints,
+            'coordinate-show-origin': coordinateState.showOrigin,
             'coordinate-snap-grid': coordinateState.snapToGrid
         };
 
@@ -6123,6 +6132,7 @@ class DrawingBoard {
     }
 
     syncInteractiveOverlays() {
+        this.backgroundManager?.renderCoordinateOverlay?.();
         this.selectionManager?.updateControlBox?.();
         this.strokeControls?.updateControlBox?.();
         if (this.imageControls?.isActive) {

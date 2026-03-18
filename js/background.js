@@ -70,6 +70,7 @@ class BackgroundManager {
 
         this.coordinateOverlayCanvas = null;
         this.coordinateOverlayCtx = null;
+        this.coordinateOverlaySvg = null;
         let savedCoordinateOverlayState = null;
         try {
             savedCoordinateOverlayState = JSON.parse(localStorage.getItem('coordinateOverlayState') || 'null');
@@ -788,8 +789,10 @@ class BackgroundManager {
             showTicks: true,
             showLabels: true,
             showPointLabels: true,
+            showOrigin: true,
             connectPoints: true,
             snapToGrid: true,
+            lineColor: '#2563eb',
             points: [],
             plots: []
         };
@@ -804,8 +807,12 @@ class BackgroundManager {
             showTicks: nextState.showTicks !== false,
             showLabels: nextState.showLabels !== false,
             showPointLabels: nextState.showPointLabels !== false,
+            showOrigin: nextState.showOrigin !== false,
             connectPoints: nextState.connectPoints !== false,
             snapToGrid: nextState.snapToGrid !== false,
+            lineColor: typeof nextState.lineColor === 'string' && nextState.lineColor.trim()
+                ? nextState.lineColor.trim()
+                : defaults.lineColor,
             points: Array.isArray(nextState.points)
                 ? nextState.points
                     .filter(point => Number.isFinite(point?.x) && Number.isFinite(point?.y))
@@ -860,6 +867,202 @@ class BackgroundManager {
     getCoordinatePaletteColor(index = 0) {
         const palette = ['#ef4444', '#2563eb', '#16a34a', '#d97706', '#7c3aed', '#db2777', '#0891b2'];
         return palette[Math.abs(index) % palette.length];
+    }
+
+    getCoordinateLineColor() {
+        return this.coordinateOverlayState.lineColor || this.getAdaptivePatternColor(0.74, 0.24);
+    }
+
+    getCoordinatePointEntries(pointIds = null) {
+        const points = this.coordinateOverlayState.points || [];
+        const idSet = Array.isArray(pointIds) ? new Set(pointIds) : null;
+        return points
+            .filter(point => !idSet || idSet.has(point.id))
+            .map((point, index) => {
+                const canvasPoint = this.mathToCanvasLogicalPoint(point.x, point.y);
+                return {
+                    ...point,
+                    index,
+                    canvasX: canvasPoint.x,
+                    canvasY: canvasPoint.y
+                };
+            });
+    }
+
+    getCanvasScreenMetrics() {
+        const rect = this.bgCanvas.getBoundingClientRect();
+        const logicalWidth = this.bgCanvas.offsetWidth || this.bgCanvas.clientWidth || (this.bgCanvas.width / this.getCoordinateOverlayDpr());
+        const logicalHeight = this.bgCanvas.offsetHeight || this.bgCanvas.clientHeight || (this.bgCanvas.height / this.getCoordinateOverlayDpr());
+        const scaleX = logicalWidth > 0 ? rect.width / logicalWidth : 1;
+        const scaleY = logicalHeight > 0 ? rect.height / logicalHeight : 1;
+        const visualScale = Math.max(Math.min((scaleX + scaleY) / 2, 12), 0.1);
+
+        return {
+            rect,
+            logicalWidth,
+            logicalHeight,
+            viewportWidth: window.innerWidth || document.documentElement.clientWidth || logicalWidth,
+            viewportHeight: window.innerHeight || document.documentElement.clientHeight || logicalHeight,
+            scaleX,
+            scaleY,
+            visualScale
+        };
+    }
+
+    canvasLogicalToScreenPoint(canvasX, canvasY, metrics = this.getCanvasScreenMetrics()) {
+        return {
+            x: metrics.rect.left + canvasX * metrics.scaleX,
+            y: metrics.rect.top + canvasY * metrics.scaleY
+        };
+    }
+
+    mathToScreenPoint(x, y, pattern = this.backgroundPattern, metrics = this.getCanvasScreenMetrics()) {
+        const logicalPoint = this.mathToCanvasLogicalPoint(x, y, pattern);
+        return this.canvasLogicalToScreenPoint(logicalPoint.x, logicalPoint.y, metrics);
+    }
+
+    getCoordinatePointIds() {
+        return this.coordinateOverlayState.points.map(point => point.id);
+    }
+
+    hasCoordinateSelectableContent() {
+        return (this.coordinateOverlayState.points?.length || 0) > 0;
+    }
+
+    distancePointToSegment(px, py, x1, y1, x2, y2) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        if (dx === 0 && dy === 0) {
+            return Math.hypot(px - x1, py - y1);
+        }
+        const t = Math.max(0, Math.min(1, (((px - x1) * dx) + ((py - y1) * dy)) / ((dx * dx) + (dy * dy))));
+        const nearestX = x1 + (t * dx);
+        const nearestY = y1 + (t * dy);
+        return Math.hypot(px - nearestX, py - nearestY);
+    }
+
+    getCoordinateLineSegments() {
+        const entries = this.getCoordinatePointEntries();
+        if (!this.coordinateOverlayState.connectPoints || entries.length < 2) {
+            return [];
+        }
+
+        const segments = [];
+        for (let i = 1; i < entries.length; i++) {
+            segments.push({
+                start: entries[i - 1],
+                end: entries[i]
+            });
+        }
+        return segments;
+    }
+
+    hitTestCoordinateOverlay(canvasX, canvasY, threshold = 10) {
+        const entries = this.getCoordinatePointEntries();
+        for (let i = entries.length - 1; i >= 0; i--) {
+            const point = entries[i];
+            if (Math.hypot(canvasX - point.canvasX, canvasY - point.canvasY) <= threshold) {
+                return { type: 'point', pointId: point.id };
+            }
+        }
+
+        if (this.coordinateOverlayState.connectPoints && entries.length > 1) {
+            const segments = this.getCoordinateLineSegments();
+            for (const segment of segments) {
+                const distance = this.distancePointToSegment(
+                    canvasX,
+                    canvasY,
+                    segment.start.canvasX,
+                    segment.start.canvasY,
+                    segment.end.canvasX,
+                    segment.end.canvasY
+                );
+                if (distance <= threshold) {
+                    return { type: 'line', pointIds: entries.map(point => point.id) };
+                }
+            }
+        }
+
+        return null;
+    }
+
+    getCoordinateSelectionBounds(pointIds = null, padding = 10) {
+        const entries = this.getCoordinatePointEntries(pointIds);
+        if (entries.length === 0) return null;
+
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+
+        entries.forEach(point => {
+            minX = Math.min(minX, point.canvasX);
+            minY = Math.min(minY, point.canvasY);
+            maxX = Math.max(maxX, point.canvasX);
+            maxY = Math.max(maxY, point.canvasY);
+        });
+
+        return {
+            x: minX - padding,
+            y: minY - padding,
+            width: Math.max(18, (maxX - minX) + padding * 2),
+            height: Math.max(18, (maxY - minY) + padding * 2)
+        };
+    }
+
+    updateCoordinatePoints(pointUpdates = [], options = {}) {
+        if (!Array.isArray(pointUpdates) || pointUpdates.length === 0) return false;
+        const updateMap = new Map(pointUpdates.filter(update => update?.id).map(update => [update.id, update]));
+        if (updateMap.size === 0) return false;
+
+        const nextState = this.getCoordinateOverlayState();
+        let changed = false;
+        nextState.points = nextState.points.map(point => {
+            const update = updateMap.get(point.id);
+            if (!update) return point;
+            changed = true;
+            return {
+                ...point,
+                x: Number.isFinite(update.x) ? this.roundToDecimals(update.x, 4) : point.x,
+                y: Number.isFinite(update.y) ? this.roundToDecimals(update.y, 4) : point.y,
+                color: typeof update.color === 'string' && update.color.trim() ? update.color.trim() : point.color
+            };
+        });
+
+        if (!changed) return false;
+        this.setCoordinateOverlayState(nextState, options);
+        return true;
+    }
+
+    setCoordinatePointsColor(pointIds, color, options = {}) {
+        if (!Array.isArray(pointIds) || !pointIds.length || !color) return false;
+        return this.updateCoordinatePoints(pointIds.map(id => ({ id, color })), options);
+    }
+
+    setCoordinateLineColor(color, options = {}) {
+        if (typeof color !== 'string' || !color.trim()) return false;
+        this.updateCoordinateOverlayOptions({ lineColor: color.trim() }, options);
+        return true;
+    }
+
+    removeCoordinatePoints(pointIds, options = {}) {
+        if (!Array.isArray(pointIds) || pointIds.length === 0) return false;
+        const idSet = new Set(pointIds);
+        const nextState = this.getCoordinateOverlayState();
+        const initialLength = nextState.points.length;
+        nextState.points = nextState.points.filter(point => !idSet.has(point.id));
+        if (nextState.points.length === initialLength) return false;
+        this.setCoordinateOverlayState(nextState, options);
+        return true;
+    }
+
+    escapeSvgText(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     roundToDecimals(value, decimals = 2) {
@@ -985,6 +1188,66 @@ class BackgroundManager {
             logicalWidth,
             logicalHeight
         };
+    }
+
+    ensureCoordinateOverlaySvg() {
+        if (this.coordinateOverlaySvg && document.body.contains(this.coordinateOverlaySvg)) {
+            return this.coordinateOverlaySvg;
+        }
+
+        let overlaySvg = document.getElementById('coordinate-overlay-svg');
+        if (!overlaySvg) {
+            overlaySvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            overlaySvg.id = 'coordinate-overlay-svg';
+            overlaySvg.style.position = 'fixed';
+            overlaySvg.style.left = '0';
+            overlaySvg.style.top = '0';
+            overlaySvg.style.width = '100vw';
+            overlaySvg.style.height = '100vh';
+            overlaySvg.style.pointerEvents = 'none';
+            overlaySvg.style.zIndex = '2';
+            overlaySvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            overlaySvg.setAttribute('overflow', 'visible');
+            overlaySvg.setAttribute('shape-rendering', 'geometricPrecision');
+            overlaySvg.setAttribute('text-rendering', 'geometricPrecision');
+            document.body.appendChild(overlaySvg);
+        }
+
+        this.coordinateOverlaySvg = overlaySvg;
+        return overlaySvg;
+    }
+
+    syncCoordinateOverlaySvgSize() {
+        const overlaySvg = this.ensureCoordinateOverlaySvg();
+        if (!overlaySvg) return null;
+
+        const metrics = this.getCanvasScreenMetrics();
+        overlaySvg.style.width = `${metrics.viewportWidth}px`;
+        overlaySvg.style.height = `${metrics.viewportHeight}px`;
+        overlaySvg.setAttribute('width', String(metrics.viewportWidth));
+        overlaySvg.setAttribute('height', String(metrics.viewportHeight));
+        overlaySvg.setAttribute('viewBox', `0 0 ${metrics.viewportWidth} ${metrics.viewportHeight}`);
+
+        return {
+            svg: overlaySvg,
+            logicalWidth: metrics.logicalWidth,
+            logicalHeight: metrics.logicalHeight,
+            metrics
+        };
+    }
+
+    renderCoordinateOriginSvg(origin, metrics) {
+        if (!this.coordinateOverlayState.showOrigin) return '';
+        const screenOrigin = this.canvasLogicalToScreenPoint(origin.x, origin.y, metrics);
+        const fill = this.getAdaptivePatternColor(0.9, 0.28);
+        const stroke = this.backgroundColor;
+        const radius = Math.max(4.5, Math.min(16, 5.5 * metrics.visualScale));
+        const strokeWidth = Math.max(1.2, Math.min(5, 2 * metrics.visualScale));
+        return `
+            <g class="coordinate-origin-marker">
+                <circle cx="${screenOrigin.x}" cy="${screenOrigin.y}" r="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}"></circle>
+            </g>
+        `;
     }
 
     getCoordinateLabelInterval(unitSize) {
@@ -1210,86 +1473,77 @@ class BackgroundManager {
         return `P${index + 1}(${this.formatCoordinateValue(point.x)}, ${this.formatCoordinateValue(point.y)})`;
     }
 
-    renderCartesianTicksAndLabels(ctx, origin, unitSize, logicalWidth, logicalHeight) {
+    renderCartesianTicksAndLabels(origin, unitSize, logicalWidth, logicalHeight, metrics) {
         const { showTicks, showLabels } = this.coordinateOverlayState;
-        if (!showTicks && !showLabels) return;
+        if (!showTicks && !showLabels) return '';
 
         const axisColor = this.getAdaptivePatternColor(0.82, 0.24);
         const labelColor = this.getAdaptivePatternColor(0.76, 0.22);
-        const tickSize = 5;
+        const tickSize = Math.max(4, Math.min(14, 5 * metrics.visualScale));
+        const fontSize = Math.max(11, Math.min(48, unitSize * 0.55 * metrics.visualScale));
+        const lineWidth = Math.max(1, Math.min(4, metrics.visualScale));
         const labelInterval = this.getCoordinateLabelInterval(unitSize);
         const xMin = Math.ceil((0 - origin.x) / unitSize);
         const xMax = Math.floor((logicalWidth - origin.x) / unitSize);
         const yMin = Math.ceil((origin.y - logicalHeight) / unitSize);
         const yMax = Math.floor(origin.y / unitSize);
-        const axisVisibleX = origin.y >= 0 && origin.y <= logicalHeight;
-        const axisVisibleY = origin.x >= 0 && origin.x <= logicalWidth;
-
-        ctx.save();
-        ctx.strokeStyle = axisColor;
-        ctx.fillStyle = labelColor;
-        ctx.lineWidth = 1;
-        ctx.font = `${Math.max(11, Math.min(14, unitSize * 0.55))}px sans-serif`;
+        const screenOrigin = this.canvasLogicalToScreenPoint(origin.x, origin.y, metrics);
+        const axisVisibleX = screenOrigin.y >= -tickSize && screenOrigin.y <= metrics.viewportHeight + tickSize;
+        const axisVisibleY = screenOrigin.x >= -tickSize && screenOrigin.x <= metrics.viewportWidth + tickSize;
+        const parts = [];
 
         if (showTicks && axisVisibleX) {
             for (let x = xMin; x <= xMax; x++) {
                 if (x === 0) continue;
-                const px = origin.x + x * unitSize;
-                ctx.beginPath();
-                ctx.moveTo(px, origin.y - tickSize);
-                ctx.lineTo(px, origin.y + tickSize);
-                ctx.stroke();
+                const screenPoint = this.canvasLogicalToScreenPoint(origin.x + x * unitSize, origin.y, metrics);
+                parts.push(`<line x1="${screenPoint.x}" y1="${screenOrigin.y - tickSize}" x2="${screenPoint.x}" y2="${screenOrigin.y + tickSize}" stroke="${axisColor}" stroke-width="${lineWidth}"></line>`);
             }
         }
 
         if (showTicks && axisVisibleY) {
             for (let y = yMin; y <= yMax; y++) {
                 if (y === 0) continue;
-                const py = origin.y - y * unitSize;
-                ctx.beginPath();
-                ctx.moveTo(origin.x - tickSize, py);
-                ctx.lineTo(origin.x + tickSize, py);
-                ctx.stroke();
+                const screenPoint = this.canvasLogicalToScreenPoint(origin.x, origin.y - y * unitSize, metrics);
+                parts.push(`<line x1="${screenOrigin.x - tickSize}" y1="${screenPoint.y}" x2="${screenOrigin.x + tickSize}" y2="${screenPoint.y}" stroke="${axisColor}" stroke-width="${lineWidth}"></line>`);
             }
         }
 
         if (showLabels && axisVisibleX) {
-            const labelY = Math.min(logicalHeight - 18, origin.y + 8);
-            ctx.textBaseline = 'top';
-            ctx.textAlign = 'center';
+            const labelY = Math.min(metrics.viewportHeight - fontSize - 6, screenOrigin.y + (8 * metrics.visualScale));
             for (let x = xMin; x <= xMax; x++) {
                 if (x === 0 || x % labelInterval !== 0) continue;
-                const px = origin.x + x * unitSize;
-                ctx.fillText(this.formatCoordinateValue(x, 0), px, labelY);
+                const screenPoint = this.canvasLogicalToScreenPoint(origin.x + x * unitSize, origin.y, metrics);
+                parts.push(`<text x="${screenPoint.x}" y="${labelY}" fill="${labelColor}" font-size="${fontSize}" text-anchor="middle" dominant-baseline="hanging">${this.escapeSvgText(this.formatCoordinateValue(x, 0))}</text>`);
             }
         }
 
         if (showLabels && axisVisibleY) {
-            ctx.textBaseline = 'middle';
-            ctx.textAlign = origin.x > logicalWidth - 52 ? 'right' : 'left';
-            const labelX = origin.x > logicalWidth - 52 ? origin.x - 8 : origin.x + 8;
+            const textAnchor = screenOrigin.x > metrics.viewportWidth - (fontSize * 3.2) ? 'end' : 'start';
+            const labelX = textAnchor === 'end'
+                ? screenOrigin.x - (8 * metrics.visualScale)
+                : screenOrigin.x + (8 * metrics.visualScale);
             for (let y = yMin; y <= yMax; y++) {
                 if (y === 0 || y % labelInterval !== 0) continue;
-                const py = origin.y - y * unitSize;
-                ctx.fillText(this.formatCoordinateValue(y, 0), labelX, py);
+                const screenPoint = this.canvasLogicalToScreenPoint(origin.x, origin.y - y * unitSize, metrics);
+                parts.push(`<text x="${labelX}" y="${screenPoint.y}" fill="${labelColor}" font-size="${fontSize}" text-anchor="${textAnchor}" dominant-baseline="middle">${this.escapeSvgText(this.formatCoordinateValue(y, 0))}</text>`);
             }
         }
 
         if (showLabels && axisVisibleX && axisVisibleY) {
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'top';
-            ctx.fillText('0', origin.x + 6, origin.y + 6);
+            parts.push(`<text x="${screenOrigin.x + (6 * metrics.visualScale)}" y="${screenOrigin.y + (6 * metrics.visualScale)}" fill="${labelColor}" font-size="${fontSize}" text-anchor="start" dominant-baseline="hanging">0</text>`);
         }
 
-        ctx.restore();
+        return `<g class="coordinate-cartesian-labels">${parts.join('')}</g>`;
     }
 
-    renderPolarTicksAndLabels(ctx, origin, unitSize, logicalWidth, logicalHeight) {
+    renderPolarTicksAndLabels(origin, unitSize, logicalWidth, logicalHeight, metrics) {
         const { showTicks, showLabels } = this.coordinateOverlayState;
-        if (!showTicks && !showLabels) return;
+        if (!showTicks && !showLabels) return '';
 
         const labelColor = this.getAdaptivePatternColor(0.76, 0.22);
         const tickColor = this.getAdaptivePatternColor(0.82, 0.24);
+        const fontSize = Math.max(11, Math.min(48, unitSize * 0.55 * metrics.visualScale));
+        const lineWidth = Math.max(1, Math.min(4, metrics.visualScale));
         const radiusInterval = this.getCoordinateLabelInterval(unitSize);
         const safeRadius = Math.max(0, Math.min(origin.x, logicalWidth - origin.x, origin.y, logicalHeight - origin.y) - 18);
         const maxRadiusUnits = Math.floor(Math.max(
@@ -1299,21 +1553,15 @@ class BackgroundManager {
             Math.hypot(logicalWidth - origin.x, logicalHeight - origin.y)
         ) / unitSize);
         const angleStep = this.getPolarAngleLabelStep();
-
-        ctx.save();
-        ctx.strokeStyle = tickColor;
-        ctx.fillStyle = labelColor;
-        ctx.lineWidth = 1;
-        ctx.font = `${Math.max(11, Math.min(14, unitSize * 0.55))}px sans-serif`;
+        const screenOrigin = this.canvasLogicalToScreenPoint(origin.x, origin.y, metrics);
+        const parts = [];
 
         if (showTicks) {
             for (let radius = 1; radius <= maxRadiusUnits; radius++) {
-                const px = origin.x + radius * unitSize;
-                if (px < 0 || px > logicalWidth) continue;
-                ctx.beginPath();
-                ctx.moveTo(px, origin.y - 4);
-                ctx.lineTo(px, origin.y + 4);
-                ctx.stroke();
+                const screenPoint = this.canvasLogicalToScreenPoint(origin.x + radius * unitSize, origin.y, metrics);
+                if (screenPoint.x < -12 || screenPoint.x > metrics.viewportWidth + 12) continue;
+                const tickHalf = Math.max(3, Math.min(10, 4 * metrics.visualScale));
+                parts.push(`<line x1="${screenPoint.x}" y1="${screenOrigin.y - tickHalf}" x2="${screenPoint.x}" y2="${screenOrigin.y + tickHalf}" stroke="${tickColor}" stroke-width="${lineWidth}"></line>`);
             }
 
             if (safeRadius > 24) {
@@ -1321,63 +1569,50 @@ class BackgroundManager {
                     const rad = angle * Math.PI / 180;
                     const cos = Math.cos(rad);
                     const sin = Math.sin(rad);
-                    ctx.beginPath();
-                    ctx.moveTo(origin.x + (safeRadius - 6) * cos, origin.y - (safeRadius - 6) * sin);
-                    ctx.lineTo(origin.x + safeRadius * cos, origin.y - safeRadius * sin);
-                    ctx.stroke();
+                    const startPoint = this.canvasLogicalToScreenPoint(origin.x + (safeRadius - 6) * cos, origin.y - (safeRadius - 6) * sin, metrics);
+                    const endPoint = this.canvasLogicalToScreenPoint(origin.x + safeRadius * cos, origin.y - safeRadius * sin, metrics);
+                    parts.push(`<line x1="${startPoint.x}" y1="${startPoint.y}" x2="${endPoint.x}" y2="${endPoint.y}" stroke="${tickColor}" stroke-width="${lineWidth}"></line>`);
                 }
             }
         }
 
         if (showLabels) {
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'bottom';
             for (let radius = radiusInterval; radius <= maxRadiusUnits; radius += radiusInterval) {
-                const px = origin.x + radius * unitSize;
-                if (px > logicalWidth - 12 || origin.y < 16 || origin.y > logicalHeight - 4) continue;
-                ctx.fillText(this.formatCoordinateValue(radius, 0), px + 4, origin.y - 6);
+                const screenPoint = this.canvasLogicalToScreenPoint(origin.x + radius * unitSize, origin.y, metrics);
+                if (screenPoint.x > metrics.viewportWidth - 12 || screenOrigin.y < 16 || screenOrigin.y > metrics.viewportHeight - 4) continue;
+                parts.push(`<text x="${screenPoint.x + (4 * metrics.visualScale)}" y="${screenOrigin.y - (6 * metrics.visualScale)}" fill="${labelColor}" font-size="${fontSize}" text-anchor="start" dominant-baseline="auto">${this.escapeSvgText(this.formatCoordinateValue(radius, 0))}</text>`);
             }
 
             if (safeRadius > 28) {
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
                 for (let angle = 0; angle < 360; angle += angleStep) {
                     const rad = angle * Math.PI / 180;
                     const labelRadius = safeRadius - 14;
-                    ctx.fillText(
-                        `${angle}°`,
-                        origin.x + labelRadius * Math.cos(rad),
-                        origin.y - labelRadius * Math.sin(rad)
-                    );
+                    const labelPoint = this.canvasLogicalToScreenPoint(origin.x + labelRadius * Math.cos(rad), origin.y - labelRadius * Math.sin(rad), metrics);
+                    parts.push(`<text x="${labelPoint.x}" y="${labelPoint.y}" fill="${labelColor}" font-size="${fontSize}" text-anchor="middle" dominant-baseline="middle">${angle}°</text>`);
                 }
             }
         }
 
-        ctx.restore();
+        return `<g class="coordinate-polar-labels">${parts.join('')}</g>`;
     }
 
-    renderCoordinatePlots(ctx, logicalWidth, logicalHeight) {
+    renderCoordinatePlots(logicalWidth, logicalHeight, metrics) {
         const activePlots = this.coordinateOverlayState.plots.filter(plot => plot.coordinateType === this.backgroundPattern);
-        if (activePlots.length === 0) return;
+        if (activePlots.length === 0) return '';
 
         const origin = this.getPatternOriginLogical();
         const unitSize = this.getCoordinateUnitSize();
+        const strokeWidth = Math.max(1.5, Math.min(14, 2.5 * metrics.visualScale));
+        const parts = [];
 
         activePlots.forEach(plot => {
             try {
                 const evaluator = this.createPlotEvaluator(plot.expression, plot.coordinateType);
-                ctx.save();
-                ctx.strokeStyle = plot.color;
-                ctx.lineWidth = 2.5;
-                ctx.lineJoin = 'round';
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-
-                let hasSegment = false;
+                let pathData = '';
                 let isCurrentSegmentOpen = false;
 
                 if (plot.coordinateType === 'polar') {
-                    const totalSamples = 720;
+                    const totalSamples = Math.max(720, Math.min(2160, Math.round(720 * Math.min(Math.max(metrics.visualScale, 1), 3))));
                     for (let i = 0; i <= totalSamples; i++) {
                         const theta = (Math.PI * 2 * i) / totalSamples;
                         const deg = theta * 180 / Math.PI;
@@ -1396,7 +1631,7 @@ class BackgroundManager {
 
                         const x = radius * Math.cos(theta);
                         const y = radius * Math.sin(theta);
-                        const point = this.mathToCanvasLogicalPoint(x, y, 'polar');
+                        const point = this.mathToScreenPoint(x, y, 'polar', metrics);
 
                         if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
                             isCurrentSegmentOpen = false;
@@ -1404,17 +1639,16 @@ class BackgroundManager {
                         }
 
                         if (!isCurrentSegmentOpen) {
-                            ctx.moveTo(point.x, point.y);
+                            pathData += `M ${point.x} ${point.y} `;
                             isCurrentSegmentOpen = true;
                         } else {
-                            ctx.lineTo(point.x, point.y);
+                            pathData += `L ${point.x} ${point.y} `;
                         }
-                        hasSegment = true;
                     }
                 } else {
                     const xMin = (0 - origin.x) / unitSize;
                     const xMax = (logicalWidth - origin.x) / unitSize;
-                    const totalSamples = Math.max(240, Math.min(1600, Math.round(logicalWidth)));
+                    const totalSamples = Math.max(320, Math.min(2400, Math.round(metrics.viewportWidth * Math.min(Math.max(metrics.visualScale, 1), 3))));
                     let previousPoint = null;
 
                     for (let i = 0; i <= totalSamples; i++) {
@@ -1434,101 +1668,99 @@ class BackgroundManager {
                             continue;
                         }
 
-                        const point = this.mathToCanvasLogicalPoint(x, y, 'coordinate');
-                        const isLargeJump = previousPoint && Math.abs(point.y - previousPoint.y) > logicalHeight * 1.5;
+                        const point = this.mathToScreenPoint(x, y, 'coordinate', metrics);
+                        const isLargeJump = previousPoint && Math.abs(point.y - previousPoint.y) > metrics.viewportHeight * 1.5;
 
                         if (!isCurrentSegmentOpen || isLargeJump) {
-                            ctx.moveTo(point.x, point.y);
+                            pathData += `M ${point.x} ${point.y} `;
                             isCurrentSegmentOpen = true;
                         } else {
-                            ctx.lineTo(point.x, point.y);
+                            pathData += `L ${point.x} ${point.y} `;
                         }
 
                         previousPoint = point;
-                        hasSegment = true;
                     }
                 }
 
-                if (hasSegment) {
-                    ctx.stroke();
+                if (pathData.trim()) {
+                    parts.push(`<path d="${pathData.trim()}" fill="none" stroke="${plot.color}" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"></path>`);
                 }
-                ctx.restore();
             } catch (error) {
                 console.warn('Failed to render coordinate plot:', plot.expression, error);
             }
         });
+
+        return `<g class="coordinate-plot-group">${parts.join('')}</g>`;
     }
 
-    renderCoordinatePoints(ctx) {
+    renderCoordinatePoints(metrics) {
         const points = this.coordinateOverlayState.points;
-        if (points.length === 0) return;
+        if (points.length === 0) return '';
 
-        const lineColor = this.getAdaptivePatternColor(0.74, 0.24);
+        const entries = this.getCoordinatePointEntries();
+        const screenEntries = entries.map(point => ({
+            ...point,
+            screen: this.canvasLogicalToScreenPoint(point.canvasX, point.canvasY, metrics)
+        }));
+        const pointRadius = Math.max(4, Math.min(20, 5 * metrics.visualScale));
+        const pointStrokeWidth = Math.max(1.2, Math.min(6, 2 * metrics.visualScale));
+        const lineStrokeWidth = Math.max(1.5, Math.min(10, 2 * metrics.visualScale));
+        const labelOffset = Math.max(6, Math.min(18, 8 * metrics.visualScale));
+        const labelFontSize = Math.max(12, Math.min(42, 12 * metrics.visualScale));
+        const parts = [];
 
-        ctx.save();
-
-        if (this.coordinateOverlayState.connectPoints && points.length > 1) {
-            ctx.beginPath();
-            points.forEach((point, index) => {
-                const canvasPoint = this.mathToCanvasLogicalPoint(point.x, point.y);
-                if (index === 0) {
-                    ctx.moveTo(canvasPoint.x, canvasPoint.y);
-                } else {
-                    ctx.lineTo(canvasPoint.x, canvasPoint.y);
-                }
-            });
-            ctx.strokeStyle = lineColor;
-            ctx.lineWidth = 2;
-            ctx.stroke();
+        if (this.coordinateOverlayState.connectPoints && screenEntries.length > 1) {
+            const polylinePoints = screenEntries.map(point => `${point.screen.x},${point.screen.y}`).join(' ');
+            parts.push(`<polyline points="${polylinePoints}" fill="none" stroke="${this.getCoordinateLineColor()}" stroke-width="${lineStrokeWidth}" stroke-linejoin="round" stroke-linecap="round"></polyline>`);
         }
 
-        points.forEach((point, index) => {
-            const canvasPoint = this.mathToCanvasLogicalPoint(point.x, point.y);
-
-            ctx.beginPath();
-            ctx.fillStyle = point.color || this.getCoordinatePaletteColor(index);
-            ctx.arc(canvasPoint.x, canvasPoint.y, 5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = this.backgroundColor;
-            ctx.lineWidth = 2;
-            ctx.stroke();
+        screenEntries.forEach((point, index) => {
+            const color = point.color || this.getCoordinatePaletteColor(index);
+            parts.push(`<circle cx="${point.screen.x}" cy="${point.screen.y}" r="${pointRadius}" fill="${color}" stroke="${this.backgroundColor}" stroke-width="${pointStrokeWidth}"></circle>`);
 
             if (this.coordinateOverlayState.showPointLabels) {
-                ctx.fillStyle = point.color || this.getCoordinatePaletteColor(index);
-                ctx.font = '12px sans-serif';
-                ctx.textBaseline = 'bottom';
-                ctx.textAlign = 'left';
-                ctx.fillText(this.getPointDisplayLabel(point, index), canvasPoint.x + 8, canvasPoint.y - 8);
+                parts.push(`<text x="${point.screen.x + labelOffset}" y="${point.screen.y - labelOffset}" fill="${color}" font-size="${labelFontSize}" text-anchor="start" dominant-baseline="auto">${this.escapeSvgText(this.getPointDisplayLabel(point, point.index))}</text>`);
             }
         });
 
-        ctx.restore();
+        return `<g class="coordinate-point-group">${parts.join('')}</g>`;
     }
 
     renderCoordinateOverlay() {
-        const overlayData = this.syncCoordinateOverlayCanvasSize();
+        const overlayData = this.syncCoordinateOverlaySvgSize();
         if (!overlayData) return;
 
-        const { canvas, ctx, logicalWidth, logicalHeight } = overlayData;
+        const { svg, logicalWidth, logicalHeight, metrics } = overlayData;
+        const legacyCanvas = document.getElementById('coordinate-overlay-canvas');
 
         if (!this.supportsMovableOrigin()) {
-            canvas.style.display = 'none';
+            svg.style.display = 'none';
+            if (legacyCanvas) {
+                legacyCanvas.style.display = 'none';
+            }
             return;
         }
 
-        canvas.style.display = 'block';
+        svg.style.display = 'block';
+        if (legacyCanvas) {
+            legacyCanvas.style.display = 'none';
+        }
 
         const origin = this.getPatternOriginLogical();
         const unitSize = this.getCoordinateUnitSize();
+        const parts = [];
 
         if (this.backgroundPattern === 'polar') {
-            this.renderPolarTicksAndLabels(ctx, origin, unitSize, logicalWidth, logicalHeight);
+            parts.push(this.renderPolarTicksAndLabels(origin, unitSize, logicalWidth, logicalHeight, metrics));
         } else {
-            this.renderCartesianTicksAndLabels(ctx, origin, unitSize, logicalWidth, logicalHeight);
+            parts.push(this.renderCartesianTicksAndLabels(origin, unitSize, logicalWidth, logicalHeight, metrics));
         }
 
-        this.renderCoordinatePlots(ctx, logicalWidth, logicalHeight);
-        this.renderCoordinatePoints(ctx);
+        parts.push(this.renderCoordinatePlots(logicalWidth, logicalHeight, metrics));
+        parts.push(this.renderCoordinatePoints(metrics));
+        parts.push(this.renderCoordinateOriginSvg(origin, metrics));
+
+        svg.innerHTML = parts.filter(Boolean).join('');
     }
     
     drawCoordinatePattern(dpr, patternColor) {

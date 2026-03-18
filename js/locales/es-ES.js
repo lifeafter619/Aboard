@@ -164,6 +164,7 @@ window.translations = {
 
     selection: {
         edit: 'Editar',
+        color: 'Color',
         copy: 'Copiar',
         delete: 'Eliminar',
         done: 'Hecho',
@@ -175,7 +176,8 @@ window.translations = {
         layerUp: 'Subir una capa',
         layerDown: 'Bajar una capa',
         group: 'Agrupar',
-        ungroup: 'Desagrupar'
+        ungroup: 'Desagrupar',
+        position: 'Posición'
     },
 
     // Line Style Modal
@@ -223,14 +225,16 @@ window.translations = {
         preference: 'Preferencia de patrón de fondo',
         moveCoordinateOrigin: 'Mover origen',
         moveCoordinateOriginHint: 'Haga clic y arrastre en el lienzo para mover el origen de coordenadas',
-        coordinateTools: 'Herramientas de coordenadas',
+        coordinateTools: 'Configuración de coordenadas',
         showTicks: 'Mostrar escala',
         showLabels: 'Mostrar etiquetas',
         showPointLabels: 'Etiquetas de puntos',
+        showOrigin: 'Mostrar origen',
         connectPoints: 'Unir puntos',
         snapToGrid: 'Ajustar a la cuadrícula',
         addPoint: 'Agregar punto',
-        addPointHint: 'Actívelo y haga clic en el lienzo para agregar puntos',
+        drawPointLine: 'Dibujar puntos y línea',
+        addPointHint: 'Actívelo y haga clic en el lienzo para colocar puntos y conectarlos automáticamente',
         clearPoints: 'Borrar puntos',
         clearPlots: 'Borrar gráficas',
         pointsCount: 'Puntos',
@@ -246,8 +250,10 @@ window.translations = {
         plotPlaceholderCartesian: 'ej.: sin(x) + 2',
         plotPlaceholderPolar: 'ej.: 2 * sin(4 * theta)',
         noPlots: 'Aún no hay gráficas',
-        coordinateStatusAddPoint: 'Modo punto activado. Haga clic en el lienzo para agregar puntos',
-        coordinateStatusAddPointOff: 'Modo punto desactivado',
+        coordinateStatusAddPoint: 'Modo de dibujar puntos y líneas activado',
+        coordinateStatusAddPointOff: 'Modo de dibujar puntos y líneas desactivado',
+        connectPointsEnabled: 'Línea de puntos activada',
+        connectPointsDisabled: 'Línea de puntos desactivada',
         pointAdded: 'Punto de coordenadas agregado',
         pointsCleared: 'Puntos de coordenadas borrados',
         plotAdded: 'Gráfica agregada',
@@ -270,6 +276,7 @@ window.translations = {
         delete: 'Eliminar',
         done: 'Listo',
         edit: 'Editar',
+        color: 'Color',
         rotate90: 'Rotar 90°',
         flipH: 'Voltear horizontal',
         layer: 'Capa',
@@ -278,7 +285,8 @@ window.translations = {
         layerUp: 'Subir una capa',
         layerDown: 'Bajar una capa',
         group: 'Agrupar',
-        ungroup: 'Desagrupar'
+        ungroup: 'Desagrupar',
+        position: 'Posición'
     },
 
     // Page Navigation

@@ -166,6 +166,7 @@ window.translations = {
 
     selection: {
         edit: '編集',
+        color: '色',
         copy: 'コピー',
         delete: '削除',
         done: '完了',
@@ -177,7 +178,8 @@ window.translations = {
         layerUp: '前面へ',
         layerDown: '背面へ',
         group: 'グループ化',
-        ungroup: 'グループ解除'
+        ungroup: 'グループ解除',
+        position: '位置'
     },
 
     // Line Style Modal
@@ -227,14 +229,16 @@ window.translations = {
         upload: 'アップロード',
         moveCoordinateOrigin: '原点を移動',
         moveCoordinateOriginHint: 'ボタンをクリックしてキャンバス上でドラッグして座標原点を移動',
-        coordinateTools: '座標ツール',
+        coordinateTools: '座標設定',
         showTicks: '目盛りを表示',
         showLabels: 'ラベルを表示',
         showPointLabels: '点ラベルを表示',
+        showOrigin: '原点を表示',
         connectPoints: '点を結ぶ',
         snapToGrid: 'グリッドに吸着',
         addPoint: '点を追加',
-        addPointHint: '有効にしてキャンバスをクリックすると座標点を追加します',
+        drawPointLine: '点と線を描画',
+        addPointHint: '有効にしてキャンバスをクリックすると、座標点を順に配置して自動で結びます',
         clearPoints: '点を消去',
         clearPlots: 'グラフを消去',
         pointsCount: '点数',
@@ -250,8 +254,10 @@ window.translations = {
         plotPlaceholderCartesian: '例：sin(x) + 2',
         plotPlaceholderPolar: '例：2 * sin(4 * theta)',
         noPlots: 'まだ関数グラフはありません',
-        coordinateStatusAddPoint: '点追加モードが有効です。キャンバスをクリックして点を追加します',
-        coordinateStatusAddPointOff: '点追加モードを無効にしました',
+        coordinateStatusAddPoint: '点と線の描画モードを有効にしました',
+        coordinateStatusAddPointOff: '点と線の描画モードを無効にしました',
+        connectPointsEnabled: '点線表示を有効にしました',
+        connectPointsDisabled: '点線表示を無効にしました',
         pointAdded: '座標点を追加しました',
         pointsCleared: '座標点を消去しました',
         plotAdded: '関数グラフを追加しました',
@@ -274,6 +280,7 @@ window.translations = {
         delete: '削除',
         done: '完了',
         edit: '編集',
+        color: '色',
         rotate90: '90°回転',
         flipH: '左右反転',
         layer: 'レイヤー',
@@ -282,7 +289,8 @@ window.translations = {
         layerUp: '前面へ',
         layerDown: '背面へ',
         group: 'グループ化',
-        ungroup: 'グループ解除'
+        ungroup: 'グループ解除',
+        position: '位置'
     },
 
     // Page Navigation

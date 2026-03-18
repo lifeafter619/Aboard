@@ -166,6 +166,7 @@ window.translations = {
 
     selection: {
         edit: 'Bearbeiten',
+        color: 'Farbe',
         copy: 'Kopieren',
         delete: 'Löschen',
         done: 'Fertig',
@@ -177,7 +178,8 @@ window.translations = {
         layerUp: 'Eine Ebene nach vorne',
         layerDown: 'Eine Ebene nach hinten',
         group: 'Gruppieren',
-        ungroup: 'Gruppierung aufheben'
+        ungroup: 'Gruppierung aufheben',
+        position: 'Position'
     },
 
     // Line Style Modal
@@ -225,14 +227,16 @@ window.translations = {
         preference: 'Hintergrundmuster-Präferenz',
         moveCoordinateOrigin: 'Ursprung verschieben',
         moveCoordinateOriginHint: 'Klicken und auf der Leinwand ziehen, um den Koordinatenursprung zu verschieben',
-        coordinateTools: 'Koordinatenwerkzeuge',
+        coordinateTools: 'Koordinateneinstellungen',
         showTicks: 'Skalen anzeigen',
         showLabels: 'Beschriftungen anzeigen',
         showPointLabels: 'Punktbeschriftungen',
+        showOrigin: 'Ursprung anzeigen',
         connectPoints: 'Punkte verbinden',
         snapToGrid: 'Am Raster ausrichten',
         addPoint: 'Punkt setzen',
-        addPointHint: 'Aktivieren und auf die Leinwand klicken, um Punkte zu setzen',
+        drawPointLine: 'Punkte/Linie zeichnen',
+        addPointHint: 'Aktivieren und nacheinander auf die Leinwand klicken, um Punkte mit Linien zu zeichnen',
         clearPoints: 'Punkte löschen',
         clearPlots: 'Graphen löschen',
         pointsCount: 'Punkte',
@@ -248,8 +252,10 @@ window.translations = {
         plotPlaceholderCartesian: 'z. B. sin(x) + 2',
         plotPlaceholderPolar: 'z. B. 2 * sin(4 * theta)',
         noPlots: 'Noch keine Funktionsgraphen',
-        coordinateStatusAddPoint: 'Punktmodus aktiv. Auf die Leinwand klicken, um Punkte hinzuzufügen',
-        coordinateStatusAddPointOff: 'Punktmodus deaktiviert',
+        coordinateStatusAddPoint: 'Punkte/Linien-Zeichenmodus aktiviert',
+        coordinateStatusAddPointOff: 'Punkte/Linien-Zeichenmodus deaktiviert',
+        connectPointsEnabled: 'Punktlinie aktiviert',
+        connectPointsDisabled: 'Punktlinie deaktiviert',
         pointAdded: 'Koordinatenpunkt hinzugefügt',
         pointsCleared: 'Koordinatenpunkte gelöscht',
         plotAdded: 'Funktionsgraph hinzugefügt',
@@ -272,6 +278,7 @@ window.translations = {
         delete: 'Löschen',
         done: 'Fertig',
         edit: 'Bearbeiten',
+        color: 'Farbe',
         rotate90: '90° drehen',
         flipH: 'Horizontal spiegeln',
         layer: 'Ebene',
@@ -280,7 +287,8 @@ window.translations = {
         layerUp: 'Eine Ebene nach vorne',
         layerDown: 'Eine Ebene nach hinten',
         group: 'Gruppieren',
-        ungroup: 'Gruppierung aufheben'
+        ungroup: 'Gruppierung aufheben',
+        position: 'Position'
     },
 
     // Page Navigation

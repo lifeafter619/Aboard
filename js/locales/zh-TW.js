@@ -169,6 +169,7 @@ window.translations = {
 
     selection: {
         edit: '編輯',
+        color: '顏色',
         copy: '複製',
         delete: '刪除',
         done: '完成',
@@ -180,7 +181,8 @@ window.translations = {
         layerUp: '上移一層',
         layerDown: '下移一層',
         group: '群組',
-        ungroup: '取消群組'
+        ungroup: '取消群組',
+        position: '位置'
     },
 
     // Line Style Modal
@@ -231,14 +233,16 @@ window.translations = {
         upload: '上傳',
         moveCoordinateOrigin: '移動座標原點',
         moveCoordinateOriginHint: '點擊按鈕後，可在畫布上拖動移動座標原點',
-        coordinateTools: '座標輔助',
+        coordinateTools: '座標設定',
         showTicks: '顯示刻度',
         showLabels: '顯示標籤',
         showPointLabels: '顯示點標籤',
+        showOrigin: '顯示原點',
         connectPoints: '點間連線',
         snapToGrid: '吸附網格',
         addPoint: '取點',
-        addPointHint: '開啟後點擊畫布添加座標點',
+        drawPointLine: '繪製點線',
+        addPointHint: '開啟後點擊畫布依序添加座標點並自動連線',
         clearPoints: '清空點',
         clearPlots: '清空圖像',
         pointsCount: '點數',
@@ -254,8 +258,10 @@ window.translations = {
         plotPlaceholderCartesian: '如：sin(x) + 2',
         plotPlaceholderPolar: '如：2 * sin(4 * theta)',
         noPlots: '暫無函數圖像',
-        coordinateStatusAddPoint: '取點模式已開啟，點擊畫布添加座標點',
-        coordinateStatusAddPointOff: '取點模式已關閉',
+        coordinateStatusAddPoint: '繪製點線模式已開啟，點擊畫布依序添加座標點',
+        coordinateStatusAddPointOff: '繪製點線模式已關閉',
+        connectPointsEnabled: '點線繪製已開啟',
+        connectPointsDisabled: '點線繪製已關閉',
         pointAdded: '已添加座標點',
         pointsCleared: '座標點已清空',
         plotAdded: '函數圖像已添加',
@@ -278,6 +284,7 @@ window.translations = {
         delete: '刪除',
         done: '完成',
         edit: '編輯',
+        color: '顏色',
         rotate90: '旋轉90°',
         flipH: '水平翻轉',
         layer: '圖層',
@@ -286,7 +293,8 @@ window.translations = {
         layerUp: '上移一層',
         layerDown: '下移一層',
         group: '群組',
-        ungroup: '取消群組'
+        ungroup: '取消群組',
+        position: '位置'
     },
 
     // Page Navigation

@@ -166,6 +166,7 @@ window.translations = {
 
     selection: {
         edit: '편집',
+        color: '색상',
         copy: '복사',
         delete: '삭제',
         done: '완료',
@@ -177,7 +178,8 @@ window.translations = {
         layerUp: '앞으로 한 단계',
         layerDown: '뒤로 한 단계',
         group: '그룹',
-        ungroup: '그룹 해제'
+        ungroup: '그룹 해제',
+        position: '위치'
     },
 
     // Line Style Modal
@@ -227,14 +229,16 @@ window.translations = {
         upload: '업로드',
         moveCoordinateOrigin: '원점 이동',
         moveCoordinateOriginHint: '버튼을 클릭한 후 캔버스에서 드래그하여 좌표 원점 이동',
-        coordinateTools: '좌표 도구',
+        coordinateTools: '좌표 설정',
         showTicks: '눈금 표시',
         showLabels: '라벨 표시',
         showPointLabels: '점 라벨 표시',
+        showOrigin: '원점 표시',
         connectPoints: '점 연결',
         snapToGrid: '격자에 맞춤',
         addPoint: '점 추가',
-        addPointHint: '활성화 후 캔버스를 클릭하면 좌표점을 추가합니다',
+        drawPointLine: '점·선 그리기',
+        addPointHint: '활성화 후 캔버스를 클릭하면 좌표점을 순서대로 찍고 자동으로 연결합니다',
         clearPoints: '점 지우기',
         clearPlots: '그래프 지우기',
         pointsCount: '점 개수',
@@ -250,8 +254,10 @@ window.translations = {
         plotPlaceholderCartesian: '예: sin(x) + 2',
         plotPlaceholderPolar: '예: 2 * sin(4 * theta)',
         noPlots: '아직 그래프가 없습니다',
-        coordinateStatusAddPoint: '점 추가 모드가 켜졌습니다. 캔버스를 클릭해 점을 추가하세요',
-        coordinateStatusAddPointOff: '점 추가 모드가 꺼졌습니다',
+        coordinateStatusAddPoint: '점·선 그리기 모드가 켜졌습니다',
+        coordinateStatusAddPointOff: '점·선 그리기 모드가 꺼졌습니다',
+        connectPointsEnabled: '점선 그리기가 켜졌습니다',
+        connectPointsDisabled: '점선 그리기가 꺼졌습니다',
         pointAdded: '좌표점이 추가되었습니다',
         pointsCleared: '좌표점이 삭제되었습니다',
         plotAdded: '함수 그래프가 추가되었습니다',
@@ -274,6 +280,7 @@ window.translations = {
         delete: '삭제',
         done: '완료',
         edit: '편집',
+        color: '색상',
         rotate90: '90° 회전',
         flipH: '좌우 뒤집기',
         layer: '레이어',
@@ -282,7 +289,8 @@ window.translations = {
         layerUp: '앞으로 한 단계',
         layerDown: '뒤로 한 단계',
         group: '그룹',
-        ungroup: '그룹 해제'
+        ungroup: '그룹 해제',
+        position: '위치'
     },
 
     // Page Navigation

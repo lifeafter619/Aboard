@@ -172,6 +172,7 @@ window.translations = {
 
     selection: {
         edit: 'Edit',
+        color: 'Color',
         copy: 'Copy',
         delete: 'Delete',
         done: 'Done',
@@ -183,7 +184,8 @@ window.translations = {
         layerUp: 'Move Forward',
         layerDown: 'Move Backward',
         group: 'Group',
-        ungroup: 'Ungroup'
+        ungroup: 'Ungroup',
+        position: 'Position'
     },
 
     // Line Style Modal
@@ -234,14 +236,16 @@ window.translations = {
         upload: 'Upload',
         moveCoordinateOrigin: 'Move Origin',
         moveCoordinateOriginHint: 'Click and drag on canvas to move coordinate origin',
-        coordinateTools: 'Coordinate Tools',
+        coordinateTools: 'Coordinate Settings',
         showTicks: 'Show Ticks',
         showLabels: 'Show Labels',
         showPointLabels: 'Show Point Labels',
+        showOrigin: 'Show Origin',
         connectPoints: 'Connect Points',
         snapToGrid: 'Snap to Grid',
         addPoint: 'Add Point',
-        addPointHint: 'When enabled, click the canvas to add coordinate points',
+        drawPointLine: 'Draw Points & Line',
+        addPointHint: 'When enabled, click the canvas to place coordinate points and connect them automatically',
         clearPoints: 'Clear Points',
         clearPlots: 'Clear Plots',
         pointsCount: 'Points',
@@ -257,8 +261,10 @@ window.translations = {
         plotPlaceholderCartesian: 'e.g. sin(x) + 2',
         plotPlaceholderPolar: 'e.g. 2 * sin(4 * theta)',
         noPlots: 'No plotted functions yet',
-        coordinateStatusAddPoint: 'Point mode enabled. Click the canvas to add points',
-        coordinateStatusAddPointOff: 'Point mode disabled',
+        coordinateStatusAddPoint: 'Draw points & lines mode enabled',
+        coordinateStatusAddPointOff: 'Draw points & lines mode disabled',
+        connectPointsEnabled: 'Point line enabled',
+        connectPointsDisabled: 'Point line disabled',
         pointAdded: 'Coordinate point added',
         pointsCleared: 'Coordinate points cleared',
         plotAdded: 'Function plot added',
@@ -281,6 +287,7 @@ window.translations = {
         delete: 'Delete',
         done: 'Done',
         edit: 'Edit',
+        color: 'Color',
         rotate90: 'Rotate 90°',
         flipH: 'Flip Horizontal',
         layer: 'Layer',
@@ -289,7 +296,8 @@ window.translations = {
         layerUp: 'Move Forward',
         layerDown: 'Move Backward',
         group: 'Group',
-        ungroup: 'Ungroup'
+        ungroup: 'Ungroup',
+        position: 'Position'
     },
 
     // Page Navigation

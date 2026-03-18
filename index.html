@@ -352,10 +352,17 @@
                             <circle cx="12" cy="12" r="3"></circle>
                             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                         </svg>
-                        <span data-i18n="background.coordinateTools">坐标辅助</span>
+                        <span data-i18n="background.coordinateTools">坐标设置</span>
                     </button>
                     <button id="coordinate-point-toggle-btn" type="button" class="pattern-option-btn" aria-expanded="false" style="display: none;">
-                        <span data-i18n="background.addPoint">取点</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="6" cy="18" r="2"></circle>
+                            <circle cx="12" cy="8" r="2"></circle>
+                            <circle cx="18" cy="14" r="2"></circle>
+                            <path d="M7.8 16.8 10.2 9.2"></path>
+                            <path d="M13.8 9.2 16.2 12.8"></path>
+                        </svg>
+                        <span data-i18n="background.drawPointLine">绘制点线</span>
                     </button>
                     <input type="file" id="bg-image-upload" accept="image/*" style="display: none;">
                 </div>
@@ -1164,7 +1171,7 @@
     <div id="coordinate-tools-modal" class="modal">
         <div class="modal-content coordinate-tools-modal-content">
             <div class="modal-header">
-                <h2 data-i18n="background.coordinateTools">坐标辅助</h2>
+                <h2 data-i18n="background.coordinateTools">坐标设置</h2>
                 <button id="coordinate-tools-modal-close-btn" class="modal-close-btn">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1178,7 +1185,7 @@
                         <label class="checkbox-label"><input type="checkbox" id="coordinate-show-ticks" checked><span data-i18n="background.showTicks">显示刻度</span></label>
                         <label class="checkbox-label"><input type="checkbox" id="coordinate-show-labels" checked><span data-i18n="background.showLabels">显示标签</span></label>
                         <label class="checkbox-label"><input type="checkbox" id="coordinate-show-point-labels" checked><span data-i18n="background.showPointLabels">显示点标签</span></label>
-                        <label class="checkbox-label"><input type="checkbox" id="coordinate-connect-points" checked><span data-i18n="background.connectPoints">点间连线</span></label>
+                        <label class="checkbox-label"><input type="checkbox" id="coordinate-show-origin" checked><span data-i18n="background.showOrigin">显示原点</span></label>
                         <label class="checkbox-label"><input type="checkbox" id="coordinate-snap-grid" checked><span data-i18n="background.snapToGrid">吸附网格</span></label>
                     </div>
                     <div class="button-size-options coordinate-action-buttons">
@@ -1203,7 +1210,7 @@
     <div id="coordinate-point-modal" class="modal">
         <div class="modal-content coordinate-point-modal-content">
             <div class="modal-header">
-                <h2 data-i18n="background.addPoint">取点</h2>
+                <h2 data-i18n="background.drawPointLine">绘制点线</h2>
                 <button id="coordinate-point-modal-close-btn" class="modal-close-btn">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1214,10 +1221,19 @@
             <div class="modal-body">
                 <div class="config-group config-group-compact">
                     <div class="button-size-options coordinate-action-buttons coordinate-point-action-buttons">
-                        <button id="coordinate-add-point-btn" type="button" class="pattern-option-btn" data-i18n="background.addPoint">取点</button>
+                        <button id="coordinate-add-point-btn" type="button" class="pattern-option-btn coordinate-connect-points-btn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="6" cy="18" r="2"></circle>
+                                <circle cx="12" cy="8" r="2"></circle>
+                                <circle cx="18" cy="14" r="2"></circle>
+                                <path d="M7.8 16.8 10.2 9.2"></path>
+                                <path d="M13.8 9.2 16.2 12.8"></path>
+                            </svg>
+                            <span data-i18n="background.drawPointLine">绘制点线</span>
+                        </button>
                         <button id="coordinate-clear-points-btn" type="button" class="pattern-option-btn" data-i18n="background.clearPoints">清空点</button>
                     </div>
-                    <p class="settings-hint coordinate-hint-line" data-i18n="background.addPointHint">开启后点击画布添加坐标点</p>
+                    <p class="settings-hint coordinate-hint-line" data-i18n="background.addPointHint">开启后点击画布依次添加坐标点并自动连线</p>
                     <div class="coordinate-point-count"><span data-i18n="background.pointsCount">点数</span>：<span id="coordinate-point-count-value">0</span></div>
                 </div>
                 <div class="announcement-buttons">

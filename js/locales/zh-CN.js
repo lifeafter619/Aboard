@@ -183,7 +183,8 @@ window.translations = {
         layerUp: '上移一层',
         layerDown: '下移一层',
         group: '组合',
-        ungroup: '取消组合'
+        ungroup: '取消组合',
+        position: '位置'
     },
 
     // Line Style Modal
@@ -234,14 +235,14 @@ window.translations = {
         upload: '上传',
         moveCoordinateOrigin: '移动坐标原点',
         moveCoordinateOriginHint: '点击按钮后，可在画布上拖动移动坐标原点',
-        coordinateTools: '坐标辅助',
+        coordinateTools: '坐标设置',
         showTicks: '显示刻度',
         showLabels: '显示标签',
         showPointLabels: '显示点标签',
         connectPoints: '点间连线',
         snapToGrid: '吸附网格',
         addPoint: '取点',
-        addPointHint: '开启后点击画布添加坐标点',
+        addPointHint: '开启后点击画布依次添加坐标点并自动连线',
         clearPoints: '清空点',
         clearPlots: '清空图像',
         pointsCount: '点数',
@@ -257,8 +258,8 @@ window.translations = {
         plotPlaceholderCartesian: '如：sin(x) + 2',
         plotPlaceholderPolar: '如：2 * sin(4 * theta)',
         noPlots: '暂无函数图像',
-        coordinateStatusAddPoint: '取点模式已开启，点击画布添加坐标点',
-        coordinateStatusAddPointOff: '取点模式已关闭',
+        coordinateStatusAddPoint: '绘制点线模式已开启，点击画布依次添加坐标点',
+        coordinateStatusAddPointOff: '绘制点线模式已关闭',
         pointAdded: '已添加坐标点',
         pointsCleared: '坐标点已清空',
         plotAdded: '函数图像已添加',
@@ -289,7 +290,8 @@ window.translations = {
         layerUp: '上移一层',
         layerDown: '下移一层',
         group: '组合',
-        ungroup: '取消组合'
+        ungroup: '取消组合',
+        position: '位置'
     },
 
     // Page Navigation
