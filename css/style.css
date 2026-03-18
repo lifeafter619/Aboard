@@ -1935,57 +1935,32 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     gap: 4px;
 }
 
-.coordinate-tools-popup {
-    position: fixed;
-    inset: 0;
-    z-index: 2100;
-    background: rgba(15, 23, 42, 0.18);
-    backdrop-filter: blur(2px);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-}
-
-.coordinate-tools-popup-dialog {
-    width: min(420px, calc(100vw - 32px));
-    max-height: min(82vh, 720px);
-    overflow: auto;
-    background: #fff;
-    border-radius: 14px;
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.22);
-    padding: 14px;
-}
-
-.coordinate-tools-popup-header {
+.coordinate-tools-modal-content {
+    max-width: 560px;
+    width: min(560px, 100%);
+    max-height: 85vh;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.coordinate-tools-modal-content .modal-body {
+    display: flex;
+    flex-direction: column;
     gap: 12px;
-    margin-bottom: 10px;
-    font-size: 14px;
-    font-weight: 600;
-    color: #222;
+    min-height: 0;
+    overflow: hidden;
 }
 
-.coordinate-tools-popup-close {
-    width: 28px;
-    height: 28px;
-    border: none;
-    border-radius: 999px;
-    background: #f3f4f6;
-    color: #666;
-    cursor: pointer;
-    font-size: 20px;
-    line-height: 1;
-}
-
-.coordinate-tools-popup-close:hover {
-    background: #e5e7eb;
+.coordinate-tools-modal-content .announcement-buttons {
+    padding-top: 12px;
 }
 
 #coordinate-tools-group {
     gap: 6px;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 2px;
 }
 
 .coordinate-tool-toggles {

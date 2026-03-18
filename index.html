@@ -395,12 +395,18 @@
                     </div>
                 </div>
             </div>
-            <div id="coordinate-tools-popup" class="coordinate-tools-popup" style="display: none;">
-                <div class="coordinate-tools-popup-dialog">
-                    <div class="coordinate-tools-popup-header">
-                        <span data-i18n="background.coordinateTools">坐标辅助</span>
-                        <button id="coordinate-tools-popup-close-btn" type="button" class="coordinate-tools-popup-close" aria-label="Close">×</button>
+            <div id="coordinate-tools-modal" class="modal">
+                <div class="modal-content coordinate-tools-modal-content">
+                    <div class="modal-header">
+                        <h2 data-i18n="background.coordinateTools">坐标辅助</h2>
+                        <button id="coordinate-tools-modal-close-btn" class="modal-close-btn">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
                     </div>
+                    <div class="modal-body">
                     <div class="config-group config-group-compact" id="coordinate-tools-group">
                 <div class="coordinate-tool-toggles">
                     <label class="checkbox-label"><input type="checkbox" id="coordinate-show-ticks" checked><span data-i18n="background.showTicks">显示刻度</span></label>
@@ -461,6 +467,10 @@
                 </div>
                 <p class="settings-hint coordinate-hint-line" id="coordinate-plot-hint" data-i18n="background.plotHintCartesian">直角坐标：输入 y = f(x)，可用 sin cos PI</p>
                 <div id="coordinate-plot-list" class="coordinate-plot-list"></div>
+                    </div>
+                    <div class="announcement-buttons">
+                        <button id="coordinate-tools-modal-ok-btn" class="announcement-btn ok-btn" data-i18n="common.confirm">确定</button>
+                    </div>
                     </div>
                 </div>
             </div>

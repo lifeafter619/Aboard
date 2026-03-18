@@ -405,6 +405,12 @@ class DrawingBoard {
                 selector: '#announcement-modal .announcement-modal-content',
                 minWidth: 420,
                 minHeight: 280
+            },
+            {
+                key: 'coordinateToolsModal',
+                selector: '#coordinate-tools-modal .coordinate-tools-modal-content',
+                minWidth: 420,
+                minHeight: 320
             }
         ];
     }
@@ -1794,17 +1800,23 @@ class DrawingBoard {
             });
         }
 
-        const coordinateToolsPopup = document.getElementById('coordinate-tools-popup');
-        const coordinateToolsPopupCloseBtn = document.getElementById('coordinate-tools-popup-close-btn');
-        if (coordinateToolsPopup) {
-            coordinateToolsPopup.addEventListener('click', (e) => {
-                if (e.target === coordinateToolsPopup) {
+        const coordinateToolsModal = document.getElementById('coordinate-tools-modal');
+        const coordinateToolsModalCloseBtn = document.getElementById('coordinate-tools-modal-close-btn');
+        const coordinateToolsModalOkBtn = document.getElementById('coordinate-tools-modal-ok-btn');
+        if (coordinateToolsModal) {
+            coordinateToolsModal.addEventListener('click', (e) => {
+                if (e.target === coordinateToolsModal) {
                     this.toggleCoordinateSettingsPanel(false);
                 }
             });
         }
-        if (coordinateToolsPopupCloseBtn) {
-            coordinateToolsPopupCloseBtn.addEventListener('click', () => {
+        if (coordinateToolsModalCloseBtn) {
+            coordinateToolsModalCloseBtn.addEventListener('click', () => {
+                this.toggleCoordinateSettingsPanel(false);
+            });
+        }
+        if (coordinateToolsModalOkBtn) {
+            coordinateToolsModalOkBtn.addEventListener('click', () => {
                 this.toggleCoordinateSettingsPanel(false);
             });
         }
@@ -3646,10 +3658,10 @@ class DrawingBoard {
             ? force
             : !this.isCoordinateSettingsExpanded);
 
-        const popup = document.getElementById('coordinate-tools-popup');
+        const modal = document.getElementById('coordinate-tools-modal');
         const toggleBtn = document.getElementById('coordinate-settings-toggle-btn');
-        if (popup) {
-            popup.style.display = this.isCoordinateSettingsExpanded ? 'flex' : 'none';
+        if (modal) {
+            modal.classList.toggle('show', this.isCoordinateSettingsExpanded);
         }
         if (toggleBtn) {
             toggleBtn.classList.toggle('active', this.isCoordinateSettingsExpanded);
@@ -5638,7 +5650,7 @@ class DrawingBoard {
         }
 
         const coordinateSettingsToggleBtn = document.getElementById('coordinate-settings-toggle-btn');
-        const coordinateToolsPopup = document.getElementById('coordinate-tools-popup');
+        const coordinateToolsModal = document.getElementById('coordinate-tools-modal');
         const coordinateToolsGroup = document.getElementById('coordinate-tools-group');
         const coordinateState = this.backgroundManager.getCoordinateOverlayState();
         const supportsCoordinateTools = this.backgroundManager.supportsMovableOrigin(currentPattern);
@@ -5654,8 +5666,8 @@ class DrawingBoard {
             coordinateSettingsToggleBtn.setAttribute('aria-expanded', supportsCoordinateTools && this.isCoordinateSettingsExpanded ? 'true' : 'false');
         }
 
-        if (coordinateToolsPopup) {
-            coordinateToolsPopup.style.display = supportsCoordinateTools && this.isCoordinateSettingsExpanded ? 'flex' : 'none';
+        if (coordinateToolsModal) {
+            coordinateToolsModal.classList.toggle('show', supportsCoordinateTools && this.isCoordinateSettingsExpanded);
         }
 
         if (coordinateToolsGroup) {
