@@ -173,6 +173,7 @@ class DrawingBoard {
         this.isCoordinateSettingsExpanded = false;
         this.isCoordinatePointPanelVisible = false;
         this.isCoordinateInputPanelVisible = false;
+        this.expandedCoordinatePlotId = null;
         this.coordinateOriginDragStart = { x: 0, y: 0 };
         
         // Uploaded images storage
@@ -1876,6 +1877,7 @@ class DrawingBoard {
         const coordinateClearPlotsBtn = document.getElementById('coordinate-clear-plots-btn');
         if (coordinateClearPlotsBtn) {
             coordinateClearPlotsBtn.addEventListener('click', () => {
+                this.expandedCoordinatePlotId = null;
                 this.backgroundManager.clearCoordinatePlots(this.backgroundManager.backgroundPattern);
                 this.savePageBackground(this.currentPage);
                 this.updateBackgroundUI();
@@ -1890,8 +1892,10 @@ class DrawingBoard {
             if (!expression || !this.backgroundManager.supportsMovableOrigin()) return;
 
             try {
-                this.backgroundManager.addCoordinatePlot(expression, this.backgroundManager.backgroundPattern);
+                const plot = this.backgroundManager.addCoordinatePlot(expression, this.backgroundManager.backgroundPattern);
+                this.expandedCoordinatePlotId = plot?.id || null;
                 coordinateExpressionInput.value = '';
+                this.syncCoordinateExpressionDisplay();
                 this.savePageBackground(this.currentPage);
                 this.updateBackgroundUI();
                 this.showCoordinateToast('background.plotAdded', '函数图像已添加', 'success');
@@ -1906,6 +1910,9 @@ class DrawingBoard {
         }
 
         if (coordinateExpressionInput) {
+            coordinateExpressionInput.addEventListener('input', () => {
+                this.syncCoordinateExpressionDisplay();
+            });
             coordinateExpressionInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -1913,6 +1920,7 @@ class DrawingBoard {
                 }
             });
         }
+        this.syncCoordinateExpressionDisplay();
 
         const coordinateKeypadToggleBtn = document.getElementById('coordinate-keypad-toggle-btn');
         if (coordinateKeypadToggleBtn) {
@@ -1963,12 +1971,7 @@ class DrawingBoard {
         const coordinatePlotList = document.getElementById('coordinate-plot-list');
         if (coordinatePlotList) {
             coordinatePlotList.addEventListener('click', (e) => {
-                const removeBtn = e.target.closest('[data-plot-remove]');
-                if (!removeBtn) return;
-
-                this.backgroundManager.removeCoordinatePlot(removeBtn.dataset.plotRemove);
-                this.savePageBackground(this.currentPage);
-                this.updateBackgroundUI();
+                this.handleCoordinatePlotListClick(e);
             });
         }
         
@@ -3698,6 +3701,152 @@ class DrawingBoard {
             .replace(/'/g, '&#39;');
     }
 
+    getCoordinateExpressionPrefix(pattern = this.backgroundManager?.backgroundPattern) {
+        return pattern === 'polar' ? 'r = ' : 'y = ';
+    }
+
+    syncCoordinateExpressionDisplay() {
+        const display = document.getElementById('coordinate-keypad-expression-display');
+        const input = document.getElementById('coordinate-expression-input');
+        if (!display) return;
+        const prefix = this.getCoordinateExpressionPrefix();
+        const expression = input?.value || '';
+        display.textContent = `${prefix}${expression}`;
+    }
+
+    getCoordinatePlotAxisOptions(coordinateType = this.backgroundManager?.backgroundPattern) {
+        if (coordinateType === 'polar') {
+            return [
+                { value: 'theta', label: 'θ（弧度）' },
+                { value: 'r', label: 'r' }
+            ];
+        }
+
+        return [
+            { value: 'x', label: 'x' },
+            { value: 'y', label: 'y' }
+        ];
+    }
+
+    createCoordinatePlotRangeRowMarkup(segment = {}, coordinateType = this.backgroundManager?.backgroundPattern) {
+        const axisOptions = this.getCoordinatePlotAxisOptions(coordinateType)
+            .map(option => `<option value="${option.value}"${option.value === (segment.axis || this.getCoordinatePlotAxisOptions(coordinateType)[0].value) ? ' selected' : ''}>${this.escapeHtml(option.label)}</option>`)
+            .join('');
+        const minValue = segment.min ?? '';
+        const maxValue = segment.max ?? '';
+        const segmentId = segment.id || `segment-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+
+        return `
+            <div class="coordinate-plot-range-row" data-range-row data-segment-id="${this.escapeHtml(segmentId)}">
+                <select data-range-field="axis">${axisOptions}</select>
+                <input type="number" step="0.1" data-range-field="min" value="${this.escapeHtml(minValue)}" placeholder="最小值">
+                <input type="number" step="0.1" data-range-field="max" value="${this.escapeHtml(maxValue)}" placeholder="最大值">
+                <button type="button" class="coordinate-plot-range-remove" data-plot-range-remove="${this.escapeHtml(segmentId)}" title="删除范围段">✕</button>
+            </div>
+        `;
+    }
+
+    handleCoordinatePlotListClick(e) {
+        const actionButton = e.target.closest('[data-plot-toggle-edit], [data-plot-save], [data-plot-cancel], [data-plot-remove], [data-plot-add-segment], [data-plot-range-remove]');
+        if (!actionButton) return;
+
+        if (actionButton.dataset.plotToggleEdit) {
+            const plotId = actionButton.dataset.plotToggleEdit;
+            this.expandedCoordinatePlotId = this.expandedCoordinatePlotId === plotId ? null : plotId;
+            this.updateBackgroundUI();
+            return;
+        }
+
+        if (actionButton.dataset.plotCancel) {
+            this.expandedCoordinatePlotId = null;
+            this.updateBackgroundUI();
+            return;
+        }
+
+        if (actionButton.dataset.plotRemove) {
+            const plotId = actionButton.dataset.plotRemove;
+            if (this.expandedCoordinatePlotId === plotId) {
+                this.expandedCoordinatePlotId = null;
+            }
+            this.backgroundManager.removeCoordinatePlot(plotId);
+            this.savePageBackground(this.currentPage);
+            this.updateBackgroundUI();
+            return;
+        }
+
+        if (actionButton.dataset.plotSave) {
+            this.saveCoordinatePlotEditor(actionButton.dataset.plotSave);
+            return;
+        }
+
+        if (actionButton.dataset.plotAddSegment) {
+            this.addCoordinatePlotRangeRow(actionButton.dataset.plotAddSegment);
+            return;
+        }
+
+        if (actionButton.dataset.plotRangeRemove) {
+            const row = actionButton.closest('[data-range-row]');
+            row?.remove();
+            const editor = actionButton.closest('.coordinate-plot-editor');
+            const rangeList = editor?.querySelector('.coordinate-plot-range-list');
+            if (rangeList && !rangeList.querySelector('[data-range-row]')) {
+                rangeList.innerHTML = '<div class="coordinate-plot-range-empty">未限制显示范围，默认显示全部</div>';
+            }
+        }
+    }
+
+    addCoordinatePlotRangeRow(plotId) {
+        const plotItem = document.querySelector(`.coordinate-plot-item[data-plot-id="${plotId}"]`);
+        const rangeList = plotItem?.querySelector('.coordinate-plot-range-list');
+        if (!rangeList) return;
+
+        const coordinateType = plotItem.dataset.coordinateType || this.backgroundManager.backgroundPattern;
+        const emptyState = rangeList.querySelector('.coordinate-plot-range-empty');
+        if (emptyState) {
+            emptyState.remove();
+        }
+        rangeList.insertAdjacentHTML('beforeend', this.createCoordinatePlotRangeRowMarkup({}, coordinateType));
+    }
+
+    collectCoordinatePlotEditorSegments(plotId) {
+        const plotItem = document.querySelector(`.coordinate-plot-item[data-plot-id="${plotId}"]`);
+        if (!plotItem) return [];
+
+        return Array.from(plotItem.querySelectorAll('[data-range-row]')).map(row => ({
+            id: row.dataset.segmentId,
+            axis: row.querySelector('[data-range-field="axis"]')?.value,
+            min: row.querySelector('[data-range-field="min"]')?.value?.trim() ?? '',
+            max: row.querySelector('[data-range-field="max"]')?.value?.trim() ?? ''
+        }));
+    }
+
+    saveCoordinatePlotEditor(plotId) {
+        const plotItem = document.querySelector(`.coordinate-plot-item[data-plot-id="${plotId}"]`);
+        if (!plotItem) return;
+
+        const expression = plotItem.querySelector('[data-plot-field="expression"]')?.value?.trim() || '';
+        const color = plotItem.querySelector('[data-plot-field="color"]')?.value || '#2563eb';
+        const strokeWidth = plotItem.querySelector('[data-plot-field="strokeWidth"]')?.value || '2.5';
+        const dashStyle = plotItem.querySelector('[data-plot-field="dashStyle"]')?.value || 'solid';
+        const segments = this.collectCoordinatePlotEditorSegments(plotId);
+
+        try {
+            this.backgroundManager.updateCoordinatePlot(plotId, {
+                expression,
+                color,
+                strokeWidth,
+                dashStyle,
+                segments
+            });
+            this.savePageBackground(this.currentPage);
+            this.updateBackgroundUI();
+            this.showCoordinateToast('background.plotUpdated', '函数图像已更新', 'success');
+        } catch (error) {
+            console.error('Failed to update coordinate plot:', error);
+            this.showCoordinateToast('background.plotError', '表达式无效，无法绘制', 'error');
+        }
+    }
+
     toggleCoordinateSettingsPanel(force) {
         const supportsCoordinateTools = this.backgroundManager.supportsMovableOrigin(this.backgroundManager.backgroundPattern);
         this.isCoordinateSettingsExpanded = supportsCoordinateTools && (typeof force === 'boolean'
@@ -3737,12 +3886,16 @@ class DrawingBoard {
             toggleBtn.setAttribute('aria-expanded', this.isCoordinatePointPanelVisible ? 'true' : 'false');
         }
 
+        if (!this.isCoordinatePointPanelVisible) {
+            this.toggleCoordinateInputPanel(false);
+        }
+
         this.updateBackgroundUI();
     }
 
     toggleCoordinateInputPanel(force) {
         const supportsCoordinateTools = this.backgroundManager.supportsMovableOrigin(this.backgroundManager.backgroundPattern);
-        this.isCoordinateInputPanelVisible = supportsCoordinateTools && this.isCoordinateSettingsExpanded && (typeof force === 'boolean'
+        this.isCoordinateInputPanelVisible = supportsCoordinateTools && this.isCoordinatePointPanelVisible && (typeof force === 'boolean'
             ? force
             : !this.isCoordinateInputPanelVisible);
 
@@ -3760,6 +3913,7 @@ class DrawingBoard {
 
         if (this.isCoordinateInputPanelVisible) {
             this.syncCoordinateInputPanelButtons();
+            this.syncCoordinateExpressionDisplay();
         }
     }
 
@@ -3782,12 +3936,14 @@ class DrawingBoard {
 
         if (typeof input.setRangeText === 'function') {
             input.setRangeText(value, start, end, 'end');
+            this.syncCoordinateExpressionDisplay();
             return;
         }
 
         input.value = `${input.value.slice(0, start)}${value}${input.value.slice(end)}`;
         const nextCursor = start + value.length;
         input.setSelectionRange(nextCursor, nextCursor);
+        this.syncCoordinateExpressionDisplay();
     }
 
     handleCoordinateExpressionAction(action) {
@@ -3801,6 +3957,7 @@ class DrawingBoard {
         if (action === 'clear') {
             input.value = '';
             input.setSelectionRange(0, 0);
+            this.syncCoordinateExpressionDisplay();
             return;
         }
 
@@ -3811,6 +3968,7 @@ class DrawingBoard {
                 } else if (start > 0) {
                     input.setRangeText('', start - 1, start, 'end');
                 }
+                this.syncCoordinateExpressionDisplay();
                 return;
             }
 
@@ -3822,6 +3980,7 @@ class DrawingBoard {
                 input.value = `${input.value.slice(0, nextCursor)}${input.value.slice(start)}`;
                 input.setSelectionRange(nextCursor, nextCursor);
             }
+            this.syncCoordinateExpressionDisplay();
         }
     }
 
@@ -5645,14 +5804,76 @@ class DrawingBoard {
             return;
         }
 
+        const editTitle = window.i18n ? window.i18n.t('selection.edit') : '编辑';
         const deleteTitle = window.i18n ? window.i18n.t('selection.delete') : '删除';
-        plotList.innerHTML = activePlots.map(plot => `
-            <div class="coordinate-plot-item">
-                <span class="coordinate-plot-color" style="background:${plot.color};"></span>
-                <span class="coordinate-plot-expression">${plot.coordinateType === 'polar' ? 'r = ' : 'y = '}${this.escapeHtml(plot.expression)}</span>
-                <button type="button" class="coordinate-plot-remove" data-plot-remove="${this.escapeHtml(plot.id)}" title="${this.escapeHtml(deleteTitle)}">×</button>
-            </div>
-        `).join('');
+        const dashStyleLabels = {
+            solid: '实线',
+            dashed: '虚线',
+            dotted: '点线',
+            dashdot: '点划线'
+        };
+
+        plotList.innerHTML = activePlots.map(plot => {
+            const isExpanded = this.expandedCoordinatePlotId === plot.id;
+            const dashOptions = Object.entries(dashStyleLabels)
+                .map(([value, label]) => `<option value="${value}"${value === (plot.dashStyle || 'solid') ? ' selected' : ''}>${label}</option>`)
+                .join('');
+            const rangeRows = Array.isArray(plot.segments) && plot.segments.length
+                ? plot.segments.map(segment => this.createCoordinatePlotRangeRowMarkup(segment, plot.coordinateType)).join('')
+                : '<div class="coordinate-plot-range-empty">未限制显示范围，默认显示全部</div>';
+
+            return `
+                <div class="coordinate-plot-item ${isExpanded ? 'expanded' : ''}" data-plot-id="${this.escapeHtml(plot.id)}" data-coordinate-type="${this.escapeHtml(plot.coordinateType)}">
+                    <div class="coordinate-plot-summary">
+                        <span class="coordinate-plot-color" style="background:${plot.color};"></span>
+                        <span class="coordinate-plot-expression">${this.getCoordinateExpressionPrefix(plot.coordinateType)}${this.escapeHtml(plot.expression)}</span>
+                        <div class="coordinate-plot-actions">
+                            <button type="button" class="coordinate-plot-action-btn" data-plot-toggle-edit="${this.escapeHtml(plot.id)}" title="${this.escapeHtml(editTitle)}">✎</button>
+                            <button type="button" class="coordinate-plot-remove" data-plot-remove="${this.escapeHtml(plot.id)}" title="${this.escapeHtml(deleteTitle)}">×</button>
+                        </div>
+                    </div>
+                    <div class="coordinate-plot-editor">
+                        <div class="coordinate-plot-field">
+                            <label>表达式</label>
+                            <input type="text" data-plot-field="expression" value="${this.escapeHtml(plot.expression)}">
+                        </div>
+                        <div class="coordinate-plot-style-grid">
+                            <div class="coordinate-plot-field">
+                                <label>颜色</label>
+                                <input class="coordinate-plot-color-input" type="color" data-plot-field="color" value="${this.escapeHtml(plot.color)}">
+                            </div>
+                            <div class="coordinate-plot-field">
+                                <label>线型</label>
+                                <select data-plot-field="dashStyle">${dashOptions}</select>
+                            </div>
+                            <div class="coordinate-plot-field">
+                                <label>粗细</label>
+                                <input type="number" min="1" max="12" step="0.5" data-plot-field="strokeWidth" value="${this.escapeHtml(plot.strokeWidth ?? 2.5)}">
+                            </div>
+                        </div>
+                        <div class="coordinate-plot-field">
+                            <div class="coordinate-plot-range-title">显示范围（可组合多段）</div>
+                            <div class="coordinate-plot-range-header">
+                                <span>控制量</span>
+                                <span>最小值</span>
+                                <span>最大值</span>
+                                <span></span>
+                            </div>
+                            <div class="coordinate-plot-range-list">${rangeRows}</div>
+                        </div>
+                        <div class="coordinate-plot-editor-actions">
+                            <div class="coordinate-plot-editor-actions-left">
+                                <button type="button" class="coordinate-plot-editor-btn" data-plot-add-segment="${this.escapeHtml(plot.id)}">添加范围段</button>
+                            </div>
+                            <div class="coordinate-plot-editor-actions-right">
+                                <button type="button" class="coordinate-plot-editor-btn" data-plot-cancel="${this.escapeHtml(plot.id)}">收起</button>
+                                <button type="button" class="coordinate-plot-editor-btn primary" data-plot-save="${this.escapeHtml(plot.id)}">保存</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
     
     updateBackgroundUI() {
@@ -5812,7 +6033,12 @@ class DrawingBoard {
             coordinateAddPointBtn.classList.toggle('active', supportsCoordinateTools && this.isCoordinatePointMode);
         }
 
+        if (!coordinateState.plots.some(plot => plot.id === this.expandedCoordinatePlotId && plot.coordinateType === currentPattern)) {
+            this.expandedCoordinatePlotId = null;
+        }
+
         this.syncCoordinateInputPanelButtons();
+        this.syncCoordinateExpressionDisplay();
         this.toggleCoordinateInputPanel(this.isCoordinateInputPanelVisible);
         this.renderCoordinatePlotList(currentPattern);
         

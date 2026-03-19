@@ -71,6 +71,7 @@ class BackgroundManager {
         this.coordinateOverlayCanvas = null;
         this.coordinateOverlayCtx = null;
         this.coordinateOverlaySvg = null;
+        this.backgroundPatternSvg = null;
         let savedCoordinateOverlayState = null;
         try {
             savedCoordinateOverlayState = JSON.parse(localStorage.getItem('coordinateOverlayState') || 'null');
@@ -294,19 +295,20 @@ class BackgroundManager {
     }
     
     drawBackgroundPattern() {
-        if (this.backgroundPattern === 'blank') return;
-        
-        if (this.backgroundPattern === 'image') {
-            // Handled by updateBackgroundImageElement
+        if (this.renderBackgroundPatternLayer()) {
             return;
         }
-        
+
+        if (this.backgroundPattern === 'blank' || this.backgroundPattern === 'image') {
+            return;
+        }
+
         this.bgCtx.save();
         this.bgCtx.globalCompositeOperation = 'source-over';
-        
+
         const dpr = window.devicePixelRatio || 1;
         const patternColor = this.getPatternColor();
-        
+
         switch(this.backgroundPattern) {
             case 'dots':
                 this.drawDotsPattern(dpr, patternColor);
@@ -330,8 +332,276 @@ class BackgroundManager {
                 this.drawPolarPattern(dpr, patternColor);
                 break;
         }
-        
+
         this.bgCtx.restore();
+    }
+
+    getCanvasLogicalSize() {
+        const dpr = window.devicePixelRatio || 1;
+        return {
+            width: this.bgCanvas.clientWidth || this.bgCanvas.offsetWidth || (this.bgCanvas.width / dpr),
+            height: this.bgCanvas.clientHeight || this.bgCanvas.offsetHeight || (this.bgCanvas.height / dpr)
+        };
+    }
+
+    ensureBackgroundPatternSvg() {
+        if (this.backgroundPatternSvg && document.body.contains(this.backgroundPatternSvg)) {
+            return this.backgroundPatternSvg;
+        }
+
+        const transformLayer = document.getElementById('transform-layer');
+        if (!transformLayer) return null;
+
+        let svg = document.getElementById('background-pattern-svg');
+        if (!svg) {
+            svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.id = 'background-pattern-svg';
+            svg.style.position = 'absolute';
+            svg.style.inset = '0';
+            svg.style.width = '100%';
+            svg.style.height = '100%';
+            svg.style.pointerEvents = 'none';
+            svg.style.zIndex = '0';
+            svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            svg.setAttribute('overflow', 'hidden');
+            svg.setAttribute('shape-rendering', 'geometricPrecision');
+            svg.setAttribute('text-rendering', 'geometricPrecision');
+
+            const gifLayer = document.getElementById('gif-layer');
+            if (gifLayer) {
+                transformLayer.insertBefore(svg, gifLayer);
+            } else {
+                const canvas = document.getElementById('canvas');
+                if (canvas) {
+                    transformLayer.insertBefore(svg, canvas);
+                } else {
+                    transformLayer.appendChild(svg);
+                }
+            }
+        }
+
+        this.backgroundPatternSvg = svg;
+        return svg;
+    }
+
+    syncBackgroundPatternSvgSize() {
+        const svg = this.ensureBackgroundPatternSvg();
+        if (!svg) return null;
+
+        const { width, height } = this.getCanvasLogicalSize();
+        svg.style.width = `${width}px`;
+        svg.style.height = `${height}px`;
+        svg.setAttribute('width', String(width));
+        svg.setAttribute('height', String(height));
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        return { svg, logicalWidth: width, logicalHeight: height };
+    }
+
+    renderBackgroundPatternLayer() {
+        const svgData = this.syncBackgroundPatternSvgSize();
+        if (!svgData) return false;
+
+        const { svg, logicalWidth, logicalHeight } = svgData;
+        if (this.backgroundPattern === 'blank' || this.backgroundPattern === 'image') {
+            svg.style.display = 'none';
+            svg.innerHTML = '';
+            return true;
+        }
+
+        svg.style.display = 'block';
+        svg.innerHTML = this.getBackgroundPatternSvgMarkup(logicalWidth, logicalHeight);
+        return true;
+    }
+
+    getBackgroundPatternSvgMarkup(logicalWidth, logicalHeight) {
+        switch (this.backgroundPattern) {
+            case 'dots':
+                return this.renderDotsPatternSvg(logicalWidth, logicalHeight);
+            case 'grid':
+                return this.renderGridPatternSvg(logicalWidth, logicalHeight);
+            case 'tianzige':
+                return this.renderTianzigePatternSvg(logicalWidth, logicalHeight);
+            case 'english-lines':
+                return this.renderEnglishLinesPatternSvg(logicalWidth, logicalHeight);
+            case 'music-staff':
+                return this.renderMusicStaffPatternSvg(logicalWidth, logicalHeight);
+            case 'coordinate':
+                return this.renderCoordinatePatternSvg(logicalWidth, logicalHeight);
+            case 'polar':
+                return this.renderPolarPatternSvg(logicalWidth, logicalHeight);
+            default:
+                return '';
+        }
+    }
+
+    renderDotsPatternSvg(logicalWidth, logicalHeight) {
+        const spacing = 20 / this.patternDensity;
+        const patternColor = this.getPatternColor();
+        const radius = Math.max(0.7, Math.min(2.2, 1.1 / Math.sqrt(Math.max(this.patternDensity, 0.2))));
+        const parts = [];
+
+        for (let x = spacing; x < logicalWidth; x += spacing) {
+            for (let y = spacing; y < logicalHeight; y += spacing) {
+                parts.push(`<circle cx="${x}" cy="${y}" r="${radius}" fill="${patternColor}"></circle>`);
+            }
+        }
+
+        return `<g class="background-pattern-dots">${parts.join('')}</g>`;
+    }
+
+    renderGridPatternSvg(logicalWidth, logicalHeight) {
+        const spacing = 20 / this.patternDensity;
+        const patternColor = this.getPatternColor();
+        const pathParts = [];
+
+        for (let x = spacing; x < logicalWidth; x += spacing) {
+            pathParts.push(`M ${x} 0 L ${x} ${logicalHeight}`);
+        }
+
+        for (let y = spacing; y < logicalHeight; y += spacing) {
+            pathParts.push(`M 0 ${y} L ${logicalWidth} ${y}`);
+        }
+
+        return `<path d="${pathParts.join(' ')}" fill="none" stroke="${patternColor}" stroke-width="0.5"></path>`;
+    }
+
+    renderTianzigePatternSvg(logicalWidth, logicalHeight) {
+        const cellSize = 60 / this.patternDensity;
+        const patternColor = this.getPatternColor();
+        const outer = [];
+        const inner = [];
+
+        for (let x = 0; x < logicalWidth; x += cellSize) {
+            for (let y = 0; y < logicalHeight; y += cellSize) {
+                outer.push(`<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" fill="none" stroke="${patternColor}" stroke-width="2"></rect>`);
+                inner.push(`M ${x + cellSize / 2} ${y} L ${x + cellSize / 2} ${y + cellSize}`);
+                inner.push(`M ${x} ${y + cellSize / 2} L ${x + cellSize} ${y + cellSize / 2}`);
+                inner.push(`M ${x} ${y} L ${x + cellSize} ${y + cellSize}`);
+                inner.push(`M ${x + cellSize} ${y} L ${x} ${y + cellSize}`);
+            }
+        }
+
+        return `${outer.join('')}<path d="${inner.join(' ')}" fill="none" stroke="${patternColor}" stroke-width="0.5"></path>`;
+    }
+
+    renderEnglishLinesPatternSvg(logicalWidth, logicalHeight) {
+        const lineHeight = 60 / this.patternDensity;
+        const patternColor = this.getPatternColor();
+        const midlineColor = this.isLightBackground() ? 'rgba(255, 0, 0, 0.3)' : 'rgba(255, 100, 100, 0.5)';
+        const parts = [];
+
+        for (let y = lineHeight; y < logicalHeight; y += lineHeight) {
+            parts.push(`<line x1="0" y1="${y}" x2="${logicalWidth}" y2="${y}" stroke="${patternColor}" stroke-width="1"></line>`);
+            parts.push(`<line x1="0" y1="${y + lineHeight / 4}" x2="${logicalWidth}" y2="${y + lineHeight / 4}" stroke="${patternColor}" stroke-width="0.5" stroke-dasharray="5 5"></line>`);
+            parts.push(`<line x1="0" y1="${y + lineHeight / 2}" x2="${logicalWidth}" y2="${y + lineHeight / 2}" stroke="${midlineColor}" stroke-width="1"></line>`);
+            parts.push(`<line x1="0" y1="${y + (3 * lineHeight / 4)}" x2="${logicalWidth}" y2="${y + (3 * lineHeight / 4)}" stroke="${patternColor}" stroke-width="0.5" stroke-dasharray="5 5"></line>`);
+        }
+
+        return `<g class="background-pattern-english-lines">${parts.join('')}</g>`;
+    }
+
+    renderMusicStaffPatternSvg(logicalWidth, logicalHeight) {
+        const staffHeight = 80 / this.patternDensity;
+        const lineSpacing = staffHeight / 4;
+        const patternColor = this.getPatternColor();
+        const pathParts = [];
+
+        for (let startY = staffHeight; startY < logicalHeight; startY += staffHeight * 2) {
+            for (let i = 0; i < 5; i++) {
+                const y = startY + i * lineSpacing;
+                pathParts.push(`M 0 ${y} L ${logicalWidth} ${y}`);
+            }
+        }
+
+        return `<path d="${pathParts.join(' ')}" fill="none" stroke="${patternColor}" stroke-width="1"></path>`;
+    }
+
+    renderSvgArrowHead(endX, endY, angle, headSize, color, strokeWidth = 2) {
+        const x1 = endX - headSize * Math.cos(angle - Math.PI / 6);
+        const y1 = endY - headSize * Math.sin(angle - Math.PI / 6);
+        const x2 = endX - headSize * Math.cos(angle + Math.PI / 6);
+        const y2 = endY - headSize * Math.sin(angle + Math.PI / 6);
+        return `<path d="M ${endX} ${endY} L ${x1} ${y1} M ${endX} ${endY} L ${x2} ${y2}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round"></path>`;
+    }
+
+    renderCoordinatePatternSvg(logicalWidth, logicalHeight) {
+        const origin = this.getPatternOriginLogical();
+        const unitSize = this.getCoordinateUnitSize('coordinate');
+        const gridColor = this.getAdaptivePatternColor(0.18, 0.08);
+        const axisColor = this.getPatternColor();
+        const gridPath = [];
+        const arrowSize = Math.max(8, Math.min(14, unitSize * 0.45));
+        const normalizedXStart = ((origin.x % unitSize) + unitSize) % unitSize;
+        const normalizedYStart = ((origin.y % unitSize) + unitSize) % unitSize;
+
+        for (let x = normalizedXStart; x <= logicalWidth; x += unitSize) {
+            gridPath.push(`M ${x} 0 L ${x} ${logicalHeight}`);
+        }
+
+        for (let y = normalizedYStart; y <= logicalHeight; y += unitSize) {
+            gridPath.push(`M 0 ${y} L ${logicalWidth} ${y}`);
+        }
+
+        const parts = [
+            `<path d="${gridPath.join(' ')}" fill="none" stroke="${gridColor}" stroke-width="0.5"></path>`,
+            `<line x1="0" y1="${origin.y}" x2="${logicalWidth}" y2="${origin.y}" stroke="${axisColor}" stroke-width="2"></line>`,
+            `<line x1="${origin.x}" y1="0" x2="${origin.x}" y2="${logicalHeight}" stroke="${axisColor}" stroke-width="2"></line>`,
+            this.renderSvgArrowHead(logicalWidth, origin.y, 0, arrowSize, axisColor, 2),
+            this.renderSvgArrowHead(origin.x, 0, -Math.PI / 2, arrowSize, axisColor, 2)
+        ];
+
+        return `<g class="background-pattern-coordinate">${parts.join('')}</g>`;
+    }
+
+    renderPolarPatternSvg(logicalWidth, logicalHeight) {
+        const origin = this.getPatternOriginLogical();
+        const radiusStep = this.getCoordinateUnitSize('polar');
+        const angleStep = this.getPolarAngleStep();
+        const minorColor = this.getAdaptivePatternColor(0.18, 0.07);
+        const majorColor = this.getAdaptivePatternColor(0.38, 0.14);
+        const axisColor = this.getPatternColor();
+        const maxRadius = Math.max(
+            Math.hypot(origin.x, origin.y),
+            Math.hypot(logicalWidth - origin.x, origin.y),
+            Math.hypot(origin.x, logicalHeight - origin.y),
+            Math.hypot(logicalWidth - origin.x, logicalHeight - origin.y)
+        );
+        const majorRingInterval = 5;
+        const majorAngleInterval = angleStep <= 15 ? 30 : angleStep <= 30 ? 45 : 90;
+        const parts = [];
+
+        for (let ringIndex = 1, radius = radiusStep; radius < maxRadius; ringIndex++, radius += radiusStep) {
+            const isMajorRing = ringIndex % majorRingInterval === 0;
+            parts.push(`<circle cx="${origin.x}" cy="${origin.y}" r="${radius}" fill="none" stroke="${isMajorRing ? majorColor : minorColor}" stroke-width="${isMajorRing ? 1 : 0.5}"></circle>`);
+        }
+
+        for (let angleDeg = 0; angleDeg < 360; angleDeg += angleStep) {
+            const angleRad = angleDeg * Math.PI / 180;
+            const endPoint = this.getRayEndpointForBounds(origin.x, origin.y, angleRad, logicalWidth, logicalHeight);
+            const isAxis = angleDeg % 90 === 0;
+            const isMajorRay = angleDeg % majorAngleInterval === 0;
+            const stroke = isAxis ? axisColor : (isMajorRay ? majorColor : minorColor);
+            const strokeWidth = isAxis ? 2 : (isMajorRay ? 1 : 0.5);
+            parts.push(`<line x1="${origin.x}" y1="${origin.y}" x2="${endPoint.x}" y2="${endPoint.y}" stroke="${stroke}" stroke-width="${strokeWidth}"></line>`);
+        }
+
+        const positiveXAxisEnd = this.getRayEndpointForBounds(origin.x, origin.y, 0, logicalWidth, logicalHeight);
+        if (positiveXAxisEnd.distance > 0) {
+            parts.push(this.renderSvgArrowHead(positiveXAxisEnd.x, positiveXAxisEnd.y, 0, 10, axisColor, 2));
+        }
+
+        const positiveYAxisEnd = this.getRayEndpointForBounds(origin.x, origin.y, Math.PI / 2, logicalWidth, logicalHeight);
+        if (positiveYAxisEnd.distance > 0) {
+            parts.push(this.renderSvgArrowHead(positiveYAxisEnd.x, positiveYAxisEnd.y, -Math.PI / 2, 10, axisColor, 2));
+        }
+
+        const angleGuideRadius = Math.min(radiusStep * 1.5, 42);
+        const guideEndX = origin.x + angleGuideRadius;
+        const guideEndY = origin.y;
+        parts.push(`<path d="M ${guideEndX} ${guideEndY} A ${angleGuideRadius} ${angleGuideRadius} 0 0 0 ${origin.x + angleGuideRadius * Math.cos(-Math.PI / 3)} ${origin.y + angleGuideRadius * Math.sin(-Math.PI / 3)}" fill="none" stroke="${majorColor}" stroke-width="1"></path>`);
+        parts.push(this.renderSvgArrowHead(guideEndX, guideEndY, 0, 8, majorColor, 1.4));
+
+        return `<g class="background-pattern-polar">${parts.join('')}</g>`;
     }
     
     updateBackgroundImageElement() {
@@ -729,19 +999,19 @@ class BackgroundManager {
         this.bgCtx.stroke();
     }
 
-    getRayEndpoint(centerX, centerY, angleRad) {
+    getRayEndpointForBounds(centerX, centerY, angleRad, width, height) {
         const directionX = Math.cos(angleRad);
         const directionY = -Math.sin(angleRad);
         const intersections = [];
 
         if (Math.abs(directionX) > 1e-6) {
             intersections.push((0 - centerX) / directionX);
-            intersections.push((this.bgCanvas.width - centerX) / directionX);
+            intersections.push((width - centerX) / directionX);
         }
 
         if (Math.abs(directionY) > 1e-6) {
             intersections.push((0 - centerY) / directionY);
-            intersections.push((this.bgCanvas.height - centerY) / directionY);
+            intersections.push((height - centerY) / directionY);
         }
 
         const validDistances = intersections.filter(distance => distance > 0);
@@ -752,6 +1022,10 @@ class BackgroundManager {
             y: centerY + directionY * distance,
             distance
         };
+    }
+
+    getRayEndpoint(centerX, centerY, angleRad) {
+        return this.getRayEndpointForBounds(centerX, centerY, angleRad, this.bgCanvas.width, this.bgCanvas.height);
     }
 
     drawArrowHead(startX, startY, endX, endY, dpr, color) {
@@ -826,14 +1100,125 @@ class BackgroundManager {
             plots: Array.isArray(nextState.plots)
                 ? nextState.plots
                     .filter(plot => typeof plot?.expression === 'string' && plot.expression.trim())
-                    .map((plot, index) => ({
-                        id: plot.id || `plot-${Date.now()}-${index}`,
-                        expression: this.normalizePlotExpression(plot.expression, plot.coordinateType),
-                        coordinateType: plot.coordinateType === 'polar' ? 'polar' : 'coordinate',
-                        color: plot.color || this.getCoordinatePaletteColor(index + 2)
-                    }))
+                    .map((plot, index) => {
+                        const coordinateType = plot.coordinateType === 'polar' ? 'polar' : 'coordinate';
+                        return {
+                            id: plot.id || `plot-${Date.now()}-${index}`,
+                            expression: this.normalizePlotExpression(plot.expression, coordinateType),
+                            coordinateType,
+                            color: plot.color || this.getCoordinatePaletteColor(index + 2),
+                            strokeWidth: this.normalizePlotStrokeWidth(plot.strokeWidth),
+                            dashStyle: this.normalizePlotDashStyle(plot.dashStyle),
+                            segments: this.sanitizeCoordinatePlotSegments(plot.segments, coordinateType)
+                        };
+                    })
                 : []
         };
+    }
+
+    normalizePlotStrokeWidth(value) {
+        const numericValue = Number(value);
+        if (!Number.isFinite(numericValue)) return 2.5;
+        return Math.max(1, Math.min(12, this.roundToDecimals(numericValue, 2)));
+    }
+
+    normalizePlotDashStyle(value) {
+        const normalized = String(value || 'solid').trim().toLowerCase();
+        return ['solid', 'dashed', 'dotted', 'dashdot'].includes(normalized) ? normalized : 'solid';
+    }
+
+    getAllowedPlotAxes(coordinateType = this.backgroundPattern) {
+        return coordinateType === 'polar' ? ['theta', 'r'] : ['x', 'y'];
+    }
+
+    sanitizeCoordinatePlotSegments(segments, coordinateType = this.backgroundPattern) {
+        if (!Array.isArray(segments)) return [];
+        const allowedAxes = this.getAllowedPlotAxes(coordinateType);
+        return segments
+            .map((segment, index) => {
+                const axis = allowedAxes.includes(segment?.axis) ? segment.axis : allowedAxes[0];
+                let min = segment?.min === '' || segment?.min === null || typeof segment?.min === 'undefined'
+                    ? null
+                    : Number(segment.min);
+                let max = segment?.max === '' || segment?.max === null || typeof segment?.max === 'undefined'
+                    ? null
+                    : Number(segment.max);
+
+                min = Number.isFinite(min) ? this.roundToDecimals(min, 4) : null;
+                max = Number.isFinite(max) ? this.roundToDecimals(max, 4) : null;
+
+                if (min === null && max === null) return null;
+                if (min !== null && max !== null && min > max) {
+                    [min, max] = [max, min];
+                }
+
+                return {
+                    id: segment?.id || `segment-${Date.now()}-${index}`,
+                    axis,
+                    min,
+                    max
+                };
+            })
+            .filter(Boolean);
+    }
+
+    getPlotStrokeDasharray(plot, scale = 1) {
+        const width = Math.max(1, this.normalizePlotStrokeWidth(plot?.strokeWidth || 2.5) * Math.max(scale, 0.2));
+        switch (this.normalizePlotDashStyle(plot?.dashStyle)) {
+            case 'dashed':
+                return `${width * 4} ${width * 2.5}`;
+            case 'dotted':
+                return `${width * 1.2} ${width * 2.2}`;
+            case 'dashdot':
+                return `${width * 4} ${width * 2.2} ${width * 1.2} ${width * 2.2}`;
+            default:
+                return '';
+        }
+    }
+
+    plotMatchesSegments(plot, valueMap = {}) {
+        const segments = Array.isArray(plot?.segments) ? plot.segments : [];
+        if (segments.length === 0) return true;
+
+        return segments.some(segment => {
+            const value = valueMap[segment.axis];
+            if (!Number.isFinite(value)) return false;
+            if (segment.min !== null && value < segment.min) return false;
+            if (segment.max !== null && value > segment.max) return false;
+            return true;
+        });
+    }
+
+    validateCoordinatePlotExpression(expression, coordinateType = this.backgroundPattern) {
+        const normalizedExpression = this.normalizePlotExpression(expression, coordinateType);
+        if (!normalizedExpression) {
+            throw new Error('empty-expression');
+        }
+
+        const preparedExpression = this.preparePlotExpression(normalizedExpression, coordinateType);
+        const evaluator = this.createPlotEvaluator(preparedExpression, coordinateType);
+        const sampleInputs = coordinateType === 'polar'
+            ? [[0, 0, 0], [0, Math.PI / 4, 45], [0, Math.PI / 2, 90]]
+            : [[-1, 0, 0], [0, 0, 0], [1, 0, 0]];
+
+        let canEvaluate = false;
+        for (const [x, theta, deg] of sampleInputs) {
+            try {
+                const result = evaluator(x, theta, deg, Math.PI, Math.E);
+                if (typeof result === 'number') {
+                    canEvaluate = true;
+                    break;
+                }
+            } catch (error) {
+                // ignore partial-domain sample failures
+            }
+        }
+
+        if (!canEvaluate) {
+            throw new Error('invalid-expression');
+        }
+
+        return normalizedExpression;
     }
 
     persistCoordinateOverlayState() {
@@ -1411,44 +1796,61 @@ class BackgroundManager {
     }
 
     addCoordinatePlot(expression, coordinateType = this.backgroundPattern, color = null) {
-        const normalizedExpression = this.normalizePlotExpression(expression, coordinateType);
-        if (!normalizedExpression) {
-            throw new Error('empty-expression');
-        }
-
-        const preparedExpression = this.preparePlotExpression(normalizedExpression, coordinateType);
-        const evaluator = this.createPlotEvaluator(preparedExpression, coordinateType);
-        const sampleInputs = coordinateType === 'polar'
-            ? [[0, 0, 0], [0, Math.PI / 4, 45], [0, Math.PI / 2, 90]]
-            : [[-1, 0, 0], [0, 0, 0], [1, 0, 0]];
-
-        let canEvaluate = false;
-        for (const [x, theta, deg] of sampleInputs) {
-            try {
-                const result = evaluator(x, theta, deg, Math.PI, Math.E);
-                if (typeof result === 'number') {
-                    canEvaluate = true;
-                    break;
-                }
-            } catch (error) {
-                // Try next sample point so functions with partial domains can still be plotted.
-            }
-        }
-
-        if (!canEvaluate) {
-            throw new Error('invalid-expression');
-        }
-
+        const normalizedType = coordinateType === 'polar' ? 'polar' : 'coordinate';
+        const normalizedExpression = this.validateCoordinatePlotExpression(expression, normalizedType);
         const nextState = this.getCoordinateOverlayState();
-        const sameTypePlots = nextState.plots.filter(plot => plot.coordinateType === coordinateType);
+        const sameTypePlots = nextState.plots.filter(plot => plot.coordinateType === normalizedType);
         nextState.plots.push({
             id: `plot-${Date.now()}-${nextState.plots.length}`,
-            expression: preparedExpression,
-            coordinateType: coordinateType === 'polar' ? 'polar' : 'coordinate',
-            color: color || this.getCoordinatePaletteColor(sameTypePlots.length + 1)
+            expression: normalizedExpression,
+            coordinateType: normalizedType,
+            color: color || this.getCoordinatePaletteColor(sameTypePlots.length + 1),
+            strokeWidth: 2.5,
+            dashStyle: 'solid',
+            segments: []
         });
         this.setCoordinateOverlayState(nextState);
         return nextState.plots[nextState.plots.length - 1];
+    }
+
+    updateCoordinatePlot(plotId, partialPlot = {}, options = {}) {
+        if (!plotId) return false;
+
+        const nextState = this.getCoordinateOverlayState();
+        let changed = false;
+        nextState.plots = nextState.plots.map(plot => {
+            if (plot.id !== plotId) return plot;
+            changed = true;
+
+            const nextType = partialPlot.coordinateType
+                ? (partialPlot.coordinateType === 'polar' ? 'polar' : 'coordinate')
+                : plot.coordinateType;
+            const nextExpression = Object.prototype.hasOwnProperty.call(partialPlot, 'expression')
+                ? this.validateCoordinatePlotExpression(partialPlot.expression, nextType)
+                : plot.expression;
+
+            return {
+                ...plot,
+                expression: nextExpression,
+                coordinateType: nextType,
+                color: typeof partialPlot.color === 'string' && partialPlot.color.trim()
+                    ? partialPlot.color.trim()
+                    : plot.color,
+                strokeWidth: Object.prototype.hasOwnProperty.call(partialPlot, 'strokeWidth')
+                    ? this.normalizePlotStrokeWidth(partialPlot.strokeWidth)
+                    : this.normalizePlotStrokeWidth(plot.strokeWidth),
+                dashStyle: Object.prototype.hasOwnProperty.call(partialPlot, 'dashStyle')
+                    ? this.normalizePlotDashStyle(partialPlot.dashStyle)
+                    : this.normalizePlotDashStyle(plot.dashStyle),
+                segments: Object.prototype.hasOwnProperty.call(partialPlot, 'segments')
+                    ? this.sanitizeCoordinatePlotSegments(partialPlot.segments, nextType)
+                    : this.sanitizeCoordinatePlotSegments(plot.segments, nextType)
+            };
+        });
+
+        if (!changed) return false;
+        this.setCoordinateOverlayState(nextState, options);
+        return true;
     }
 
     removeCoordinatePlot(plotId) {
@@ -1602,12 +2004,14 @@ class BackgroundManager {
 
         const origin = this.getPatternOriginLogical();
         const unitSize = this.getCoordinateUnitSize();
-        const strokeWidth = Math.max(1.5, Math.min(14, 2.5 * metrics.visualScale));
         const parts = [];
 
         activePlots.forEach(plot => {
             try {
                 const evaluator = this.createPlotEvaluator(plot.expression, plot.coordinateType);
+                const strokeWidth = Math.max(1, Math.min(24, this.normalizePlotStrokeWidth(plot.strokeWidth) * metrics.visualScale));
+                const strokeDasharray = this.getPlotStrokeDasharray(plot, metrics.visualScale);
+                const dashAttr = strokeDasharray ? ` stroke-dasharray="${strokeDasharray}"` : '';
                 let pathData = '';
                 let isCurrentSegmentOpen = false;
 
@@ -1624,7 +2028,7 @@ class BackgroundManager {
                             continue;
                         }
 
-                        if (!Number.isFinite(radius)) {
+                        if (!Number.isFinite(radius) || !this.plotMatchesSegments(plot, { theta, r: radius })) {
                             isCurrentSegmentOpen = false;
                             continue;
                         }
@@ -1662,7 +2066,7 @@ class BackgroundManager {
                             continue;
                         }
 
-                        if (!Number.isFinite(y)) {
+                        if (!Number.isFinite(y) || !this.plotMatchesSegments(plot, { x, y })) {
                             previousPoint = null;
                             isCurrentSegmentOpen = false;
                             continue;
@@ -1683,7 +2087,7 @@ class BackgroundManager {
                 }
 
                 if (pathData.trim()) {
-                    parts.push(`<path d="${pathData.trim()}" fill="none" stroke="${plot.color}" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"></path>`);
+                    parts.push(`<path d="${pathData.trim()}" fill="none" stroke="${plot.color}" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"${dashAttr}></path>`);
                 }
             } catch (error) {
                 console.warn('Failed to render coordinate plot:', plot.expression, error);
@@ -1726,6 +2130,98 @@ class BackgroundManager {
         return `<g class="coordinate-point-group">${parts.join('')}</g>`;
     }
 
+    getCanvasScreenRect(metrics) {
+        return {
+            x: metrics.rect.left,
+            y: metrics.rect.top,
+            width: metrics.logicalWidth * metrics.scaleX,
+            height: metrics.logicalHeight * metrics.scaleY
+        };
+    }
+
+    buildCoordinateOverlayMarkup(logicalWidth, logicalHeight, metrics, options = {}) {
+        const { clipToCanvas = true, clipId = 'coordinate-overlay-clip' } = options;
+        if (!this.supportsMovableOrigin()) {
+            return '';
+        }
+
+        const origin = this.getPatternOriginLogical();
+        const unitSize = this.getCoordinateUnitSize();
+        const parts = [];
+
+        if (this.backgroundPattern === 'polar') {
+            parts.push(this.renderPolarTicksAndLabels(origin, unitSize, logicalWidth, logicalHeight, metrics));
+        } else {
+            parts.push(this.renderCartesianTicksAndLabels(origin, unitSize, logicalWidth, logicalHeight, metrics));
+        }
+
+        parts.push(this.renderCoordinatePlots(logicalWidth, logicalHeight, metrics));
+        parts.push(this.renderCoordinatePoints(metrics));
+        parts.push(this.renderCoordinateOriginSvg(origin, metrics));
+
+        const content = parts.filter(Boolean).join('');
+        if (!content || !clipToCanvas) {
+            return content;
+        }
+
+        const canvasRect = this.getCanvasScreenRect(metrics);
+        return `
+            <defs>
+                <clipPath id="${clipId}">
+                    <rect x="${canvasRect.x}" y="${canvasRect.y}" width="${canvasRect.width}" height="${canvasRect.height}"></rect>
+                </clipPath>
+            </defs>
+            <g clip-path="url(#${clipId})">${content}</g>
+        `;
+    }
+
+    getCoordinateOverlayExportMetrics(logicalWidth, logicalHeight) {
+        return {
+            rect: { left: 0, top: 0 },
+            logicalWidth,
+            logicalHeight,
+            viewportWidth: logicalWidth,
+            viewportHeight: logicalHeight,
+            scaleX: 1,
+            scaleY: 1,
+            visualScale: 1
+        };
+    }
+
+    getCoordinateOverlaySvgDocument(logicalWidth, logicalHeight) {
+        if (!this.supportsMovableOrigin()) {
+            return '';
+        }
+
+        const metrics = this.getCoordinateOverlayExportMetrics(logicalWidth, logicalHeight);
+        const innerMarkup = this.buildCoordinateOverlayMarkup(logicalWidth, logicalHeight, metrics, {
+            clipToCanvas: true,
+            clipId: 'coordinate-overlay-export-clip'
+        });
+        if (!innerMarkup) return '';
+
+        return `
+            <svg xmlns="http://www.w3.org/2000/svg" width="${logicalWidth}" height="${logicalHeight}" viewBox="0 0 ${logicalWidth} ${logicalHeight}" overflow="hidden" shape-rendering="geometricPrecision" text-rendering="geometricPrecision">
+                ${innerMarkup}
+            </svg>
+        `;
+    }
+
+    getBackgroundPatternSvgDocument(logicalWidth, logicalHeight) {
+        if (this.backgroundPattern === 'blank' || this.backgroundPattern === 'image') {
+            return '';
+        }
+
+        const innerMarkup = this.getBackgroundPatternSvgMarkup(logicalWidth, logicalHeight);
+        if (!innerMarkup) return '';
+
+        return `
+            <svg xmlns="http://www.w3.org/2000/svg" width="${logicalWidth}" height="${logicalHeight}" viewBox="0 0 ${logicalWidth} ${logicalHeight}" overflow="hidden" shape-rendering="geometricPrecision" text-rendering="geometricPrecision">
+                ${innerMarkup}
+            </svg>
+        `;
+    }
+
     renderCoordinateOverlay() {
         const overlayData = this.syncCoordinateOverlaySvgSize();
         if (!overlayData) return;
@@ -1746,21 +2242,10 @@ class BackgroundManager {
             legacyCanvas.style.display = 'none';
         }
 
-        const origin = this.getPatternOriginLogical();
-        const unitSize = this.getCoordinateUnitSize();
-        const parts = [];
-
-        if (this.backgroundPattern === 'polar') {
-            parts.push(this.renderPolarTicksAndLabels(origin, unitSize, logicalWidth, logicalHeight, metrics));
-        } else {
-            parts.push(this.renderCartesianTicksAndLabels(origin, unitSize, logicalWidth, logicalHeight, metrics));
-        }
-
-        parts.push(this.renderCoordinatePlots(logicalWidth, logicalHeight, metrics));
-        parts.push(this.renderCoordinatePoints(metrics));
-        parts.push(this.renderCoordinateOriginSvg(origin, metrics));
-
-        svg.innerHTML = parts.filter(Boolean).join('');
+        svg.innerHTML = this.buildCoordinateOverlayMarkup(logicalWidth, logicalHeight, metrics, {
+            clipToCanvas: true,
+            clipId: 'coordinate-overlay-screen-clip'
+        });
     }
     
     drawCoordinatePattern(dpr, patternColor) {

@@ -268,6 +268,7 @@ window.translations = {
         pointAdded: 'Coordinate point added',
         pointsCleared: 'Coordinate points cleared',
         plotAdded: 'Function plot added',
+        plotUpdated: 'Function plot updated',
         plotError: 'Invalid expression, unable to plot',
         plotsCleared: 'Function plots cleared'
     },

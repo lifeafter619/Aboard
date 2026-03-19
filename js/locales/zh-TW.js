@@ -265,6 +265,7 @@ window.translations = {
         pointAdded: '已添加座標點',
         pointsCleared: '座標點已清空',
         plotAdded: '函數圖像已添加',
+        plotUpdated: '函數圖像已更新',
         plotError: '表達式無效，無法繪製',
         plotsCleared: '函數圖像已清空'
     },

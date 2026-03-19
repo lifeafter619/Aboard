@@ -263,6 +263,7 @@ window.translations = {
         pointAdded: '已添加坐标点',
         pointsCleared: '坐标点已清空',
         plotAdded: '函数图像已添加',
+        plotUpdated: '函数图像已更新',
         plotError: '表达式无效，无法绘制',
         plotsCleared: '函数图像已清空'
     },

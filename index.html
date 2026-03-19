@@ -1188,17 +1188,6 @@
                         <label class="checkbox-label"><input type="checkbox" id="coordinate-show-origin" checked><span data-i18n="background.showOrigin">显示原点</span></label>
                         <label class="checkbox-label"><input type="checkbox" id="coordinate-snap-grid" checked><span data-i18n="background.snapToGrid">吸附网格</span></label>
                     </div>
-                    <div class="button-size-options coordinate-action-buttons">
-                        <button id="coordinate-clear-plots-btn" type="button" class="pattern-option-btn" data-i18n="background.clearPlots">清空图像</button>
-                    </div>
-                    <label data-i18n="background.plotExpression">函数表达式</label>
-                    <div class="coordinate-plot-input-row">
-                        <input type="text" id="coordinate-expression-input" data-i18n-placeholder="background.plotPlaceholderCartesian" placeholder="如：sin(x) + 2">
-                        <button id="coordinate-keypad-toggle-btn" type="button" class="pattern-option-btn coordinate-input-panel-toggle" data-i18n="background.inputPanel" aria-expanded="false">输入面板</button>
-                        <button id="coordinate-plot-btn" type="button" class="pattern-option-btn" data-i18n="background.plot">绘制</button>
-                    </div>
-                    <p class="settings-hint coordinate-hint-line" id="coordinate-plot-hint" data-i18n="background.plotHintCartesian">直角坐标：输入 y = f(x)，可用 sin cos PI</p>
-                    <div id="coordinate-plot-list" class="coordinate-plot-list"></div>
                 </div>
                 <div class="announcement-buttons">
                     <button id="coordinate-tools-modal-ok-btn" class="announcement-btn ok-btn" data-i18n="common.confirm">确定</button>
@@ -1235,6 +1224,19 @@
                     </div>
                     <p class="settings-hint coordinate-hint-line" data-i18n="background.addPointHint">开启后点击画布依次添加坐标点并自动连线</p>
                     <div class="coordinate-point-count"><span data-i18n="background.pointsCount">点数</span>：<span id="coordinate-point-count-value">0</span></div>
+                    <div class="coordinate-plot-panel">
+                        <div class="coordinate-plot-panel-header">
+                            <label for="coordinate-expression-input" data-i18n="background.plotExpression">函数表达式</label>
+                            <button id="coordinate-clear-plots-btn" type="button" class="pattern-option-btn coordinate-clear-plots-inline" data-i18n="background.clearPlots">清空图像</button>
+                        </div>
+                        <div class="coordinate-plot-input-row">
+                            <input type="text" id="coordinate-expression-input" data-i18n-placeholder="background.plotPlaceholderCartesian" placeholder="如：sin(x) + 2">
+                            <button id="coordinate-keypad-toggle-btn" type="button" class="pattern-option-btn coordinate-input-panel-toggle" data-i18n="background.inputPanel" aria-expanded="false">输入面板</button>
+                            <button id="coordinate-plot-btn" type="button" class="pattern-option-btn" data-i18n="background.plot">绘制</button>
+                        </div>
+                        <p class="settings-hint coordinate-hint-line" id="coordinate-plot-hint" data-i18n="background.plotHintCartesian">直角坐标：输入 y = f(x)，可用 sin cos PI</p>
+                        <div id="coordinate-plot-list" class="coordinate-plot-list"></div>
+                    </div>
                 </div>
                 <div class="announcement-buttons">
                     <button id="coordinate-point-modal-ok-btn" class="announcement-btn ok-btn" data-i18n="common.confirm">确定</button>
@@ -1255,6 +1257,7 @@
                 </button>
             </div>
             <div class="modal-body">
+                <div class="coordinate-keypad-expression-display" id="coordinate-keypad-expression-display">y = </div>
                 <div id="coordinate-keypad-panel" class="coordinate-keypad-panel">
                     <div class="coordinate-keypad-top-actions">
                         <button type="button" class="coordinate-keypad-btn" data-coordinate-action="clear">C</button>
