@@ -87,6 +87,7 @@ class DrawingBoard {
         
         // Initialize shape drawing manager
         this.shapeDrawingManager = new ShapeDrawingManager(this.canvas, this.ctx, this.drawingEngine, this.historyManager);
+        this.drawingEngine.setShapeDrawingManager(this.shapeDrawingManager);
         
         // Initialize line style modal for both pen and shape tools
         this.lineStyleModal = new LineStyleModal(this.drawingEngine, this.shapeDrawingManager);
@@ -139,7 +140,7 @@ class DrawingBoard {
         
         // Canvas scale limits
         this.MIN_CANVAS_SCALE = 0.5;
-        this.NORMAL_MAX_SCALE = 5.0;
+        this.NORMAL_MAX_SCALE = 10.0;
         this.UNLIMITED_MAX_SCALE = 500.0;
         this.MAX_CANVAS_SCALE = this.settingsManager.unlimitedZoom ? this.UNLIMITED_MAX_SCALE : this.NORMAL_MAX_SCALE;
         this.dynamicRenderScale = 1;
@@ -1432,6 +1433,11 @@ class DrawingBoard {
             if (this.historyManager.undo()) {
                 // Clear stroke selection as strokes are no longer valid
                 this.drawingEngine.clearStrokes();
+                this.drawingEngine.stampedImages = [];
+                this.drawingEngine.objectGroups = [];
+                this.insertTextManager?.clearTextObjects?.();
+                this.drawingEngine.clearVectorScene();
+                this.drawingEngine.setVectorPreviewVisible(false);
                 this.updateUI();
                 this.saveSessionDebounced();
             }
@@ -1441,6 +1447,11 @@ class DrawingBoard {
             if (this.historyManager.redo()) {
                 // Clear stroke selection as strokes are no longer valid
                 this.drawingEngine.clearStrokes();
+                this.drawingEngine.stampedImages = [];
+                this.drawingEngine.objectGroups = [];
+                this.insertTextManager?.clearTextObjects?.();
+                this.drawingEngine.clearVectorScene();
+                this.drawingEngine.setVectorPreviewVisible(false);
                 this.updateUI();
                 this.saveSessionDebounced();
             }
@@ -4163,12 +4174,14 @@ class DrawingBoard {
         // Handle shape drawing completion
         if (this.drawingEngine.currentTool === 'shape') {
             this.shapeDrawingManager.stopDrawing();
+            this.syncVectorPreviewState(true);
             return;
         }
         
         if (this.drawingEngine.stopDrawing()) {
             this.historyManager.saveState();
             this.saveSessionDebounced();
+            this.syncVectorPreviewState(true);
             // Keep eraser config open after each erase stroke so users can continuously
             // fine-tune and erase without repeated reopen operations.
             if (this.drawingEngine.currentTool !== 'eraser') {
@@ -6474,6 +6487,39 @@ class DrawingBoard {
         if (this.imageControls?.isActive) {
             this.imageControls.updateControlBox();
         }
+        this.syncVectorPreviewState();
+    }
+
+    hasVectorPreviewContent() {
+        const hasText = !!(this.insertTextManager?.textObjects?.length);
+        return this.drawingEngine.strokes.length > 0 ||
+            this.drawingEngine.stampedImages.length > 0 ||
+            hasText;
+    }
+
+    shouldUseVectorPreview() {
+        const finalScale = this.canvasFitScale * this.drawingEngine.canvasScale;
+        const hasTransientOverlay = !!(
+            this.drawingEngine.isDrawing ||
+            this.shapeDrawingManager?.isDrawing ||
+            this.insertImageManager?.isActive ||
+            this.insertTextManager?.isActive ||
+            this.selectionManager?.hasSelection?.() ||
+            this.strokeControls?.isActive
+        );
+
+        return finalScale > 1.05 &&
+            this.hasVectorPreviewContent() &&
+            !hasTransientOverlay;
+    }
+
+    syncVectorPreviewState(forceRender = false) {
+        if (forceRender || this.hasVectorPreviewContent()) {
+            this.drawingEngine.renderVectorScene(this.insertTextManager || null);
+        }
+
+        const shouldShow = this.shouldUseVectorPreview();
+        this.drawingEngine.setVectorPreviewVisible(shouldShow);
     }
     
     loadUploadedImages() {
@@ -6637,6 +6683,17 @@ class DrawingBoard {
                     tool: s.tool,
                     lineStyle: s.lineStyle || 'solid',
                     dashDensity: s.dashDensity || 10,
+                    renderMode: s.renderMode || null,
+                    shapeType: s.shapeType || null,
+                    shapeStart: s.shapeStart ? { ...s.shapeStart } : null,
+                    shapeEnd: s.shapeEnd ? { ...s.shapeEnd } : null,
+                    shapeLineStyle: s.shapeLineStyle || null,
+                    shapeDashDensity: s.shapeDashDensity || null,
+                    shapeWaveDensity: s.shapeWaveDensity || null,
+                    shapeMultiLineCount: s.shapeMultiLineCount || null,
+                    shapeMultiLineSpacing: s.shapeMultiLineSpacing || null,
+                    arrowSize: s.arrowSize || null,
+                    eraserShape: s.eraserShape || null,
                     rotation: s.rotation || 0,
                     layerOrder: s.layerOrder || 0,
                     objectId: s.objectId || this.drawingEngine.getNextObjectId(),

@@ -64,7 +64,32 @@ button, a, input[type="button"], input[type="submit"] {
     width: 100%;
     height: 100%;
     cursor: crosshair;
+    z-index: 2;
+    transition: opacity 0.18s ease;
+}
+
+#vector-scene-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    pointer-events: none;
+    overflow: visible;
     z-index: 1;
+}
+
+body.vector-preview-active #canvas {
+    opacity: 0;
+}
+
+body.vector-preview-active #vector-scene-svg {
+    display: block;
+}
+
+body.vector-preview-active #off-canvas-image-layer {
+    display: none !important;
 }
 
 /* Eraser cursor */

@@ -2344,6 +2344,8 @@ class SelectionManager {
             const copiedStroke = {
                 ...stroke,
                 points: stroke.points.map(p => ({ x: p.x + this.COPY_OFFSET, y: p.y + this.COPY_OFFSET })),
+                shapeStart: stroke.shapeStart ? { x: stroke.shapeStart.x + this.COPY_OFFSET, y: stroke.shapeStart.y + this.COPY_OFFSET } : null,
+                shapeEnd: stroke.shapeEnd ? { x: stroke.shapeEnd.x + this.COPY_OFFSET, y: stroke.shapeEnd.y + this.COPY_OFFSET } : null,
                 layerOrder: this.drawingEngine.getNextLayerOrder(),
                 objectId: this.drawingEngine.getNextObjectId(),
                 groupId: null
@@ -2382,7 +2384,9 @@ class SelectionManager {
         if (this.clipboard.strokes) {
             this.clipboard.strokes = this.clipboard.strokes.map(s => ({
                 ...s,
-                points: s.points.map(p => ({ x: p.x + this.COPY_OFFSET, y: p.y + this.COPY_OFFSET }))
+                points: s.points.map(p => ({ x: p.x + this.COPY_OFFSET, y: p.y + this.COPY_OFFSET })),
+                shapeStart: s.shapeStart ? { x: s.shapeStart.x + this.COPY_OFFSET, y: s.shapeStart.y + this.COPY_OFFSET } : null,
+                shapeEnd: s.shapeEnd ? { x: s.shapeEnd.x + this.COPY_OFFSET, y: s.shapeEnd.y + this.COPY_OFFSET } : null
             }));
         }
         if (this.clipboard.images) {
@@ -2428,6 +2432,17 @@ class SelectionManager {
             tool: stroke.tool,
             lineStyle: stroke.lineStyle || 'solid',
             dashDensity: stroke.dashDensity || 10,
+            renderMode: stroke.renderMode || null,
+            shapeType: stroke.shapeType || null,
+            shapeStart: stroke.shapeStart ? { ...stroke.shapeStart } : null,
+            shapeEnd: stroke.shapeEnd ? { ...stroke.shapeEnd } : null,
+            shapeLineStyle: stroke.shapeLineStyle || null,
+            shapeDashDensity: stroke.shapeDashDensity || null,
+            shapeWaveDensity: stroke.shapeWaveDensity || null,
+            shapeMultiLineCount: stroke.shapeMultiLineCount || null,
+            shapeMultiLineSpacing: stroke.shapeMultiLineSpacing || null,
+            arrowSize: stroke.arrowSize || null,
+            eraserShape: stroke.eraserShape || null,
             rotation: stroke.rotation || 0,
             layerOrder: stroke.layerOrder || 0
         };
@@ -3014,6 +3029,8 @@ class SelectionManager {
         } else if (this.selectionType === 'text' && this.textManager) {
             this.textManager.drawTextSelection();
         }
+
+        window.drawingBoard?.syncVectorPreviewState?.();
     }
     
     // Box selection methods

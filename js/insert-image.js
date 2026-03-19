@@ -242,6 +242,7 @@ class InsertImageManager {
     showOverlay() {
         this.isActive = true;
         this.overlay.style.display = 'block';
+        window.drawingBoard?.syncVectorPreviewState?.();
 
         // Initial sizing and positioning
         // Image should be smaller than canvas and not exceed half the canvas size
@@ -627,6 +628,7 @@ class InsertImageManager {
         this.historyManager.saveState();
 
         this.close();
+        window.drawingBoard?.syncVectorPreviewState?.(true);
     }
 
     cancelImage() {
@@ -652,6 +654,7 @@ class InsertImageManager {
             previewInner.remove();
         }
         this.controlBox.style.backgroundImage = 'none';
+        window.drawingBoard?.syncVectorPreviewState?.();
     }
 
     // Interaction Handlers

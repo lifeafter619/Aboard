@@ -63,6 +63,10 @@ class DrawingEngine {
         this.groupCounter = 1;
         this.objectGroups = [];
         this.offCanvasImageLayer = null;
+        this.shapeDrawingManager = null;
+        this.vectorSceneSvg = null;
+        this.vectorPreviewEnabled = false;
+        this.vectorSceneMaskCounter = 0;
         
         // Canvas scaling and panning
         this.canvasScale = parseFloat(localStorage.getItem('canvasScale')) || 1.0;
@@ -79,6 +83,10 @@ class DrawingEngine {
      */
     setEdgeDrawingManager(edgeDrawingManager) {
         this.edgeDrawingManager = edgeDrawingManager;
+    }
+
+    setShapeDrawingManager(shapeDrawingManager) {
+        this.shapeDrawingManager = shapeDrawingManager;
     }
     
     setPenLineStyle(style) {
@@ -486,6 +494,439 @@ class DrawingEngine {
             }
         });
     }
+
+    ensureVectorSceneSvg() {
+        if (this.vectorSceneSvg && document.body.contains(this.vectorSceneSvg)) {
+            return this.vectorSceneSvg;
+        }
+
+        const transformLayer = document.getElementById('transform-layer');
+        if (!transformLayer) return null;
+
+        let svg = document.getElementById('vector-scene-svg');
+        if (!svg) {
+            svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.id = 'vector-scene-svg';
+            svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            svg.setAttribute('overflow', 'visible');
+            svg.setAttribute('shape-rendering', 'geometricPrecision');
+            svg.setAttribute('text-rendering', 'geometricPrecision');
+            svg.setAttribute('vector-effect', 'non-scaling-stroke');
+            transformLayer.insertBefore(svg, this.canvas);
+        }
+
+        this.vectorSceneSvg = svg;
+        this.syncVectorSceneSvgSize();
+        return svg;
+    }
+
+    syncVectorSceneSvgSize() {
+        const svg = this.ensureVectorSceneSvg();
+        if (!svg) return null;
+
+        const dpr = window.devicePixelRatio || 1;
+        const logicalWidth = this.canvas.width / dpr;
+        const logicalHeight = this.canvas.height / dpr;
+
+        svg.style.width = `${logicalWidth}px`;
+        svg.style.height = `${logicalHeight}px`;
+        svg.setAttribute('width', String(logicalWidth));
+        svg.setAttribute('height', String(logicalHeight));
+        svg.setAttribute('viewBox', `0 0 ${logicalWidth} ${logicalHeight}`);
+
+        return { svg, logicalWidth, logicalHeight };
+    }
+
+    setVectorPreviewVisible(visible) {
+        this.vectorPreviewEnabled = !!visible;
+        if (typeof document !== 'undefined' && document.body) {
+            document.body.classList.toggle('vector-preview-active', this.vectorPreviewEnabled);
+        }
+    }
+
+    clearVectorScene() {
+        const svg = this.ensureVectorSceneSvg();
+        if (!svg) return;
+        svg.innerHTML = '';
+    }
+
+    escapeSvgText(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    escapeSvgAttribute(value) {
+        return this.escapeSvgText(value)
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    buildSvgPathFromPoints(points = []) {
+        if (!Array.isArray(points) || points.length === 0) return '';
+        if (points.length === 1) {
+            const point = points[0];
+            return `M ${point.x} ${point.y}`;
+        }
+
+        return points
+            .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
+            .join(' ');
+    }
+
+    getSvgStrokeAppearance(stroke) {
+        const appearance = {
+            lineWidth: stroke?.size || this.penSize,
+            opacity: 1,
+            lineCap: 'round',
+            lineJoin: 'round',
+            dashArray: '',
+            extraMarkup: ''
+        };
+
+        if (!stroke || stroke.tool === 'eraser') {
+            return appearance;
+        }
+
+        this.applyStoredStrokeLineStyle?.(stroke);
+        const dashPattern = this.getLineStyleDashPattern(
+            stroke.lineStyle || 'solid',
+            stroke.dashDensity || 10,
+            stroke.size || this.penSize
+        );
+        appearance.dashArray = dashPattern.length ? dashPattern.join(' ') : '';
+
+        switch (stroke.penType) {
+            case 'pencil':
+                appearance.opacity = 0.68;
+                appearance.lineWidth = (stroke.size || this.penSize) * 0.92;
+                break;
+            case 'ballpoint':
+                appearance.opacity = 0.92;
+                appearance.lineWidth = (stroke.size || this.penSize) * 0.95;
+                break;
+            case 'fountain':
+                appearance.opacity = 1;
+                appearance.lineWidth = (stroke.size || this.penSize) * 1.2;
+                break;
+            case 'brush':
+                appearance.opacity = 0.78;
+                appearance.lineWidth = (stroke.size || this.penSize) * 1.65;
+                break;
+            case 'marker':
+                appearance.opacity = 0.45;
+                appearance.lineWidth = (stroke.size || this.penSize) * 2.2;
+                appearance.lineCap = 'square';
+                break;
+            default:
+                break;
+        }
+
+        return appearance;
+    }
+
+    flattenRenderableObjects(textObjects = []) {
+        const renderables = this.getRenderableObjects(textObjects);
+        const flattened = [];
+
+        renderables.forEach(renderable => {
+            if (renderable.type === 'group') {
+                renderable.members.forEach(member => flattened.push(member));
+            } else {
+                flattened.push(renderable);
+            }
+        });
+
+        return flattened;
+    }
+
+    getRenderSceneBounds(flattenedRenderables = [], textObjects = []) {
+        const canvasBounds = this.getCanvasLogicalBounds();
+        let minX = canvasBounds.x;
+        let minY = canvasBounds.y;
+        let maxX = canvasBounds.x + canvasBounds.width;
+        let maxY = canvasBounds.y + canvasBounds.height;
+
+        flattenedRenderables.forEach(renderable => {
+            const bounds = this.getTopLevelRenderableBounds(renderable, textObjects);
+            if (!bounds) return;
+            minX = Math.min(minX, bounds.x);
+            minY = Math.min(minY, bounds.y);
+            maxX = Math.max(maxX, bounds.x + bounds.width);
+            maxY = Math.max(maxY, bounds.y + bounds.height);
+        });
+
+        const padding = 256;
+        return {
+            x: minX - padding,
+            y: minY - padding,
+            width: Math.max(canvasBounds.width + padding * 2, (maxX - minX) + padding * 2),
+            height: Math.max(canvasBounds.height + padding * 2, (maxY - minY) + padding * 2)
+        };
+    }
+
+    buildSvgStrokeMarkup(stroke) {
+        if (!stroke?.points?.length) return '';
+
+        if (stroke.renderMode === 'shape' && this.shapeDrawingManager?.buildSvgShapeMarkup) {
+            return this.shapeDrawingManager.buildSvgShapeMarkup(stroke) || '';
+        }
+
+        const appearance = this.getSvgStrokeAppearance(stroke);
+        const pathData = this.buildSvgPathFromPoints(stroke.points);
+        const strokeColor = this.escapeSvgAttribute(stroke.color || this.currentColor);
+        const dashMarkup = appearance.dashArray ? ` stroke-dasharray="${appearance.dashArray}"` : '';
+
+        if (stroke.points.length === 1) {
+            const point = stroke.points[0];
+            const radius = Math.max(appearance.lineWidth / 2, 0.5);
+            return `<circle cx="${point.x}" cy="${point.y}" r="${radius}" fill="${strokeColor}" fill-opacity="${appearance.opacity}" />`;
+        }
+
+        if (stroke.penType === 'brush') {
+            const accentWidth = Math.max(1, appearance.lineWidth * 0.5);
+            return `
+                <g>
+                    <path d="${pathData}" fill="none" stroke="${strokeColor}" stroke-width="${appearance.lineWidth}" stroke-linecap="${appearance.lineCap}" stroke-linejoin="${appearance.lineJoin}" stroke-opacity="${appearance.opacity}"${dashMarkup} />
+                    <path d="${pathData}" fill="none" stroke="${strokeColor}" stroke-width="${accentWidth}" stroke-linecap="${appearance.lineCap}" stroke-linejoin="${appearance.lineJoin}" stroke-opacity="0.18" />
+                </g>
+            `;
+        }
+
+        return `<path d="${pathData}" fill="none" stroke="${strokeColor}" stroke-width="${appearance.lineWidth}" stroke-linecap="${appearance.lineCap}" stroke-linejoin="${appearance.lineJoin}" stroke-opacity="${appearance.opacity}"${dashMarkup} />`;
+    }
+
+    buildSvgEraserMaskMarkup(stroke) {
+        if (!stroke?.points?.length) return '';
+
+        const eraserShape = stroke.eraserShape || 'circle';
+        const eraserSize = Math.max(stroke.size || 1, 1);
+
+        if (eraserShape === 'rectangle') {
+            if (stroke.points.length === 1) {
+                const point = stroke.points[0];
+                const half = eraserSize / 2;
+                return `<rect x="${point.x - half}" y="${point.y - half}" width="${eraserSize}" height="${eraserSize}" fill="black" />`;
+            }
+
+            return stroke.points.map(point => {
+                const half = eraserSize / 2;
+                return `<rect x="${point.x - half}" y="${point.y - half}" width="${eraserSize}" height="${eraserSize}" fill="black" />`;
+            }).join('');
+        }
+
+        if (stroke.points.length === 1) {
+            const point = stroke.points[0];
+            return `<circle cx="${point.x}" cy="${point.y}" r="${eraserSize / 2}" fill="black" />`;
+        }
+
+        const pathData = this.buildSvgPathFromPoints(stroke.points);
+        return `<path d="${pathData}" fill="none" stroke="black" stroke-width="${eraserSize}" stroke-linecap="round" stroke-linejoin="round" />`;
+    }
+
+    buildSvgImageMarkup(img) {
+        if (!img?.imageSrc && !img?.imageElement?.src) return '';
+
+        const href = this.escapeSvgAttribute(img.imageSrc || img.imageElement.src);
+        const centerX = img.x + img.width / 2;
+        const centerY = img.y + img.height / 2;
+        const rotation = img.rotation || 0;
+        const scaleX = img.flipHorizontal ? -1 : 1;
+        const scaleY = img.flipVertical ? -1 : 1;
+        const transformParts = [
+            `translate(${centerX} ${centerY})`
+        ];
+
+        if (rotation) {
+            transformParts.push(`rotate(${rotation})`);
+        }
+        if (scaleX !== 1 || scaleY !== 1) {
+            transformParts.push(`scale(${scaleX} ${scaleY})`);
+        }
+
+        return `
+            <image
+                href="${href}"
+                x="${-img.width / 2}"
+                y="${-img.height / 2}"
+                width="${img.width}"
+                height="${img.height}"
+                preserveAspectRatio="none"
+                transform="${transformParts.join(' ')}"
+            />
+        `;
+    }
+
+    buildSvgTextMarkup(textObj) {
+        if (!textObj?.text) return '';
+
+        const padding = 4;
+        const fontSize = textObj.fontSize || 48;
+        const fontStyle = textObj.italic ? 'italic' : 'normal';
+        const fontWeight = textObj.bold ? 'bold' : 'normal';
+        const lines = String(textObj.text).split('\n');
+        const lineHeight = fontSize * 1.2;
+        const color = this.escapeSvgAttribute(textObj.color || '#000000');
+        const fontFamily = this.escapeSvgAttribute(textObj.fontFamily || 'sans-serif');
+
+        this.ctx.save();
+        this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
+        let maxWidth = 0;
+        const measuredLines = lines.map((line) => {
+            const width = this.ctx.measureText(line).width;
+            maxWidth = Math.max(maxWidth, width);
+            return { text: line, width };
+        });
+        this.ctx.restore();
+
+        const totalHeight = measuredLines.length * lineHeight + padding * 2;
+        const centerX = textObj.x + (maxWidth + padding * 2) / 2;
+        const centerY = textObj.y + totalHeight / 2;
+        const rotation = textObj.rotation || 0;
+
+        const textMarkup = measuredLines.map((line, index) => {
+            const lineY = textObj.y + padding + (index * lineHeight);
+            return `<tspan x="${textObj.x + padding}" y="${lineY}" dominant-baseline="hanging">${this.escapeSvgText(line.text)}</tspan>`;
+        }).join('');
+
+        const decorations = [];
+        const decorationColor = this.escapeSvgAttribute(textObj.decorationColor || textObj.color || '#000000');
+        const decorationWidth = textObj.decorationWidth || Math.max(1, fontSize * 0.05);
+        const decorationStyle = textObj.decorationStyle || 'solid';
+        const dashArray = decorationStyle === 'dashed'
+            ? `${decorationWidth * 4} ${decorationWidth * 2}`
+            : decorationStyle === 'dotted'
+                ? `${decorationWidth} ${decorationWidth * 2.2}`
+                : '';
+
+        measuredLines.forEach((line, index) => {
+            if (!line.width) return;
+            const baseY = textObj.y + padding + (index * lineHeight);
+            if (textObj.underline) {
+                decorations.push(this.buildSvgDecorationMarkup(
+                    textObj.x + padding,
+                    baseY + fontSize * 1.05,
+                    line.width,
+                    decorationStyle,
+                    decorationWidth,
+                    decorationColor,
+                    dashArray
+                ));
+            }
+            if (textObj.strikethrough) {
+                decorations.push(this.buildSvgDecorationMarkup(
+                    textObj.x + padding,
+                    baseY + fontSize * 0.55,
+                    line.width,
+                    decorationStyle,
+                    decorationWidth,
+                    decorationColor,
+                    dashArray
+                ));
+            }
+        });
+
+        return `
+            <g transform="${rotation ? `rotate(${rotation} ${centerX} ${centerY})` : ''}">
+                <text fill="${color}" font-size="${fontSize}" font-family="${fontFamily}" font-style="${fontStyle}" font-weight="${fontWeight}">
+                    ${textMarkup}
+                </text>
+                ${decorations.join('')}
+            </g>
+        `;
+    }
+
+    buildSvgDecorationMarkup(x, y, width, style, lineWidth, color, dashArray = '') {
+        if (style === 'wavy') {
+            const amplitude = Math.max(1, lineWidth * 1.2);
+            const wavelength = Math.max(6, lineWidth * 4);
+            const step = Math.max(2, wavelength / 4);
+            let path = `M ${x} ${y}`;
+            for (let offset = step; offset <= width; offset += step) {
+                const waveY = y + Math.sin((offset / wavelength) * Math.PI * 2) * amplitude;
+                path += ` L ${x + offset} ${waveY}`;
+            }
+            return `<path d="${path}" fill="none" stroke="${color}" stroke-width="${lineWidth}" stroke-linecap="round" stroke-linejoin="round" />`;
+        }
+
+        const dashMarkup = dashArray ? ` stroke-dasharray="${dashArray}"` : '';
+        return `<line x1="${x}" y1="${y}" x2="${x + width}" y2="${y}" stroke="${color}" stroke-width="${lineWidth}" stroke-linecap="round"${dashMarkup} />`;
+    }
+
+    renderVectorScene(textManager = null) {
+        const svgData = this.syncVectorSceneSvgSize();
+        if (!svgData) return;
+
+        const { svg, logicalWidth, logicalHeight } = svgData;
+        const textObjects = textManager?.textObjects || [];
+        const flattenedRenderables = this.flattenRenderableObjects(textObjects);
+
+        if (!flattenedRenderables.length) {
+            svg.innerHTML = '';
+            return;
+        }
+
+        const segments = [{ items: [], erasers: [] }];
+        flattenedRenderables.forEach(renderable => {
+            if (renderable.type === 'stroke' && renderable.item?.tool === 'eraser') {
+                segments.forEach(segment => segment.erasers.push(renderable.item));
+                segments.push({ items: [], erasers: [] });
+                return;
+            }
+
+            segments[segments.length - 1].items.push(renderable);
+        });
+
+        const sceneBounds = this.getRenderSceneBounds(flattenedRenderables, textObjects);
+        const defs = [];
+        const content = [];
+
+        segments.forEach((segment, index) => {
+            if (!segment.items.length) return;
+
+            const segmentMarkup = segment.items.map(renderable => {
+                if (renderable.type === 'stroke') {
+                    return this.buildSvgStrokeMarkup(renderable.item);
+                }
+                if (renderable.type === 'image') {
+                    return this.buildSvgImageMarkup(renderable.item);
+                }
+                if (renderable.type === 'text') {
+                    return this.buildSvgTextMarkup(renderable.item);
+                }
+                return '';
+            }).join('');
+
+            if (!segmentMarkup.trim()) return;
+
+            if (segment.erasers.length) {
+                const maskId = `vector-scene-mask-${++this.vectorSceneMaskCounter}-${index}`;
+                const maskMarkup = segment.erasers
+                    .map(stroke => this.buildSvgEraserMaskMarkup(stroke))
+                    .join('');
+                defs.push(`
+                    <mask id="${maskId}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" x="${sceneBounds.x}" y="${sceneBounds.y}" width="${sceneBounds.width}" height="${sceneBounds.height}">
+                        <rect x="${sceneBounds.x}" y="${sceneBounds.y}" width="${sceneBounds.width}" height="${sceneBounds.height}" fill="white" />
+                        ${maskMarkup}
+                    </mask>
+                `);
+                content.push(`<g mask="url(#${maskId})">${segmentMarkup}</g>`);
+            } else {
+                content.push(`<g>${segmentMarkup}</g>`);
+            }
+        });
+
+        svg.innerHTML = `
+            <defs>${defs.join('')}</defs>
+            <g data-vector-scene-root="true" transform="">
+                ${content.join('')}
+            </g>
+        `;
+
+        svg.setAttribute('overflow', 'visible');
+        svg.setAttribute('viewBox', `0 0 ${logicalWidth} ${logicalHeight}`);
+    }
     
     getPosition(e) {
         const rect = this.canvas.getBoundingClientRect();
@@ -588,6 +1029,7 @@ class DrawingEngine {
     
     startDrawing(e) {
         this.isDrawing = true;
+        window.drawingBoard?.syncVectorPreviewState?.();
         let pos = this.getPosition(e);
         
         // Reset accumulated distance for dashed line drawing
@@ -1072,6 +1514,7 @@ class DrawingEngine {
             
             this.points = [];
             this.lastPoint = null;
+            window.drawingBoard?.syncVectorPreviewState?.(true);
             return true;
         }
         return false;
@@ -1119,6 +1562,7 @@ class DrawingEngine {
         this.clearStampedImages();
         this.objectGroups = [];
         this.updateOffCanvasImageMirrors();
+        this.clearVectorScene();
     }
     
     setTool(tool) {
@@ -1323,6 +1767,23 @@ class DrawingEngine {
             tool: stroke.tool,
             lineStyle: stroke.lineStyle || 'solid',
             dashDensity: stroke.dashDensity || 10,
+            renderMode: stroke.renderMode || null,
+            shapeType: stroke.shapeType || null,
+            shapeStart: stroke.shapeStart ? {
+                x: stroke.shapeStart.x + this.COPY_OFFSET,
+                y: stroke.shapeStart.y + this.COPY_OFFSET
+            } : null,
+            shapeEnd: stroke.shapeEnd ? {
+                x: stroke.shapeEnd.x + this.COPY_OFFSET,
+                y: stroke.shapeEnd.y + this.COPY_OFFSET
+            } : null,
+            shapeLineStyle: stroke.shapeLineStyle || null,
+            shapeDashDensity: stroke.shapeDashDensity || null,
+            shapeWaveDensity: stroke.shapeWaveDensity || null,
+            shapeMultiLineCount: stroke.shapeMultiLineCount || null,
+            shapeMultiLineSpacing: stroke.shapeMultiLineSpacing || null,
+            arrowSize: stroke.arrowSize || null,
+            eraserShape: stroke.eraserShape || null,
             rotation: stroke.rotation || 0,
             layerOrder: this.getNextLayerOrder(),
             objectId: this.getNextObjectId(),
@@ -1356,6 +1817,11 @@ class DrawingEngine {
     }
     
     redrawStroke(stroke) {
+        if (stroke?.renderMode === 'shape' && this.shapeDrawingManager?.drawStoredShapeOnContext) {
+            this.shapeDrawingManager.drawStoredShapeOnContext(this.ctx, stroke);
+            return;
+        }
+
         this.ctx.save();
         
         // Set up drawing context based on stroke properties
@@ -1445,6 +1911,7 @@ class DrawingEngine {
     clearStrokes() {
         this.strokes = [];
         this.selectedStrokeIndex = null;
+        this.renderVectorScene(window.drawingBoard?.insertTextManager || null);
     }
     
     // Stamped image management
@@ -1696,6 +2163,7 @@ class DrawingEngine {
             }
         });
         this.updateOffCanvasImageMirrors(textManager?.textObjects || []);
+        this.renderVectorScene(textManager);
     }
     
     redrawStampedImages() {
@@ -1731,6 +2199,7 @@ class DrawingEngine {
         this.stampedImages = [];
         this.selectedImageIndex = null;
         this.updateOffCanvasImageMirrors();
+        this.renderVectorScene(window.drawingBoard?.insertTextManager || null);
     }
 
     findImageAtPoint(x, y) {
