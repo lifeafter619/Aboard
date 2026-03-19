@@ -64,6 +64,7 @@ class SelectionManager {
         this.selectedImages = []; // Array of image indices for multi-select
         this.selectedTexts = []; // Array of text indices for multi-select
         this.selectedCoordinatePointIds = [];
+        this.selectedCoordinateGroupId = null;
         this.multiImageDragStartPositions = []; // Starting positions for images in multi-drag
         this.multiTextDragStartPositions = []; // Starting positions for texts in multi-drag
         this.coordinateDragStartPositions = [];
@@ -102,6 +103,12 @@ class SelectionManager {
     getCoordinateSelectionBounds() {
         if (!this.backgroundManager || this.selectedCoordinatePointIds.length === 0) return null;
         return this.backgroundManager.getCoordinateSelectionBounds(this.selectedCoordinatePointIds);
+    }
+
+    getSelectedCoordinateGroup() {
+        return this.selectedCoordinateGroupId
+            ? this.backgroundManager?.getCoordinateGroupById?.(this.selectedCoordinateGroupId) || null
+            : null;
     }
 
     commitCoordinateSelectionChange(saveHistory = true) {
@@ -179,6 +186,7 @@ class SelectionManager {
         this.selectedIndex = null;
         this.multiRotation = 0;
         this.selectedCoordinatePointIds = [];
+        this.selectedCoordinateGroupId = null;
         this.refreshSelectedGroupMembers();
         this.showControls();
         this.redrawWithSelection();
@@ -998,6 +1006,7 @@ class SelectionManager {
         this.selectedImages = [];
         this.selectedTexts = [];
         this.selectedCoordinatePointIds = [];
+        this.selectedCoordinateGroupId = null;
         this.drawingEngine.selectStroke(index);
         this.showControls();
         this.redrawWithSelection();
@@ -1011,6 +1020,7 @@ class SelectionManager {
         this.selectedImages = [];
         this.selectedTexts = [];
         this.selectedCoordinatePointIds = [];
+        this.selectedCoordinateGroupId = null;
         if (this.textManager) {
             this.textManager.selectedTextIndex = index;
         }
@@ -1026,6 +1036,7 @@ class SelectionManager {
         this.selectedImages = [];
         this.selectedTexts = [];
         this.selectedCoordinatePointIds = [];
+        this.selectedCoordinateGroupId = null;
         this.drawingEngine.selectImage(index);
         this.showControls();
         this.redrawWithSelection();
@@ -1033,7 +1044,9 @@ class SelectionManager {
 
     selectCoordinatePoints(pointIds, options = {}) {
         if (!this.backgroundManager || !Array.isArray(pointIds) || pointIds.length === 0) return false;
-        const uniqueIds = [...new Set(pointIds)];
+        const validPointIds = new Set(this.backgroundManager.getCoordinatePointIds?.() || []);
+        const uniqueIds = [...new Set(pointIds.filter(pointId => validPointIds.has(pointId)))];
+        if (uniqueIds.length === 0) return false;
         this.drawingEngine.deselectStroke();
         this.drawingEngine.deselectImage();
         if (this.textManager) {
@@ -1049,6 +1062,9 @@ class SelectionManager {
         this.selectedImages = [];
         this.selectedTexts = [];
         this.selectedCoordinatePointIds = uniqueIds;
+        this.selectedCoordinateGroupId = options.groupId
+            || this.backgroundManager.findCoordinateGroupByPointIds?.(uniqueIds, { line: options.line === true })?.id
+            || null;
         this.showControls();
         this.redrawWithSelection();
         return true;
@@ -1068,6 +1084,7 @@ class SelectionManager {
         this.selectedImages = [];
         this.selectedTexts = [];
         this.selectedCoordinatePointIds = [];
+        this.selectedCoordinateGroupId = null;
         this.showControls();
         this.redrawWithSelection();
     }
@@ -1105,12 +1122,16 @@ class SelectionManager {
         }
         if (groupBtn) {
             const totalSelected = this.selectedStrokes.length + this.selectedImages.length + this.selectedTexts.length;
-            groupBtn.style.display = (!this.isCoordinateSelection() && this.isCompoundSelection() &&
+            const shouldShowCoordinateGroup = this.isCoordinateSelection() &&
+                this.selectedCoordinatePointIds.length > 1 &&
+                !this.selectedCoordinateGroupId;
+            groupBtn.style.display = (shouldShowCoordinateGroup || (!this.isCoordinateSelection() && this.isCompoundSelection() &&
                 totalSelected > 1 &&
-                !this.selectionContainsGroupedObjects()) ? '' : 'none';
+                !this.selectionContainsGroupedObjects())) ? '' : 'none';
         }
         if (ungroupBtn) {
-            ungroupBtn.style.display = (!this.isCoordinateSelection() && this.selectionType === 'group') ? '' : 'none';
+            const shouldShowCoordinateUngroup = this.isCoordinateSelection() && !!this.selectedCoordinateGroupId;
+            ungroupBtn.style.display = (shouldShowCoordinateUngroup || (!this.isCoordinateSelection() && this.selectionType === 'group')) ? '' : 'none';
         }
         this.updateControlBox();
     }
@@ -1199,10 +1220,10 @@ class SelectionManager {
         });
         const toolbarButtons = Array.from(this.toolbar.querySelectorAll('.image-control-btn'));
         const visibleCount = Math.max(toolbarItems.length, 1);
-        const toolbarButtonSize = this.clamp(Math.min(safeWidth * 0.22, minSide * 0.36), 20, 44);
-        const toolbarGap = this.clamp(toolbarButtonSize * 0.18, 4, 8);
-        const toolbarPaddingX = this.clamp(toolbarButtonSize * 0.22, 4, 10);
-        const toolbarPaddingY = this.clamp(toolbarButtonSize * 0.18, 4, 10);
+        const toolbarButtonSize = this.clamp(Math.min(safeWidth * 0.28, minSide * 0.56), 34, 52);
+        const toolbarGap = this.clamp(toolbarButtonSize * 0.18, 6, 10);
+        const toolbarPaddingX = this.clamp(toolbarButtonSize * 0.24, 8, 14);
+        const toolbarPaddingY = this.clamp(toolbarButtonSize * 0.18, 6, 12);
         const toolbarHorizontalWidth = (toolbarButtonSize * visibleCount) + (toolbarGap * Math.max(visibleCount - 1, 0)) + toolbarPaddingX * 2;
         const toolbarGridColumns = visibleCount >= 4 ? 3 : 2;
         const toolbarGridWidth = (toolbarButtonSize * Math.min(visibleCount, toolbarGridColumns)) + (toolbarGap * Math.max(Math.min(visibleCount, toolbarGridColumns) - 1, 0)) + toolbarPaddingX * 2;
@@ -1213,7 +1234,7 @@ class SelectionManager {
 
             const icon = button.querySelector('svg');
             if (icon) {
-                const toolbarIconSize = this.clamp(toolbarButtonSize * 0.45, 10, 20);
+                const toolbarIconSize = this.clamp(toolbarButtonSize * 0.48, 16, 24);
                 icon.style.width = `${toolbarIconSize}px`;
                 icon.style.height = `${toolbarIconSize}px`;
             }
@@ -1240,7 +1261,7 @@ class SelectionManager {
 
         if (safeWidth < toolbarHorizontalWidth + inset * 2) {
             this.toolbar.style.bottom = `${inset}px`;
-            if (safeWidth >= toolbarGridWidth + inset * 2 && visibleCount > 2) {
+            if (safeWidth >= toolbarGridWidth + inset * 2 && visibleCount > 4) {
                 this.toolbar.style.display = 'grid';
                 this.toolbar.style.gridTemplateColumns = `repeat(${toolbarGridColumns}, minmax(0, 1fr))`;
                 this.toolbar.style.justifyItems = 'center';
@@ -2136,6 +2157,8 @@ class SelectionManager {
                         size: stroke.size,
                         penType: stroke.penType,
                         tool: stroke.tool,
+                        lineStyle: stroke.lineStyle || 'solid',
+                        dashDensity: stroke.dashDensity || 10,
                         rotation: stroke.rotation || 0,
                         layerOrder: this.drawingEngine.getNextLayerOrder(),
                         objectId: this.drawingEngine.getNextObjectId(),
@@ -2188,6 +2211,8 @@ class SelectionManager {
             this.selectedStrokes = newStrokeIndices;
             this.selectedImages = newImageIndices;
             this.selectedTexts = newTextIndices;
+            this.selectedCoordinatePointIds = [];
+            this.selectedCoordinateGroupId = null;
             this.multiRotation = 0;
             this.selectedGroupId = null;
             this.selectionType = 'multi';
@@ -2375,6 +2400,8 @@ class SelectionManager {
             this.selectedStrokes = newStrokeIndices;
             this.selectedImages = newImageIndices;
             this.selectedTexts = newTextIndices;
+            this.selectedCoordinatePointIds = [];
+            this.selectedCoordinateGroupId = null;
             this.multiRotation = 0;
             this.selectionType = 'multi';
             this.selectedGroupId = null;
@@ -2397,6 +2424,8 @@ class SelectionManager {
             size: stroke.size,
             penType: stroke.penType,
             tool: stroke.tool,
+            lineStyle: stroke.lineStyle || 'solid',
+            dashDensity: stroke.dashDensity || 10,
             rotation: stroke.rotation || 0,
             layerOrder: stroke.layerOrder || 0
         };
@@ -2584,6 +2613,26 @@ class SelectionManager {
     }
 
     groupSelection(saveHistory = true) {
+        if (this.isCoordinateSelection()) {
+            if (!this.backgroundManager || this.selectedCoordinatePointIds.length < 2 || this.selectedCoordinateGroupId) {
+                return false;
+            }
+            const group = this.backgroundManager.createCoordinateGroup(this.selectedCoordinatePointIds, {
+                line: this.selectionType === 'coordinate-line',
+                persist: true,
+                redraw: true
+            });
+            if (!group) return false;
+            this.selectCoordinatePoints(group.pointIds, {
+                line: group.line === true,
+                groupId: group.id
+            });
+            if (saveHistory) {
+                this.saveHistory();
+            }
+            return true;
+        }
+
         if (this.selectionType !== 'multi') return false;
         const objectIds = this.getSelectedObjectIds();
         if (objectIds.length < 2 || this.selectionContainsGroupedObjects()) {
@@ -2599,6 +2648,22 @@ class SelectionManager {
     }
 
     ungroupSelection(saveHistory = true) {
+        if (this.isCoordinateSelection()) {
+            if (!this.backgroundManager || !this.selectedCoordinateGroupId) return false;
+            const group = this.getSelectedCoordinateGroup();
+            if (!group) return false;
+            const removed = this.backgroundManager.removeCoordinateGroup(this.selectedCoordinateGroupId, {
+                persist: true,
+                redraw: true
+            });
+            if (!removed) return false;
+            this.selectCoordinatePoints(group.pointIds, { line: group.line === true });
+            if (saveHistory) {
+                this.saveHistory();
+            }
+            return true;
+        }
+
         if (this.selectionType !== 'group' || !this.selectedGroupId) return false;
         const members = this.drawingEngine.ungroupObjects(this.selectedGroupId, this.textManager?.textObjects || []);
         if (!members.length) return false;
@@ -2610,6 +2675,7 @@ class SelectionManager {
         this.selectionType = 'multi';
         this.selectedIndex = null;
         this.multiRotation = 0;
+        this.selectedCoordinateGroupId = null;
         this.showControls();
         this.redrawWithSelection();
         if (saveHistory) {
@@ -2890,6 +2956,7 @@ class SelectionManager {
         this.selectedImages = [];
         this.selectedTexts = [];
         this.selectedCoordinatePointIds = [];
+        this.selectedCoordinateGroupId = null;
         this.coordinateDragStartPositions = [];
         this.multiRotation = 0;
         this.multiBounds = null;
@@ -3032,7 +3099,7 @@ class SelectionManager {
         }
 
         const foundCoordinatePointIds = [];
-        let foundCoordinateLine = false;
+        const foundCoordinateLinePointIds = [];
         if (this.backgroundManager?.hasCoordinateSelectableContent?.()) {
             const coordinatePoints = this.backgroundManager.getCoordinatePointEntries();
             coordinatePoints.forEach(point => {
@@ -3045,9 +3112,17 @@ class SelectionManager {
             });
 
             const coordinateSegments = this.backgroundManager.getCoordinateLineSegments();
-            foundCoordinateLine = coordinateSegments.some(segment =>
-                this.segmentIntersectsRect(segment.start.canvasX, segment.start.canvasY, segment.end.canvasX, segment.end.canvasY, canvasSelRect)
-            );
+            coordinateSegments.forEach(segment => {
+                if (this.segmentIntersectsRect(
+                    segment.start.canvasX,
+                    segment.start.canvasY,
+                    segment.end.canvasX,
+                    segment.end.canvasY,
+                    canvasSelRect
+                )) {
+                    foundCoordinateLinePointIds.push(...(segment.pointIds || []));
+                }
+            });
         }
         
         this.boxSelectStart = null;
@@ -3058,23 +3133,27 @@ class SelectionManager {
             backgroundBounds &&
             this.rectsIntersect(canvasSelRect, backgroundBounds));
 
-        this.applyFoundSelection(foundStrokes, foundImages, foundTexts, foundBackground, foundCoordinatePointIds, foundCoordinateLine);
+        this.applyFoundSelection(
+            foundStrokes,
+            foundImages,
+            foundTexts,
+            foundBackground,
+            foundCoordinatePointIds,
+            foundCoordinateLinePointIds
+        );
     }
     
     // Apply selection from found strokes, images, and texts (shared by box and lasso selection)
-    applyFoundSelection(foundStrokes, foundImages, foundTexts = [], foundBackground = false, foundCoordinatePointIds = [], foundCoordinateLine = false) {
+    applyFoundSelection(foundStrokes, foundImages, foundTexts = [], foundBackground = false, foundCoordinatePointIds = [], foundCoordinateLinePointIds = []) {
         const expandedSelection = this.expandGroupedSelection(foundStrokes, foundImages, foundTexts);
-        const coordinateIds = foundCoordinateLine
-            ? (this.backgroundManager?.getCoordinatePointIds?.() || [])
-            : [...new Set(foundCoordinatePointIds || [])];
+        const coordinateIds = [...new Set(foundCoordinatePointIds || [])];
+        const coordinateLineIds = [...new Set(foundCoordinateLinePointIds || [])];
         const totalFound = expandedSelection.strokes.length + expandedSelection.images.length + expandedSelection.texts.length + (foundBackground ? 1 : 0);
-        const hasCoordinateFound = coordinateIds.length > 0 || foundCoordinateLine;
+        const hasCoordinateFound = coordinateIds.length > 0 || coordinateLineIds.length > 0;
 
         if (totalFound === 0 && hasCoordinateFound) {
-            if (foundCoordinateLine && coordinateIds.length === 0) {
-                this.selectCoordinatePoints(this.backgroundManager.getCoordinatePointIds(), { line: true });
-            } else if (foundCoordinateLine) {
-                this.selectCoordinatePoints(coordinateIds, { line: true });
+            if (coordinateLineIds.length > 0) {
+                this.selectCoordinatePoints([...new Set([...coordinateLineIds, ...coordinateIds])], { line: true });
             } else {
                 this.selectCoordinatePoints(coordinateIds);
             }
@@ -3099,6 +3178,8 @@ class SelectionManager {
             this.selectedStrokes = expandedSelection.strokes;
             this.selectedImages = expandedSelection.images;
             this.selectedTexts = expandedSelection.texts;
+            this.selectedCoordinatePointIds = [];
+            this.selectedCoordinateGroupId = null;
             this.multiRotation = 0;
             this.selectionType = 'multi';
             this.selectedGroupId = null;
@@ -3450,7 +3531,7 @@ class SelectionManager {
         }
 
         const foundCoordinatePointIds = [];
-        let foundCoordinateLine = false;
+        const foundCoordinateLinePointIds = [];
         if (this.backgroundManager?.hasCoordinateSelectableContent?.()) {
             const coordinatePoints = this.backgroundManager.getCoordinatePointEntries();
             coordinatePoints.forEach(point => {
@@ -3460,15 +3541,17 @@ class SelectionManager {
             });
 
             const coordinateSegments = this.backgroundManager.getCoordinateLineSegments();
-            foundCoordinateLine = coordinateSegments.some(segment =>
-                this.segmentIntersectsPolygon(
+            coordinateSegments.forEach(segment => {
+                if (this.segmentIntersectsPolygon(
                     segment.start.canvasX,
                     segment.start.canvasY,
                     segment.end.canvasX,
                     segment.end.canvasY,
                     canvasLassoPoints
-                )
-            );
+                )) {
+                    foundCoordinateLinePointIds.push(...(segment.pointIds || []));
+                }
+            });
         }
         
         const backgroundBounds = this.backgroundManager?.getBackgroundImageVisualBounds?.();
@@ -3476,7 +3559,14 @@ class SelectionManager {
             backgroundBounds &&
             this.polygonIntersectsRect(canvasLassoPoints, backgroundBounds));
 
-        this.applyFoundSelection(foundStrokes, foundImages, foundTexts, foundBackground, foundCoordinatePointIds, foundCoordinateLine);
+        this.applyFoundSelection(
+            foundStrokes,
+            foundImages,
+            foundTexts,
+            foundBackground,
+            foundCoordinatePointIds,
+            foundCoordinateLinePointIds
+        );
     }
     
     // Ray-casting point-in-polygon algorithm

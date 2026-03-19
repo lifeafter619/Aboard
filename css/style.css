@@ -2646,12 +2646,14 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     left: 50%;
     transform: translateX(-50%);
     display: flex;
+    flex-wrap: nowrap;
     gap: var(--toolbar-gap);
     padding: var(--toolbar-padding-y) var(--toolbar-padding-x);
     background-color: white;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     max-width: calc(100% - 8px);
+    min-width: max-content;
     box-sizing: border-box;
 }
 
@@ -2794,8 +2796,6 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 .coordinate-selection-only .selection-transform-handle,
 .coordinate-selection-only .selection-layer-menu-wrapper,
 .coordinate-selection-only #selection-copy-btn,
-.coordinate-selection-only #selection-group-btn,
-.coordinate-selection-only #selection-ungroup-btn,
 .coordinate-selection-only #selection-edit-btn {
     display: none !important;
 }

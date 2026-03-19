@@ -6525,6 +6525,8 @@ class DrawingBoard {
                     size: s.size,
                     penType: s.penType,
                     tool: s.tool,
+                    lineStyle: s.lineStyle || 'solid',
+                    dashDensity: s.dashDensity || 10,
                     rotation: s.rotation || 0,
                     layerOrder: s.layerOrder || 0,
                     objectId: s.objectId || this.drawingEngine.getNextObjectId(),
@@ -6651,7 +6653,12 @@ class DrawingBoard {
 
                 // Restore strokes for selection support
                 if (settings.strokes && settings.strokes.length > 0) {
-                    this.drawingEngine.strokes = settings.strokes;
+                    this.drawingEngine.strokes = settings.strokes.map(stroke => ({
+                        ...stroke,
+                        lineStyle: stroke.lineStyle || 'solid',
+                        dashDensity: stroke.dashDensity || 10,
+                        groupId: stroke.groupId || null
+                    }));
                 } else {
                     this.drawingEngine.strokes = [];
                 }

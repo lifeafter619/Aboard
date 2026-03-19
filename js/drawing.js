@@ -101,6 +101,28 @@ class DrawingEngine {
         localStorage.setItem('penMultiLineSpacing', this.penMultiLineSpacing);
     }
 
+    getLineStyleDashPattern(lineStyle = 'solid', dashDensity = 10, strokeSize = this.penSize) {
+        if (lineStyle === 'dashed') {
+            const spacing = Math.max(2, 400 / Math.max(1, dashDensity));
+            return [spacing, spacing * 0.6];
+        }
+        if (lineStyle === 'dotted') {
+            const spacing = Math.max(2, 400 / Math.max(1, dashDensity));
+            return [Math.max(1, strokeSize * 0.1), spacing * 0.6 + strokeSize];
+        }
+        return [];
+    }
+
+    applyStoredStrokeLineStyle(stroke) {
+        const dashPattern = this.getLineStyleDashPattern(
+            stroke?.lineStyle || 'solid',
+            stroke?.dashDensity || 10,
+            stroke?.size || this.penSize
+        );
+        this.ctx.setLineDash(dashPattern);
+        this.ctx.lineDashOffset = 0;
+    }
+
     getNextObjectId() {
         return `obj-${this.objectIdCounter++}`;
     }
@@ -1038,6 +1060,8 @@ class DrawingEngine {
                     size: isEraserStroke ? this.getCanvasEraserSize() : this.penSize,
                     penType: this.penType,
                     tool: this.currentTool,
+                    lineStyle: isEraserStroke ? 'solid' : this.penLineStyle,
+                    dashDensity: isEraserStroke ? 10 : this.penDashDensity,
                     eraserShape: isEraserStroke ? this.eraserShape : null,
                     rotation: 0, // Initialize rotation property
                     layerOrder: this.getNextLayerOrder(),
@@ -1297,6 +1321,8 @@ class DrawingEngine {
             size: stroke.size,
             penType: stroke.penType,
             tool: stroke.tool,
+            lineStyle: stroke.lineStyle || 'solid',
+            dashDensity: stroke.dashDensity || 10,
             rotation: stroke.rotation || 0,
             layerOrder: this.getNextLayerOrder(),
             objectId: this.getNextObjectId(),
@@ -1339,6 +1365,8 @@ class DrawingEngine {
         this.ctx.strokeStyle = stroke.color;
         this.ctx.fillStyle = stroke.color;
         this.ctx.lineWidth = stroke.size;
+        this.ctx.setLineDash([]);
+        this.ctx.lineDashOffset = 0;
 
         if (stroke.tool === 'eraser') {
             this.ctx.globalCompositeOperation = 'destination-out';
@@ -1364,6 +1392,7 @@ class DrawingEngine {
         
         // Apply pen type settings
         if (stroke.tool !== 'eraser') {
+            this.applyStoredStrokeLineStyle(stroke);
             switch(stroke.penType) {
                 case 'pencil':
                     this.ctx.globalAlpha = 0.7;

@@ -1068,13 +1068,39 @@ class BackgroundManager {
             snapToGrid: true,
             lineColor: '#2563eb',
             points: [],
-            plots: []
+            plots: [],
+            groups: []
         };
     }
 
     sanitizeCoordinateOverlayState(state) {
         const defaults = this.getDefaultCoordinateOverlayState();
         const nextState = state && typeof state === 'object' ? state : {};
+        const sanitizedPoints = Array.isArray(nextState.points)
+            ? nextState.points
+                .filter(point => Number.isFinite(point?.x) && Number.isFinite(point?.y))
+                .map((point, index) => ({
+                    id: point.id || `pt-${Date.now()}-${index}`,
+                    x: this.roundToDecimals(point.x, 4),
+                    y: this.roundToDecimals(point.y, 4),
+                    color: point.color || this.getCoordinatePaletteColor(index)
+                }))
+            : [];
+        const validPointIds = new Set(sanitizedPoints.map(point => point.id));
+        const sanitizedGroups = Array.isArray(nextState.groups)
+            ? nextState.groups
+                .map((group, index) => {
+                    const pointIds = [...new Set((Array.isArray(group?.pointIds) ? group.pointIds : [])
+                        .filter(pointId => validPointIds.has(pointId)))];
+                    if (pointIds.length < 2) return null;
+                    return {
+                        id: group.id || `coord-group-${Date.now()}-${index}`,
+                        pointIds,
+                        line: group.line === true
+                    };
+                })
+                .filter(Boolean)
+            : [];
 
         return {
             ...defaults,
@@ -1087,16 +1113,7 @@ class BackgroundManager {
             lineColor: typeof nextState.lineColor === 'string' && nextState.lineColor.trim()
                 ? nextState.lineColor.trim()
                 : defaults.lineColor,
-            points: Array.isArray(nextState.points)
-                ? nextState.points
-                    .filter(point => Number.isFinite(point?.x) && Number.isFinite(point?.y))
-                    .map((point, index) => ({
-                        id: point.id || `pt-${Date.now()}-${index}`,
-                        x: this.roundToDecimals(point.x, 4),
-                        y: this.roundToDecimals(point.y, 4),
-                        color: point.color || this.getCoordinatePaletteColor(index)
-                    }))
-                : [],
+            points: sanitizedPoints,
             plots: Array.isArray(nextState.plots)
                 ? nextState.plots
                     .filter(plot => typeof plot?.expression === 'string' && plot.expression.trim())
@@ -1112,7 +1129,8 @@ class BackgroundManager {
                             segments: this.sanitizeCoordinatePlotSegments(plot.segments, coordinateType)
                         };
                     })
-                : []
+                : [],
+            groups: sanitizedGroups
         };
     }
 
@@ -1310,6 +1328,59 @@ class BackgroundManager {
         return this.coordinateOverlayState.points.map(point => point.id);
     }
 
+    getCoordinateGroupById(groupId) {
+        if (!groupId) return null;
+        return (this.coordinateOverlayState.groups || []).find(group => group.id === groupId) || null;
+    }
+
+    findCoordinateGroupByPointIds(pointIds = [], options = {}) {
+        const uniqueIds = [...new Set(Array.isArray(pointIds) ? pointIds.filter(Boolean) : [])];
+        if (uniqueIds.length < 2) return null;
+
+        const expectedIds = [...uniqueIds].sort();
+        return (this.coordinateOverlayState.groups || []).find(group => {
+            if (!group || group.pointIds.length !== expectedIds.length) {
+                return false;
+            }
+            if (typeof options.line === 'boolean' && !!group.line !== options.line) {
+                return false;
+            }
+            const groupIds = [...group.pointIds].sort();
+            return groupIds.every((pointId, index) => pointId === expectedIds[index]);
+        }) || null;
+    }
+
+    createCoordinateGroup(pointIds = [], options = {}) {
+        const normalizedPointIds = [...new Set((Array.isArray(pointIds) ? pointIds : [])
+            .filter(pointId => this.getCoordinatePointIds().includes(pointId)))];
+        if (normalizedPointIds.length < 2) return null;
+
+        const existingGroup = this.findCoordinateGroupByPointIds(normalizedPointIds, { line: options.line === true });
+        if (existingGroup) {
+            return existingGroup;
+        }
+
+        const nextState = this.getCoordinateOverlayState();
+        const group = {
+            id: `coord-group-${Date.now()}-${nextState.groups.length}`,
+            pointIds: normalizedPointIds,
+            line: options.line === true
+        };
+        nextState.groups.push(group);
+        this.setCoordinateOverlayState(nextState, options);
+        return group;
+    }
+
+    removeCoordinateGroup(groupId, options = {}) {
+        if (!groupId) return false;
+        const nextState = this.getCoordinateOverlayState();
+        const initialLength = nextState.groups.length;
+        nextState.groups = nextState.groups.filter(group => group.id !== groupId);
+        if (nextState.groups.length === initialLength) return false;
+        this.setCoordinateOverlayState(nextState, options);
+        return true;
+    }
+
     hasCoordinateSelectableContent() {
         return (this.coordinateOverlayState.points?.length || 0) > 0;
     }
@@ -1335,8 +1406,10 @@ class BackgroundManager {
         const segments = [];
         for (let i = 1; i < entries.length; i++) {
             segments.push({
+                id: `coord-segment-${entries[i - 1].id}-${entries[i].id}-${i}`,
                 start: entries[i - 1],
-                end: entries[i]
+                end: entries[i],
+                pointIds: [entries[i - 1].id, entries[i].id]
             });
         }
         return segments;
@@ -1363,7 +1436,11 @@ class BackgroundManager {
                     segment.end.canvasY
                 );
                 if (distance <= threshold) {
-                    return { type: 'line', pointIds: entries.map(point => point.id) };
+                    return {
+                        type: 'line',
+                        segmentId: segment.id,
+                        pointIds: segment.pointIds
+                    };
                 }
             }
         }
@@ -1390,8 +1467,8 @@ class BackgroundManager {
         return {
             x: minX - padding,
             y: minY - padding,
-            width: Math.max(18, (maxX - minX) + padding * 2),
-            height: Math.max(18, (maxY - minY) + padding * 2)
+            width: Math.max(132, (maxX - minX) + padding * 2),
+            height: Math.max(56, (maxY - minY) + padding * 2)
         };
     }
 
@@ -1437,6 +1514,12 @@ class BackgroundManager {
         const initialLength = nextState.points.length;
         nextState.points = nextState.points.filter(point => !idSet.has(point.id));
         if (nextState.points.length === initialLength) return false;
+        nextState.groups = (nextState.groups || [])
+            .map(group => ({
+                ...group,
+                pointIds: group.pointIds.filter(pointId => !idSet.has(pointId))
+            }))
+            .filter(group => group.pointIds.length >= 2);
         this.setCoordinateOverlayState(nextState, options);
         return true;
     }
