@@ -144,4 +144,14 @@ graph LR
 
 [![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/lifeafter619/Aboard)
 
-如果这个项目对你有帮助，欢迎点个 Star。
+## 🌟 致谢
+
+感谢所有贡献者和使用者！如果这个项目对您有帮助，欢迎给个Star⭐，这样就对我很有帮助了
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=lifeafter619/Aboard&type=date&legend=top-left)](https://www.star-history.com/#lifeafter619/Aboard&type=date&legend=top-left)
+
+---
+
+Made with ❤️ for educators and creators
+
