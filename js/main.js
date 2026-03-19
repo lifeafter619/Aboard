@@ -209,6 +209,7 @@ class DrawingBoard {
             document.querySelectorAll('.resizable-modal-content').forEach(content => {
                 this.updateModalHeaderActionButtons(content);
             });
+            this.updateBackgroundUI();
         });
         this.backgroundManager.drawBackground();
         this.updateUI();
@@ -417,8 +418,10 @@ class DrawingBoard {
             {
                 key: 'coordinatePointModal',
                 selector: '#coordinate-point-modal .coordinate-point-modal-content',
-                minWidth: 420,
-                minHeight: 320
+                minWidth: 380,
+                minHeight: 280,
+                showResizeHandles: false,
+                showHeaderActions: false
             },
             {
                 key: 'coordinateKeypadModal',
@@ -445,6 +448,9 @@ class DrawingBoard {
         if (!content || content.dataset.modalResizeRegistered === 'true') {
             return;
         }
+
+        const showResizeHandles = config.showResizeHandles !== false;
+        const showHeaderActions = config.showHeaderActions !== false;
 
         content.dataset.modalResizeRegistered = 'true';
         content.dataset.modalResizeKey = config.key;
@@ -481,7 +487,10 @@ class DrawingBoard {
                 titleGroup.appendChild(title);
             }
 
-            if (!titleGroup.querySelector('.modal-reset-size-btn')) {
+            if (!showHeaderActions) {
+                content.classList.add('no-modal-header-actions');
+                titleGroup.querySelectorAll('.modal-reset-size-btn, .modal-keep-centered-btn').forEach(btn => btn.remove());
+            } else if (!titleGroup.querySelector('.modal-reset-size-btn')) {
                 const resetButton = document.createElement('button');
                 resetButton.type = 'button';
                 resetButton.className = 'modal-reset-size-btn';
@@ -492,7 +501,7 @@ class DrawingBoard {
                 titleGroup.appendChild(resetButton);
             }
 
-            if (!titleGroup.querySelector('.modal-keep-centered-btn')) {
+            if (showHeaderActions && !titleGroup.querySelector('.modal-keep-centered-btn')) {
                 const keepCenteredButton = document.createElement('button');
                 keepCenteredButton.type = 'button';
                 keepCenteredButton.className = 'modal-keep-centered-btn';
@@ -504,13 +513,18 @@ class DrawingBoard {
             }
         }
 
-        ['top-left', 'top-right', 'bottom-left', 'bottom-right'].forEach(handleName => {
-            const handle = document.createElement('div');
-            handle.className = `modal-resize-handle ${handleName}`;
-            handle.dataset.handle = handleName;
-            handle.addEventListener('pointerdown', (event) => this.startModalResize(event, content, handleName));
-            content.appendChild(handle);
-        });
+        if (!showResizeHandles) {
+            content.classList.add('no-modal-resize-handles');
+            content.querySelectorAll('.modal-resize-handle').forEach(handle => handle.remove());
+        } else {
+            ['top-left', 'top-right', 'bottom-left', 'bottom-right'].forEach(handleName => {
+                const handle = document.createElement('div');
+                handle.className = `modal-resize-handle ${handleName}`;
+                handle.dataset.handle = handleName;
+                handle.addEventListener('pointerdown', (event) => this.startModalResize(event, content, handleName));
+                content.appendChild(handle);
+            });
+        }
 
         this.syncResizableModalState(content);
     }
@@ -1871,13 +1885,17 @@ class DrawingBoard {
             coordinateAddPointBtn.addEventListener('click', () => {
                 const nextEnabled = !this.isCoordinatePointMode;
                 this.setCoordinatePointMode(nextEnabled);
-                if (nextEnabled) {
-                    this.showCoordinateToast('background.coordinateStatusAddPoint', '绘制点线模式已开启，点击画布依次添加坐标点');
-                } else {
-                    this.showCoordinateToast('background.coordinateStatusAddPointOff', '绘制点线模式已关闭');
-                }
+                this.showCoordinatePointModeStatus(nextEnabled);
             });
         }
+
+        document.querySelectorAll('[data-coordinate-point-mode]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const nextMode = btn.dataset.coordinatePointMode;
+                if (!nextMode) return;
+                this.setCoordinatePointLineMode(nextMode);
+            });
+        });
 
         const coordinateClearPointsBtn = document.getElementById('coordinate-clear-points-btn');
         if (coordinateClearPointsBtn) {
@@ -4007,17 +4025,72 @@ class DrawingBoard {
         }
     }
 
+    getCoordinatePointLineMode() {
+        return this.backgroundManager?.getCoordinatePointLineMode?.() || 'auto';
+    }
+
+    getCoordinatePointLineModeMeta(mode = this.getCoordinatePointLineMode()) {
+        const normalizedMode = ['line', 'auto', 'selected'].includes(mode) ? mode : 'auto';
+        const modeConfig = {
+            line: {
+                hintKey: 'background.addPointHintLineOnly',
+                hintFallback: '开启后点击画布依次添加坐标点，仅绘制折线',
+                statusOnKey: 'background.coordinateStatusAddPointLineOnly',
+                statusOnFallback: '仅绘制线模式已开启，点击画布依次添加坐标点',
+                statusOffKey: 'background.coordinateStatusAddPointOff',
+                statusOffFallback: '绘制点线模式已关闭'
+            },
+            auto: {
+                hintKey: 'background.addPointHintAuto',
+                hintFallback: '开启后点击画布依次添加坐标点并自动连线',
+                statusOnKey: 'background.coordinateStatusAddPointAuto',
+                statusOnFallback: '自动连线模式已开启，点击画布依次添加坐标点',
+                statusOffKey: 'background.coordinateStatusAddPointOff',
+                statusOffFallback: '绘制点线模式已关闭'
+            },
+            selected: {
+                hintKey: 'background.addPointHintSelected',
+                hintFallback: '开启后点击画布添加坐标点；切到选择工具后，仅选中的点会连线',
+                statusOnKey: 'background.coordinateStatusAddPointSelected',
+                statusOnFallback: '选择连线模式已开启，点击画布添加坐标点',
+                statusOffKey: 'background.coordinateStatusAddPointOff',
+                statusOffFallback: '绘制点线模式已关闭'
+            }
+        };
+        return modeConfig[normalizedMode];
+    }
+
+    showCoordinatePointModeStatus(enabled) {
+        const modeMeta = this.getCoordinatePointLineModeMeta();
+        if (enabled) {
+            this.showCoordinateToast(modeMeta.statusOnKey, modeMeta.statusOnFallback);
+        } else {
+            this.showCoordinateToast(modeMeta.statusOffKey, modeMeta.statusOffFallback);
+        }
+    }
+
+    setCoordinatePointLineMode(mode, options = {}) {
+        const normalizedMode = ['line', 'auto', 'selected'].includes(mode) ? mode : 'auto';
+        const currentMode = this.getCoordinatePointLineMode();
+        if (currentMode === normalizedMode) {
+            return false;
+        }
+
+        this.backgroundManager.updateCoordinateOverlayOptions({
+            pointLineMode: normalizedMode
+        });
+        this.savePageBackground(this.currentPage);
+        this.updateBackgroundUI();
+
+        if (!options.silent) {
+            const modeMeta = this.getCoordinatePointLineModeMeta(normalizedMode);
+            this.showCoordinateToast(modeMeta.statusOnKey, modeMeta.statusOnFallback, 'success');
+        }
+        return true;
+    }
+
     setCoordinatePointMode(enabled) {
         this.isCoordinatePointMode = !!enabled && this.backgroundManager.supportsMovableOrigin();
-
-        if (this.isCoordinatePointMode) {
-            const coordinateState = this.backgroundManager.getCoordinateOverlayState();
-            if (!coordinateState.connectPoints) {
-                this.backgroundManager.updateCoordinateOverlayOptions({ connectPoints: true });
-                this.savePageBackground(this.currentPage);
-                this.updateBackgroundUI();
-            }
-        }
 
         const addPointBtn = document.getElementById('coordinate-add-point-btn');
         if (addPointBtn) {
@@ -6029,6 +6102,20 @@ class DrawingBoard {
         const pointCountValue = document.getElementById('coordinate-point-count-value');
         if (pointCountValue) {
             pointCountValue.textContent = coordinateState.points.length;
+        }
+
+        const coordinatePointMode = this.getCoordinatePointLineMode();
+        document.querySelectorAll('[data-coordinate-point-mode]').forEach((btn) => {
+            const btnMode = btn.dataset.coordinatePointMode;
+            btn.classList.toggle('active', supportsCoordinateTools && btnMode === coordinatePointMode);
+            btn.disabled = !supportsCoordinateTools;
+        });
+
+        const coordinatePointModeHint = document.getElementById('coordinate-point-mode-hint');
+        if (coordinatePointModeHint) {
+            const modeMeta = this.getCoordinatePointLineModeMeta(coordinatePointMode);
+            const translated = window.i18n ? window.i18n.t(modeMeta.hintKey) : modeMeta.hintFallback;
+            coordinatePointModeHint.textContent = translated === modeMeta.hintKey ? modeMeta.hintFallback : translated;
         }
 
         const coordinatePlotHint = document.getElementById('coordinate-plot-hint');

@@ -1095,6 +1095,7 @@ class SelectionManager {
         this.controlBox.classList.toggle('coordinate-selection-only', this.isCoordinateSelection());
         this.hideLayerMenu();
         this.updateLayerMenuVisibility();
+        this.backgroundManager?.renderCoordinateOverlay?.();
         // Show edit button only for text selections
         const editBtn = document.getElementById('selection-edit-btn');
         const colorBtn = document.getElementById('selection-color-btn');
@@ -1142,6 +1143,7 @@ class SelectionManager {
         this.controlBox.classList.remove('coordinate-selection-only');
         this.hideLayerMenu();
         this.closeCoordinatePositionEditor(false);
+        this.backgroundManager?.renderCoordinateOverlay?.();
     }
 
     clamp(value, min, max) {
@@ -2617,8 +2619,9 @@ class SelectionManager {
             if (!this.backgroundManager || this.selectedCoordinatePointIds.length < 2 || this.selectedCoordinateGroupId) {
                 return false;
             }
+            const coordinateMode = this.backgroundManager.getCoordinatePointLineMode?.() || 'auto';
             const group = this.backgroundManager.createCoordinateGroup(this.selectedCoordinatePointIds, {
-                line: this.selectionType === 'coordinate-line',
+                line: this.selectionType === 'coordinate-line' || coordinateMode === 'selected',
                 persist: true,
                 redraw: true
             });

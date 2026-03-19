@@ -1064,6 +1064,7 @@ class BackgroundManager {
             showLabels: true,
             showPointLabels: true,
             showOrigin: true,
+            pointLineMode: 'auto',
             connectPoints: true,
             snapToGrid: true,
             lineColor: '#2563eb',
@@ -1073,9 +1074,17 @@ class BackgroundManager {
         };
     }
 
+    normalizeCoordinatePointLineMode(value) {
+        const normalized = String(value || '').trim().toLowerCase();
+        return ['line', 'auto', 'selected'].includes(normalized) ? normalized : 'auto';
+    }
+
     sanitizeCoordinateOverlayState(state) {
         const defaults = this.getDefaultCoordinateOverlayState();
         const nextState = state && typeof state === 'object' ? state : {};
+        const pointLineMode = this.normalizeCoordinatePointLineMode(
+            nextState.pointLineMode ?? (nextState.connectPoints === false ? 'selected' : defaults.pointLineMode)
+        );
         const sanitizedPoints = Array.isArray(nextState.points)
             ? nextState.points
                 .filter(point => Number.isFinite(point?.x) && Number.isFinite(point?.y))
@@ -1108,7 +1117,8 @@ class BackgroundManager {
             showLabels: nextState.showLabels !== false,
             showPointLabels: nextState.showPointLabels !== false,
             showOrigin: nextState.showOrigin !== false,
-            connectPoints: nextState.connectPoints !== false,
+            pointLineMode,
+            connectPoints: pointLineMode !== 'selected',
             snapToGrid: nextState.snapToGrid !== false,
             lineColor: typeof nextState.lineColor === 'string' && nextState.lineColor.trim()
                 ? nextState.lineColor.trim()
@@ -1276,6 +1286,29 @@ class BackgroundManager {
         return this.coordinateOverlayState.lineColor || this.getAdaptivePatternColor(0.74, 0.24);
     }
 
+    getCoordinatePointLineMode() {
+        return this.normalizeCoordinatePointLineMode(this.coordinateOverlayState.pointLineMode);
+    }
+
+    shouldShowCoordinatePoints() {
+        return this.getCoordinatePointLineMode() !== 'line';
+    }
+
+    getTransientCoordinateSelectionLinePointIds() {
+        if (this.getCoordinatePointLineMode() !== 'selected') {
+            return [];
+        }
+
+        const selectionManager = window.drawingBoard?.selectionManager;
+        if (!selectionManager?.isCoordinateSelection?.()) {
+            return [];
+        }
+
+        return Array.isArray(selectionManager.selectedCoordinatePointIds)
+            ? [...new Set(selectionManager.selectedCoordinatePointIds.filter(Boolean))]
+            : [];
+    }
+
     getCoordinatePointEntries(pointIds = null) {
         const points = this.coordinateOverlayState.points || [];
         const idSet = Array.isArray(pointIds) ? new Set(pointIds) : null;
@@ -1397,22 +1430,69 @@ class BackgroundManager {
         return Math.hypot(px - nearestX, py - nearestY);
     }
 
-    getCoordinateLineSegments() {
-        const entries = this.getCoordinatePointEntries();
-        if (!this.coordinateOverlayState.connectPoints || entries.length < 2) {
+    buildCoordinateLineSegmentsFromPointIds(pointIds = [], segmentPrefix = 'coord-line') {
+        const entries = this.getCoordinatePointEntries(pointIds);
+        if (entries.length < 2) {
             return [];
         }
 
         const segments = [];
         for (let i = 1; i < entries.length; i++) {
             segments.push({
-                id: `coord-segment-${entries[i - 1].id}-${entries[i].id}-${i}`,
+                id: `${segmentPrefix}-${entries[i - 1].id}-${entries[i].id}-${i}`,
                 start: entries[i - 1],
                 end: entries[i],
                 pointIds: [entries[i - 1].id, entries[i].id]
             });
         }
         return segments;
+    }
+
+    getCoordinateLinePaths(options = {}) {
+        const { includeTransientSelection = false } = options;
+        const mode = this.getCoordinatePointLineMode();
+
+        if (mode === 'selected') {
+            const paths = (this.coordinateOverlayState.groups || [])
+                .filter(group => group?.line === true)
+                .map(group => ({
+                    id: group.id,
+                    pointIds: [...group.pointIds]
+                }))
+                .filter(group => group.pointIds.length > 1);
+
+            if (includeTransientSelection) {
+                const transientIds = this.getTransientCoordinateSelectionLinePointIds();
+                if (transientIds.length > 1) {
+                    const signature = transientIds.join('|');
+                    const hasSamePath = paths.some(path => path.pointIds.join('|') === signature);
+                    if (!hasSamePath) {
+                        paths.push({
+                            id: 'coord-line-selection-preview',
+                            pointIds: transientIds,
+                            transient: true
+                        });
+                    }
+                }
+            }
+
+            return paths;
+        }
+
+        const allPointIds = this.getCoordinatePointIds();
+        if (allPointIds.length < 2) {
+            return [];
+        }
+
+        return [{
+            id: 'coord-line-all-points',
+            pointIds: allPointIds
+        }];
+    }
+
+    getCoordinateLineSegments(options = {}) {
+        return this.getCoordinateLinePaths(options)
+            .flatMap(path => this.buildCoordinateLineSegmentsFromPointIds(path.pointIds, path.id));
     }
 
     findCoordinatePointNearCanvasPoint(canvasX, canvasY, threshold = 10) {
@@ -1441,25 +1521,22 @@ class BackgroundManager {
             return { type: 'point', pointId: hitPoint.id };
         }
 
-        const entries = this.getCoordinatePointEntries();
-        if (this.coordinateOverlayState.connectPoints && entries.length > 1) {
-            const segments = this.getCoordinateLineSegments();
-            for (const segment of segments) {
-                const distance = this.distancePointToSegment(
-                    canvasX,
-                    canvasY,
-                    segment.start.canvasX,
-                    segment.start.canvasY,
-                    segment.end.canvasX,
-                    segment.end.canvasY
-                );
-                if (distance <= threshold) {
-                    return {
-                        type: 'line',
-                        segmentId: segment.id,
-                        pointIds: segment.pointIds
-                    };
-                }
+        const segments = this.getCoordinateLineSegments();
+        for (const segment of segments) {
+            const distance = this.distancePointToSegment(
+                canvasX,
+                canvasY,
+                segment.start.canvasX,
+                segment.start.canvasY,
+                segment.end.canvasX,
+                segment.end.canvasY
+            );
+            if (distance <= threshold) {
+                return {
+                    type: 'line',
+                    segmentId: segment.id,
+                    pointIds: segment.pointIds
+                };
             }
         }
 
@@ -2223,17 +2300,28 @@ class BackgroundManager {
         const labelOffset = Math.max(6, Math.min(18, 8 * metrics.visualScale));
         const labelFontSize = Math.max(12, Math.min(42, 12 * metrics.visualScale));
         const parts = [];
+        const shouldShowPoints = this.shouldShowCoordinatePoints();
 
-        if (this.coordinateOverlayState.connectPoints && screenEntries.length > 1) {
-            const polylinePoints = screenEntries.map(point => `${point.screen.x},${point.screen.y}`).join(' ');
-            parts.push(`<polyline points="${polylinePoints}" fill="none" stroke="${this.getCoordinateLineColor()}" stroke-width="${lineStrokeWidth}" stroke-linejoin="round" stroke-linecap="round"></polyline>`);
-        }
+        this.getCoordinateLinePaths({ includeTransientSelection: true }).forEach(path => {
+            const pointMap = new Map(screenEntries.map(point => [point.id, point]));
+            const pathEntries = path.pointIds
+                .map(pointId => pointMap.get(pointId))
+                .filter(Boolean);
+            if (pathEntries.length < 2) {
+                return;
+            }
+            const polylinePoints = pathEntries.map(point => `${point.screen.x},${point.screen.y}`).join(' ');
+            const opacityAttr = path.transient ? ' opacity="0.72"' : '';
+            parts.push(`<polyline points="${polylinePoints}" fill="none" stroke="${this.getCoordinateLineColor()}" stroke-width="${lineStrokeWidth}" stroke-linejoin="round" stroke-linecap="round"${opacityAttr}></polyline>`);
+        });
 
         screenEntries.forEach((point, index) => {
             const color = point.color || this.getCoordinatePaletteColor(index);
-            parts.push(`<circle cx="${point.screen.x}" cy="${point.screen.y}" r="${pointRadius}" fill="${color}" stroke="${this.backgroundColor}" stroke-width="${pointStrokeWidth}"></circle>`);
+            if (shouldShowPoints) {
+                parts.push(`<circle cx="${point.screen.x}" cy="${point.screen.y}" r="${pointRadius}" fill="${color}" stroke="${this.backgroundColor}" stroke-width="${pointStrokeWidth}"></circle>`);
+            }
 
-            if (this.coordinateOverlayState.showPointLabels) {
+            if (shouldShowPoints && this.coordinateOverlayState.showPointLabels) {
                 parts.push(`<text x="${point.screen.x + labelOffset}" y="${point.screen.y - labelOffset}" fill="${color}" font-size="${labelFontSize}" text-anchor="start" dominant-baseline="auto">${this.escapeSvgText(this.getPointDisplayLabel(point, point.index))}</text>`);
             }
         });

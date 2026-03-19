@@ -745,6 +745,10 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     user-select: none;
 }
 
+.resizable-modal-content.no-modal-resize-handles .modal-resize-handle {
+    display: none;
+}
+
 .modal-resize-handle {
     position: absolute;
     width: 18px;
@@ -1983,8 +1987,8 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-point-modal-content {
-    max-width: min(640px, calc(100vw - 48px));
-    width: min(640px, calc(100vw - 48px));
+    max-width: min(520px, calc(100vw - 40px));
+    width: min(520px, calc(100vw - 40px));
     max-height: 85vh;
     display: flex;
     flex-direction: column;
@@ -1996,9 +2000,28 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-point-modal-content .modal-body {
-    gap: 12px;
+    gap: 10px;
     min-height: 0;
     overflow-y: auto;
+}
+
+.coordinate-point-modal-content .modal-header {
+    margin-bottom: 12px;
+}
+
+.coordinate-point-modal-content .modal-header h2 {
+    font-size: 17px;
+}
+
+.coordinate-point-modal-content .modal-close-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+}
+
+.coordinate-point-modal-content .modal-close-btn svg {
+    width: 18px;
+    height: 18px;
 }
 
 .coordinate-keypad-modal {
@@ -2059,6 +2082,25 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     margin-top: 0;
 }
 
+.coordinate-point-action-buttons .pattern-option-btn,
+.coordinate-point-mode-options .pattern-option-btn,
+.coordinate-point-modal-content .coordinate-plot-panel .pattern-option-btn {
+    padding: 6px 10px;
+    border-width: 2px;
+    border-radius: 7px;
+    font-size: 11px;
+}
+
+.coordinate-point-mode-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.coordinate-point-mode-btn {
+    min-width: 0;
+}
+
 .coordinate-hint-line {
     margin: 4px 0 0;
 }
@@ -2073,8 +2115,8 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-top: 10px;
-    padding-top: 10px;
+    margin-top: 8px;
+    padding-top: 8px;
     border-top: 1px solid #ececec;
 }
 
@@ -2087,6 +2129,12 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 
 .coordinate-clear-plots-inline {
     flex-shrink: 0;
+}
+
+.coordinate-point-modal-content .coordinate-plot-input-row input {
+    min-height: 32px;
+    padding: 6px 10px;
+    font-size: 12px;
 }
 
 .coordinate-plot-input-row {

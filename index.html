@@ -1222,7 +1222,12 @@
                         </button>
                         <button id="coordinate-clear-points-btn" type="button" class="pattern-option-btn" data-i18n="background.clearPoints">清空点</button>
                     </div>
-                    <p class="settings-hint coordinate-hint-line" data-i18n="background.addPointHint">开启后点击画布依次添加坐标点并自动连线</p>
+                    <div class="button-size-options coordinate-point-mode-options" role="group" aria-label="Coordinate point line modes">
+                        <button id="coordinate-point-mode-line-btn" type="button" class="pattern-option-btn coordinate-point-mode-btn" data-coordinate-point-mode="line" data-i18n="background.pointLineModeLineOnly">仅绘制线</button>
+                        <button id="coordinate-point-mode-auto-btn" type="button" class="pattern-option-btn coordinate-point-mode-btn" data-coordinate-point-mode="auto" data-i18n="background.pointLineModeAuto">自动连线</button>
+                        <button id="coordinate-point-mode-selected-btn" type="button" class="pattern-option-btn coordinate-point-mode-btn" data-coordinate-point-mode="selected" data-i18n="background.pointLineModeSelected">选择连线</button>
+                    </div>
+                    <p class="settings-hint coordinate-hint-line" id="coordinate-point-mode-hint" data-i18n="background.addPointHintAuto">开启后点击画布依次添加坐标点并自动连线</p>
                     <div class="coordinate-point-count"><span data-i18n="background.pointsCount">点数</span>：<span id="coordinate-point-count-value">0</span></div>
                     <div class="coordinate-plot-panel">
                         <div class="coordinate-plot-panel-header">

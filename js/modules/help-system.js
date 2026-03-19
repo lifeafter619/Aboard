@@ -10,6 +10,8 @@ class HelpSystem {
             'eraser-config': 'help.tools.eraser',
             'select-config': 'help.tools.select',
             'background-config': 'help.background',
+            'coordinate-tools-modal': 'help.background',
+            'coordinate-point-modal': 'help.background',
             'settings-modal': 'help.settings',
             'time-display-area': 'help.features.timeDisplay',
             'timer-settings-modal': 'help.features.timer',
@@ -113,6 +115,8 @@ class HelpSystem {
         // List of modal IDs that should have help buttons
         const helpModalIds = [
             'settings-modal',
+            'coordinate-tools-modal',
+            'coordinate-point-modal',
             'random-picker-settings-modal',
             'timer-settings-modal',
             'teaching-tools-modal',
@@ -150,7 +154,7 @@ class HelpSystem {
     }
     
     checkExistingModals() {
-        const modalIds = ['settings-modal', 'random-picker-settings-modal', 'timer-settings-modal', 'teaching-tools-modal', 'time-display-settings-modal', 'insert-text-modal', 'line-style-modal'];
+        const modalIds = ['settings-modal', 'coordinate-tools-modal', 'coordinate-point-modal', 'random-picker-settings-modal', 'timer-settings-modal', 'teaching-tools-modal', 'time-display-settings-modal', 'insert-text-modal', 'line-style-modal'];
         modalIds.forEach(id => {
             const modal = document.getElementById(id);
             if (modal) this.injectIntoModal(modal);
