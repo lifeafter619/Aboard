@@ -413,6 +413,18 @@ class DrawingBoard {
                 selector: '#coordinate-tools-modal .coordinate-tools-modal-content',
                 minWidth: 420,
                 minHeight: 320
+            },
+            {
+                key: 'coordinatePointModal',
+                selector: '#coordinate-point-modal .coordinate-point-modal-content',
+                minWidth: 420,
+                minHeight: 320
+            },
+            {
+                key: 'coordinateKeypadModal',
+                selector: '#coordinate-keypad-modal .coordinate-keypad-modal-content',
+                minWidth: 360,
+                minHeight: 320
             }
         ];
     }
@@ -1041,7 +1053,10 @@ class DrawingBoard {
             
             if (this.isCoordinatePointMode && this.backgroundManager.supportsMovableOrigin()) {
                 const point = this.getLogicalCanvasPointFromEvent(e);
-                this.backgroundManager.addCoordinatePoint(point.x, point.y);
+                const addedPoint = this.backgroundManager.addCoordinatePoint(point.x, point.y);
+                if (addedPoint?.duplicate) {
+                    return;
+                }
                 this.savePageBackground(this.currentPage);
                 this.updateBackgroundUI();
                 this.showCoordinateToast('background.pointAdded', '已添加坐标点', 'success');
@@ -1931,6 +1946,7 @@ class DrawingBoard {
 
         const coordinateKeypadModal = document.getElementById('coordinate-keypad-modal');
         const coordinateKeypadModalCloseBtn = document.getElementById('coordinate-keypad-modal-close-btn');
+        const coordinateKeypadConfirmBtn = document.getElementById('coordinate-keypad-confirm-btn');
         if (coordinateKeypadModal) {
             coordinateKeypadModal.addEventListener('click', (e) => {
                 if (e.target === coordinateKeypadModal) {
@@ -1941,6 +1957,13 @@ class DrawingBoard {
         if (coordinateKeypadModalCloseBtn) {
             coordinateKeypadModalCloseBtn.addEventListener('click', () => {
                 this.toggleCoordinateInputPanel(false);
+            });
+        }
+        if (coordinateKeypadConfirmBtn) {
+            coordinateKeypadConfirmBtn.addEventListener('click', () => {
+                this.syncCoordinateExpressionDisplay();
+                this.toggleCoordinateInputPanel(false);
+                coordinateExpressionInput?.focus();
             });
         }
 
@@ -2924,7 +2947,7 @@ class DrawingBoard {
 
     setupModalInteractionLock() {
         const updateModalState = () => {
-            const hasBlockingModal = !!document.querySelector('.modal.show, .time-fullscreen-modal.show, .timer-fullscreen-modal.show');
+            const hasBlockingModal = !!document.querySelector('.modal.show:not(.non-blocking-modal), .time-fullscreen-modal.show, .timer-fullscreen-modal.show');
             document.body.classList.toggle('overlay-modal-open', hasBlockingModal);
         };
         const observer = new MutationObserver(updateModalState);

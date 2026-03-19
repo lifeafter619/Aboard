@@ -1415,15 +1415,33 @@ class BackgroundManager {
         return segments;
     }
 
-    hitTestCoordinateOverlay(canvasX, canvasY, threshold = 10) {
+    findCoordinatePointNearCanvasPoint(canvasX, canvasY, threshold = 10) {
         const entries = this.getCoordinatePointEntries();
         for (let i = entries.length - 1; i >= 0; i--) {
             const point = entries[i];
             if (Math.hypot(canvasX - point.canvasX, canvasY - point.canvasY) <= threshold) {
-                return { type: 'point', pointId: point.id };
+                return point;
             }
         }
+        return null;
+    }
 
+    findCoordinatePointByMathPosition(x, y, tolerance = 0.0001) {
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+            return null;
+        }
+        return (this.coordinateOverlayState.points || []).find(point =>
+            Math.abs(point.x - x) <= tolerance && Math.abs(point.y - y) <= tolerance
+        ) || null;
+    }
+
+    hitTestCoordinateOverlay(canvasX, canvasY, threshold = 10) {
+        const hitPoint = this.findCoordinatePointNearCanvasPoint(canvasX, canvasY, threshold);
+        if (hitPoint) {
+            return { type: 'point', pointId: hitPoint.id };
+        }
+
+        const entries = this.getCoordinatePointEntries();
         if (this.coordinateOverlayState.connectPoints && entries.length > 1) {
             const segments = this.getCoordinateLineSegments();
             for (const segment of segments) {
@@ -1863,6 +1881,16 @@ class BackgroundManager {
 
     addCoordinatePoint(canvasX, canvasY, options = {}) {
         const point = this.canvasLogicalToMathPoint(canvasX, canvasY, options);
+        const duplicatePoint =
+            this.findCoordinatePointByMathPosition(point.x, point.y) ||
+            this.findCoordinatePointNearCanvasPoint(canvasX, canvasY, options.duplicateThreshold ?? 12);
+        if (duplicatePoint) {
+            return {
+                ...duplicatePoint,
+                duplicate: true
+            };
+        }
+
         const nextState = this.getCoordinateOverlayState();
         nextState.points.push({
             id: `pt-${Date.now()}-${nextState.points.length}`,
@@ -1870,7 +1898,7 @@ class BackgroundManager {
             y: point.y,
             color: options.color || this.getCoordinatePaletteColor(nextState.points.length)
         });
-        this.setCoordinateOverlayState(nextState);
+        this.setCoordinateOverlayState(nextState, options);
         return nextState.points[nextState.points.length - 1];
     }
 

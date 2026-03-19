@@ -603,6 +603,20 @@ button, a, input[type="button"], input[type="submit"] {
     display: flex;
 }
 
+.modal.non-blocking-modal {
+    padding: 0;
+    background-color: transparent;
+    pointer-events: none;
+}
+
+.modal.non-blocking-modal.show {
+    display: block;
+}
+
+.modal.non-blocking-modal .modal-content {
+    pointer-events: auto;
+}
+
 body.overlay-modal-open #config-area,
 body.overlay-modal-open #feature-area,
 body.overlay-modal-open #time-display-area,
@@ -1969,12 +1983,16 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-point-modal-content {
-    max-width: 640px;
-    width: min(640px, 100%);
+    max-width: min(640px, calc(100vw - 48px));
+    width: min(640px, calc(100vw - 48px));
     max-height: 85vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+}
+
+.coordinate-point-modal {
+    z-index: 2050;
 }
 
 .coordinate-point-modal-content .modal-body {
@@ -1990,8 +2008,8 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-keypad-modal-content {
-    max-width: 460px;
-    width: min(460px, 100%);
+    max-width: min(460px, calc(100vw - 48px));
+    width: min(460px, calc(100vw - 48px));
     max-height: calc(100vh - 72px);
     display: flex;
     flex-direction: column;
@@ -2002,6 +2020,10 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     gap: 12px;
     min-height: 0;
     overflow-y: auto;
+}
+
+.coordinate-keypad-modal-content .announcement-buttons {
+    padding-top: 12px;
 }
 
 #coordinate-tools-group {
