@@ -175,6 +175,7 @@ class DrawingBoard {
         this.isCoordinatePointPanelVisible = false;
         this.isCoordinateInputPanelVisible = false;
         this.expandedCoordinatePlotId = null;
+        this.pendingCoordinateLineStartId = null;
         this.coordinateOriginDragStart = { x: 0, y: 0 };
         
         // Uploaded images storage
@@ -1068,10 +1069,19 @@ class DrawingBoard {
             
             if (this.isCoordinatePointMode && this.backgroundManager.supportsMovableOrigin()) {
                 const point = this.getLogicalCanvasPointFromEvent(e);
+                const pointMode = this.getCoordinatePointLineMode();
+                if (pointMode === 'selected') {
+                    const hitPoint = this.backgroundManager.findCoordinatePointNearCanvasPoint(point.x, point.y);
+                    if (hitPoint) {
+                        this.handleSelectedCoordinateLinePointClick(hitPoint.id);
+                        return;
+                    }
+                }
                 const addedPoint = this.backgroundManager.addCoordinatePoint(point.x, point.y);
                 if (addedPoint?.duplicate) {
                     return;
                 }
+                this.resetSelectedCoordinateLineConnection();
                 this.savePageBackground(this.currentPage);
                 this.updateBackgroundUI();
                 this.showCoordinateToast('background.pointAdded', '已添加坐标点', 'success');
@@ -1911,6 +1921,7 @@ class DrawingBoard {
         const coordinateClearPointsBtn = document.getElementById('coordinate-clear-points-btn');
         if (coordinateClearPointsBtn) {
             coordinateClearPointsBtn.addEventListener('click', () => {
+                this.resetSelectedCoordinateLineConnection({ clearSelection: true });
                 this.backgroundManager.clearCoordinatePoints();
                 this.savePageBackground(this.currentPage);
                 this.updateBackgroundUI();
@@ -3744,6 +3755,50 @@ class DrawingBoard {
         };
     }
 
+    resetSelectedCoordinateLineConnection(options = {}) {
+        const { clearSelection = false } = options;
+        this.pendingCoordinateLineStartId = null;
+
+        if (clearSelection && this.selectionManager?.isCoordinateSelection?.()) {
+            this.selectionManager.clearSelection();
+        }
+    }
+
+    handleSelectedCoordinateLinePointClick(pointId) {
+        if (!pointId || !this.backgroundManager) return false;
+
+        const startPointId = this.pendingCoordinateLineStartId;
+        if (!startPointId || startPointId === pointId) {
+            this.pendingCoordinateLineStartId = pointId;
+            this.showCoordinateToast(
+                'background.coordinateStatusSelectLineStartPoint',
+                '已选中第一个点，再点一个点即可连线'
+            );
+            return true;
+        }
+
+        const existingGroup = this.backgroundManager.findCoordinateGroupByPointIds?.([startPointId, pointId], { line: true });
+        if (existingGroup) {
+            this.resetSelectedCoordinateLineConnection();
+            this.showCoordinateToast(
+                'background.coordinateLineExists',
+                '这两个点之间已经有线段了'
+            );
+            return true;
+        }
+
+        const group = this.backgroundManager.createCoordinateGroup([startPointId, pointId], { line: true });
+        this.resetSelectedCoordinateLineConnection();
+        if (!group) {
+            return false;
+        }
+
+        this.savePageBackground(this.currentPage);
+        this.updateBackgroundUI();
+        this.showCoordinateToast('background.coordinateLineCreated', '线段已连接', 'success');
+        return true;
+    }
+
     escapeHtml(value) {
         return String(value)
             .replace(/&/g, '&amp;')
@@ -4060,10 +4115,10 @@ class DrawingBoard {
                 statusOffFallback: '绘制点线模式已关闭'
             },
             selected: {
-                hintKey: 'background.addPointHintSelected',
-                hintFallback: '开启后点击画布添加坐标点；切到选择工具后，仅选中的点会连线',
-                statusOnKey: 'background.coordinateStatusAddPointSelected',
-                statusOnFallback: '选择连线模式已开启，点击画布添加坐标点',
+                hintKey: 'background.addPointHintSelectedInteractive',
+                hintFallback: '开启后点击空白处添加坐标点；依次点击两个点即可连接线段',
+                statusOnKey: 'background.coordinateStatusAddPointSelectedInteractive',
+                statusOnFallback: '选择连线模式已开启，点击空白处添加点，点击两个点可连线',
                 statusOffKey: 'background.coordinateStatusAddPointOff',
                 statusOffFallback: '绘制点线模式已关闭'
             }
@@ -4087,6 +4142,7 @@ class DrawingBoard {
             return false;
         }
 
+        this.resetSelectedCoordinateLineConnection();
         this.backgroundManager.updateCoordinateOverlayOptions({
             pointLineMode: normalizedMode
         });
@@ -4102,6 +4158,9 @@ class DrawingBoard {
 
     setCoordinatePointMode(enabled) {
         this.isCoordinatePointMode = !!enabled && this.backgroundManager.supportsMovableOrigin();
+        if (!this.isCoordinatePointMode) {
+            this.resetSelectedCoordinateLineConnection();
+        }
 
         const addPointBtn = document.getElementById('coordinate-add-point-btn');
         if (addPointBtn) {

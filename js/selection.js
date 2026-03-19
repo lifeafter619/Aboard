@@ -77,6 +77,10 @@ class SelectionManager {
         this.layerMenuVisible = false;
         this.layerMenuOutsideListener = null;
         this.layerMenuOutsideListenerAttached = false;
+        this.selectionColorPresetValues = ['#ef4444', '#f97316', '#eab308', '#16a34a', '#0891b2', '#2563eb', '#7c3aed', '#111827'];
+        this.selectionColorPopoverVisible = false;
+        this.selectionColorPopoverOutsideListener = null;
+        this.selectionColorPopoverOutsideListenerAttached = false;
         
         // Create selection controls overlay
         this.createSelectionControls();
@@ -358,15 +362,23 @@ class SelectionManager {
                                 <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
                             </svg>
                         </button>
-                        <label id="selection-color-btn" class="image-control-btn selection-color-btn" data-i18n-title="selection.color" title="Color" style="display:none;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 3c4.97 0 9 3.58 9 8 0 2.76-1.57 4.91-4.14 5.96-.65.26-1.06.9-1.06 1.6V20a1 1 0 0 1-1 1h-2.5a1.5 1.5 0 0 1-1.5-1.5v-.34a2 2 0 0 0-2-2H8a5 5 0 0 1-5-5c0-5.08 4.03-9.16 9-9.16Z"></path>
-                                <circle cx="7.5" cy="10.5" r="1"></circle>
-                                <circle cx="12" cy="8.5" r="1"></circle>
-                                <circle cx="16.5" cy="10.5" r="1"></circle>
-                            </svg>
-                            <input id="selection-color-input" type="color" style="display:none;">
-                        </label>
+                        <div id="selection-color-wrapper" class="selection-color-picker-wrapper" style="display:none;">
+                            <button id="selection-color-btn" type="button" class="image-control-btn selection-color-btn" data-i18n-title="selection.color" title="Color" aria-expanded="false">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 3c4.97 0 9 3.58 9 8 0 2.76-1.57 4.91-4.14 5.96-.65.26-1.06.9-1.06 1.6V20a1 1 0 0 1-1 1h-2.5a1.5 1.5 0 0 1-1.5-1.5v-.34a2 2 0 0 0-2-2H8a5 5 0 0 1-5-5c0-5.08 4.03-9.16 9-9.16Z"></path>
+                                    <circle cx="7.5" cy="10.5" r="1"></circle>
+                                    <circle cx="12" cy="8.5" r="1"></circle>
+                                    <circle cx="16.5" cy="10.5" r="1"></circle>
+                                </svg>
+                            </button>
+                            <div id="selection-color-popover" class="selection-color-popover" style="display:none;">
+                                <div class="selection-color-presets">
+                                    ${this.getSelectionColorPresetMarkup()}
+                                </div>
+                                <button id="selection-color-picker-toggle-btn" type="button" class="selection-color-picker-toggle" data-i18n="tools.pen.colorPicker">取色器</button>
+                                <input id="selection-color-input" type="color" class="selection-color-input" tabindex="-1" aria-hidden="true">
+                            </div>
+                        </div>
                         <button id="selection-position-btn" class="image-control-btn" data-i18n-title="selection.position" title="Position" style="display:none;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M12 3v18"></path>
@@ -461,6 +473,10 @@ class SelectionManager {
         this.rotate90Handle = document.getElementById('selection-rotate90-handle');
         this.flipHHandle = document.getElementById('selection-flip-h-handle');
         this.toolbar = this.controlBox.querySelector('.selection-action-toolbar');
+        this.colorWrapper = document.getElementById('selection-color-wrapper');
+        this.colorPopover = document.getElementById('selection-color-popover');
+        this.colorInput = document.getElementById('selection-color-input');
+        this.colorButton = document.getElementById('selection-color-btn');
         this.coordinatePositionModal = document.getElementById('selection-coordinate-position-modal');
         this.coordinatePositionList = document.getElementById('selection-coordinate-position-list');
         
@@ -626,8 +642,11 @@ class SelectionManager {
         // Action buttons - need to handle both mousedown and click to prevent event propagation
         const copyBtn = document.getElementById('selection-copy-btn');
         const colorBtn = document.getElementById('selection-color-btn');
+        const colorWrapper = this.colorWrapper;
+        const colorPopover = this.colorPopover;
+        const colorPickerToggleBtn = document.getElementById('selection-color-picker-toggle-btn');
         const positionBtn = document.getElementById('selection-position-btn');
-        const colorInput = document.getElementById('selection-color-input');
+        const colorInput = this.colorInput;
         const deleteBtn = document.getElementById('selection-delete-btn');
         const doneBtn = document.getElementById('selection-done-btn');
         const editBtn = document.getElementById('selection-edit-btn');
@@ -643,7 +662,7 @@ class SelectionManager {
         const coordinatePositionSaveBtn = document.getElementById('selection-coordinate-position-save-btn');
         
         // Add mousedown/pointerdown handlers to prevent events from propagating to document
-        [copyBtn, colorBtn, positionBtn, deleteBtn, doneBtn, editBtn, groupBtn, ungroupBtn, rotate90Handle, flipHHandle, layerBtn].forEach(btn => {
+        [copyBtn, colorBtn, colorPickerToggleBtn, positionBtn, deleteBtn, doneBtn, editBtn, groupBtn, ungroupBtn, rotate90Handle, flipHHandle, layerBtn].forEach(btn => {
             if (!btn) return;
             btn.addEventListener('mousedown', (e) => {
                 e.stopPropagation();
@@ -661,17 +680,74 @@ class SelectionManager {
             this.copySelection();
         });
 
+        if (colorWrapper) {
+            ['mousedown', 'pointerdown', 'touchstart', 'click'].forEach(eventName => {
+                colorWrapper.addEventListener(eventName, (e) => {
+                    e.stopPropagation();
+                }, eventName === 'touchstart' ? { passive: true } : undefined);
+            });
+        }
+
+        if (colorBtn) {
+            colorBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.toggleSelectionColorPopover();
+            });
+        }
+
+        if (colorPopover) {
+            ['mousedown', 'pointerdown', 'click'].forEach(eventName => {
+                colorPopover.addEventListener(eventName, (e) => {
+                    e.stopPropagation();
+                });
+            });
+        }
+
+        if (colorPopover) {
+            colorPopover.querySelectorAll('.selection-color-swatch').forEach((swatch) => {
+                swatch.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const color = swatch.dataset.color;
+                    if (!color) return;
+                    if (this.applySelectionColor(color)) {
+                        this.syncSelectionColorUI(color);
+                    }
+                    this.hideSelectionColorPopover();
+                });
+            });
+        }
+
+        if (colorPickerToggleBtn && colorInput) {
+            colorPickerToggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.syncSelectionColorUI();
+                if (typeof colorInput.showPicker === 'function') {
+                    colorInput.showPicker();
+                } else {
+                    colorInput.click();
+                }
+            });
+        }
+
         if (colorInput) {
             colorInput.addEventListener('click', (e) => {
                 e.stopPropagation();
             });
             colorInput.addEventListener('input', (e) => {
                 e.stopPropagation();
-                this.applySelectionColor(e.target.value);
+                if (this.applySelectionColor(e.target.value)) {
+                    this.syncSelectionColorUI(e.target.value);
+                }
             });
             colorInput.addEventListener('change', (e) => {
                 e.stopPropagation();
-                this.applySelectionColor(e.target.value);
+                if (this.applySelectionColor(e.target.value)) {
+                    this.syncSelectionColorUI(e.target.value);
+                }
+                this.hideSelectionColorPopover();
             });
         }
 
@@ -763,6 +839,20 @@ class SelectionManager {
             document.addEventListener('pointerdown', this.layerMenuOutsideListener);
             document.addEventListener('touchstart', this.layerMenuOutsideListener, { passive: true });
             this.layerMenuOutsideListenerAttached = true;
+        }
+
+        if (!this.selectionColorPopoverOutsideListener) {
+            this.selectionColorPopoverOutsideListener = (e) => {
+                if (!this.selectionColorPopoverVisible || !this.colorWrapper) return;
+                if (this.colorWrapper.contains(e.target)) return;
+                this.hideSelectionColorPopover();
+            };
+        }
+        if (!this.selectionColorPopoverOutsideListenerAttached) {
+            document.addEventListener('mousedown', this.selectionColorPopoverOutsideListener);
+            document.addEventListener('pointerdown', this.selectionColorPopoverOutsideListener);
+            document.addEventListener('touchstart', this.selectionColorPopoverOutsideListener, { passive: true });
+            this.selectionColorPopoverOutsideListenerAttached = true;
         }
 
         if (coordinatePositionModal) {
@@ -1088,6 +1178,73 @@ class SelectionManager {
         this.showControls();
         this.redrawWithSelection();
     }
+
+    getSelectionColorPresetMarkup() {
+        return this.selectionColorPresetValues.map((color) => `
+            <button
+                type="button"
+                class="selection-color-swatch"
+                data-color="${color}"
+                title="${color}"
+                aria-label="${color}"
+                style="--selection-swatch-color: ${color};"
+            ></button>
+        `).join('');
+    }
+
+    getSelectedCoordinateColor() {
+        if (!this.isCoordinateSelection()) {
+            return '#2563eb';
+        }
+
+        if (this.selectionType === 'coordinate-line') {
+            return this.backgroundManager?.getCoordinateOverlayState?.().lineColor || '#2563eb';
+        }
+
+        return this.backgroundManager?.getCoordinatePointEntries?.(this.selectedCoordinatePointIds)?.[0]?.color || '#2563eb';
+    }
+
+    syncSelectionColorUI(color = this.getSelectedCoordinateColor()) {
+        if (!color) return;
+        const normalizedColor = String(color).trim().toLowerCase();
+
+        if (this.colorInput) {
+            this.colorInput.value = normalizedColor;
+        }
+
+        if (this.colorButton) {
+            this.colorButton.style.setProperty('--selection-color-preview', normalizedColor);
+        }
+
+        if (this.colorPopover) {
+            this.colorPopover.querySelectorAll('.selection-color-swatch').forEach((swatch) => {
+                swatch.classList.toggle('active', String(swatch.dataset.color || '').trim().toLowerCase() === normalizedColor);
+            });
+        }
+    }
+
+    toggleSelectionColorPopover(force) {
+        if (!this.colorPopover || !this.colorWrapper || !this.colorButton) return false;
+
+        const nextVisible = this.isCoordinateSelection() && (typeof force === 'boolean'
+            ? force
+            : !this.selectionColorPopoverVisible);
+
+        this.selectionColorPopoverVisible = nextVisible;
+        this.colorWrapper.classList.toggle('show-color-popover', nextVisible);
+        this.colorPopover.style.display = nextVisible ? 'flex' : 'none';
+        this.colorButton.setAttribute('aria-expanded', nextVisible ? 'true' : 'false');
+
+        if (nextVisible) {
+            this.syncSelectionColorUI();
+        }
+
+        return nextVisible;
+    }
+
+    hideSelectionColorPopover() {
+        this.toggleSelectionColorPopover(false);
+    }
     
     showControls() {
         this.overlay.style.display = 'block';
@@ -1098,8 +1255,7 @@ class SelectionManager {
         this.backgroundManager?.renderCoordinateOverlay?.();
         // Show edit button only for text selections
         const editBtn = document.getElementById('selection-edit-btn');
-        const colorBtn = document.getElementById('selection-color-btn');
-        const colorInput = document.getElementById('selection-color-input');
+        const colorWrapper = this.colorWrapper;
         const positionBtn = document.getElementById('selection-position-btn');
         const copyBtn = document.getElementById('selection-copy-btn');
         const groupBtn = document.getElementById('selection-group-btn');
@@ -1107,16 +1263,11 @@ class SelectionManager {
         if (editBtn) {
             editBtn.style.display = (this.selectionType === 'text') ? '' : 'none';
         }
-        if (colorBtn) {
-            colorBtn.style.display = this.isCoordinateSelection() ? '' : 'none';
+        if (colorWrapper) {
+            colorWrapper.style.display = this.isCoordinateSelection() ? '' : 'none';
         }
         if (positionBtn) {
             positionBtn.style.display = this.isCoordinateSelection() ? '' : 'none';
-        }
-        if (colorInput && this.isCoordinateSelection()) {
-            colorInput.value = this.selectionType === 'coordinate-line'
-                ? (this.backgroundManager?.getCoordinateOverlayState?.().lineColor || '#2563eb')
-                : (this.backgroundManager?.getCoordinatePointEntries?.(this.selectedCoordinatePointIds)?.[0]?.color || '#2563eb');
         }
         if (copyBtn) {
             copyBtn.style.display = (this.selectionType === 'background' || this.isCoordinateSelection()) ? 'none' : '';
@@ -1134,6 +1285,11 @@ class SelectionManager {
             const shouldShowCoordinateUngroup = this.isCoordinateSelection() && !!this.selectedCoordinateGroupId;
             ungroupBtn.style.display = (shouldShowCoordinateUngroup || (!this.isCoordinateSelection() && this.selectionType === 'group')) ? '' : 'none';
         }
+        if (this.isCoordinateSelection()) {
+            this.syncSelectionColorUI();
+        } else {
+            this.hideSelectionColorPopover();
+        }
         this.updateControlBox();
     }
     
@@ -1142,6 +1298,7 @@ class SelectionManager {
         this.controlBox.classList.remove('text-selection-only');
         this.controlBox.classList.remove('coordinate-selection-only');
         this.hideLayerMenu();
+        this.hideSelectionColorPopover();
         this.closeCoordinatePositionEditor(false);
         this.backgroundManager?.renderCoordinateOverlay?.();
     }
@@ -1222,10 +1379,15 @@ class SelectionManager {
         });
         const toolbarButtons = Array.from(this.toolbar.querySelectorAll('.image-control-btn'));
         const visibleCount = Math.max(toolbarItems.length, 1);
-        const toolbarButtonSize = this.clamp(Math.min(safeWidth * 0.28, minSide * 0.56), 34, 52);
-        const toolbarGap = this.clamp(toolbarButtonSize * 0.18, 6, 10);
-        const toolbarPaddingX = this.clamp(toolbarButtonSize * 0.24, 8, 14);
-        const toolbarPaddingY = this.clamp(toolbarButtonSize * 0.18, 6, 12);
+        const isCoordinateSelection = this.isCoordinateSelection();
+        const toolbarButtonSize = this.clamp(
+            Math.min(safeWidth * 0.28, minSide * 0.56),
+            isCoordinateSelection ? 30 : 34,
+            isCoordinateSelection ? 42 : 52
+        );
+        const toolbarGap = this.clamp(toolbarButtonSize * (isCoordinateSelection ? 0.14 : 0.18), isCoordinateSelection ? 4 : 6, isCoordinateSelection ? 8 : 10);
+        const toolbarPaddingX = this.clamp(toolbarButtonSize * (isCoordinateSelection ? 0.18 : 0.24), isCoordinateSelection ? 6 : 8, isCoordinateSelection ? 10 : 14);
+        const toolbarPaddingY = this.clamp(toolbarButtonSize * (isCoordinateSelection ? 0.14 : 0.18), isCoordinateSelection ? 5 : 6, isCoordinateSelection ? 9 : 12);
         const toolbarHorizontalWidth = (toolbarButtonSize * visibleCount) + (toolbarGap * Math.max(visibleCount - 1, 0)) + toolbarPaddingX * 2;
         const toolbarGridColumns = visibleCount >= 4 ? 3 : 2;
         const toolbarGridWidth = (toolbarButtonSize * Math.min(visibleCount, toolbarGridColumns)) + (toolbarGap * Math.max(Math.min(visibleCount, toolbarGridColumns) - 1, 0)) + toolbarPaddingX * 2;
@@ -1260,8 +1422,9 @@ class SelectionManager {
         this.toolbar.style.justifyItems = '';
         this.toolbar.style.gridTemplateColumns = '';
         this.toolbar.style.width = 'auto';
+        this.toolbar.style.maxWidth = isCoordinateSelection ? 'none' : 'calc(100% - 8px)';
 
-        if (safeWidth < toolbarHorizontalWidth + inset * 2) {
+        if (!isCoordinateSelection && safeWidth < toolbarHorizontalWidth + inset * 2) {
             this.toolbar.style.bottom = `${inset}px`;
             if (safeWidth >= toolbarGridWidth + inset * 2 && visibleCount > 4) {
                 this.toolbar.style.display = 'grid';
