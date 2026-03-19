@@ -2012,8 +2012,8 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-point-modal-content {
-    max-width: min(520px, calc(100vw - 40px));
-    width: min(520px, calc(100vw - 40px));
+    max-width: min(460px, calc(100vw - 32px));
+    width: min(460px, calc(100vw - 32px));
     max-height: 85vh;
     display: flex;
     flex-direction: column;
@@ -2025,28 +2025,28 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-point-modal-content .modal-body {
-    gap: 10px;
+    gap: 8px;
     min-height: 0;
     overflow-y: auto;
 }
 
 .coordinate-point-modal-content .modal-header {
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .coordinate-point-modal-content .modal-header h2 {
-    font-size: 17px;
+    font-size: 15px;
 }
 
 .coordinate-point-modal-content .modal-close-btn {
-    width: 28px;
-    height: 28px;
-    border-radius: 7px;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
 }
 
 .coordinate-point-modal-content .modal-close-btn svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
 }
 
 .coordinate-keypad-modal {
@@ -2110,16 +2110,17 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 .coordinate-point-action-buttons .pattern-option-btn,
 .coordinate-point-mode-options .pattern-option-btn,
 .coordinate-point-modal-content .coordinate-plot-panel .pattern-option-btn {
-    padding: 6px 10px;
-    border-width: 2px;
-    border-radius: 7px;
-    font-size: 11px;
+    padding: 5px 8px;
+    border-width: 1px;
+    border-radius: 6px;
+    font-size: 10px;
+    min-height: 28px;
 }
 
 .coordinate-point-mode-options {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
+    gap: 4px;
 }
 
 .coordinate-point-mode-btn {
@@ -2127,21 +2128,22 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-hint-line {
-    margin: 4px 0 0;
+    margin: 2px 0 0;
+    font-size: 11px;
 }
 
 .coordinate-point-count {
-    margin-top: 4px;
-    font-size: 12px;
+    margin-top: 2px;
+    font-size: 11px;
     color: #666;
 }
 
 .coordinate-plot-panel {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-top: 8px;
-    padding-top: 8px;
+    gap: 6px;
+    margin-top: 6px;
+    padding-top: 6px;
     border-top: 1px solid #ececec;
 }
 
@@ -2157,31 +2159,31 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-point-modal-content .coordinate-plot-input-row input {
-    min-height: 32px;
-    padding: 6px 10px;
-    font-size: 12px;
+    min-height: 28px;
+    padding: 5px 8px;
+    font-size: 11px;
 }
 
 .coordinate-plot-input-row {
     display: flex;
-    gap: 6px;
+    gap: 4px;
     align-items: center;
-    margin-top: 4px;
+    margin-top: 2px;
 }
 
 #coordinate-expression-input {
     flex: 1;
     min-width: 0;
-    padding: 7px 10px;
+    padding: 6px 8px;
     border: 1px solid #ddd;
-    border-radius: 8px;
+    border-radius: 6px;
     background: #fff;
-    font-size: 13px;
+    font-size: 11px;
 }
 
 .coordinate-input-panel-toggle {
     flex-shrink: 0;
-    min-width: 88px;
+    min-width: 72px;
 }
 
 .coordinate-keypad-expression-display {
