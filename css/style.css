@@ -603,6 +603,20 @@ button, a, input[type="button"], input[type="submit"] {
     display: flex;
 }
 
+.modal.non-blocking-modal {
+    padding: 0;
+    background-color: transparent;
+    pointer-events: none;
+}
+
+.modal.non-blocking-modal.show {
+    display: block;
+}
+
+.modal.non-blocking-modal .modal-content {
+    pointer-events: auto;
+}
+
 body.overlay-modal-open #config-area,
 body.overlay-modal-open #feature-area,
 body.overlay-modal-open #time-display-area,
@@ -729,6 +743,10 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 
 .resizable-modal-content.modal-dragging {
     user-select: none;
+}
+
+.resizable-modal-content.no-modal-resize-handles .modal-resize-handle {
+    display: none;
 }
 
 .modal-resize-handle {
@@ -1928,6 +1946,526 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     margin-top: 15px;
 }
 
+.coordinate-settings-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+#coordinate-point-toggle-btn,
+.coordinate-connect-points-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.coordinate-connect-points-btn svg {
+    flex-shrink: 0;
+}
+
+.coordinate-tools-modal-content {
+    max-width: 560px;
+    width: min(560px, 100%);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.coordinate-tools-modal-content .modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.coordinate-tools-modal-content .announcement-buttons {
+    padding-top: 12px;
+}
+
+.coordinate-point-modal-content {
+    max-width: min(520px, calc(100vw - 40px));
+    width: min(520px, calc(100vw - 40px));
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.coordinate-point-modal {
+    z-index: 2050;
+}
+
+.coordinate-point-modal-content .modal-body {
+    gap: 10px;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.coordinate-point-modal-content .modal-header {
+    margin-bottom: 12px;
+}
+
+.coordinate-point-modal-content .modal-header h2 {
+    font-size: 17px;
+}
+
+.coordinate-point-modal-content .modal-close-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+}
+
+.coordinate-point-modal-content .modal-close-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.coordinate-keypad-modal {
+    align-items: flex-start;
+    padding-top: 56px;
+    z-index: 2100;
+}
+
+.coordinate-keypad-modal-content {
+    max-width: min(460px, calc(100vw - 48px));
+    width: min(460px, calc(100vw - 48px));
+    max-height: calc(100vh - 72px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.coordinate-keypad-modal-content .modal-body {
+    gap: 12px;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.coordinate-keypad-modal-content .announcement-buttons {
+    padding-top: 12px;
+}
+
+#coordinate-tools-group {
+    gap: 10px;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.coordinate-tool-toggles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.coordinate-tool-toggles .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 9px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.coordinate-action-buttons {
+    margin-top: 6px;
+}
+
+.coordinate-point-action-buttons {
+    margin-top: 0;
+}
+
+.coordinate-point-action-buttons .pattern-option-btn,
+.coordinate-point-mode-options .pattern-option-btn,
+.coordinate-point-modal-content .coordinate-plot-panel .pattern-option-btn {
+    padding: 6px 10px;
+    border-width: 2px;
+    border-radius: 7px;
+    font-size: 11px;
+}
+
+.coordinate-point-mode-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.coordinate-point-mode-btn {
+    min-width: 0;
+}
+
+.coordinate-hint-line {
+    margin: 4px 0 0;
+}
+
+.coordinate-point-count {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #666;
+}
+
+.coordinate-plot-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #ececec;
+}
+
+.coordinate-plot-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.coordinate-clear-plots-inline {
+    flex-shrink: 0;
+}
+
+.coordinate-point-modal-content .coordinate-plot-input-row input {
+    min-height: 32px;
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+.coordinate-plot-input-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 4px;
+}
+
+#coordinate-expression-input {
+    flex: 1;
+    min-width: 0;
+    padding: 7px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 13px;
+}
+
+.coordinate-input-panel-toggle {
+    flex-shrink: 0;
+    min-width: 88px;
+}
+
+.coordinate-keypad-expression-display {
+    min-height: 48px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #f5f7fb;
+    border: 1px solid #d9e2f3;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #1f2937;
+    word-break: break-all;
+    white-space: pre-wrap;
+}
+
+.coordinate-keypad-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.coordinate-keypad-btn {
+    min-height: 38px;
+    padding: 8px 6px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.coordinate-keypad-btn:hover {
+    background: #f2f6ff;
+    border-color: var(--theme-color, #007bff);
+}
+
+.coordinate-keypad-top-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.coordinate-keypad-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 12px;
+    background: #f7f7f7;
+    border: 1px solid #ececec;
+}
+
+.coordinate-keypad-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+}
+
+.coordinate-keypad-grid {
+    display: grid;
+    gap: 8px;
+}
+
+.coordinate-keypad-grid-digits {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.coordinate-keypad-grid-operators,
+.coordinate-keypad-grid-variables {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.coordinate-keypad-grid-functions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 520px) {
+    .coordinate-tool-toggles {
+        grid-template-columns: 1fr;
+    }
+
+    .coordinate-keypad-modal {
+        padding-top: 20px;
+    }
+
+    .coordinate-keypad-grid-operators,
+    .coordinate-keypad-grid-variables,
+    .coordinate-keypad-grid-functions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .coordinate-plot-style-grid,
+    .coordinate-plot-range-header,
+    .coordinate-plot-range-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.coordinate-plot-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.coordinate-plot-item,
+.coordinate-empty-state {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    background: #f7f7f7;
+    border: 1px solid #ececec;
+    font-size: 12px;
+}
+
+.coordinate-plot-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.coordinate-plot-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+
+.coordinate-plot-expression {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.coordinate-plot-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.coordinate-plot-action-btn,
+.coordinate-plot-remove {
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+.coordinate-plot-action-btn:hover,
+.coordinate-plot-remove:hover {
+    background: rgba(37, 99, 235, 0.08);
+    color: #2563eb;
+}
+
+.coordinate-plot-remove:hover {
+    color: #e11d48;
+    background: rgba(225, 29, 72, 0.08);
+}
+
+.coordinate-plot-editor {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 2px;
+}
+
+.coordinate-plot-item.expanded .coordinate-plot-editor {
+    display: flex;
+}
+
+.coordinate-plot-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.coordinate-plot-field label,
+.coordinate-plot-range-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4b5563;
+}
+
+.coordinate-plot-editor input[type="text"],
+.coordinate-plot-editor input[type="number"],
+.coordinate-plot-editor select {
+    width: 100%;
+    min-width: 0;
+    padding: 7px 9px;
+    border: 1px solid #d8dce6;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 12px;
+}
+
+.coordinate-plot-style-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.coordinate-plot-color-input {
+    width: 100%;
+    min-height: 34px;
+    padding: 2px;
+    border: 1px solid #d8dce6;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.coordinate-plot-range-header,
+.coordinate-plot-range-row {
+    display: grid;
+    grid-template-columns: minmax(84px, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.coordinate-plot-range-header {
+    color: #6b7280;
+    font-size: 11px;
+}
+
+.coordinate-plot-range-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.coordinate-plot-range-empty {
+    padding: 8px 10px;
+    border: 1px dashed #cfd6e4;
+    border-radius: 8px;
+    color: #6b7280;
+    background: #fff;
+}
+
+.coordinate-plot-range-remove {
+    border: none;
+    background: transparent;
+    color: #ef4444;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+.coordinate-plot-range-remove:hover {
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.coordinate-plot-editor-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.coordinate-plot-editor-actions-left,
+.coordinate-plot-editor-actions-right {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.coordinate-plot-editor-btn {
+    border: 1px solid #d8dce6;
+    background: #fff;
+    color: #374151;
+    border-radius: 8px;
+    padding: 7px 10px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.coordinate-plot-editor-btn.primary {
+    background: var(--theme-color, #2563eb);
+    border-color: var(--theme-color, #2563eb);
+    color: #fff;
+}
+
+.coordinate-plot-editor-btn.danger {
+    color: #b91c1c;
+}
+
+.coordinate-plot-editor-btn:hover {
+    background: #f3f4f6;
+}
+
+.coordinate-plot-editor-btn.primary:hover {
+    filter: brightness(0.95);
+    background: var(--theme-color, #2563eb);
+}
+
+.coordinate-plot-editor-btn.danger:hover {
+    background: rgba(239, 68, 68, 0.08);
+}
+
 /* Image Controls Overlay */
 .image-controls-overlay {
     position: fixed;
@@ -2178,12 +2716,14 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     left: 50%;
     transform: translateX(-50%);
     display: flex;
+    flex-wrap: nowrap;
     gap: var(--toolbar-gap);
     padding: var(--toolbar-padding-y) var(--toolbar-padding-x);
     background-color: white;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     max-width: calc(100% - 8px);
+    min-width: max-content;
     box-sizing: border-box;
 }
 
@@ -2245,6 +2785,89 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     justify-content: center;
     transition: background-color 0.12s ease, color 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
     color: #333;
+}
+
+.selection-color-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.selection-coordinate-position-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: min(420px, 75vw);
+    max-height: min(55vh, 420px);
+    overflow-y: auto;
+}
+
+.selection-coordinate-position-item {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 12px;
+    padding: 12px;
+    background: rgba(248, 250, 252, 0.9);
+}
+
+.selection-coordinate-position-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 10px;
+    word-break: break-all;
+}
+
+.selection-coordinate-position-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.selection-coordinate-position-fields label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: #475569;
+}
+
+.selection-coordinate-position-fields input {
+    width: 100%;
+    border: 1px solid #d7deea;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.selection-coordinate-position-fields input:focus {
+    border-color: var(--theme-color);
+    box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.14);
+}
+
+.selection-coordinate-position-fields input.invalid {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+@media (max-width: 640px) {
+    .selection-coordinate-position-list {
+        min-width: 0;
+        max-height: min(50vh, 360px);
+    }
+
+    .selection-coordinate-position-fields {
+        grid-template-columns: 1fr;
+    }
+}
+
+.coordinate-selection-only .resize-handle,
+.coordinate-selection-only .rotate-handle,
+.coordinate-selection-only .selection-transform-handle,
+.coordinate-selection-only .selection-layer-menu-wrapper,
+.coordinate-selection-only #selection-copy-btn,
+.coordinate-selection-only #selection-edit-btn {
+    display: none !important;
 }
 
 #selection-rotate-handle {

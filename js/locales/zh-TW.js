@@ -169,6 +169,7 @@ window.translations = {
 
     selection: {
         edit: '編輯',
+        color: '顏色',
         copy: '複製',
         delete: '刪除',
         done: '完成',
@@ -180,7 +181,8 @@ window.translations = {
         layerUp: '上移一層',
         layerDown: '下移一層',
         group: '群組',
-        ungroup: '取消群組'
+        ungroup: '取消群組',
+        position: '位置'
     },
 
     // Line Style Modal
@@ -213,6 +215,7 @@ window.translations = {
         english4line: '英語四線格',
         musicStaff: '五線譜',
         coordinate: '座標系',
+        polar: '極座標',
         coordinateOriginHint: '在移動模式下雙擊選中座標系中心可拖動移動',
         image: '上傳圖片',
         density: '密度',
@@ -229,7 +232,51 @@ window.translations = {
         preferenceHint: '選擇在屬性欄中顯示的圖案',
         upload: '上傳',
         moveCoordinateOrigin: '移動座標原點',
-        moveCoordinateOriginHint: '點擊按鈕後，可在畫布上拖動移動座標原點'
+        moveCoordinateOriginHint: '點擊按鈕後，可在畫布上拖動移動座標原點',
+        coordinateTools: '座標設定',
+        showTicks: '顯示刻度',
+        showLabels: '顯示標籤',
+        showPointLabels: '顯示點標籤',
+        showOrigin: '顯示原點',
+        connectPoints: '點間連線',
+        snapToGrid: '吸附網格',
+        addPoint: '取點',
+        drawPointLine: '繪製點線',
+        pointLineModeLineOnly: '僅繪製線',
+        pointLineModeAuto: '自動連線',
+        pointLineModeSelected: '選擇連線',
+        addPointHint: '開啟後點擊畫布依序添加座標點並自動連線',
+        addPointHintLineOnly: '開啟後點擊畫布依序添加座標點，僅繪製折線',
+        addPointHintAuto: '開啟後點擊畫布依序添加座標點並自動連線',
+        addPointHintSelected: '開啟後點擊畫布添加座標點；切到選擇工具後，僅選中的點會連線',
+        clearPoints: '清空點',
+        clearPlots: '清空圖像',
+        pointsCount: '點數',
+        plotExpression: '函數表達式',
+        plot: '繪製',
+        inputPanel: '輸入面板',
+        keypadNumbers: '數字',
+        keypadOperators: '符號',
+        keypadVariables: '變數',
+        keypadFunctions: '函數',
+        plotHintCartesian: '直角座標：輸入 y = f(x)，可用 sin cos PI',
+        plotHintPolar: '極座標：輸入 r = f(theta)，theta 為弧度，deg 為角度',
+        plotPlaceholderCartesian: '如：sin(x) + 2',
+        plotPlaceholderPolar: '如：2 * sin(4 * theta)',
+        noPlots: '暫無函數圖像',
+        coordinateStatusAddPoint: '繪製點線模式已開啟，點擊畫布依序添加座標點',
+        coordinateStatusAddPointLineOnly: '僅繪製線模式已開啟，點擊畫布依序添加座標點',
+        coordinateStatusAddPointAuto: '自動連線模式已開啟，點擊畫布依序添加座標點',
+        coordinateStatusAddPointSelected: '選擇連線模式已開啟，點擊畫布添加座標點',
+        coordinateStatusAddPointOff: '繪製點線模式已關閉',
+        connectPointsEnabled: '點線繪製已開啟',
+        connectPointsDisabled: '點線繪製已關閉',
+        pointAdded: '已添加座標點',
+        pointsCleared: '座標點已清空',
+        plotAdded: '函數圖像已添加',
+        plotUpdated: '函數圖像已更新',
+        plotError: '表達式無效，無法繪製',
+        plotsCleared: '函數圖像已清空'
     },
 
     // Image Controls
@@ -247,6 +294,7 @@ window.translations = {
         delete: '刪除',
         done: '完成',
         edit: '編輯',
+        color: '顏色',
         rotate90: '旋轉90°',
         flipH: '水平翻轉',
         layer: '圖層',
@@ -255,7 +303,8 @@ window.translations = {
         layerUp: '上移一層',
         layerDown: '下移一層',
         group: '群組',
-        ungroup: '取消群組'
+        ungroup: '取消群組',
+        position: '位置'
     },
 
     // Page Navigation

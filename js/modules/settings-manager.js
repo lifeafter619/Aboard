@@ -410,12 +410,7 @@ class SettingsManager {
     }
     
     loadPatternPreferences() {
-        const saved = localStorage.getItem('patternPreferences');
-        if (saved) {
-            return JSON.parse(saved);
-        }
-        // Default: all patterns enabled
-        return {
+        const defaults = {
             'blank': true,
             'dots': true,
             'grid': true,
@@ -423,8 +418,19 @@ class SettingsManager {
             'english-lines': true,
             'music-staff': true,
             'coordinate': true,
+            'polar': true,
             'image': true
         };
+        const saved = localStorage.getItem('patternPreferences');
+        if (saved) {
+            try {
+                return { ...defaults, ...JSON.parse(saved) };
+            } catch (error) {
+                console.warn('Failed to parse patternPreferences, using defaults:', error);
+            }
+        }
+        // Default: all patterns enabled
+        return defaults;
     }
     
     getPatternPreferences() {

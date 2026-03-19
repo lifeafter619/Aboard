@@ -338,6 +338,7 @@
                     <button class="pattern-option-btn" data-pattern="english-lines">四线格</button>
                     <button class="pattern-option-btn" data-pattern="music-staff">五线谱</button>
                     <button class="pattern-option-btn" data-pattern="coordinate">坐标系</button>
+                    <button class="pattern-option-btn" data-pattern="polar">极坐标</button>
                     <button class="pattern-option-btn" data-pattern="image" id="image-pattern-btn">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 2px;">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -345,6 +346,23 @@
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
                         <span class="upload-text" data-i18n="background.upload">上传</span>
+                    </button>
+                    <button id="coordinate-settings-toggle-btn" type="button" class="pattern-option-btn coordinate-settings-toggle-btn" aria-expanded="false" style="display: none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                        <span data-i18n="background.coordinateTools">坐标设置</span>
+                    </button>
+                    <button id="coordinate-point-toggle-btn" type="button" class="pattern-option-btn" aria-expanded="false" style="display: none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="6" cy="18" r="2"></circle>
+                            <circle cx="12" cy="8" r="2"></circle>
+                            <circle cx="18" cy="14" r="2"></circle>
+                            <path d="M7.8 16.8 10.2 9.2"></path>
+                            <path d="M13.8 9.2 16.2 12.8"></path>
+                        </svg>
+                        <span data-i18n="background.drawPointLine">绘制点线</span>
                     </button>
                     <input type="file" id="bg-image-upload" accept="image/*" style="display: none;">
                 </div>
@@ -995,6 +1013,10 @@
                                     <span data-i18n="background.coordinate">坐标系</span>
                                 </label>
                                 <label class="checkbox-label">
+                                    <input type="checkbox" class="pattern-pref-checkbox" data-pattern="polar" checked>
+                                    <span data-i18n="background.polar">极坐标</span>
+                                </label>
+                                <label class="checkbox-label">
                                     <input type="checkbox" class="pattern-pref-checkbox" data-pattern="image" checked>
                                     <span data-i18n="background.upload">上传图片</span>
                                 </label>
@@ -1140,6 +1162,165 @@
                 <div class="confirm-buttons">
                     <button id="confirm-cancel-btn" class="confirm-btn cancel-btn" data-i18n="common.cancel">取消</button>
                     <button id="confirm-ok-btn" class="confirm-btn ok-btn" data-i18n="common.confirm">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coordinate tools modal -->
+    <div id="coordinate-tools-modal" class="modal">
+        <div class="modal-content coordinate-tools-modal-content">
+            <div class="modal-header">
+                <h2 data-i18n="background.coordinateTools">坐标设置</h2>
+                <button id="coordinate-tools-modal-close-btn" class="modal-close-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="config-group config-group-compact" id="coordinate-tools-group">
+                    <div class="coordinate-tool-toggles">
+                        <label class="checkbox-label"><input type="checkbox" id="coordinate-show-ticks" checked><span data-i18n="background.showTicks">显示刻度</span></label>
+                        <label class="checkbox-label"><input type="checkbox" id="coordinate-show-labels" checked><span data-i18n="background.showLabels">显示标签</span></label>
+                        <label class="checkbox-label"><input type="checkbox" id="coordinate-show-point-labels" checked><span data-i18n="background.showPointLabels">显示点标签</span></label>
+                        <label class="checkbox-label"><input type="checkbox" id="coordinate-show-origin" checked><span data-i18n="background.showOrigin">显示原点</span></label>
+                        <label class="checkbox-label"><input type="checkbox" id="coordinate-snap-grid" checked><span data-i18n="background.snapToGrid">吸附网格</span></label>
+                    </div>
+                </div>
+                <div class="announcement-buttons">
+                    <button id="coordinate-tools-modal-ok-btn" class="announcement-btn ok-btn" data-i18n="common.confirm">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="coordinate-point-modal" class="modal non-blocking-modal coordinate-point-modal">
+        <div class="modal-content coordinate-point-modal-content" style="position: fixed; top: 96px; right: 24px; margin: 0;">
+            <div class="modal-header">
+                <h2 data-i18n="background.drawPointLine">绘制点线</h2>
+                <button id="coordinate-point-modal-close-btn" class="modal-close-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="config-group config-group-compact">
+                    <div class="button-size-options coordinate-action-buttons coordinate-point-action-buttons">
+                        <button id="coordinate-add-point-btn" type="button" class="pattern-option-btn coordinate-connect-points-btn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="6" cy="18" r="2"></circle>
+                                <circle cx="12" cy="8" r="2"></circle>
+                                <circle cx="18" cy="14" r="2"></circle>
+                                <path d="M7.8 16.8 10.2 9.2"></path>
+                                <path d="M13.8 9.2 16.2 12.8"></path>
+                            </svg>
+                            <span data-i18n="background.drawPointLine">绘制点线</span>
+                        </button>
+                        <button id="coordinate-clear-points-btn" type="button" class="pattern-option-btn" data-i18n="background.clearPoints">清空点</button>
+                    </div>
+                    <div class="button-size-options coordinate-point-mode-options" role="group" aria-label="Coordinate point line modes">
+                        <button id="coordinate-point-mode-line-btn" type="button" class="pattern-option-btn coordinate-point-mode-btn" data-coordinate-point-mode="line" data-i18n="background.pointLineModeLineOnly">仅绘制线</button>
+                        <button id="coordinate-point-mode-auto-btn" type="button" class="pattern-option-btn coordinate-point-mode-btn" data-coordinate-point-mode="auto" data-i18n="background.pointLineModeAuto">自动连线</button>
+                        <button id="coordinate-point-mode-selected-btn" type="button" class="pattern-option-btn coordinate-point-mode-btn" data-coordinate-point-mode="selected" data-i18n="background.pointLineModeSelected">选择连线</button>
+                    </div>
+                    <p class="settings-hint coordinate-hint-line" id="coordinate-point-mode-hint" data-i18n="background.addPointHintAuto">开启后点击画布依次添加坐标点并自动连线</p>
+                    <div class="coordinate-point-count"><span data-i18n="background.pointsCount">点数</span>：<span id="coordinate-point-count-value">0</span></div>
+                    <div class="coordinate-plot-panel">
+                        <div class="coordinate-plot-panel-header">
+                            <label for="coordinate-expression-input" data-i18n="background.plotExpression">函数表达式</label>
+                            <button id="coordinate-clear-plots-btn" type="button" class="pattern-option-btn coordinate-clear-plots-inline" data-i18n="background.clearPlots">清空图像</button>
+                        </div>
+                        <div class="coordinate-plot-input-row">
+                            <input type="text" id="coordinate-expression-input" data-i18n-placeholder="background.plotPlaceholderCartesian" placeholder="如：sin(x) + 2">
+                            <button id="coordinate-keypad-toggle-btn" type="button" class="pattern-option-btn coordinate-input-panel-toggle" data-i18n="background.inputPanel" aria-expanded="false">输入面板</button>
+                            <button id="coordinate-plot-btn" type="button" class="pattern-option-btn" data-i18n="background.plot">绘制</button>
+                        </div>
+                        <p class="settings-hint coordinate-hint-line" id="coordinate-plot-hint" data-i18n="background.plotHintCartesian">直角坐标：输入 y = f(x)，可用 sin cos PI</p>
+                        <div id="coordinate-plot-list" class="coordinate-plot-list"></div>
+                    </div>
+                </div>
+                <div class="announcement-buttons">
+                    <button id="coordinate-point-modal-ok-btn" class="announcement-btn ok-btn" data-i18n="common.confirm">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="coordinate-keypad-modal" class="modal coordinate-keypad-modal non-blocking-modal">
+        <div class="modal-content coordinate-keypad-modal-content" style="position: fixed; right: 24px; bottom: 24px; margin: 0;">
+            <div class="modal-header">
+                <h2 data-i18n="background.inputPanel">输入面板</h2>
+                <button id="coordinate-keypad-modal-close-btn" class="modal-close-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="coordinate-keypad-expression-display" id="coordinate-keypad-expression-display">y = </div>
+                <div id="coordinate-keypad-panel" class="coordinate-keypad-panel">
+                    <div class="coordinate-keypad-top-actions">
+                        <button type="button" class="coordinate-keypad-btn" data-coordinate-action="clear">C</button>
+                        <button type="button" class="coordinate-keypad-btn" data-coordinate-action="backspace">⌫</button>
+                    </div>
+                    <div class="coordinate-keypad-section">
+                        <div class="coordinate-keypad-section-title" data-i18n="background.keypadNumbers">数字</div>
+                        <div class="coordinate-keypad-grid coordinate-keypad-grid-digits">
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="7">7</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="8">8</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="9">9</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="4">4</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="5">5</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="6">6</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="1">1</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="2">2</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="3">3</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="0">0</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert=".">.</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="=">=</button>
+                        </div>
+                    </div>
+                    <div class="coordinate-keypad-section">
+                        <div class="coordinate-keypad-section-title" data-i18n="background.keypadOperators">符号</div>
+                        <div class="coordinate-keypad-grid coordinate-keypad-grid-operators">
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="(">(</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert=")">)</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="+">+</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="-">-</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="*">×</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="/">÷</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="^">^</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert=",">,</button>
+                        </div>
+                    </div>
+                    <div class="coordinate-keypad-section">
+                        <div class="coordinate-keypad-section-title" data-i18n="background.keypadVariables">变量</div>
+                        <div class="coordinate-keypad-grid coordinate-keypad-grid-variables">
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-variable-btn data-insert-cartesian="x" data-insert-polar="theta">x</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="PI">π</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="E">e</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="deg">deg</button>
+                        </div>
+                    </div>
+                    <div class="coordinate-keypad-section">
+                        <div class="coordinate-keypad-section-title" data-i18n="background.keypadFunctions">函数</div>
+                        <div class="coordinate-keypad-grid coordinate-keypad-grid-functions">
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="sin(">sin</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="cos(">cos</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="tan(">tan</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="log(">log</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="sqrt(">sqrt</button>
+                            <button type="button" class="coordinate-keypad-btn" data-coordinate-insert="abs(">abs</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="announcement-buttons">
+                    <button id="coordinate-keypad-confirm-btn" class="announcement-btn ok-btn" data-i18n="common.confirm">确定</button>
                 </div>
             </div>
         </div>

@@ -164,6 +164,7 @@ window.translations = {
 
     selection: {
         edit: 'Editar',
+        color: 'Color',
         copy: 'Copiar',
         delete: 'Eliminar',
         done: 'Hecho',
@@ -175,7 +176,8 @@ window.translations = {
         layerUp: 'Subir una capa',
         layerDown: 'Bajar una capa',
         group: 'Agrupar',
-        ungroup: 'Desagrupar'
+        ungroup: 'Desagrupar',
+        position: 'Posición'
     },
 
     // Line Style Modal
@@ -208,6 +210,7 @@ window.translations = {
         english4line: 'Línea inglesa 4',
         musicStaff: 'Pentagrama',
         coordinate: 'Coordenadas',
+        polar: 'Coordenadas polares',
         coordinateOriginHint: 'Doble clic para seleccionar el origen en modo Mover, luego arrastre para moverlo',
         image: 'Imagen',
         imagePrefix: 'Imagen',
@@ -221,7 +224,50 @@ window.translations = {
         contrastHint: 'Ajustar la oscuridad de las líneas del patrón de fondo',
         preference: 'Preferencia de patrón de fondo',
         moveCoordinateOrigin: 'Mover origen',
-        moveCoordinateOriginHint: 'Haga clic y arrastre en el lienzo para mover el origen de coordenadas'
+        moveCoordinateOriginHint: 'Haga clic y arrastre en el lienzo para mover el origen de coordenadas',
+        coordinateTools: 'Configuración de coordenadas',
+        showTicks: 'Mostrar escala',
+        showLabels: 'Mostrar etiquetas',
+        showPointLabels: 'Etiquetas de puntos',
+        showOrigin: 'Mostrar origen',
+        connectPoints: 'Unir puntos',
+        snapToGrid: 'Ajustar a la cuadrícula',
+        addPoint: 'Agregar punto',
+        drawPointLine: 'Dibujar puntos y línea',
+        pointLineModeLineOnly: 'Solo línea',
+        pointLineModeAuto: 'Conexión automática',
+        pointLineModeSelected: 'Conectar selección',
+        addPointHint: 'Actívelo y haga clic en el lienzo para colocar puntos y conectarlos automáticamente',
+        addPointHintLineOnly: 'Al activarlo, haga clic en el lienzo para colocar puntos y dibujar solo la polilínea',
+        addPointHintAuto: 'Al activarlo, haga clic en el lienzo para colocar puntos y conectarlos automáticamente',
+        addPointHintSelected: 'Al activarlo, haga clic en el lienzo para añadir puntos. Al cambiar a Selección, solo se conectarán los puntos seleccionados',
+        clearPoints: 'Borrar puntos',
+        clearPlots: 'Borrar gráficas',
+        pointsCount: 'Puntos',
+        plotExpression: 'Expresión',
+        plot: 'Graficar',
+        inputPanel: 'Panel de entrada',
+        keypadNumbers: 'Números',
+        keypadOperators: 'Símbolos',
+        keypadVariables: 'Variables',
+        keypadFunctions: 'Funciones',
+        plotHintCartesian: 'Cartesiano: introduzca y = f(x), puede usar sin cos PI',
+        plotHintPolar: 'Polar: introduzca r = f(theta), theta en radianes y deg en grados',
+        plotPlaceholderCartesian: 'ej.: sin(x) + 2',
+        plotPlaceholderPolar: 'ej.: 2 * sin(4 * theta)',
+        noPlots: 'Aún no hay gráficas',
+        coordinateStatusAddPoint: 'Modo de dibujar puntos y líneas activado',
+        coordinateStatusAddPointLineOnly: 'Modo solo línea activado. Haga clic en el lienzo para colocar puntos de coordenadas',
+        coordinateStatusAddPointAuto: 'Modo conexión automática activado. Haga clic en el lienzo para colocar puntos de coordenadas',
+        coordinateStatusAddPointSelected: 'Modo conectar selección activado. Haga clic en el lienzo para colocar puntos de coordenadas',
+        coordinateStatusAddPointOff: 'Modo de dibujar puntos y líneas desactivado',
+        connectPointsEnabled: 'Línea de puntos activada',
+        connectPointsDisabled: 'Línea de puntos desactivada',
+        pointAdded: 'Punto de coordenadas agregado',
+        pointsCleared: 'Puntos de coordenadas borrados',
+        plotAdded: 'Gráfica agregada',
+        plotError: 'Expresión no válida, no se puede graficar',
+        plotsCleared: 'Gráficas borradas'
     },
 
     // Image Controls
@@ -239,6 +285,7 @@ window.translations = {
         delete: 'Eliminar',
         done: 'Listo',
         edit: 'Editar',
+        color: 'Color',
         rotate90: 'Rotar 90°',
         flipH: 'Voltear horizontal',
         layer: 'Capa',
@@ -247,7 +294,8 @@ window.translations = {
         layerUp: 'Subir una capa',
         layerDown: 'Bajar una capa',
         group: 'Agrupar',
-        ungroup: 'Desagrupar'
+        ungroup: 'Desagrupar',
+        position: 'Posición'
     },
 
     // Page Navigation

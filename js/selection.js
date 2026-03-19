@@ -63,8 +63,11 @@ class SelectionManager {
         this.multiDragStartPositions = [];
         this.selectedImages = []; // Array of image indices for multi-select
         this.selectedTexts = []; // Array of text indices for multi-select
+        this.selectedCoordinatePointIds = [];
+        this.selectedCoordinateGroupId = null;
         this.multiImageDragStartPositions = []; // Starting positions for images in multi-drag
         this.multiTextDragStartPositions = []; // Starting positions for texts in multi-drag
+        this.coordinateDragStartPositions = [];
         this.multiBounds = null;
         this.multiRotation = 0; // Accumulated rotation for multi-select
         this.multiStrokeRotateStart = [];
@@ -89,6 +92,41 @@ class SelectionManager {
 
     setBackgroundManager(backgroundManager) {
         this.backgroundManager = backgroundManager;
+    }
+
+    isCoordinateSelection() {
+        return this.selectionType === 'coordinate-point' ||
+            this.selectionType === 'coordinate-points' ||
+            this.selectionType === 'coordinate-line';
+    }
+
+    getCoordinateSelectionBounds() {
+        if (!this.backgroundManager || this.selectedCoordinatePointIds.length === 0) return null;
+        return this.backgroundManager.getCoordinateSelectionBounds(this.selectedCoordinatePointIds);
+    }
+
+    getSelectedCoordinateGroup() {
+        return this.selectedCoordinateGroupId
+            ? this.backgroundManager?.getCoordinateGroupById?.(this.selectedCoordinateGroupId) || null
+            : null;
+    }
+
+    commitCoordinateSelectionChange(saveHistory = true) {
+        if (!this.backgroundManager) return;
+        if (typeof this.backgroundManager.persistCoordinateOverlayState === 'function') {
+            this.backgroundManager.persistCoordinateOverlayState();
+        }
+        this.backgroundManager.renderCoordinateOverlay();
+        if (window.drawingBoard?.savePageBackground) {
+            window.drawingBoard.savePageBackground(window.drawingBoard.currentPage);
+        }
+        if (window.drawingBoard?.updateBackgroundUI) {
+            window.drawingBoard.updateBackgroundUI();
+        }
+        if (saveHistory) {
+            this.saveHistory();
+            this.hasUnsavedChanges = false;
+        }
     }
 
     isCompoundSelection() {
@@ -147,6 +185,8 @@ class SelectionManager {
         this.selectedGroupId = groupId;
         this.selectedIndex = null;
         this.multiRotation = 0;
+        this.selectedCoordinatePointIds = [];
+        this.selectedCoordinateGroupId = null;
         this.refreshSelectedGroupMembers();
         this.showControls();
         this.redrawWithSelection();
@@ -318,6 +358,23 @@ class SelectionManager {
                                 <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
                             </svg>
                         </button>
+                        <label id="selection-color-btn" class="image-control-btn selection-color-btn" data-i18n-title="selection.color" title="Color" style="display:none;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 3c4.97 0 9 3.58 9 8 0 2.76-1.57 4.91-4.14 5.96-.65.26-1.06.9-1.06 1.6V20a1 1 0 0 1-1 1h-2.5a1.5 1.5 0 0 1-1.5-1.5v-.34a2 2 0 0 0-2-2H8a5 5 0 0 1-5-5c0-5.08 4.03-9.16 9-9.16Z"></path>
+                                <circle cx="7.5" cy="10.5" r="1"></circle>
+                                <circle cx="12" cy="8.5" r="1"></circle>
+                                <circle cx="16.5" cy="10.5" r="1"></circle>
+                            </svg>
+                            <input id="selection-color-input" type="color" style="display:none;">
+                        </label>
+                        <button id="selection-position-btn" class="image-control-btn" data-i18n-title="selection.position" title="Position" style="display:none;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 3v18"></path>
+                                <path d="M3 12h18"></path>
+                                <path d="m7 7 5-5 5 5"></path>
+                                <path d="m7 17 5 5 5-5"></path>
+                            </svg>
+                        </button>
                         <div class="selection-layer-menu-wrapper">
                             <button id="selection-layer-btn" class="image-control-btn" data-i18n-title="selection.layer" title="Layer">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -372,6 +429,26 @@ class SelectionManager {
                     </div>
                 </div>
             </div>
+            <div id="selection-coordinate-position-modal" class="modal">
+                <div class="modal-content coordinate-position-modal-content">
+                    <div class="modal-header">
+                        <h2 data-i18n="selection.position">位置</h2>
+                        <button id="selection-coordinate-position-close-btn" class="modal-close-btn">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="selection-coordinate-position-list" class="selection-coordinate-position-list"></div>
+                        <div class="announcement-buttons">
+                            <button id="selection-coordinate-position-cancel-btn" class="announcement-btn secondary-btn" data-i18n="common.cancel">取消</button>
+                            <button id="selection-coordinate-position-save-btn" class="announcement-btn ok-btn" data-i18n="common.confirm">确定</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         `;
         
         document.body.insertAdjacentHTML('beforeend', controlsHTML);
@@ -384,6 +461,8 @@ class SelectionManager {
         this.rotate90Handle = document.getElementById('selection-rotate90-handle');
         this.flipHHandle = document.getElementById('selection-flip-h-handle');
         this.toolbar = this.controlBox.querySelector('.selection-action-toolbar');
+        this.coordinatePositionModal = document.getElementById('selection-coordinate-position-modal');
+        this.coordinatePositionList = document.getElementById('selection-coordinate-position-list');
         
         // Box selection rectangle overlay
         this.boxSelectDiv = document.createElement('div');
@@ -546,6 +625,9 @@ class SelectionManager {
         
         // Action buttons - need to handle both mousedown and click to prevent event propagation
         const copyBtn = document.getElementById('selection-copy-btn');
+        const colorBtn = document.getElementById('selection-color-btn');
+        const positionBtn = document.getElementById('selection-position-btn');
+        const colorInput = document.getElementById('selection-color-input');
         const deleteBtn = document.getElementById('selection-delete-btn');
         const doneBtn = document.getElementById('selection-done-btn');
         const editBtn = document.getElementById('selection-edit-btn');
@@ -555,9 +637,13 @@ class SelectionManager {
         const flipHHandle = this.flipHHandle;
         const layerBtn = document.getElementById('selection-layer-btn');
         const layerMenu = document.getElementById('selection-layer-menu');
+        const coordinatePositionModal = this.coordinatePositionModal;
+        const coordinatePositionCloseBtn = document.getElementById('selection-coordinate-position-close-btn');
+        const coordinatePositionCancelBtn = document.getElementById('selection-coordinate-position-cancel-btn');
+        const coordinatePositionSaveBtn = document.getElementById('selection-coordinate-position-save-btn');
         
         // Add mousedown/pointerdown handlers to prevent events from propagating to document
-        [copyBtn, deleteBtn, doneBtn, editBtn, groupBtn, ungroupBtn, rotate90Handle, flipHHandle, layerBtn].forEach(btn => {
+        [copyBtn, colorBtn, positionBtn, deleteBtn, doneBtn, editBtn, groupBtn, ungroupBtn, rotate90Handle, flipHHandle, layerBtn].forEach(btn => {
             if (!btn) return;
             btn.addEventListener('mousedown', (e) => {
                 e.stopPropagation();
@@ -574,6 +660,28 @@ class SelectionManager {
             e.preventDefault();
             this.copySelection();
         });
+
+        if (colorInput) {
+            colorInput.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+            colorInput.addEventListener('input', (e) => {
+                e.stopPropagation();
+                this.applySelectionColor(e.target.value);
+            });
+            colorInput.addEventListener('change', (e) => {
+                e.stopPropagation();
+                this.applySelectionColor(e.target.value);
+            });
+        }
+
+        if (positionBtn) {
+            positionBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.openCoordinatePositionEditor();
+            });
+        }
         
         deleteBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -655,6 +763,31 @@ class SelectionManager {
             document.addEventListener('pointerdown', this.layerMenuOutsideListener);
             document.addEventListener('touchstart', this.layerMenuOutsideListener, { passive: true });
             this.layerMenuOutsideListenerAttached = true;
+        }
+
+        if (coordinatePositionModal) {
+            coordinatePositionModal.addEventListener('click', (e) => {
+                if (e.target === coordinatePositionModal) {
+                    this.closeCoordinatePositionEditor();
+                }
+            });
+        }
+
+        [coordinatePositionCloseBtn, coordinatePositionCancelBtn].forEach(btn => {
+            if (!btn) return;
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.closeCoordinatePositionEditor();
+            });
+        });
+
+        if (coordinatePositionSaveBtn) {
+            coordinatePositionSaveBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.applyCoordinatePositionEditor();
+            });
         }
     }
 
@@ -841,6 +974,19 @@ class SelectionManager {
             return true;
         }
 
+        const coordinateTarget = this.backgroundManager?.hitTestCoordinateOverlay?.(coords.x, coords.y);
+        if (coordinateTarget) {
+            if (coordinateTarget.type === 'point') {
+                return this.selectCoordinatePoints([coordinateTarget.pointId]);
+            }
+            if (coordinateTarget.type === 'line') {
+                return this.selectCoordinatePoints(
+                    coordinateTarget.pointIds || this.backgroundManager.getCoordinatePointIds(),
+                    { line: true }
+                );
+            }
+        }
+
         if (this.backgroundManager?.isPointInBackgroundImage?.(coords.x, coords.y)) {
             this.selectBackgroundImage();
             return true;
@@ -859,6 +1005,8 @@ class SelectionManager {
         this.selectedStrokes = [];
         this.selectedImages = [];
         this.selectedTexts = [];
+        this.selectedCoordinatePointIds = [];
+        this.selectedCoordinateGroupId = null;
         this.drawingEngine.selectStroke(index);
         this.showControls();
         this.redrawWithSelection();
@@ -871,6 +1019,8 @@ class SelectionManager {
         this.selectedStrokes = [];
         this.selectedImages = [];
         this.selectedTexts = [];
+        this.selectedCoordinatePointIds = [];
+        this.selectedCoordinateGroupId = null;
         if (this.textManager) {
             this.textManager.selectedTextIndex = index;
         }
@@ -885,9 +1035,39 @@ class SelectionManager {
         this.selectedStrokes = [];
         this.selectedImages = [];
         this.selectedTexts = [];
+        this.selectedCoordinatePointIds = [];
+        this.selectedCoordinateGroupId = null;
         this.drawingEngine.selectImage(index);
         this.showControls();
         this.redrawWithSelection();
+    }
+
+    selectCoordinatePoints(pointIds, options = {}) {
+        if (!this.backgroundManager || !Array.isArray(pointIds) || pointIds.length === 0) return false;
+        const validPointIds = new Set(this.backgroundManager.getCoordinatePointIds?.() || []);
+        const uniqueIds = [...new Set(pointIds.filter(pointId => validPointIds.has(pointId)))];
+        if (uniqueIds.length === 0) return false;
+        this.drawingEngine.deselectStroke();
+        this.drawingEngine.deselectImage();
+        if (this.textManager) {
+            this.textManager.selectedTextIndex = null;
+        }
+
+        this.selectionType = options.line
+            ? 'coordinate-line'
+            : (uniqueIds.length === 1 ? 'coordinate-point' : 'coordinate-points');
+        this.selectedIndex = null;
+        this.selectedGroupId = null;
+        this.selectedStrokes = [];
+        this.selectedImages = [];
+        this.selectedTexts = [];
+        this.selectedCoordinatePointIds = uniqueIds;
+        this.selectedCoordinateGroupId = options.groupId
+            || this.backgroundManager.findCoordinateGroupByPointIds?.(uniqueIds, { line: options.line === true })?.id
+            || null;
+        this.showControls();
+        this.redrawWithSelection();
+        return true;
     }
 
     selectBackgroundImage() {
@@ -903,6 +1083,8 @@ class SelectionManager {
         this.selectedStrokes = [];
         this.selectedImages = [];
         this.selectedTexts = [];
+        this.selectedCoordinatePointIds = [];
+        this.selectedCoordinateGroupId = null;
         this.showControls();
         this.redrawWithSelection();
     }
@@ -910,27 +1092,47 @@ class SelectionManager {
     showControls() {
         this.overlay.style.display = 'block';
         this.controlBox.classList.toggle('text-selection-only', this.selectionType === 'text');
+        this.controlBox.classList.toggle('coordinate-selection-only', this.isCoordinateSelection());
         this.hideLayerMenu();
         this.updateLayerMenuVisibility();
+        this.backgroundManager?.renderCoordinateOverlay?.();
         // Show edit button only for text selections
         const editBtn = document.getElementById('selection-edit-btn');
+        const colorBtn = document.getElementById('selection-color-btn');
+        const colorInput = document.getElementById('selection-color-input');
+        const positionBtn = document.getElementById('selection-position-btn');
         const copyBtn = document.getElementById('selection-copy-btn');
         const groupBtn = document.getElementById('selection-group-btn');
         const ungroupBtn = document.getElementById('selection-ungroup-btn');
         if (editBtn) {
             editBtn.style.display = (this.selectionType === 'text') ? '' : 'none';
         }
+        if (colorBtn) {
+            colorBtn.style.display = this.isCoordinateSelection() ? '' : 'none';
+        }
+        if (positionBtn) {
+            positionBtn.style.display = this.isCoordinateSelection() ? '' : 'none';
+        }
+        if (colorInput && this.isCoordinateSelection()) {
+            colorInput.value = this.selectionType === 'coordinate-line'
+                ? (this.backgroundManager?.getCoordinateOverlayState?.().lineColor || '#2563eb')
+                : (this.backgroundManager?.getCoordinatePointEntries?.(this.selectedCoordinatePointIds)?.[0]?.color || '#2563eb');
+        }
         if (copyBtn) {
-            copyBtn.style.display = this.selectionType === 'background' ? 'none' : '';
+            copyBtn.style.display = (this.selectionType === 'background' || this.isCoordinateSelection()) ? 'none' : '';
         }
         if (groupBtn) {
             const totalSelected = this.selectedStrokes.length + this.selectedImages.length + this.selectedTexts.length;
-            groupBtn.style.display = (this.isCompoundSelection() &&
+            const shouldShowCoordinateGroup = this.isCoordinateSelection() &&
+                this.selectedCoordinatePointIds.length > 1 &&
+                !this.selectedCoordinateGroupId;
+            groupBtn.style.display = (shouldShowCoordinateGroup || (!this.isCoordinateSelection() && this.isCompoundSelection() &&
                 totalSelected > 1 &&
-                !this.selectionContainsGroupedObjects()) ? '' : 'none';
+                !this.selectionContainsGroupedObjects())) ? '' : 'none';
         }
         if (ungroupBtn) {
-            ungroupBtn.style.display = this.selectionType === 'group' ? '' : 'none';
+            const shouldShowCoordinateUngroup = this.isCoordinateSelection() && !!this.selectedCoordinateGroupId;
+            ungroupBtn.style.display = (shouldShowCoordinateUngroup || (!this.isCoordinateSelection() && this.selectionType === 'group')) ? '' : 'none';
         }
         this.updateControlBox();
     }
@@ -938,7 +1140,10 @@ class SelectionManager {
     hideControls() {
         this.overlay.style.display = 'none';
         this.controlBox.classList.remove('text-selection-only');
+        this.controlBox.classList.remove('coordinate-selection-only');
         this.hideLayerMenu();
+        this.closeCoordinatePositionEditor(false);
+        this.backgroundManager?.renderCoordinateOverlay?.();
     }
 
     clamp(value, min, max) {
@@ -1017,10 +1222,10 @@ class SelectionManager {
         });
         const toolbarButtons = Array.from(this.toolbar.querySelectorAll('.image-control-btn'));
         const visibleCount = Math.max(toolbarItems.length, 1);
-        const toolbarButtonSize = this.clamp(Math.min(safeWidth * 0.22, minSide * 0.36), 20, 44);
-        const toolbarGap = this.clamp(toolbarButtonSize * 0.18, 4, 8);
-        const toolbarPaddingX = this.clamp(toolbarButtonSize * 0.22, 4, 10);
-        const toolbarPaddingY = this.clamp(toolbarButtonSize * 0.18, 4, 10);
+        const toolbarButtonSize = this.clamp(Math.min(safeWidth * 0.28, minSide * 0.56), 34, 52);
+        const toolbarGap = this.clamp(toolbarButtonSize * 0.18, 6, 10);
+        const toolbarPaddingX = this.clamp(toolbarButtonSize * 0.24, 8, 14);
+        const toolbarPaddingY = this.clamp(toolbarButtonSize * 0.18, 6, 12);
         const toolbarHorizontalWidth = (toolbarButtonSize * visibleCount) + (toolbarGap * Math.max(visibleCount - 1, 0)) + toolbarPaddingX * 2;
         const toolbarGridColumns = visibleCount >= 4 ? 3 : 2;
         const toolbarGridWidth = (toolbarButtonSize * Math.min(visibleCount, toolbarGridColumns)) + (toolbarGap * Math.max(Math.min(visibleCount, toolbarGridColumns) - 1, 0)) + toolbarPaddingX * 2;
@@ -1031,7 +1236,7 @@ class SelectionManager {
 
             const icon = button.querySelector('svg');
             if (icon) {
-                const toolbarIconSize = this.clamp(toolbarButtonSize * 0.45, 10, 20);
+                const toolbarIconSize = this.clamp(toolbarButtonSize * 0.48, 16, 24);
                 icon.style.width = `${toolbarIconSize}px`;
                 icon.style.height = `${toolbarIconSize}px`;
             }
@@ -1058,7 +1263,7 @@ class SelectionManager {
 
         if (safeWidth < toolbarHorizontalWidth + inset * 2) {
             this.toolbar.style.bottom = `${inset}px`;
-            if (safeWidth >= toolbarGridWidth + inset * 2 && visibleCount > 2) {
+            if (safeWidth >= toolbarGridWidth + inset * 2 && visibleCount > 4) {
                 this.toolbar.style.display = 'grid';
                 this.toolbar.style.gridTemplateColumns = `repeat(${toolbarGridColumns}, minmax(0, 1fr))`;
                 this.toolbar.style.justifyItems = 'center';
@@ -1074,7 +1279,7 @@ class SelectionManager {
         if (this.selectionType === 'group') {
             this.refreshSelectedGroupMembers();
         }
-        if (!this.isCompoundSelection() && this.selectionType !== 'background' && this.selectedIndex === null) return;
+        if (!this.isCompoundSelection() && this.selectionType !== 'background' && !this.isCoordinateSelection() && this.selectedIndex === null) return;
         
         let bounds = null;
         let rotation = 0;
@@ -1109,6 +1314,9 @@ class SelectionManager {
                 height: transform.height
             };
             rotation = transform.rotation || 0;
+        } else if (this.isCoordinateSelection()) {
+            bounds = this.getCoordinateSelectionBounds();
+            rotation = 0;
         } else if (this.isCompoundSelection()) {
             // During rotation, use the saved original bounds to keep box shape fixed
             if (this.isRotating && this.multiBounds) {
@@ -1148,7 +1356,7 @@ class SelectionManager {
     startDrag(e) {
         if (this.isCompoundSelection()) {
             // Multi-select drag
-        } else if (this.selectionType !== 'background' && this.selectedIndex === null) {
+        } else if (this.selectionType !== 'background' && !this.isCoordinateSelection() && this.selectedIndex === null) {
             return;
         }
         
@@ -1178,6 +1386,16 @@ class SelectionManager {
                 return;
             }
             this.dragStartObjectPos = { x: transform.x, y: transform.y };
+        } else if (this.isCoordinateSelection()) {
+            this.coordinateDragStartPositions = this.backgroundManager
+                ? this.backgroundManager.getCoordinateOverlayState().points
+                    .filter(point => this.selectedCoordinatePointIds.includes(point.id))
+                    .map(point => ({ id: point.id, x: point.x, y: point.y }))
+                : [];
+            if (this.coordinateDragStartPositions.length === 0) {
+                this.isDragging = false;
+                return;
+            }
         } else if (this.isCompoundSelection()) {
             this.multiDragStartPositions = [];
             for (const idx of this.selectedStrokes) {
@@ -1210,7 +1428,7 @@ class SelectionManager {
     
     drag(e) {
         if (!this.isDragging) return;
-        if (!this.isCompoundSelection() && this.selectionType !== 'background' && this.selectedIndex === null) return;
+        if (!this.isCompoundSelection() && this.selectionType !== 'background' && !this.isCoordinateSelection() && this.selectedIndex === null) return;
         
         const pos = this.getClientPos(e);
         const rect = this.canvas.getBoundingClientRect();
@@ -1245,6 +1463,18 @@ class SelectionManager {
                 x: this.dragStartObjectPos.x + deltaX,
                 y: this.dragStartObjectPos.y + deltaY
             });
+        } else if (this.isCoordinateSelection()) {
+            const unitSize = this.backgroundManager?.getCoordinateUnitSize?.() || 1;
+            const deltaMathX = deltaX / unitSize;
+            const deltaMathY = -deltaY / unitSize;
+            this.backgroundManager?.updateCoordinatePoints(
+                this.coordinateDragStartPositions.map(point => ({
+                    id: point.id,
+                    x: point.x + deltaMathX,
+                    y: point.y + deltaMathY
+                })),
+                { persist: false }
+            );
         } else if (this.isCompoundSelection()) {
             for (const idx of this.selectedStrokes) {
                 const stroke = this.drawingEngine.strokes[idx];
@@ -1292,6 +1522,9 @@ class SelectionManager {
                         delete point.originalY;
                     }
                 }
+            } else if (this.isCoordinateSelection()) {
+                this.coordinateDragStartPositions = [];
+                this.commitCoordinateSelectionChange(true);
             } else if (this.isCompoundSelection()) {
                 for (const idx of this.selectedStrokes) {
                     const stroke = this.drawingEngine.strokes[idx];
@@ -1308,6 +1541,7 @@ class SelectionManager {
         }
     }
     startResize(e, handle) {
+        if (this.isCoordinateSelection()) return;
         if (!this.isCompoundSelection() && this.selectionType !== 'background' && this.selectedIndex === null) return;
         
         this.isResizing = true;
@@ -1574,6 +1808,8 @@ class SelectionManager {
             const transform = this.backgroundManager?.getBackgroundImageTransform?.();
             if (!transform) return null;
             bounds = { x: transform.x, y: transform.y, width: transform.width, height: transform.height };
+        } else if (this.isCoordinateSelection()) {
+            bounds = this.getCoordinateSelectionBounds();
         } else if (this.isCompoundSelection()) {
             // During rotation, use the saved original bounds center
             bounds = (this.isRotating && this.multiBounds) ? this.multiBounds : this.getMultiSelectionBounds();
@@ -1591,6 +1827,7 @@ class SelectionManager {
     }
     
     startRotate(e) {
+        if (this.isCoordinateSelection()) return;
         if (!this.isCompoundSelection() && this.selectionType !== 'background' && this.selectedIndex === null) return;
         
         this.isRotating = true;
@@ -1795,7 +2032,115 @@ class SelectionManager {
     }
     
     // Action methods
+    applySelectionColor(color) {
+        if (!this.isCoordinateSelection() || !this.backgroundManager || !color) return false;
+
+        const changed = this.selectionType === 'coordinate-line'
+            ? this.backgroundManager.setCoordinateLineColor(color)
+            : this.backgroundManager.setCoordinatePointsColor(this.selectedCoordinatePointIds, color);
+
+        if (!changed) return false;
+
+        this.commitCoordinateSelectionChange(true);
+        this.updateControlBox();
+        return true;
+    }
+
+    openCoordinatePositionEditor() {
+        if (!this.isCoordinateSelection() || !this.backgroundManager || !this.coordinatePositionModal || !this.coordinatePositionList) {
+            return false;
+        }
+
+        const entries = this.backgroundManager.getCoordinatePointEntries(this.selectedCoordinatePointIds);
+        if (!entries.length) return false;
+
+        this.coordinatePositionList.innerHTML = entries.map((point, index) => `
+            <div class="selection-coordinate-position-item">
+                <div class="selection-coordinate-position-title">${this.escapeHtml(this.backgroundManager.getPointDisplayLabel(point, point.index ?? index))}</div>
+                <div class="selection-coordinate-position-fields">
+                    <label>
+                        <span>X</span>
+                        <input type="number" step="0.1" data-point-id="${point.id}" data-axis="x" value="${point.x}">
+                    </label>
+                    <label>
+                        <span>Y</span>
+                        <input type="number" step="0.1" data-point-id="${point.id}" data-axis="y" value="${point.y}">
+                    </label>
+                </div>
+            </div>
+        `).join('');
+
+        this.coordinatePositionModal.classList.add('show');
+        return true;
+    }
+
+    closeCoordinatePositionEditor(shouldRefocus = true) {
+        if (!this.coordinatePositionModal) return;
+        this.coordinatePositionModal.classList.remove('show');
+        if (shouldRefocus && this.hasSelection()) {
+            this.updateControlBox();
+        }
+    }
+
+    applyCoordinatePositionEditor() {
+        if (!this.isCoordinateSelection() || !this.backgroundManager || !this.coordinatePositionList) return false;
+
+        const inputs = Array.from(this.coordinatePositionList.querySelectorAll('input[data-point-id][data-axis]'));
+        if (!inputs.length) return false;
+
+        const updates = new Map();
+        let hasInvalidValue = false;
+
+        inputs.forEach(input => {
+            const pointId = input.dataset.pointId;
+            const axis = input.dataset.axis;
+            const value = parseFloat(input.value);
+
+            if (!pointId || !axis) return;
+
+            if (!Number.isFinite(value)) {
+                hasInvalidValue = true;
+                input.classList.add('invalid');
+                return;
+            }
+
+            input.classList.remove('invalid');
+            if (!updates.has(pointId)) {
+                updates.set(pointId, { id: pointId });
+            }
+            updates.get(pointId)[axis] = value;
+        });
+
+        if (hasInvalidValue) {
+            return false;
+        }
+
+        const changed = this.backgroundManager.updateCoordinatePoints([...updates.values()]);
+        if (!changed) {
+            this.closeCoordinatePositionEditor();
+            return false;
+        }
+
+        this.commitCoordinateSelectionChange(true);
+        this.closeCoordinatePositionEditor();
+        this.updateControlBox();
+        this.redrawWithSelection();
+        return true;
+    }
+
+    escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     copySelection() {
+        if (this.isCoordinateSelection()) {
+            return false;
+        }
         if (this.selectionType === 'background') {
             return false;
         }
@@ -1814,6 +2159,8 @@ class SelectionManager {
                         size: stroke.size,
                         penType: stroke.penType,
                         tool: stroke.tool,
+                        lineStyle: stroke.lineStyle || 'solid',
+                        dashDensity: stroke.dashDensity || 10,
                         rotation: stroke.rotation || 0,
                         layerOrder: this.drawingEngine.getNextLayerOrder(),
                         objectId: this.drawingEngine.getNextObjectId(),
@@ -1866,6 +2213,8 @@ class SelectionManager {
             this.selectedStrokes = newStrokeIndices;
             this.selectedImages = newImageIndices;
             this.selectedTexts = newTextIndices;
+            this.selectedCoordinatePointIds = [];
+            this.selectedCoordinateGroupId = null;
             this.multiRotation = 0;
             this.selectedGroupId = null;
             this.selectionType = 'multi';
@@ -1920,7 +2269,8 @@ class SelectionManager {
         const hasImages = this.drawingEngine.stampedImages.length > 0;
         const hasTexts = this.textManager && this.textManager.textObjects && this.textManager.textObjects.length > 0;
         const hasBackgroundImage = this.backgroundManager?.hasBackgroundImage?.() || false;
-        return hasStrokes || hasImages || hasTexts || hasBackgroundImage;
+        const hasCoordinateOverlay = this.backgroundManager?.hasCoordinateSelectableContent?.() || false;
+        return hasStrokes || hasImages || hasTexts || hasBackgroundImage || hasCoordinateOverlay;
     }
 
     cacheSelection() {
@@ -2052,6 +2402,8 @@ class SelectionManager {
             this.selectedStrokes = newStrokeIndices;
             this.selectedImages = newImageIndices;
             this.selectedTexts = newTextIndices;
+            this.selectedCoordinatePointIds = [];
+            this.selectedCoordinateGroupId = null;
             this.multiRotation = 0;
             this.selectionType = 'multi';
             this.selectedGroupId = null;
@@ -2074,6 +2426,8 @@ class SelectionManager {
             size: stroke.size,
             penType: stroke.penType,
             tool: stroke.tool,
+            lineStyle: stroke.lineStyle || 'solid',
+            dashDensity: stroke.dashDensity || 10,
             rotation: stroke.rotation || 0,
             layerOrder: stroke.layerOrder || 0
         };
@@ -2117,6 +2471,15 @@ class SelectionManager {
     }
     
     deleteSelection() {
+        if (this.isCoordinateSelection()) {
+            if (!this.backgroundManager || this.selectedCoordinatePointIds.length === 0) return false;
+            const result = this.backgroundManager.removeCoordinatePoints(this.selectedCoordinatePointIds);
+            if (!result) return false;
+            this.commitCoordinateSelectionChange(true);
+            this.clearSelection();
+            return true;
+        }
+
         if (this.selectionType === 'group') {
             if (!this.selectedGroupId) return false;
             const groupMembers = this.drawingEngine.getGroupMembers(this.selectedGroupId, this.textManager?.textObjects || []);
@@ -2252,6 +2615,27 @@ class SelectionManager {
     }
 
     groupSelection(saveHistory = true) {
+        if (this.isCoordinateSelection()) {
+            if (!this.backgroundManager || this.selectedCoordinatePointIds.length < 2 || this.selectedCoordinateGroupId) {
+                return false;
+            }
+            const coordinateMode = this.backgroundManager.getCoordinatePointLineMode?.() || 'auto';
+            const group = this.backgroundManager.createCoordinateGroup(this.selectedCoordinatePointIds, {
+                line: this.selectionType === 'coordinate-line' || coordinateMode === 'selected',
+                persist: true,
+                redraw: true
+            });
+            if (!group) return false;
+            this.selectCoordinatePoints(group.pointIds, {
+                line: group.line === true,
+                groupId: group.id
+            });
+            if (saveHistory) {
+                this.saveHistory();
+            }
+            return true;
+        }
+
         if (this.selectionType !== 'multi') return false;
         const objectIds = this.getSelectedObjectIds();
         if (objectIds.length < 2 || this.selectionContainsGroupedObjects()) {
@@ -2267,6 +2651,22 @@ class SelectionManager {
     }
 
     ungroupSelection(saveHistory = true) {
+        if (this.isCoordinateSelection()) {
+            if (!this.backgroundManager || !this.selectedCoordinateGroupId) return false;
+            const group = this.getSelectedCoordinateGroup();
+            if (!group) return false;
+            const removed = this.backgroundManager.removeCoordinateGroup(this.selectedCoordinateGroupId, {
+                persist: true,
+                redraw: true
+            });
+            if (!removed) return false;
+            this.selectCoordinatePoints(group.pointIds, { line: group.line === true });
+            if (saveHistory) {
+                this.saveHistory();
+            }
+            return true;
+        }
+
         if (this.selectionType !== 'group' || !this.selectedGroupId) return false;
         const members = this.drawingEngine.ungroupObjects(this.selectedGroupId, this.textManager?.textObjects || []);
         if (!members.length) return false;
@@ -2278,6 +2678,7 @@ class SelectionManager {
         this.selectionType = 'multi';
         this.selectedIndex = null;
         this.multiRotation = 0;
+        this.selectedCoordinateGroupId = null;
         this.showControls();
         this.redrawWithSelection();
         if (saveHistory) {
@@ -2536,6 +2937,7 @@ class SelectionManager {
     
     hasSelection() {
         return this.selectionType === 'background' ||
+            this.isCoordinateSelection() ||
             this.selectedIndex !== null ||
             (this.isCompoundSelection() && (this.selectedStrokes.length > 0 || this.selectedImages.length > 0 || this.selectedTexts.length > 0));
     }
@@ -2556,6 +2958,9 @@ class SelectionManager {
         this.selectedStrokes = [];
         this.selectedImages = [];
         this.selectedTexts = [];
+        this.selectedCoordinatePointIds = [];
+        this.selectedCoordinateGroupId = null;
+        this.coordinateDragStartPositions = [];
         this.multiRotation = 0;
         this.multiBounds = null;
         this.multiStrokeRotateStart = [];
@@ -2695,6 +3100,33 @@ class SelectionManager {
                 }
             }
         }
+
+        const foundCoordinatePointIds = [];
+        const foundCoordinateLinePointIds = [];
+        if (this.backgroundManager?.hasCoordinateSelectableContent?.()) {
+            const coordinatePoints = this.backgroundManager.getCoordinatePointEntries();
+            coordinatePoints.forEach(point => {
+                if (point.canvasX >= canvasSelRect.x &&
+                    point.canvasX <= canvasSelRect.x + canvasSelRect.width &&
+                    point.canvasY >= canvasSelRect.y &&
+                    point.canvasY <= canvasSelRect.y + canvasSelRect.height) {
+                    foundCoordinatePointIds.push(point.id);
+                }
+            });
+
+            const coordinateSegments = this.backgroundManager.getCoordinateLineSegments();
+            coordinateSegments.forEach(segment => {
+                if (this.segmentIntersectsRect(
+                    segment.start.canvasX,
+                    segment.start.canvasY,
+                    segment.end.canvasX,
+                    segment.end.canvasY,
+                    canvasSelRect
+                )) {
+                    foundCoordinateLinePointIds.push(...(segment.pointIds || []));
+                }
+            });
+        }
         
         this.boxSelectStart = null;
         this.boxSelectEnd = null;
@@ -2704,13 +3136,32 @@ class SelectionManager {
             backgroundBounds &&
             this.rectsIntersect(canvasSelRect, backgroundBounds));
 
-        this.applyFoundSelection(foundStrokes, foundImages, foundTexts, foundBackground);
+        this.applyFoundSelection(
+            foundStrokes,
+            foundImages,
+            foundTexts,
+            foundBackground,
+            foundCoordinatePointIds,
+            foundCoordinateLinePointIds
+        );
     }
     
     // Apply selection from found strokes, images, and texts (shared by box and lasso selection)
-    applyFoundSelection(foundStrokes, foundImages, foundTexts = [], foundBackground = false) {
+    applyFoundSelection(foundStrokes, foundImages, foundTexts = [], foundBackground = false, foundCoordinatePointIds = [], foundCoordinateLinePointIds = []) {
         const expandedSelection = this.expandGroupedSelection(foundStrokes, foundImages, foundTexts);
+        const coordinateIds = [...new Set(foundCoordinatePointIds || [])];
+        const coordinateLineIds = [...new Set(foundCoordinateLinePointIds || [])];
         const totalFound = expandedSelection.strokes.length + expandedSelection.images.length + expandedSelection.texts.length + (foundBackground ? 1 : 0);
+        const hasCoordinateFound = coordinateIds.length > 0 || coordinateLineIds.length > 0;
+
+        if (totalFound === 0 && hasCoordinateFound) {
+            if (coordinateLineIds.length > 0) {
+                this.selectCoordinatePoints([...new Set([...coordinateLineIds, ...coordinateIds])], { line: true });
+            } else {
+                this.selectCoordinatePoints(coordinateIds);
+            }
+            return;
+        }
         
         if (totalFound === 0) {
             return;
@@ -2730,6 +3181,8 @@ class SelectionManager {
             this.selectedStrokes = expandedSelection.strokes;
             this.selectedImages = expandedSelection.images;
             this.selectedTexts = expandedSelection.texts;
+            this.selectedCoordinatePointIds = [];
+            this.selectedCoordinateGroupId = null;
             this.multiRotation = 0;
             this.selectionType = 'multi';
             this.selectedGroupId = null;
@@ -2744,6 +3197,65 @@ class SelectionManager {
                a.x + a.width > b.x &&
                a.y < b.y + b.height &&
                a.y + a.height > b.y;
+    }
+
+    orientation(ax, ay, bx, by, cx, cy) {
+        const value = ((by - ay) * (cx - bx)) - ((bx - ax) * (cy - by));
+        if (Math.abs(value) < 1e-7) return 0;
+        return value > 0 ? 1 : 2;
+    }
+
+    onSegment(ax, ay, bx, by, cx, cy) {
+        return bx <= Math.max(ax, cx) &&
+            bx >= Math.min(ax, cx) &&
+            by <= Math.max(ay, cy) &&
+            by >= Math.min(ay, cy);
+    }
+
+    segmentsIntersect(a1x, a1y, a2x, a2y, b1x, b1y, b2x, b2y) {
+        const o1 = this.orientation(a1x, a1y, a2x, a2y, b1x, b1y);
+        const o2 = this.orientation(a1x, a1y, a2x, a2y, b2x, b2y);
+        const o3 = this.orientation(b1x, b1y, b2x, b2y, a1x, a1y);
+        const o4 = this.orientation(b1x, b1y, b2x, b2y, a2x, a2y);
+
+        if (o1 !== o2 && o3 !== o4) return true;
+        if (o1 === 0 && this.onSegment(a1x, a1y, b1x, b1y, a2x, a2y)) return true;
+        if (o2 === 0 && this.onSegment(a1x, a1y, b2x, b2y, a2x, a2y)) return true;
+        if (o3 === 0 && this.onSegment(b1x, b1y, a1x, a1y, b2x, b2y)) return true;
+        if (o4 === 0 && this.onSegment(b1x, b1y, a2x, a2y, b2x, b2y)) return true;
+        return false;
+    }
+
+    segmentIntersectsRect(x1, y1, x2, y2, rect) {
+        if ((x1 >= rect.x && x1 <= rect.x + rect.width && y1 >= rect.y && y1 <= rect.y + rect.height) ||
+            (x2 >= rect.x && x2 <= rect.x + rect.width && y2 >= rect.y && y2 <= rect.y + rect.height)) {
+            return true;
+        }
+
+        const corners = [
+            [rect.x, rect.y, rect.x + rect.width, rect.y],
+            [rect.x + rect.width, rect.y, rect.x + rect.width, rect.y + rect.height],
+            [rect.x + rect.width, rect.y + rect.height, rect.x, rect.y + rect.height],
+            [rect.x, rect.y + rect.height, rect.x, rect.y]
+        ];
+        return corners.some(([ax, ay, bx, by]) => this.segmentsIntersect(x1, y1, x2, y2, ax, ay, bx, by));
+    }
+
+    segmentIntersectsPolygon(x1, y1, x2, y2, polygon) {
+        if (this.pointInPolygon(x1, y1, polygon) || this.pointInPolygon(x2, y2, polygon)) {
+            return true;
+        }
+        for (let i = 0; i < polygon.length; i++) {
+            const nextIndex = (i + 1) % polygon.length;
+            if (this.segmentsIntersect(
+                x1, y1, x2, y2,
+                polygon[i].x, polygon[i].y,
+                polygon[nextIndex].x, polygon[nextIndex].y
+            )) {
+                return true;
+            }
+        }
+        return false;
     }
 
     rotatePoint(x, y, centerX, centerY, angleDeg) {
@@ -3020,13 +3532,44 @@ class SelectionManager {
                 }
             }
         }
+
+        const foundCoordinatePointIds = [];
+        const foundCoordinateLinePointIds = [];
+        if (this.backgroundManager?.hasCoordinateSelectableContent?.()) {
+            const coordinatePoints = this.backgroundManager.getCoordinatePointEntries();
+            coordinatePoints.forEach(point => {
+                if (this.pointInPolygon(point.canvasX, point.canvasY, canvasLassoPoints)) {
+                    foundCoordinatePointIds.push(point.id);
+                }
+            });
+
+            const coordinateSegments = this.backgroundManager.getCoordinateLineSegments();
+            coordinateSegments.forEach(segment => {
+                if (this.segmentIntersectsPolygon(
+                    segment.start.canvasX,
+                    segment.start.canvasY,
+                    segment.end.canvasX,
+                    segment.end.canvasY,
+                    canvasLassoPoints
+                )) {
+                    foundCoordinateLinePointIds.push(...(segment.pointIds || []));
+                }
+            });
+        }
         
         const backgroundBounds = this.backgroundManager?.getBackgroundImageVisualBounds?.();
         const foundBackground = !!(this.backgroundManager?.hasBackgroundImage?.() &&
             backgroundBounds &&
             this.polygonIntersectsRect(canvasLassoPoints, backgroundBounds));
 
-        this.applyFoundSelection(foundStrokes, foundImages, foundTexts, foundBackground);
+        this.applyFoundSelection(
+            foundStrokes,
+            foundImages,
+            foundTexts,
+            foundBackground,
+            foundCoordinatePointIds,
+            foundCoordinateLinePointIds
+        );
     }
     
     // Ray-casting point-in-polygon algorithm

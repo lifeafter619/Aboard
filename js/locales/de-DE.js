@@ -166,6 +166,7 @@ window.translations = {
 
     selection: {
         edit: 'Bearbeiten',
+        color: 'Farbe',
         copy: 'Kopieren',
         delete: 'Löschen',
         done: 'Fertig',
@@ -177,7 +178,8 @@ window.translations = {
         layerUp: 'Eine Ebene nach vorne',
         layerDown: 'Eine Ebene nach hinten',
         group: 'Gruppieren',
-        ungroup: 'Gruppierung aufheben'
+        ungroup: 'Gruppierung aufheben',
+        position: 'Position'
     },
 
     // Line Style Modal
@@ -210,6 +212,7 @@ window.translations = {
         english4line: 'Englisch 4-Linien',
         musicStaff: 'Notensystem',
         coordinate: 'Koordinaten',
+        polar: 'Polarkoordinaten',
         coordinateOriginHint: 'Doppelklicken Sie im Verschiebemodus, um den Koordinatenursprung auszuwählen und zu verschieben',
         image: 'Bild',
         imagePrefix: 'Bild',
@@ -223,7 +226,50 @@ window.translations = {
         contrastHint: 'Die Dunkelheit der Hintergrundmusterlinien anpassen',
         preference: 'Hintergrundmuster-Präferenz',
         moveCoordinateOrigin: 'Ursprung verschieben',
-        moveCoordinateOriginHint: 'Klicken und auf der Leinwand ziehen, um den Koordinatenursprung zu verschieben'
+        moveCoordinateOriginHint: 'Klicken und auf der Leinwand ziehen, um den Koordinatenursprung zu verschieben',
+        coordinateTools: 'Koordinateneinstellungen',
+        showTicks: 'Skalen anzeigen',
+        showLabels: 'Beschriftungen anzeigen',
+        showPointLabels: 'Punktbeschriftungen',
+        showOrigin: 'Ursprung anzeigen',
+        connectPoints: 'Punkte verbinden',
+        snapToGrid: 'Am Raster ausrichten',
+        addPoint: 'Punkt setzen',
+        drawPointLine: 'Punkte/Linie zeichnen',
+        pointLineModeLineOnly: 'Nur Linie',
+        pointLineModeAuto: 'Automatisch verbinden',
+        pointLineModeSelected: 'Auswahl verbinden',
+        addPointHint: 'Aktivieren und nacheinander auf die Leinwand klicken, um Punkte mit Linien zu zeichnen',
+        addPointHintLineOnly: 'Nach dem Aktivieren nacheinander auf die Leinwand klicken, um Punkte zu setzen und nur die Linie zu zeichnen',
+        addPointHintAuto: 'Nach dem Aktivieren nacheinander auf die Leinwand klicken, um Punkte zu setzen und automatisch zu verbinden',
+        addPointHintSelected: 'Nach dem Aktivieren Punkte setzen; nach dem Wechsel zum Auswahlwerkzeug werden nur ausgewählte Punkte verbunden',
+        clearPoints: 'Punkte löschen',
+        clearPlots: 'Graphen löschen',
+        pointsCount: 'Punkte',
+        plotExpression: 'Funktionsausdruck',
+        plot: 'Zeichnen',
+        inputPanel: 'Eingabefeld',
+        keypadNumbers: 'Zahlen',
+        keypadOperators: 'Symbole',
+        keypadVariables: 'Variablen',
+        keypadFunctions: 'Funktionen',
+        plotHintCartesian: 'Kartesisch: y = f(x) eingeben, sin cos PI sind verfügbar',
+        plotHintPolar: 'Polar: r = f(theta) eingeben, theta in Radiant, deg in Grad',
+        plotPlaceholderCartesian: 'z. B. sin(x) + 2',
+        plotPlaceholderPolar: 'z. B. 2 * sin(4 * theta)',
+        noPlots: 'Noch keine Funktionsgraphen',
+        coordinateStatusAddPoint: 'Punkte/Linien-Zeichenmodus aktiviert',
+        coordinateStatusAddPointLineOnly: 'Nur-Linie-Modus aktiviert. Klicken Sie auf die Leinwand, um Koordinatenpunkte zu setzen',
+        coordinateStatusAddPointAuto: 'Auto-Verbinden-Modus aktiviert. Klicken Sie auf die Leinwand, um Koordinatenpunkte zu setzen',
+        coordinateStatusAddPointSelected: 'Auswahl-Verbinden-Modus aktiviert. Klicken Sie auf die Leinwand, um Koordinatenpunkte zu setzen',
+        coordinateStatusAddPointOff: 'Punkte/Linien-Zeichenmodus deaktiviert',
+        connectPointsEnabled: 'Punktlinie aktiviert',
+        connectPointsDisabled: 'Punktlinie deaktiviert',
+        pointAdded: 'Koordinatenpunkt hinzugefügt',
+        pointsCleared: 'Koordinatenpunkte gelöscht',
+        plotAdded: 'Funktionsgraph hinzugefügt',
+        plotError: 'Ungültiger Ausdruck, Zeichnen fehlgeschlagen',
+        plotsCleared: 'Funktionsgraphen gelöscht'
     },
 
     // Image Controls
@@ -241,6 +287,7 @@ window.translations = {
         delete: 'Löschen',
         done: 'Fertig',
         edit: 'Bearbeiten',
+        color: 'Farbe',
         rotate90: '90° drehen',
         flipH: 'Horizontal spiegeln',
         layer: 'Ebene',
@@ -249,7 +296,8 @@ window.translations = {
         layerUp: 'Eine Ebene nach vorne',
         layerDown: 'Eine Ebene nach hinten',
         group: 'Gruppieren',
-        ungroup: 'Gruppierung aufheben'
+        ungroup: 'Gruppierung aufheben',
+        position: 'Position'
     },
 
     // Page Navigation
