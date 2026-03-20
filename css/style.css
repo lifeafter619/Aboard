@@ -312,23 +312,30 @@ body.vector-preview-active #off-canvas-image-layer {
 
 /* Background config panel: center content vertically */
 #background-config.active {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
+    align-items: flex-start;
+    gap: 12px;
     padding-top: 6px;
     padding-right: 42px;
-    width: min(548px, calc(100vw - 72px));
-}
-
-#background-config .config-group,
-#background-config .config-group-compact,
-#background-config .color-picker-row,
-#background-config .compact-sliders {
-    width: 100%;
+    width: min(532px, calc(100vw - 72px));
 }
 
 #background-config .config-group-compact {
     gap: 6px;
+}
+
+#background-config .config-group:first-child {
+    flex: 0 0 118px;
+}
+
+#background-config .config-group:last-child {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+#background-config .color-picker-row,
+#background-config .compact-sliders,
+#background-config .pattern-grid-compact {
+    width: 100%;
 }
 
 #background-config .color-picker-row {
@@ -336,18 +343,23 @@ body.vector-preview-active #off-canvas-image-layer {
 }
 
 #background-config .color-picker-main {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+
+#background-config .color-picker-icon-btn {
+    align-self: flex-start;
 }
 
 #background-config .pattern-grid-compact {
-    width: 100%;
     gap: 8px;
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 #background-config .pattern-grid-compact .pattern-option-btn {
     min-width: 0;
-    min-height: 40px;
+    min-height: 38px;
     padding: 8px 10px;
     font-size: 12px;
     line-height: 1.25;
@@ -355,7 +367,6 @@ body.vector-preview-active #off-canvas-image-layer {
     align-items: center;
     justify-content: center;
     gap: 4px;
-    flex-wrap: wrap;
     white-space: normal;
     text-align: center;
     overflow: visible;
@@ -376,17 +387,22 @@ body.vector-preview-active #off-canvas-image-layer {
     flex-shrink: 0;
 }
 
-#image-pattern-btn,
-#coordinate-settings-toggle-btn,
-#coordinate-point-toggle-btn {
+#pattern-grid .pattern-option-btn[data-pattern] {
     flex-direction: column;
-    gap: 3px;
+    gap: 5px;
 }
 
-#image-pattern-btn svg,
-#coordinate-settings-toggle-btn svg,
-#coordinate-point-toggle-btn svg {
-    margin-right: 0 !important;
+#pattern-grid .pattern-option-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+#pattern-grid .pattern-option-btn[data-pattern] .pattern-option-label {
+    display: block;
+    width: 100%;
 }
 
 #background-config .upload-text {
@@ -395,6 +411,11 @@ body.vector-preview-active #off-canvas-image-layer {
 
 #config-area.vertical #background-config.active {
     width: 100%;
+}
+
+#config-area.vertical #background-config .config-group:first-child,
+#config-area.vertical #background-config .config-group:last-child {
+    flex: 1 1 auto;
 }
 
 #config-area.vertical #background-config .pattern-grid-compact {
