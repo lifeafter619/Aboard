@@ -1208,7 +1208,7 @@
                 </button>
             </div>
             <div class="modal-body">
-                <div class="config-group config-group-compact">
+                <div class="config-group config-group-compact coordinate-point-panel">
                     <div class="button-size-options coordinate-action-buttons coordinate-point-action-buttons">
                         <button id="coordinate-add-point-btn" type="button" class="pattern-option-btn coordinate-connect-points-btn">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1222,13 +1222,18 @@
                         </button>
                         <button id="coordinate-clear-points-btn" type="button" class="pattern-option-btn" data-i18n="background.clearPoints">清空点</button>
                     </div>
-                    <div class="button-size-options coordinate-point-mode-options" role="group" aria-label="Coordinate point line modes">
-                        <button id="coordinate-point-mode-line-btn" type="button" class="pattern-option-btn coordinate-point-mode-btn" data-coordinate-point-mode="line" data-i18n="background.pointLineModeLineOnly">仅绘制线</button>
-                        <button id="coordinate-point-mode-auto-btn" type="button" class="pattern-option-btn coordinate-point-mode-btn" data-coordinate-point-mode="auto" data-i18n="background.pointLineModeAuto">自动连线</button>
-                        <button id="coordinate-point-mode-selected-btn" type="button" class="pattern-option-btn coordinate-point-mode-btn" data-coordinate-point-mode="selected" data-i18n="background.pointLineModeSelected">选择连线</button>
+                    <div class="coordinate-point-meta">
+                        <div class="button-size-options coordinate-point-mode-options" role="group" aria-label="Coordinate point line modes">
+                            <button id="coordinate-point-mode-line-btn" type="button" class="pattern-option-btn coordinate-point-mode-btn" data-coordinate-point-mode="line" data-i18n="background.pointLineModeLineOnly">仅绘制线</button>
+                            <button id="coordinate-point-mode-auto-btn" type="button" class="pattern-option-btn coordinate-point-mode-btn" data-coordinate-point-mode="auto" data-i18n="background.pointLineModeAuto">自动连线</button>
+                            <button id="coordinate-point-mode-selected-btn" type="button" class="pattern-option-btn coordinate-point-mode-btn" data-coordinate-point-mode="selected" data-i18n="background.pointLineModeSelected">选择连线</button>
+                        </div>
+                        <div class="coordinate-point-count">
+                            <span class="coordinate-point-count-label" data-i18n="background.pointsCount">点数</span>
+                            <span class="coordinate-point-count-value" id="coordinate-point-count-value">0</span>
+                        </div>
                     </div>
                     <p class="settings-hint coordinate-hint-line" id="coordinate-point-mode-hint" data-i18n="background.addPointHintAuto">开启后点击画布依次添加坐标点并自动连线</p>
-                    <div class="coordinate-point-count"><span data-i18n="background.pointsCount">点数</span>：<span id="coordinate-point-count-value">0</span></div>
                     <div class="coordinate-plot-panel">
                         <div class="coordinate-plot-panel-header">
                             <label for="coordinate-expression-input" data-i18n="background.plotExpression">函数表达式</label>
@@ -1236,8 +1241,10 @@
                         </div>
                         <div class="coordinate-plot-input-row">
                             <input type="text" id="coordinate-expression-input" data-i18n-placeholder="background.plotPlaceholderCartesian" placeholder="如：sin(x) + 2">
-                            <button id="coordinate-keypad-toggle-btn" type="button" class="pattern-option-btn coordinate-input-panel-toggle" data-i18n="background.inputPanel" aria-expanded="false">输入面板</button>
-                            <button id="coordinate-plot-btn" type="button" class="pattern-option-btn" data-i18n="background.plot">绘制</button>
+                            <div class="coordinate-plot-action-row">
+                                <button id="coordinate-keypad-toggle-btn" type="button" class="pattern-option-btn coordinate-input-panel-toggle" data-i18n="background.inputPanel" aria-expanded="false">输入面板</button>
+                                <button id="coordinate-plot-btn" type="button" class="pattern-option-btn" data-i18n="background.plot">绘制</button>
+                            </div>
                         </div>
                         <p class="settings-hint coordinate-hint-line" id="coordinate-plot-hint" data-i18n="background.plotHintCartesian">直角坐标：输入 y = f(x)，可用 sin cos PI</p>
                         <div id="coordinate-plot-list" class="coordinate-plot-list"></div>
