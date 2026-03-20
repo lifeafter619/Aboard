@@ -30,9 +30,11 @@ class SettingsManager {
         this.globalFont = localStorage.getItem('globalFont') || 'system';
         this.customFonts = this.loadCustomFonts();
         this.fontPreferences = this.loadFontPreferences();
+        this.fontPreviewSettings = this.loadFontPreviewSettings();
         this.modalSizePreferences = this.loadModalSizePreferences();
         this.modalCenterPreferences = this.loadModalCenterPreferences();
         this.ensureFontPreferencesIntegrity();
+        this.ensureFontPreviewSettingsIntegrity();
 
         // Initialize Toast Manager
         this.toastManager = new ToastManager();
@@ -94,6 +96,25 @@ class SettingsManager {
         return { order: [], visibility: {}, aliases: {} };
     }
 
+    getDefaultFontPreviewSettings() {
+        return {
+            sampleText: '一个白板-Aboard-123',
+            fontSize: 48
+        };
+    }
+
+    loadFontPreviewSettings() {
+        const saved = localStorage.getItem('fontPreviewSettings');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.warn('Failed to load font preview settings:', e);
+            }
+        }
+        return this.getDefaultFontPreviewSettings();
+    }
+
     loadModalSizePreferences() {
         const saved = localStorage.getItem('modalSizePreferences');
         if (saved) {
@@ -120,6 +141,10 @@ class SettingsManager {
 
     saveFontPreferences() {
         localStorage.setItem('fontPreferences', JSON.stringify(this.fontPreferences));
+    }
+
+    saveFontPreviewSettings() {
+        localStorage.setItem('fontPreviewSettings', JSON.stringify(this.fontPreviewSettings));
     }
 
     saveModalSizePreferences() {
@@ -149,6 +174,25 @@ class SettingsManager {
             }
         });
         this.saveFontPreferences();
+    }
+
+    ensureFontPreviewSettingsIntegrity() {
+        const defaults = this.getDefaultFontPreviewSettings();
+        if (!this.fontPreviewSettings || typeof this.fontPreviewSettings !== 'object') {
+            this.fontPreviewSettings = { ...defaults };
+        }
+
+        const sampleText = typeof this.fontPreviewSettings.sampleText === 'string'
+            ? this.fontPreviewSettings.sampleText.trim()
+            : '';
+        const fontSize = parseInt(this.fontPreviewSettings.fontSize, 10);
+
+        this.fontPreviewSettings.sampleText = sampleText || defaults.sampleText;
+        this.fontPreviewSettings.fontSize = Number.isFinite(fontSize)
+            ? Math.max(16, Math.min(160, fontSize))
+            : defaults.fontSize;
+
+        this.saveFontPreviewSettings();
     }
 
     normalizeFontOrder(order, allValues) {
@@ -283,6 +327,12 @@ class SettingsManager {
         } else if (visibleFonts.length > 0) {
             select.value = visibleFonts[0].value;
         }
+
+        if (select.value && this.globalFont !== select.value) {
+            this.globalFont = select.value;
+            localStorage.setItem('globalFont', this.globalFont);
+            this.applyGlobalFont();
+        }
     }
 
     getManagedFontOptions() {
@@ -352,6 +402,69 @@ class SettingsManager {
         });
         this.fontPreferences.order = deduped;
         this.saveFontPreferences();
+        this.populateGlobalFontSelect();
+    }
+
+    getFontPreviewSettings() {
+        this.ensureFontPreviewSettingsIntegrity();
+        return { ...this.fontPreviewSettings };
+    }
+
+    setFontPreviewSettings(partialSettings = {}) {
+        this.ensureFontPreviewSettingsIntegrity();
+        this.fontPreviewSettings = {
+            ...this.fontPreviewSettings,
+            ...partialSettings
+        };
+        this.ensureFontPreviewSettingsIntegrity();
+    }
+
+    resetFontPreviewSettings(options = {}) {
+        const defaults = this.getDefaultFontPreviewSettings();
+        const { text = true, size = true } = options;
+        const nextSettings = { ...this.getFontPreviewSettings() };
+        if (text) {
+            nextSettings.sampleText = defaults.sampleText;
+        }
+        if (size) {
+            nextSettings.fontSize = defaults.fontSize;
+        }
+        this.fontPreviewSettings = nextSettings;
+        this.ensureFontPreviewSettingsIntegrity();
+    }
+
+    deleteCustomFont(fontValue) {
+        const fontIndex = this.customFonts.findIndex(font => font.name === fontValue);
+        if (fontIndex < 0) return false;
+
+        this.customFonts.splice(fontIndex, 1);
+        this.saveCustomFonts();
+
+        this.ensureFontPreferencesIntegrity();
+        this.fontPreferences.order = this.fontPreferences.order.filter(value => value !== fontValue);
+        delete this.fontPreferences.visibility[fontValue];
+        delete this.fontPreferences.aliases[fontValue];
+        this.saveFontPreferences();
+
+        if (this.globalFont === fontValue) {
+            this.globalFont = 'system';
+            localStorage.setItem('globalFont', this.globalFont);
+            this.applyGlobalFont();
+        }
+
+        this.populateGlobalFontSelect();
+        return true;
+    }
+
+    resetFontManagementToDefaults() {
+        this.customFonts = [];
+        this.saveCustomFonts();
+        this.fontPreferences = { order: [], visibility: {}, aliases: {} };
+        this.ensureFontPreferencesIntegrity();
+        this.resetFontPreviewSettings({ text: true, size: true });
+        this.globalFont = 'system';
+        localStorage.setItem('globalFont', this.globalFont);
+        this.applyGlobalFont();
         this.populateGlobalFontSelect();
     }
 
@@ -890,6 +1003,9 @@ class SettingsManager {
             canvasPreset: this.canvasPreset,
             themeColor: this.themeColor,
             globalFont: this.globalFont,
+            customFonts: JSON.parse(JSON.stringify(this.customFonts || [])),
+            fontPreferences: JSON.parse(JSON.stringify(this.fontPreferences || {})),
+            fontPreviewSettings: JSON.parse(JSON.stringify(this.fontPreviewSettings || {})),
             modalSizePreferences: JSON.parse(JSON.stringify(this.modalSizePreferences || {})),
             modalCenterPreferences: JSON.parse(JSON.stringify(this.modalCenterPreferences || {})),
             // Also include toolbar customization
@@ -1104,6 +1220,19 @@ class SettingsManager {
         // Handle special storage items
         if (newSettings.toolbarOrder) localStorage.setItem('toolbarOrder', newSettings.toolbarOrder);
         if (newSettings.toolbarVisibility) localStorage.setItem('toolbarVisibility', newSettings.toolbarVisibility);
+        if (Array.isArray(newSettings.customFonts)) {
+            this.customFonts = newSettings.customFonts;
+            this.saveCustomFonts();
+            this.loadCustomFontsToDocument();
+        }
+        if (newSettings.fontPreferences && typeof newSettings.fontPreferences === 'object') {
+            this.fontPreferences = newSettings.fontPreferences;
+            this.ensureFontPreferencesIntegrity();
+        }
+        if (newSettings.fontPreviewSettings && typeof newSettings.fontPreviewSettings === 'object') {
+            this.fontPreviewSettings = newSettings.fontPreviewSettings;
+            this.ensureFontPreviewSettingsIntegrity();
+        }
         if (newSettings.modalSizePreferences && typeof newSettings.modalSizePreferences === 'object') {
             this.modalSizePreferences = newSettings.modalSizePreferences;
             this.saveModalSizePreferences();

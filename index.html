@@ -693,6 +693,9 @@
                                 </label>
                             </div>
                             <p class="settings-hint" data-i18n="settings.general.fontManagementHint">字体管理：支持排序、显示开关、重命名与预览</p>
+                            <div class="font-management-toolbar">
+                                <button id="font-reset-defaults-btn" type="button" class="button-secondary font-reset-defaults-btn">恢复默认状态</button>
+                            </div>
                             <div id="font-management-list" class="font-management-list"></div>
                         </div>
                         <div class="settings-group">
@@ -1330,6 +1333,43 @@
                 </div>
                 <div class="announcement-buttons">
                     <button id="coordinate-keypad-confirm-btn" class="announcement-btn ok-btn" data-i18n="common.confirm">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="font-preview-modal" class="modal">
+        <div class="modal-content font-preview-modal-content">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <h2 id="font-preview-modal-title">字体预览</h2>
+                </div>
+                <button id="font-preview-modal-close-btn" class="modal-close-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="font-preview-modal-controls">
+                    <label class="font-preview-field">
+                        <span>预览内容</span>
+                        <input id="font-preview-modal-text-input" type="text" class="export-filename-input" value="一个白板-Aboard-123">
+                    </label>
+                    <div class="font-preview-size-editor">
+                        <label class="font-preview-field">
+                            <span>预览字号</span>
+                            <input id="font-preview-modal-size-range" type="range" class="slider" min="16" max="160" step="1" value="48">
+                        </label>
+                        <input id="font-preview-modal-size-input" type="number" class="size-input" min="16" max="160" step="1" value="48">
+                        <button id="font-preview-modal-size-increase-btn" type="button" class="button-secondary">放大</button>
+                        <button id="font-preview-modal-size-reset-btn" type="button" class="button-secondary">恢复字号</button>
+                        <button id="font-preview-modal-text-reset-btn" type="button" class="button-secondary">恢复内容</button>
+                    </div>
+                </div>
+                <div class="font-preview-modal-stage">
+                    <div id="font-preview-modal-sample" class="font-preview-modal-sample">一个白板-Aboard-123</div>
                 </div>
             </div>
         </div>
