@@ -313,12 +313,12 @@ body.vector-preview-active #off-canvas-image-layer {
 /* Background config panel: center content vertically */
 #background-config.active {
     display: grid;
-    grid-template-columns: 146px minmax(0, 1fr);
+    grid-template-columns: 158px minmax(0, 1fr);
     align-items: start;
     gap: 8px;
     padding-top: 2px;
     padding-right: 6px;
-    width: min(476px, calc(100vw - 48px));
+    width: min(492px, calc(100vw - 44px));
 }
 
 #background-config .config-group,
@@ -345,14 +345,18 @@ body.vector-preview-active #off-canvas-image-layer {
 
 #background-config .color-picker-main {
     display: grid;
-    grid-template-columns: repeat(4, 32px);
+    grid-template-columns: repeat(4, 36px);
     gap: 6px;
     justify-content: start;
 }
 
+#background-config .color-picker-row + .color-picker-icon-btn {
+    margin-top: 8px;
+}
+
 #background-config .color-btn {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-width: 2px;
     border-radius: 7px;
     box-shadow: none;
@@ -370,13 +374,44 @@ body.vector-preview-active #off-canvas-image-layer {
 
 #background-config .color-picker-icon-btn {
     align-self: flex-start;
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
 }
 
 #background-config .color-picker-icon-btn svg {
     width: 18px;
     height: 18px;
+}
+
+#background-coordinate-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+#background-coordinate-actions .pattern-option-btn {
+    width: 100%;
+    min-height: 32px;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    justify-content: flex-start;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+#background-coordinate-actions .pattern-option-btn span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#background-coordinate-actions .pattern-option-btn svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
 }
 
 #background-config .pattern-grid-compact {
