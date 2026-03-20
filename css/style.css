@@ -313,12 +313,12 @@ body.vector-preview-active #off-canvas-image-layer {
 /* Background config panel: center content vertically */
 #background-config.active {
     display: grid;
-    grid-template-columns: 136px minmax(0, 1fr);
+    grid-template-columns: 146px minmax(0, 1fr);
     align-items: start;
     gap: 8px;
-    padding-top: 4px;
-    padding-right: 40px;
-    width: min(468px, calc(100vw - 52px));
+    padding-top: 2px;
+    padding-right: 6px;
+    width: min(476px, calc(100vw - 48px));
 }
 
 #background-config .config-group,
@@ -345,14 +345,14 @@ body.vector-preview-active #off-canvas-image-layer {
 
 #background-config .color-picker-main {
     display: grid;
-    grid-template-columns: repeat(4, 30px);
-    gap: 5px;
+    grid-template-columns: repeat(4, 32px);
+    gap: 6px;
     justify-content: start;
 }
 
 #background-config .color-btn {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     border-width: 2px;
     border-radius: 7px;
     box-shadow: none;
@@ -370,8 +370,8 @@ body.vector-preview-active #off-canvas-image-layer {
 
 #background-config .color-picker-icon-btn {
     align-self: flex-start;
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
 }
 
 #background-config .color-picker-icon-btn svg {
