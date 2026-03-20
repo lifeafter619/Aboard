@@ -3,6 +3,7 @@
 ## 1. Drawing and Interaction
 - Canvas rendering stays centered on native browser APIs.
 - Pen styles, shapes, selection, and edge-guided drawing are separated into dedicated modules.
+- To keep magnified content crisp, the editable scene is also mirrored into an SVG vector preview; text, images, strokes, and shapes prefer the SVG layer while zoomed in, while export still follows the existing Canvas pipeline.
 - Overlay controls for selection, rotation, resize, and image editing are managed outside the base canvas rendering path.
 
 ## 2. State, History, and Recovery

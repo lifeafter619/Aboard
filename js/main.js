@@ -13,6 +13,7 @@ const MAX_FEATURE_WIDGET_ZINDEX = 1900;
 const QUALITY_UPDATE_DEBOUNCE_MS = 120;
 const MIN_DYNAMIC_RENDER_SCALE = 1;
 const MAX_DYNAMIC_RENDER_SCALE = 4;
+const INTERACTION_DYNAMIC_RENDER_SCALE_CAP = 1.25;
 const RENDER_SCALE_SCHEDULE_THRESHOLD = 0.15;
 const RENDER_SCALE_APPLY_THRESHOLD = 0.05;
 const MAX_DYNAMIC_BACKING_DIMENSION = 8192;
@@ -87,6 +88,7 @@ class DrawingBoard {
         
         // Initialize shape drawing manager
         this.shapeDrawingManager = new ShapeDrawingManager(this.canvas, this.ctx, this.drawingEngine, this.historyManager);
+        this.drawingEngine.setShapeDrawingManager(this.shapeDrawingManager);
         
         // Initialize line style modal for both pen and shape tools
         this.lineStyleModal = new LineStyleModal(this.drawingEngine, this.shapeDrawingManager);
@@ -139,7 +141,7 @@ class DrawingBoard {
         
         // Canvas scale limits
         this.MIN_CANVAS_SCALE = 0.5;
-        this.NORMAL_MAX_SCALE = 5.0;
+        this.NORMAL_MAX_SCALE = 10.0;
         this.UNLIMITED_MAX_SCALE = 500.0;
         this.MAX_CANVAS_SCALE = this.settingsManager.unlimitedZoom ? this.UNLIMITED_MAX_SCALE : this.NORMAL_MAX_SCALE;
         this.dynamicRenderScale = 1;
@@ -174,6 +176,7 @@ class DrawingBoard {
         this.isCoordinatePointPanelVisible = false;
         this.isCoordinateInputPanelVisible = false;
         this.expandedCoordinatePlotId = null;
+        this.pendingCoordinateLineStartId = null;
         this.coordinateOriginDragStart = { x: 0, y: 0 };
         
         // Uploaded images storage
@@ -418,16 +421,16 @@ class DrawingBoard {
             {
                 key: 'coordinatePointModal',
                 selector: '#coordinate-point-modal .coordinate-point-modal-content',
-                minWidth: 380,
-                minHeight: 280,
+                minWidth: 320,
+                minHeight: 260,
                 showResizeHandles: false,
                 showHeaderActions: false
             },
             {
                 key: 'coordinateKeypadModal',
                 selector: '#coordinate-keypad-modal .coordinate-keypad-modal-content',
-                minWidth: 360,
-                minHeight: 320
+                minWidth: 320,
+                minHeight: 300
             }
         ];
     }
@@ -1067,10 +1070,19 @@ class DrawingBoard {
             
             if (this.isCoordinatePointMode && this.backgroundManager.supportsMovableOrigin()) {
                 const point = this.getLogicalCanvasPointFromEvent(e);
+                const pointMode = this.getCoordinatePointLineMode();
+                if (pointMode === 'selected') {
+                    const hitPoint = this.backgroundManager.findCoordinatePointNearCanvasPoint(point.x, point.y);
+                    if (hitPoint) {
+                        this.handleSelectedCoordinateLinePointClick(hitPoint.id);
+                        return;
+                    }
+                }
                 const addedPoint = this.backgroundManager.addCoordinatePoint(point.x, point.y);
                 if (addedPoint?.duplicate) {
                     return;
                 }
+                this.resetSelectedCoordinateLineConnection();
                 this.savePageBackground(this.currentPage);
                 this.updateBackgroundUI();
                 this.showCoordinateToast('background.pointAdded', '已添加坐标点', 'success');
@@ -1117,6 +1129,7 @@ class DrawingBoard {
             
             if (e.button === 1 || (e.button === 0 && e.shiftKey) || this.drawingEngine.currentTool === 'pan') {
                 this.drawingEngine.startPanning(e);
+                this.scheduleRenderQualityUpdate();
             } else if (this.drawingEngine.currentTool === 'select') {
                 // Handle selection tool
                 this.selectionManager.startSelection(e);
@@ -1126,12 +1139,14 @@ class DrawingBoard {
                     return;
                 }
                 this.shapeDrawingManager.startDrawing(e);
+                this.scheduleRenderQualityUpdate();
             } else if (this.drawingEngine.currentTool === 'pen' || this.drawingEngine.currentTool === 'eraser') {
                 // Don't start drawing if interacting with teaching tools
                 if (this.teachingToolsManager && this.teachingToolsManager.isInteracting) {
                     return;
                 }
                 this.drawingEngine.startDrawing(e);
+                this.scheduleRenderQualityUpdate();
                 // Show eraser cursor only when actually erasing on canvas
                 if (this.drawingEngine.currentTool === 'eraser') {
                     this.showEraserCursor();
@@ -1219,6 +1234,7 @@ class DrawingBoard {
             }
             this.handleDrawingComplete();
             this.drawingEngine.stopPanning();
+            this.scheduleRenderQualityUpdate();
             // Hide eraser cursor when erasing stops
             if (this.drawingEngine.currentTool === 'eraser') {
                 this.hideEraserCursor();
@@ -1235,6 +1251,7 @@ class DrawingBoard {
                     this.handlePointerPinchEnd();
                 }
             }
+            this.scheduleRenderQualityUpdate();
             // Hide eraser cursor when pointer is cancelled
             if (this.drawingEngine.currentTool === 'eraser') {
                 this.hideEraserCursor();
@@ -1432,6 +1449,11 @@ class DrawingBoard {
             if (this.historyManager.undo()) {
                 // Clear stroke selection as strokes are no longer valid
                 this.drawingEngine.clearStrokes();
+                this.drawingEngine.stampedImages = [];
+                this.drawingEngine.objectGroups = [];
+                this.insertTextManager?.clearTextObjects?.();
+                this.drawingEngine.clearVectorScene();
+                this.drawingEngine.setVectorPreviewVisible(false);
                 this.updateUI();
                 this.saveSessionDebounced();
             }
@@ -1441,6 +1463,11 @@ class DrawingBoard {
             if (this.historyManager.redo()) {
                 // Clear stroke selection as strokes are no longer valid
                 this.drawingEngine.clearStrokes();
+                this.drawingEngine.stampedImages = [];
+                this.drawingEngine.objectGroups = [];
+                this.insertTextManager?.clearTextObjects?.();
+                this.drawingEngine.clearVectorScene();
+                this.drawingEngine.setVectorPreviewVisible(false);
                 this.updateUI();
                 this.saveSessionDebounced();
             }
@@ -1900,6 +1927,7 @@ class DrawingBoard {
         const coordinateClearPointsBtn = document.getElementById('coordinate-clear-points-btn');
         if (coordinateClearPointsBtn) {
             coordinateClearPointsBtn.addEventListener('click', () => {
+                this.resetSelectedCoordinateLineConnection({ clearSelection: true });
                 this.backgroundManager.clearCoordinatePoints();
                 this.savePageBackground(this.currentPage);
                 this.updateBackgroundUI();
@@ -1925,8 +1953,8 @@ class DrawingBoard {
             if (!expression || !this.backgroundManager.supportsMovableOrigin()) return;
 
             try {
-                const plot = this.backgroundManager.addCoordinatePlot(expression, this.backgroundManager.backgroundPattern);
-                this.expandedCoordinatePlotId = plot?.id || null;
+                this.backgroundManager.addCoordinatePlot(expression, this.backgroundManager.backgroundPattern);
+                this.expandedCoordinatePlotId = null;
                 coordinateExpressionInput.value = '';
                 this.syncCoordinateExpressionDisplay();
                 this.savePageBackground(this.currentPage);
@@ -3733,6 +3761,50 @@ class DrawingBoard {
         };
     }
 
+    resetSelectedCoordinateLineConnection(options = {}) {
+        const { clearSelection = false } = options;
+        this.pendingCoordinateLineStartId = null;
+
+        if (clearSelection && this.selectionManager?.isCoordinateSelection?.()) {
+            this.selectionManager.clearSelection();
+        }
+    }
+
+    handleSelectedCoordinateLinePointClick(pointId) {
+        if (!pointId || !this.backgroundManager) return false;
+
+        const startPointId = this.pendingCoordinateLineStartId;
+        if (!startPointId || startPointId === pointId) {
+            this.pendingCoordinateLineStartId = pointId;
+            this.showCoordinateToast(
+                'background.coordinateStatusSelectLineStartPoint',
+                '已选中第一个点，再点一个点即可连线'
+            );
+            return true;
+        }
+
+        const existingGroup = this.backgroundManager.findCoordinateGroupByPointIds?.([startPointId, pointId], { line: true });
+        if (existingGroup) {
+            this.resetSelectedCoordinateLineConnection();
+            this.showCoordinateToast(
+                'background.coordinateLineExists',
+                '这两个点之间已经有线段了'
+            );
+            return true;
+        }
+
+        const group = this.backgroundManager.createCoordinateGroup([startPointId, pointId], { line: true });
+        this.resetSelectedCoordinateLineConnection();
+        if (!group) {
+            return false;
+        }
+
+        this.savePageBackground(this.currentPage);
+        this.updateBackgroundUI();
+        this.showCoordinateToast('background.coordinateLineCreated', '线段已连接', 'success');
+        return true;
+    }
+
     escapeHtml(value) {
         return String(value)
             .replace(/&/g, '&amp;')
@@ -3879,6 +3951,7 @@ class DrawingBoard {
                 dashStyle,
                 segments
             });
+            this.expandedCoordinatePlotId = null;
             this.savePageBackground(this.currentPage);
             this.updateBackgroundUI();
             this.showCoordinateToast('background.plotUpdated', '函数图像已更新', 'success');
@@ -4049,10 +4122,10 @@ class DrawingBoard {
                 statusOffFallback: '绘制点线模式已关闭'
             },
             selected: {
-                hintKey: 'background.addPointHintSelected',
-                hintFallback: '开启后点击画布添加坐标点；切到选择工具后，仅选中的点会连线',
-                statusOnKey: 'background.coordinateStatusAddPointSelected',
-                statusOnFallback: '选择连线模式已开启，点击画布添加坐标点',
+                hintKey: 'background.addPointHintSelectedInteractive',
+                hintFallback: '开启后点击空白处添加坐标点；依次点击两个点即可连接线段',
+                statusOnKey: 'background.coordinateStatusAddPointSelectedInteractive',
+                statusOnFallback: '选择连线模式已开启，点击空白处添加点，点击两个点可连线',
                 statusOffKey: 'background.coordinateStatusAddPointOff',
                 statusOffFallback: '绘制点线模式已关闭'
             }
@@ -4069,6 +4142,16 @@ class DrawingBoard {
         }
     }
 
+    syncCoordinatePointModeSectionVisibility(forceVisible) {
+        const section = document.getElementById('coordinate-point-mode-section');
+        if (!section) return;
+
+        const isVisible = typeof forceVisible === 'boolean'
+            ? forceVisible
+            : !!this.isCoordinatePointMode && this.backgroundManager.supportsMovableOrigin(this.backgroundManager.backgroundPattern);
+        section.hidden = !isVisible;
+    }
+
     setCoordinatePointLineMode(mode, options = {}) {
         const normalizedMode = ['line', 'auto', 'selected'].includes(mode) ? mode : 'auto';
         const currentMode = this.getCoordinatePointLineMode();
@@ -4076,6 +4159,7 @@ class DrawingBoard {
             return false;
         }
 
+        this.resetSelectedCoordinateLineConnection();
         this.backgroundManager.updateCoordinateOverlayOptions({
             pointLineMode: normalizedMode
         });
@@ -4091,6 +4175,9 @@ class DrawingBoard {
 
     setCoordinatePointMode(enabled) {
         this.isCoordinatePointMode = !!enabled && this.backgroundManager.supportsMovableOrigin();
+        if (!this.isCoordinatePointMode) {
+            this.resetSelectedCoordinateLineConnection();
+        }
 
         const addPointBtn = document.getElementById('coordinate-add-point-btn');
         if (addPointBtn) {
@@ -4101,6 +4188,8 @@ class DrawingBoard {
         if (pointToggleBtn) {
             pointToggleBtn.classList.toggle('active', this.isCoordinatePointPanelVisible || this.isCoordinatePointMode);
         }
+
+        this.syncCoordinatePointModeSectionVisibility();
 
         if (this.isCoordinatePointMode) {
             if (this.drawingEngine.currentTool !== 'background') {
@@ -4163,12 +4252,16 @@ class DrawingBoard {
         // Handle shape drawing completion
         if (this.drawingEngine.currentTool === 'shape') {
             this.shapeDrawingManager.stopDrawing();
+            this.syncVectorPreviewState(true);
+            this.scheduleRenderQualityUpdate();
             return;
         }
         
         if (this.drawingEngine.stopDrawing()) {
             this.historyManager.saveState();
             this.saveSessionDebounced();
+            this.syncVectorPreviewState(true);
+            this.scheduleRenderQualityUpdate();
             // Keep eraser config open after each erase stroke so users can continuously
             // fine-tune and erase without repeated reopen operations.
             if (this.drawingEngine.currentTool !== 'eraser') {
@@ -4618,8 +4711,18 @@ class DrawingBoard {
         if (!this.settingsManager.unlimitedZoom) {
             return MIN_DYNAMIC_RENDER_SCALE;
         }
+        const isInteractiveHighZoom = !!(
+            this.drawingEngine?.isDrawing ||
+            this.drawingEngine?.isPanning ||
+            this.isPinching ||
+            this.hasTwoFingers ||
+            this.shapeDrawingManager?.isDrawing
+        );
         const scale = this.drawingEngine?.canvasScale || 1;
-        const preferredScale = Math.min(MAX_DYNAMIC_RENDER_SCALE, Math.max(MIN_DYNAMIC_RENDER_SCALE, Math.sqrt(scale)));
+        const preferredScale = Math.min(
+            isInteractiveHighZoom ? INTERACTION_DYNAMIC_RENDER_SCALE_CAP : MAX_DYNAMIC_RENDER_SCALE,
+            Math.max(MIN_DYNAMIC_RENDER_SCALE, Math.sqrt(scale))
+        );
 
         const cssWidth = parseFloat(this.canvas.style.width) || this.settingsManager.canvasWidth;
         const cssHeight = parseFloat(this.canvas.style.height) || this.settingsManager.canvasHeight;
@@ -4657,13 +4760,6 @@ class DrawingBoard {
         const width = parseFloat(this.canvas.style.width) || this.settingsManager.canvasWidth;
         const height = parseFloat(this.canvas.style.height) || this.settingsManager.canvasHeight;
 
-        const oldCanvas = document.createElement('canvas');
-        oldCanvas.width = this.canvas.width;
-        oldCanvas.height = this.canvas.height;
-        const oldCtx = oldCanvas.getContext('2d');
-        if (!oldCtx) return;
-        oldCtx.drawImage(this.canvas, 0, 0);
-
         this.dynamicRenderScale = scale;
         const dpr = this.getRenderPixelRatio();
 
@@ -4684,8 +4780,10 @@ class DrawingBoard {
         this.ctx.scale(dpr, dpr);
         this.bgCtx.scale(dpr, dpr);
 
-        this.ctx.drawImage(oldCanvas, 0, 0, oldCanvas.width, oldCanvas.height, 0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.clearRect(0, 0, width, height);
+        this.bgCtx.clearRect(0, 0, width, height);
         this.backgroundManager.drawBackground();
+        this.drawingEngine.renderScene(this.insertTextManager || null);
     }
     
     applyCanvasSize() {
@@ -6143,6 +6241,8 @@ class DrawingBoard {
             coordinateAddPointBtn.classList.toggle('active', supportsCoordinateTools && this.isCoordinatePointMode);
         }
 
+        this.syncCoordinatePointModeSectionVisibility(supportsCoordinateTools && this.isCoordinatePointMode);
+
         if (!coordinateState.plots.some(plot => plot.id === this.expandedCoordinatePlotId && plot.coordinateType === currentPattern)) {
             this.expandedCoordinatePlotId = null;
         }
@@ -6234,6 +6334,7 @@ class DrawingBoard {
         const touch2 = e.touches[1];
         this.lastPinchDistance = this.getPinchDistance(touch1, touch2);
         this.lastPinchCenter = this.getPinchCenter(touch1, touch2);
+        this.scheduleRenderQualityUpdate();
     }
     
     handlePinchMove(e) {
@@ -6308,6 +6409,7 @@ class DrawingBoard {
         this.isPinching = false;
         this.lastPinchDistance = 0;
         this.lastPinchCenter = null;
+        this.scheduleRenderQualityUpdate();
 
         // Save state after pinch ends
         localStorage.setItem('canvasScale', this.drawingEngine.canvasScale);
@@ -6355,6 +6457,7 @@ class DrawingBoard {
         const p2 = pointers[1];
         this.lastPinchDistance = this.getPointerDistance(p1, p2);
         this.lastPinchCenter = this.getPointerCenter(p1, p2);
+        this.scheduleRenderQualityUpdate();
     }
     
     handlePointerPinchMove() {
@@ -6416,6 +6519,7 @@ class DrawingBoard {
         this.hasTwoFingers = false;
         this.lastPinchDistance = 0;
         this.lastPinchCenter = null;
+        this.scheduleRenderQualityUpdate();
         
         // Save state after pinch ends
         localStorage.setItem('canvasScale', this.drawingEngine.canvasScale);
@@ -6474,6 +6578,59 @@ class DrawingBoard {
         if (this.imageControls?.isActive) {
             this.imageControls.updateControlBox();
         }
+        this.syncVectorPreviewState();
+    }
+
+    shouldShowLiveStrokePreview() {
+        const finalScale = this.canvasFitScale * this.drawingEngine.canvasScale;
+        return finalScale > 1.05 && this.drawingEngine?.currentTool === 'pen';
+    }
+
+    shouldShowLiveEraserPreview() {
+        const finalScale = this.canvasFitScale * this.drawingEngine.canvasScale;
+        return finalScale > 1.05 && this.drawingEngine?.currentTool === 'eraser';
+    }
+
+    hasVectorPreviewContent() {
+        const hasText = !!(this.insertTextManager?.textObjects?.length);
+        const hasLiveStrokePreview = !!this.drawingEngine?.shouldUseLiveStrokePreview?.();
+        const hasLiveEraserPreview = !!this.drawingEngine?.shouldUseLiveEraserPreview?.();
+        const hasShapePreview = !!this.shapeDrawingManager?.isDrawing;
+        return this.drawingEngine.strokes.length > 0 ||
+            this.drawingEngine.stampedImages.length > 0 ||
+            hasText ||
+            hasLiveStrokePreview ||
+            hasLiveEraserPreview ||
+            hasShapePreview;
+    }
+
+    shouldUseVectorPreview() {
+        const finalScale = this.canvasFitScale * this.drawingEngine.canvasScale;
+        const hasLiveDrawingPreview = !!(
+            this.drawingEngine?.shouldUseLiveStrokePreview?.() ||
+            this.drawingEngine?.shouldUseLiveEraserPreview?.()
+        );
+        const hasBlockingTransientOverlay = !!(
+            this.insertImageManager?.isActive ||
+            this.insertTextManager?.isActive ||
+            this.selectionManager?.hasSelection?.() ||
+            this.strokeControls?.isActive ||
+            (this.drawingEngine.isDrawing && !hasLiveDrawingPreview) ||
+            (this.shapeDrawingManager?.isDrawing && !this.shapeDrawingManager?.previewCanvas)
+        );
+
+        return finalScale > 1.05 &&
+            this.hasVectorPreviewContent() &&
+            !hasBlockingTransientOverlay;
+    }
+
+    syncVectorPreviewState(forceRender = false) {
+        if (forceRender || this.hasVectorPreviewContent()) {
+            this.drawingEngine.renderVectorScene(this.insertTextManager || null);
+        }
+
+        const shouldShow = this.shouldUseVectorPreview();
+        this.drawingEngine.setVectorPreviewVisible(shouldShow);
     }
     
     loadUploadedImages() {
@@ -6637,6 +6794,17 @@ class DrawingBoard {
                     tool: s.tool,
                     lineStyle: s.lineStyle || 'solid',
                     dashDensity: s.dashDensity || 10,
+                    renderMode: s.renderMode || null,
+                    shapeType: s.shapeType || null,
+                    shapeStart: s.shapeStart ? { ...s.shapeStart } : null,
+                    shapeEnd: s.shapeEnd ? { ...s.shapeEnd } : null,
+                    shapeLineStyle: s.shapeLineStyle || null,
+                    shapeDashDensity: s.shapeDashDensity || null,
+                    shapeWaveDensity: s.shapeWaveDensity || null,
+                    shapeMultiLineCount: s.shapeMultiLineCount || null,
+                    shapeMultiLineSpacing: s.shapeMultiLineSpacing || null,
+                    arrowSize: s.arrowSize || null,
+                    eraserShape: s.eraserShape || null,
                     rotation: s.rotation || 0,
                     layerOrder: s.layerOrder || 0,
                     objectId: s.objectId || this.drawingEngine.getNextObjectId(),

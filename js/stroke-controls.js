@@ -545,5 +545,7 @@ class StrokeControls {
             this.drawingEngine.selectedStrokeIndex = this.currentStrokeIndex;
             this.drawingEngine.drawSelectionBorder();
         }
+
+        window.drawingBoard?.syncVectorPreviewState?.();
     }
 }

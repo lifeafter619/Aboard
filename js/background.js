@@ -128,12 +128,19 @@ class BackgroundManager {
     }
 
     getCanvasLogicalBounds() {
-        const dpr = window.devicePixelRatio || 1;
+        const logicalWidth = this.bgCanvas.clientWidth ||
+            this.bgCanvas.offsetWidth ||
+            parseFloat(this.bgCanvas.style.width) ||
+            this.bgCanvas.width / (window.devicePixelRatio || 1);
+        const logicalHeight = this.bgCanvas.clientHeight ||
+            this.bgCanvas.offsetHeight ||
+            parseFloat(this.bgCanvas.style.height) ||
+            this.bgCanvas.height / (window.devicePixelRatio || 1);
         return {
             x: 0,
             y: 0,
-            width: this.bgCanvas.width / dpr,
-            height: this.bgCanvas.height / dpr
+            width: logicalWidth,
+            height: logicalHeight
         };
     }
 
@@ -337,10 +344,15 @@ class BackgroundManager {
     }
 
     getCanvasLogicalSize() {
-        const dpr = window.devicePixelRatio || 1;
         return {
-            width: this.bgCanvas.clientWidth || this.bgCanvas.offsetWidth || (this.bgCanvas.width / dpr),
-            height: this.bgCanvas.clientHeight || this.bgCanvas.offsetHeight || (this.bgCanvas.height / dpr)
+            width: this.bgCanvas.clientWidth ||
+                this.bgCanvas.offsetWidth ||
+                parseFloat(this.bgCanvas.style.width) ||
+                (this.bgCanvas.width / (window.devicePixelRatio || 1)),
+            height: this.bgCanvas.clientHeight ||
+                this.bgCanvas.offsetHeight ||
+                parseFloat(this.bgCanvas.style.height) ||
+                (this.bgCanvas.height / (window.devicePixelRatio || 1))
         };
     }
 
@@ -679,9 +691,9 @@ class BackgroundManager {
             }
 
             // Apply transformations to container
-            const dpr = window.devicePixelRatio || 1;
-            const canvasWidth = this.bgCanvas.width / dpr;
-            const canvasHeight = this.bgCanvas.height / dpr;
+            const logicalSize = this.getCanvasLogicalSize();
+            const canvasWidth = logicalSize.width;
+            const canvasHeight = logicalSize.height;
             
             this.setStyleIfChanged(containerElement, 'opacity', String(this.patternIntensity));
 
@@ -1543,9 +1555,11 @@ class BackgroundManager {
         return null;
     }
 
-    getCoordinateSelectionBounds(pointIds = null, padding = 10) {
+    getCoordinateSelectionBounds(pointIds = null, padding = 10, options = {}) {
         const entries = this.getCoordinatePointEntries(pointIds);
         if (entries.length === 0) return null;
+        const minWidth = Number.isFinite(options?.minWidth) ? Math.max(0, options.minWidth) : 132;
+        const minHeight = Number.isFinite(options?.minHeight) ? Math.max(0, options.minHeight) : 56;
 
         let minX = Infinity;
         let minY = Infinity;
@@ -1562,8 +1576,8 @@ class BackgroundManager {
         return {
             x: minX - padding,
             y: minY - padding,
-            width: Math.max(132, (maxX - minX) + padding * 2),
-            height: Math.max(56, (maxY - minY) + padding * 2)
+            width: Math.max(minWidth, (maxX - minX) + padding * 2),
+            height: Math.max(minHeight, (maxY - minY) + padding * 2)
         };
     }
 

@@ -454,7 +454,7 @@ window.translations = {
             size: '畫布尺寸',
             sizeHint: '選擇預設尺寸或自定義畫布比例和大小',
             unlimitedZoom: '允許無限放大',
-            unlimitedZoomHint: '勾選後，畫布可以無限放大（最高500倍）',
+            unlimitedZoomHint: '預設最多可放大到 1000%，勾選後可繼續放大（最高 500 倍）',
             infiniteCanvas: '無限畫布',
             pagination: '分頁模式',
             presets: {

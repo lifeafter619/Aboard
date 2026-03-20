@@ -64,7 +64,32 @@ button, a, input[type="button"], input[type="submit"] {
     width: 100%;
     height: 100%;
     cursor: crosshair;
+    z-index: 2;
+    transition: opacity 0.18s ease;
+}
+
+#vector-scene-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    pointer-events: none;
+    overflow: visible;
     z-index: 1;
+}
+
+body.vector-preview-active #canvas {
+    opacity: 0;
+}
+
+body.vector-preview-active #vector-scene-svg {
+    display: block;
+}
+
+body.vector-preview-active #off-canvas-image-layer {
+    display: none !important;
 }
 
 /* Eraser cursor */
@@ -1987,12 +2012,20 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-point-modal-content {
-    max-width: min(520px, calc(100vw - 40px));
-    width: min(520px, calc(100vw - 40px));
-    max-height: 85vh;
+    --coordinate-floating-gap: clamp(12px, 2vw, 24px);
+    --coordinate-point-top-gap: clamp(64px, 9vh, 96px);
+    position: fixed;
+    top: var(--coordinate-point-top-gap);
+    right: var(--coordinate-floating-gap);
+    margin: 0;
+    min-width: 0;
+    max-width: min(328px, calc(100vw - (var(--coordinate-floating-gap) * 2)));
+    width: min(328px, calc(100vw - (var(--coordinate-floating-gap) * 2)));
+    max-height: calc(100vh - var(--coordinate-point-top-gap) - var(--coordinate-floating-gap));
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    padding: 18px;
 }
 
 .coordinate-point-modal {
@@ -2000,13 +2033,17 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-point-modal-content .modal-body {
+    display: flex;
+    flex-direction: column;
     gap: 10px;
     min-height: 0;
     overflow-y: auto;
 }
 
 .coordinate-point-modal-content .modal-header {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eef1f5;
 }
 
 .coordinate-point-modal-content .modal-header h2 {
@@ -2014,9 +2051,9 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-point-modal-content .modal-close-btn {
-    width: 28px;
-    height: 28px;
-    border-radius: 7px;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
 }
 
 .coordinate-point-modal-content .modal-close-btn svg {
@@ -2031,22 +2068,29 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-keypad-modal-content {
-    max-width: min(460px, calc(100vw - 48px));
-    width: min(460px, calc(100vw - 48px));
-    max-height: calc(100vh - 72px);
+    --coordinate-floating-gap: clamp(12px, 2vw, 24px);
+    position: fixed;
+    right: var(--coordinate-floating-gap);
+    bottom: var(--coordinate-floating-gap);
+    margin: 0;
+    min-width: 0;
+    max-width: min(396px, calc(100vw - (var(--coordinate-floating-gap) * 2)));
+    width: min(396px, calc(100vw - (var(--coordinate-floating-gap) * 2)));
+    max-height: calc(100vh - (var(--coordinate-floating-gap) * 2));
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    padding: 18px;
 }
 
 .coordinate-keypad-modal-content .modal-body {
-    gap: 12px;
+    gap: 10px;
     min-height: 0;
     overflow-y: auto;
 }
 
 .coordinate-keypad-modal-content .announcement-buttons {
-    padding-top: 12px;
+    padding-top: 10px;
 }
 
 #coordinate-tools-group {
@@ -2078,17 +2122,50 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     margin-top: 6px;
 }
 
+.coordinate-point-panel {
+    gap: 10px;
+}
+
+.coordinate-point-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid #e7ecf3;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #fafcff 0%, #f4f8ff 100%);
+}
+
+.coordinate-point-mode-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.coordinate-point-mode-section[hidden] {
+    display: none !important;
+}
+
 .coordinate-point-action-buttons {
     margin-top: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
 }
 
 .coordinate-point-action-buttons .pattern-option-btn,
 .coordinate-point-mode-options .pattern-option-btn,
 .coordinate-point-modal-content .coordinate-plot-panel .pattern-option-btn {
-    padding: 6px 10px;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 10px;
     border-width: 2px;
-    border-radius: 7px;
-    font-size: 11px;
+    border-radius: 10px;
+    font-size: 12px;
+    min-height: 36px;
+    font-weight: 600;
 }
 
 .coordinate-point-mode-options {
@@ -2099,25 +2176,52 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 
 .coordinate-point-mode-btn {
     min-width: 0;
+    white-space: normal;
+    line-height: 1.35;
+    text-align: center;
 }
 
 .coordinate-hint-line {
-    margin: 4px 0 0;
+    margin: 0;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: #f7f9fc;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.45;
 }
 
 .coordinate-point-count {
-    margin-top: 4px;
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: #e9f2ff;
+    color: #0a63c9;
     font-size: 12px;
-    color: #666;
+    font-weight: 600;
+}
+
+.coordinate-point-count-value {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .coordinate-plot-panel {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid #ececec;
+    margin-top: 0;
+    padding: 12px;
+    border: 1px solid #e7ecf3;
+    border-radius: 14px;
+    background: #fafcff;
 }
 
 .coordinate-plot-panel-header {
@@ -2127,45 +2231,57 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     gap: 10px;
 }
 
+.coordinate-plot-panel-header label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+}
+
 .coordinate-clear-plots-inline {
     flex-shrink: 0;
 }
 
 .coordinate-point-modal-content .coordinate-plot-input-row input {
-    min-height: 32px;
-    padding: 6px 10px;
+    min-height: 38px;
+    padding: 8px 10px;
     font-size: 12px;
 }
 
 .coordinate-plot-input-row {
     display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+    margin-top: 0;
+}
+
+.coordinate-plot-action-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
-    align-items: center;
-    margin-top: 4px;
 }
 
 #coordinate-expression-input {
-    flex: 1;
+    width: 100%;
     min-width: 0;
-    padding: 7px 10px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+    padding: 8px 10px;
+    border: 1px solid #d6dce6;
+    border-radius: 10px;
     background: #fff;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .coordinate-input-panel-toggle {
-    flex-shrink: 0;
-    min-width: 88px;
+    min-width: 0;
 }
 
 .coordinate-keypad-expression-display {
-    min-height: 48px;
-    padding: 10px 12px;
+    min-height: 44px;
+    padding: 8px 10px;
     border-radius: 10px;
     background: #f5f7fb;
     border: 1px solid #d9e2f3;
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.5;
     color: #1f2937;
     word-break: break-all;
@@ -2175,16 +2291,16 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 .coordinate-keypad-panel {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .coordinate-keypad-btn {
-    min-height: 38px;
-    padding: 8px 6px;
+    min-height: 34px;
+    padding: 7px 6px;
     border: 1px solid #ddd;
     border-radius: 8px;
     background: #fff;
-    font-size: 12px;
+    font-size: 11.5px;
     cursor: pointer;
     transition: background-color 0.2s ease, border-color 0.2s ease;
 }
@@ -2197,28 +2313,28 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 .coordinate-keypad-top-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
 }
 
 .coordinate-keypad-section {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px;
+    gap: 6px;
+    padding: 8px;
     border-radius: 12px;
     background: #f7f7f7;
     border: 1px solid #ececec;
 }
 
 .coordinate-keypad-section-title {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     color: #666;
 }
 
 .coordinate-keypad-grid {
     display: grid;
-    gap: 8px;
+    gap: 6px;
 }
 
 .coordinate-keypad-grid-digits {
@@ -2235,12 +2351,23 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 @media (max-width: 520px) {
+    .coordinate-point-modal-content {
+        --coordinate-floating-gap: 10px;
+        --coordinate-point-top-gap: 56px;
+        padding: 16px;
+    }
+
     .coordinate-tool-toggles {
         grid-template-columns: 1fr;
     }
 
     .coordinate-keypad-modal {
-        padding-top: 20px;
+        padding-top: 16px;
+    }
+
+    .coordinate-keypad-modal-content {
+        --coordinate-floating-gap: 10px;
+        padding: 16px;
     }
 
     .coordinate-keypad-grid-operators,
@@ -2790,6 +2917,98 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 .selection-color-btn {
     position: relative;
     overflow: hidden;
+    --selection-color-preview: #2563eb;
+}
+
+.selection-color-btn::after {
+    content: '';
+    position: absolute;
+    right: 5px;
+    bottom: 5px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--selection-color-preview);
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.2);
+}
+
+.selection-color-picker-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.selection-color-popover {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-50%);
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 132px;
+    padding: 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    z-index: 30;
+}
+
+.selection-color-picker-wrapper.show-color-popover .selection-color-popover {
+    display: flex;
+}
+
+.selection-color-presets {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.selection-color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, 0.96);
+    background: var(--selection-swatch-color);
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.18);
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    padding: 0;
+}
+
+.selection-color-swatch:hover {
+    transform: scale(1.06);
+}
+
+.selection-color-swatch.active {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.98), 0 0 0 2px var(--theme-color), 0 1px 3px rgba(15, 23, 42, 0.18);
+}
+
+.selection-color-picker-toggle {
+    border: 1px solid rgba(148, 163, 184, 0.5);
+    background: #f8fafc;
+    color: #334155;
+    border-radius: 10px;
+    min-height: 30px;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.selection-color-picker-toggle:hover {
+    background: #eef2ff;
+    border-color: rgba(37, 99, 235, 0.32);
+}
+
+.selection-color-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .selection-coordinate-position-list {
@@ -2868,6 +3087,17 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 .coordinate-selection-only #selection-copy-btn,
 .coordinate-selection-only #selection-edit-btn {
     display: none !important;
+}
+
+.coordinate-selection-only {
+    border-color: transparent !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}
+
+.selection-action-toolbar.coordinate-toolbar-side {
+    min-width: auto;
+    max-width: min(calc(100vw - 24px), 420px) !important;
 }
 
 #selection-rotate-handle {
