@@ -384,7 +384,7 @@ body.vector-preview-active #off-canvas-image-layer {
 }
 
 #background-coordinate-actions {
-    display: flex;
+    display: none;
     flex-direction: column;
     gap: 6px;
     margin-top: 6px;
@@ -417,6 +417,10 @@ body.vector-preview-active #off-canvas-image-layer {
 #background-config .pattern-grid-compact {
     gap: 5px;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+#background-config .compact-sliders {
+    margin-top: 8px;
 }
 
 #background-config .pattern-grid-compact .pattern-option-btn {

@@ -6511,6 +6511,7 @@ class DrawingBoard {
 
         const coordinateSettingsToggleBtn = document.getElementById('coordinate-settings-toggle-btn');
         const coordinatePointToggleBtn = document.getElementById('coordinate-point-toggle-btn');
+        const backgroundCoordinateActions = document.getElementById('background-coordinate-actions');
         const coordinateToolsModal = document.getElementById('coordinate-tools-modal');
         const coordinatePointModal = document.getElementById('coordinate-point-modal');
         const coordinateToolsGroup = document.getElementById('coordinate-tools-group');
@@ -6521,6 +6522,10 @@ class DrawingBoard {
             this.isCoordinateSettingsExpanded = false;
             this.isCoordinatePointPanelVisible = false;
             this.isCoordinateInputPanelVisible = false;
+        }
+
+        if (backgroundCoordinateActions) {
+            backgroundCoordinateActions.style.display = supportsCoordinateTools ? 'flex' : 'none';
         }
 
         if (coordinateSettingsToggleBtn) {
