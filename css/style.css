@@ -312,11 +312,22 @@ body.vector-preview-active #off-canvas-image-layer {
 
 /* Background config panel: center content vertically */
 #background-config.active {
-    align-items: flex-start;
-    gap: 12px;
-    padding-top: 6px;
-    padding-right: 42px;
-    width: min(532px, calc(100vw - 72px));
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    padding-top: 4px;
+    padding-right: 40px;
+    width: min(472px, calc(100vw - 56px));
+}
+
+#background-config .config-group,
+#background-config .config-group-compact,
+#background-config .color-picker-row,
+#background-config .compact-sliders,
+#background-config .pattern-grid-compact {
+    width: 100%;
+    min-width: 0;
 }
 
 #background-config .config-group-compact {
@@ -324,77 +335,94 @@ body.vector-preview-active #off-canvas-image-layer {
 }
 
 #background-config .config-group:first-child {
-    flex: 0 0 118px;
-}
-
-#background-config .config-group:last-child {
-    flex: 1 1 0;
     min-width: 0;
 }
 
-#background-config .color-picker-row,
-#background-config .compact-sliders,
-#background-config .pattern-grid-compact {
-    width: 100%;
+#background-config .config-group:last-child {
+    min-width: 0;
 }
 
 #background-config .color-picker-row {
-    gap: 8px;
+    gap: 6px;
 }
 
 #background-config .color-picker-main {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(4, 24px);
+    gap: 4px;
+    justify-content: start;
+}
+
+#background-config .color-btn {
+    width: 24px;
+    height: 24px;
+    border-width: 1.5px;
+    border-radius: 6px;
+    box-shadow: none;
+}
+
+#background-config .color-btn:hover {
+    transform: scale(1.05);
+    box-shadow: none;
+}
+
+#background-config .color-btn.active {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 1.5px var(--theme-color);
 }
 
 #background-config .color-picker-icon-btn {
     align-self: flex-start;
+    width: 28px;
+    height: 28px;
+}
+
+#background-config .color-picker-icon-btn svg {
+    width: 16px;
+    height: 16px;
 }
 
 #background-config .pattern-grid-compact {
-    gap: 8px;
+    gap: 6px;
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 #background-config .pattern-grid-compact .pattern-option-btn {
     min-width: 0;
-    min-height: 38px;
-    padding: 8px 10px;
-    font-size: 12px;
-    line-height: 1.25;
+    min-height: 32px;
+    padding: 6px 8px;
+    font-size: 11px;
+    line-height: 1.2;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 4px;
-    white-space: normal;
-    text-align: center;
-    overflow: visible;
+    justify-content: flex-start;
+    gap: 6px;
+    white-space: nowrap;
+    text-align: left;
+    overflow: hidden;
 }
 
 #background-config .pattern-grid-compact .pattern-option-btn span {
     min-width: 0;
-    white-space: normal;
-    word-break: break-word;
-    text-align: center;
-    overflow: visible;
-    text-overflow: clip;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 #background-config .pattern-grid-compact .pattern-option-btn svg {
-    width: 13px;
-    height: 13px;
+    width: 14px;
+    height: 14px;
     flex-shrink: 0;
 }
 
 #pattern-grid .pattern-option-btn[data-pattern] {
-    flex-direction: column;
-    gap: 5px;
+    flex-direction: row;
+    gap: 6px;
 }
 
 #pattern-grid .pattern-option-icon {
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
     flex-shrink: 0;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -402,20 +430,18 @@ body.vector-preview-active #off-canvas-image-layer {
 
 #pattern-grid .pattern-option-btn[data-pattern] .pattern-option-label {
     display: block;
-    width: 100%;
+    width: auto;
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 #background-config .upload-text {
-    font-size: 12px;
+    font-size: 11px;
 }
 
 #config-area.vertical #background-config.active {
+    display: flex;
     width: 100%;
-}
-
-#config-area.vertical #background-config .config-group:first-child,
-#config-area.vertical #background-config .config-group:last-child {
-    flex: 1 1 auto;
 }
 
 #config-area.vertical #background-config .pattern-grid-compact {
