@@ -420,16 +420,16 @@ class DrawingBoard {
             {
                 key: 'coordinatePointModal',
                 selector: '#coordinate-point-modal .coordinate-point-modal-content',
-                minWidth: 380,
-                minHeight: 280,
+                minWidth: 320,
+                minHeight: 260,
                 showResizeHandles: false,
                 showHeaderActions: false
             },
             {
                 key: 'coordinateKeypadModal',
                 selector: '#coordinate-keypad-modal .coordinate-keypad-modal-content',
-                minWidth: 360,
-                minHeight: 320
+                minWidth: 320,
+                minHeight: 300
             }
         ];
     }

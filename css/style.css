@@ -2012,12 +2012,20 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-point-modal-content {
-    max-width: min(360px, calc(100vw - 20px));
-    width: min(360px, calc(100vw - 20px));
-    max-height: 85vh;
+    --coordinate-floating-gap: clamp(12px, 2vw, 24px);
+    --coordinate-point-top-gap: clamp(64px, 9vh, 96px);
+    position: fixed;
+    top: var(--coordinate-point-top-gap);
+    right: var(--coordinate-floating-gap);
+    margin: 0;
+    min-width: 0;
+    max-width: min(328px, calc(100vw - (var(--coordinate-floating-gap) * 2)));
+    width: min(328px, calc(100vw - (var(--coordinate-floating-gap) * 2)));
+    max-height: calc(100vh - var(--coordinate-point-top-gap) - var(--coordinate-floating-gap));
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    padding: 18px;
 }
 
 .coordinate-point-modal {
@@ -2027,24 +2035,24 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 .coordinate-point-modal-content .modal-body {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     min-height: 0;
     overflow-y: auto;
 }
 
 .coordinate-point-modal-content .modal-header {
-    margin-bottom: 12px;
-    padding-bottom: 12px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
     border-bottom: 1px solid #eef1f5;
 }
 
 .coordinate-point-modal-content .modal-header h2 {
-    font-size: 18px;
+    font-size: 17px;
 }
 
 .coordinate-point-modal-content .modal-close-btn {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     border-radius: 8px;
 }
 
@@ -2060,22 +2068,29 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-keypad-modal-content {
-    max-width: min(460px, calc(100vw - 48px));
-    width: min(460px, calc(100vw - 48px));
-    max-height: calc(100vh - 72px);
+    --coordinate-floating-gap: clamp(12px, 2vw, 24px);
+    position: fixed;
+    right: var(--coordinate-floating-gap);
+    bottom: var(--coordinate-floating-gap);
+    margin: 0;
+    min-width: 0;
+    max-width: min(396px, calc(100vw - (var(--coordinate-floating-gap) * 2)));
+    width: min(396px, calc(100vw - (var(--coordinate-floating-gap) * 2)));
+    max-height: calc(100vh - (var(--coordinate-floating-gap) * 2));
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    padding: 18px;
 }
 
 .coordinate-keypad-modal-content .modal-body {
-    gap: 12px;
+    gap: 10px;
     min-height: 0;
     overflow-y: auto;
 }
 
 .coordinate-keypad-modal-content .announcement-buttons {
-    padding-top: 12px;
+    padding-top: 10px;
 }
 
 #coordinate-tools-group {
@@ -2108,14 +2123,14 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-point-panel {
-    gap: 12px;
+    gap: 10px;
 }
 
 .coordinate-point-meta {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 12px;
+    gap: 8px;
+    padding: 10px;
     border: 1px solid #e7ecf3;
     border-radius: 14px;
     background: linear-gradient(180deg, #fafcff 0%, #f4f8ff 100%);
@@ -2124,7 +2139,7 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 .coordinate-point-mode-section {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
 .coordinate-point-mode-section[hidden] {
@@ -2135,7 +2150,7 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     margin-top: 0;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
 }
 
 .coordinate-point-action-buttons .pattern-option-btn,
@@ -2145,18 +2160,18 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-width: 2px;
     border-radius: 10px;
-    font-size: 13px;
-    min-height: 40px;
+    font-size: 12px;
+    min-height: 36px;
     font-weight: 600;
 }
 
 .coordinate-point-mode-options {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
 }
 
 .coordinate-point-mode-btn {
@@ -2168,12 +2183,12 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 
 .coordinate-hint-line {
     margin: 0;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-radius: 10px;
     background: #f7f9fc;
     color: #64748b;
     font-size: 12px;
-    line-height: 1.55;
+    line-height: 1.45;
 }
 
 .coordinate-point-count {
@@ -2181,7 +2196,7 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 10px;
+    padding: 5px 9px;
     border-radius: 999px;
     background: #e9f2ff;
     color: #0a63c9;
@@ -2193,17 +2208,17 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 22px;
-    font-size: 14px;
+    min-width: 20px;
+    font-size: 13px;
     font-weight: 700;
 }
 
 .coordinate-plot-panel {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     margin-top: 0;
-    padding: 14px;
+    padding: 12px;
     border: 1px solid #e7ecf3;
     border-radius: 14px;
     background: #fafcff;
@@ -2217,7 +2232,7 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-plot-panel-header label {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: #334155;
 }
@@ -2227,15 +2242,15 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-point-modal-content .coordinate-plot-input-row input {
-    min-height: 42px;
-    padding: 10px 12px;
-    font-size: 13px;
+    min-height: 38px;
+    padding: 8px 10px;
+    font-size: 12px;
 }
 
 .coordinate-plot-input-row {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     align-items: stretch;
     margin-top: 0;
 }
@@ -2243,17 +2258,17 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 .coordinate-plot-action-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
 }
 
 #coordinate-expression-input {
     width: 100%;
     min-width: 0;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border: 1px solid #d6dce6;
     border-radius: 10px;
     background: #fff;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .coordinate-input-panel-toggle {
@@ -2261,12 +2276,12 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .coordinate-keypad-expression-display {
-    min-height: 48px;
-    padding: 10px 12px;
+    min-height: 44px;
+    padding: 8px 10px;
     border-radius: 10px;
     background: #f5f7fb;
     border: 1px solid #d9e2f3;
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.5;
     color: #1f2937;
     word-break: break-all;
@@ -2276,16 +2291,16 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 .coordinate-keypad-panel {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .coordinate-keypad-btn {
-    min-height: 38px;
-    padding: 8px 6px;
+    min-height: 34px;
+    padding: 7px 6px;
     border: 1px solid #ddd;
     border-radius: 8px;
     background: #fff;
-    font-size: 12px;
+    font-size: 11.5px;
     cursor: pointer;
     transition: background-color 0.2s ease, border-color 0.2s ease;
 }
@@ -2298,28 +2313,28 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 .coordinate-keypad-top-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
 }
 
 .coordinate-keypad-section {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px;
+    gap: 6px;
+    padding: 8px;
     border-radius: 12px;
     background: #f7f7f7;
     border: 1px solid #ececec;
 }
 
 .coordinate-keypad-section-title {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     color: #666;
 }
 
 .coordinate-keypad-grid {
     display: grid;
-    gap: 8px;
+    gap: 6px;
 }
 
 .coordinate-keypad-grid-digits {
@@ -2336,12 +2351,23 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 @media (max-width: 520px) {
+    .coordinate-point-modal-content {
+        --coordinate-floating-gap: 10px;
+        --coordinate-point-top-gap: 56px;
+        padding: 16px;
+    }
+
     .coordinate-tool-toggles {
         grid-template-columns: 1fr;
     }
 
     .coordinate-keypad-modal {
-        padding-top: 20px;
+        padding-top: 16px;
+    }
+
+    .coordinate-keypad-modal-content {
+        --coordinate-floating-gap: 10px;
+        padding: 16px;
     }
 
     .coordinate-keypad-grid-operators,
