@@ -1470,6 +1470,9 @@ class SelectionManager {
         this.controlBox.style.setProperty('--toolbar-padding-y', `${toolbarPaddingY}px`);
 
         this.toolbar.classList.toggle('coordinate-toolbar-side', isCoordinateSelection);
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+        const toolbarViewportMaxWidth = Math.max(220, viewportWidth - 24);
+        const canKeepHorizontal = toolbarHorizontalWidth <= toolbarViewportMaxWidth || visibleCount <= 2;
 
         this.toolbar.style.display = 'flex';
         this.toolbar.style.flexDirection = 'row';
@@ -1479,7 +1482,7 @@ class SelectionManager {
         this.toolbar.style.justifyItems = '';
         this.toolbar.style.gridTemplateColumns = '';
         this.toolbar.style.width = 'auto';
-        this.toolbar.style.maxWidth = isCoordinateSelection ? 'none' : 'calc(100% - 8px)';
+        this.toolbar.style.maxWidth = isCoordinateSelection ? 'none' : `${toolbarViewportMaxWidth}px`;
 
         if (isCoordinateSelection && Number.isFinite(boxLeft) && Number.isFinite(boxTop)) {
             const toolbarHeight = toolbarButtonSize + toolbarPaddingY * 2;
@@ -1506,13 +1509,13 @@ class SelectionManager {
             : `${inset}px`;
         this.toolbar.style.transform = 'translateX(-50%)';
 
-        if (!isCoordinateSelection && safeWidth < toolbarHorizontalWidth + inset * 2) {
+        if (!isCoordinateSelection && !canKeepHorizontal) {
             this.toolbar.style.bottom = `${inset}px`;
-            if (safeWidth >= toolbarGridWidth + inset * 2 && visibleCount > 4) {
+            if (toolbarGridWidth <= toolbarViewportMaxWidth && visibleCount > 4) {
                 this.toolbar.style.display = 'grid';
                 this.toolbar.style.gridTemplateColumns = `repeat(${toolbarGridColumns}, minmax(0, 1fr))`;
                 this.toolbar.style.justifyItems = 'center';
-                this.toolbar.style.width = `${Math.max(toolbarGridWidth, Math.min(safeWidth - inset * 2, toolbarHorizontalWidth))}px`;
+                this.toolbar.style.width = `${Math.min(toolbarViewportMaxWidth, toolbarGridWidth)}px`;
             } else {
                 this.toolbar.style.flexDirection = 'column';
             }
