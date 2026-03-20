@@ -1307,7 +1307,59 @@ class SelectionManager {
         return Math.min(max, Math.max(min, value));
     }
 
-    updateAdaptiveControlsLayout(boxWidth, boxHeight) {
+    positionCoordinateSelectionToolbar({ boxLeft, boxTop, boxWidth, boxHeight, toolbarWidth, toolbarHeight, sideGap, inset }) {
+        if (!this.toolbar) return;
+
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        const viewportInset = Math.max(12, inset + 4);
+        const centeredTop = this.clamp(
+            boxTop + (boxHeight / 2) - (toolbarHeight / 2),
+            viewportInset,
+            Math.max(viewportInset, viewportHeight - toolbarHeight - viewportInset)
+        );
+        const rightLeft = boxLeft + boxWidth + sideGap;
+        const leftLeft = boxLeft - sideGap - toolbarWidth;
+        const fitsRight = rightLeft + toolbarWidth <= viewportWidth - viewportInset;
+        const fitsLeft = leftLeft >= viewportInset;
+
+        this.toolbar.classList.add('coordinate-toolbar-side');
+        this.toolbar.style.display = 'flex';
+        this.toolbar.style.flexDirection = 'row';
+        this.toolbar.style.flexWrap = 'nowrap';
+        this.toolbar.style.justifyContent = 'center';
+        this.toolbar.style.alignItems = 'center';
+        this.toolbar.style.justifyItems = '';
+        this.toolbar.style.gridTemplateColumns = '';
+        this.toolbar.style.width = 'auto';
+        this.toolbar.style.bottom = 'auto';
+        this.toolbar.style.right = 'auto';
+
+        if (fitsRight || !fitsLeft) {
+            this.toolbar.style.left = `${boxWidth + sideGap}px`;
+            this.toolbar.style.top = `${centeredTop - boxTop}px`;
+            this.toolbar.style.transform = 'translateY(-50%)';
+            return;
+        }
+
+        if (fitsLeft) {
+            this.toolbar.style.left = `${-sideGap}px`;
+            this.toolbar.style.top = `${centeredTop - boxTop}px`;
+            this.toolbar.style.transform = 'translate(-100%, -50%)';
+            return;
+        }
+
+        const centeredLeft = this.clamp(
+            boxLeft + (boxWidth / 2) - (toolbarWidth / 2),
+            viewportInset,
+            Math.max(viewportInset, viewportWidth - toolbarWidth - viewportInset)
+        );
+        this.toolbar.style.left = `${centeredLeft - boxLeft}px`;
+        this.toolbar.style.top = `${boxHeight + sideGap}px`;
+        this.toolbar.style.transform = 'translateX(0)';
+    }
+
+    updateAdaptiveControlsLayout(boxWidth, boxHeight, boxLeft = null, boxTop = null) {
         const safeWidth = Math.max(boxWidth, 1);
         const safeHeight = Math.max(boxHeight, 1);
         const minSide = Math.max(Math.min(safeWidth, safeHeight), 1);
@@ -1409,11 +1461,8 @@ class SelectionManager {
         this.controlBox.style.setProperty('--toolbar-padding-x', `${toolbarPaddingX}px`);
         this.controlBox.style.setProperty('--toolbar-padding-y', `${toolbarPaddingY}px`);
 
-        this.toolbar.style.left = `${centerX}px`;
-        this.toolbar.style.bottom = safeHeight >= toolbarButtonSize * 2.5
-            ? `${-(toolbarButtonSize + toolbarPaddingY + 10)}px`
-            : `${inset}px`;
-        this.toolbar.style.transform = 'translateX(-50%)';
+        this.toolbar.classList.toggle('coordinate-toolbar-side', isCoordinateSelection);
+
         this.toolbar.style.display = 'flex';
         this.toolbar.style.flexDirection = 'row';
         this.toolbar.style.flexWrap = 'nowrap';
@@ -1423,6 +1472,31 @@ class SelectionManager {
         this.toolbar.style.gridTemplateColumns = '';
         this.toolbar.style.width = 'auto';
         this.toolbar.style.maxWidth = isCoordinateSelection ? 'none' : 'calc(100% - 8px)';
+
+        if (isCoordinateSelection && Number.isFinite(boxLeft) && Number.isFinite(boxTop)) {
+            const toolbarHeight = toolbarButtonSize + toolbarPaddingY * 2;
+            const toolbarWidth = toolbarHorizontalWidth;
+            const sideGap = Math.max(12, toolbarPaddingX + 6);
+            this.positionCoordinateSelectionToolbar({
+                boxLeft,
+                boxTop,
+                boxWidth: safeWidth,
+                boxHeight: safeHeight,
+                toolbarWidth,
+                toolbarHeight,
+                sideGap,
+                inset
+            });
+            return;
+        }
+
+        this.toolbar.style.left = `${centerX}px`;
+        this.toolbar.style.top = 'auto';
+        this.toolbar.style.right = 'auto';
+        this.toolbar.style.bottom = safeHeight >= toolbarButtonSize * 2.5
+            ? `${-(toolbarButtonSize + toolbarPaddingY + 10)}px`
+            : `${inset}px`;
+        this.toolbar.style.transform = 'translateX(-50%)';
 
         if (!isCoordinateSelection && safeWidth < toolbarHorizontalWidth + inset * 2) {
             this.toolbar.style.bottom = `${inset}px`;
@@ -1512,7 +1586,7 @@ class SelectionManager {
         this.controlBox.style.transformOrigin = 'center center';
         this.controlBox.style.transform = `rotate(${rotation}deg)`;
 
-        this.updateAdaptiveControlsLayout(actualWidth, actualHeight);
+        this.updateAdaptiveControlsLayout(actualWidth, actualHeight, actualX, actualY);
     }
     
     // Drag handling

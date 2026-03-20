@@ -1947,8 +1947,8 @@ class DrawingBoard {
             if (!expression || !this.backgroundManager.supportsMovableOrigin()) return;
 
             try {
-                const plot = this.backgroundManager.addCoordinatePlot(expression, this.backgroundManager.backgroundPattern);
-                this.expandedCoordinatePlotId = plot?.id || null;
+                this.backgroundManager.addCoordinatePlot(expression, this.backgroundManager.backgroundPattern);
+                this.expandedCoordinatePlotId = null;
                 coordinateExpressionInput.value = '';
                 this.syncCoordinateExpressionDisplay();
                 this.savePageBackground(this.currentPage);
@@ -3945,6 +3945,7 @@ class DrawingBoard {
                 dashStyle,
                 segments
             });
+            this.expandedCoordinatePlotId = null;
             this.savePageBackground(this.currentPage);
             this.updateBackgroundUI();
             this.showCoordinateToast('background.plotUpdated', '函数图像已更新', 'success');
@@ -4135,6 +4136,16 @@ class DrawingBoard {
         }
     }
 
+    syncCoordinatePointModeSectionVisibility(forceVisible) {
+        const section = document.getElementById('coordinate-point-mode-section');
+        if (!section) return;
+
+        const isVisible = typeof forceVisible === 'boolean'
+            ? forceVisible
+            : !!this.isCoordinatePointMode && this.backgroundManager.supportsMovableOrigin(this.backgroundManager.backgroundPattern);
+        section.hidden = !isVisible;
+    }
+
     setCoordinatePointLineMode(mode, options = {}) {
         const normalizedMode = ['line', 'auto', 'selected'].includes(mode) ? mode : 'auto';
         const currentMode = this.getCoordinatePointLineMode();
@@ -4171,6 +4182,8 @@ class DrawingBoard {
         if (pointToggleBtn) {
             pointToggleBtn.classList.toggle('active', this.isCoordinatePointPanelVisible || this.isCoordinatePointMode);
         }
+
+        this.syncCoordinatePointModeSectionVisibility();
 
         if (this.isCoordinatePointMode) {
             if (this.drawingEngine.currentTool !== 'background') {
@@ -6214,6 +6227,8 @@ class DrawingBoard {
         if (coordinateAddPointBtn) {
             coordinateAddPointBtn.classList.toggle('active', supportsCoordinateTools && this.isCoordinatePointMode);
         }
+
+        this.syncCoordinatePointModeSectionVisibility(supportsCoordinateTools && this.isCoordinatePointMode);
 
         if (!coordinateState.plots.some(plot => plot.id === this.expandedCoordinatePlotId && plot.coordinateType === currentPattern)) {
             this.expandedCoordinatePlotId = null;

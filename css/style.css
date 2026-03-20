@@ -2121,6 +2121,16 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     background: linear-gradient(180deg, #fafcff 0%, #f4f8ff 100%);
 }
 
+.coordinate-point-mode-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.coordinate-point-mode-section[hidden] {
+    display: none !important;
+}
+
 .coordinate-point-action-buttons {
     margin-top: 0;
     display: grid;
@@ -3057,6 +3067,11 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     border-color: transparent !important;
     box-shadow: none !important;
     background: transparent !important;
+}
+
+.selection-action-toolbar.coordinate-toolbar-side {
+    min-width: auto;
+    max-width: min(calc(100vw - 24px), 420px) !important;
 }
 
 #selection-rotate-handle {
