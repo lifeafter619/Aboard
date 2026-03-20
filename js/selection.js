@@ -104,9 +104,17 @@ class SelectionManager {
             this.selectionType === 'coordinate-line';
     }
 
-    getCoordinateSelectionBounds() {
+    getCoordinateSelectionBounds(options = {}) {
         if (!this.backgroundManager || this.selectedCoordinatePointIds.length === 0) return null;
-        return this.backgroundManager.getCoordinateSelectionBounds(this.selectedCoordinatePointIds);
+        return this.backgroundManager.getCoordinateSelectionBounds(
+            this.selectedCoordinatePointIds,
+            options.padding ?? 10,
+            {
+                minWidth: 0,
+                minHeight: 0,
+                ...options
+            }
+        );
     }
 
     getSelectedCoordinateGroup() {

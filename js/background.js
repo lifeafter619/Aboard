@@ -1555,9 +1555,11 @@ class BackgroundManager {
         return null;
     }
 
-    getCoordinateSelectionBounds(pointIds = null, padding = 10) {
+    getCoordinateSelectionBounds(pointIds = null, padding = 10, options = {}) {
         const entries = this.getCoordinatePointEntries(pointIds);
         if (entries.length === 0) return null;
+        const minWidth = Number.isFinite(options?.minWidth) ? Math.max(0, options.minWidth) : 132;
+        const minHeight = Number.isFinite(options?.minHeight) ? Math.max(0, options.minHeight) : 56;
 
         let minX = Infinity;
         let minY = Infinity;
@@ -1574,8 +1576,8 @@ class BackgroundManager {
         return {
             x: minX - padding,
             y: minY - padding,
-            width: Math.max(132, (maxX - minX) + padding * 2),
-            height: Math.max(56, (maxY - minY) + padding * 2)
+            width: Math.max(minWidth, (maxX - minX) + padding * 2),
+            height: Math.max(minHeight, (maxY - minY) + padding * 2)
         };
     }
 
