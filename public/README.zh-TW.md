@@ -7,7 +7,9 @@
 [簡體中文](../README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md)
 
 [![Demo](https://img.shields.io/badge/Demo-Online-22c55e?style=for-the-badge&labelColor=111827&logo=googlechrome&logoColor=fff)](https://aboard.pp.ua)
-[![Version](https://img.shields.io/badge/Version-2.4.1-f59e0b?style=for-the-badge&labelColor=111827)](../version.txt)
+<!-- version-badge:start -->
+[![Version](https://img.shields.io/badge/Version-2.4.2-f59e0b?style=for-the-badge&labelColor=111827)](../version.txt)
+<!-- version-badge:end -->
 [![License](https://img.shields.io/badge/License-MIT-3b82f6?style=for-the-badge&labelColor=111827&logo=open-source-initiative&logoColor=fff)](../LICENSE)
 [![PWA](https://img.shields.io/badge/PWA-Ready-8b5cf6?style=for-the-badge&labelColor=111827&logo=pwa&logoColor=fff)](../manifest.json)
 [![Vanilla JS](https://img.shields.io/badge/Vanilla-JavaScript-facc15?style=for-the-badge&labelColor=111827&logo=javascript&logoColor=000)](../js/main.js)
