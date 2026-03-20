@@ -76,6 +76,18 @@ class DrawingEngine {
         };
         this.isPanning = false;
         this.lastPanPoint = null;
+
+        // Live preview overlay for high-zoom pen drawing
+        this.livePreviewCanvas = null;
+        this.livePreviewCtx = null;
+        this.livePreviewPendingDraw = false;
+        this.livePreviewRafId = null;
+        this.cachedLivePreviewDpr = window.devicePixelRatio || 1;
+        this.lastLivePreviewRect = null;
+        this.liveEraserPreviewPendingDraw = false;
+        this.liveEraserPreviewRafId = null;
+        this.liveEraserPreviewMaskId = 'vector-scene-live-eraser-mask';
+        this.createLivePreviewCanvas();
     }
     
     /**
@@ -87,6 +99,333 @@ class DrawingEngine {
 
     setShapeDrawingManager(shapeDrawingManager) {
         this.shapeDrawingManager = shapeDrawingManager;
+    }
+
+    createLivePreviewCanvas() {
+        this.livePreviewCanvas = document.createElement('canvas');
+        this.livePreviewCanvas.id = 'pen-live-preview-canvas';
+        this.livePreviewCanvas.style.position = 'fixed';
+        this.livePreviewCanvas.style.top = '0';
+        this.livePreviewCanvas.style.left = '0';
+        this.livePreviewCanvas.style.pointerEvents = 'none';
+        this.livePreviewCanvas.style.zIndex = '60';
+        this.livePreviewCanvas.style.display = 'none';
+
+        document.body.appendChild(this.livePreviewCanvas);
+        this.livePreviewCtx = this.livePreviewCanvas.getContext('2d', {
+            alpha: true,
+            desynchronized: true
+        });
+    }
+
+    canUseLiveStrokePreview() {
+        return this.currentTool === 'pen' && !!this.livePreviewCanvas && !!this.livePreviewCtx;
+    }
+
+    shouldUseLiveStrokePreview() {
+        return this.isDrawing &&
+            this.canUseLiveStrokePreview() &&
+            !!window.drawingBoard?.shouldShowLiveStrokePreview?.();
+    }
+
+    canUseLiveEraserPreview() {
+        return this.currentTool === 'eraser' && !!this.ensureVectorSceneSvg();
+    }
+
+    shouldUseLiveEraserPreview() {
+        return this.isDrawing &&
+            this.canUseLiveEraserPreview() &&
+            !!window.drawingBoard?.shouldShowLiveEraserPreview?.();
+    }
+
+    syncLivePreviewCanvas() {
+        if (!this.livePreviewCanvas || !this.livePreviewCtx) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        this.cachedLivePreviewDpr = dpr;
+
+        const needsResize = !this.lastLivePreviewRect ||
+            this.lastLivePreviewRect.width !== rect.width ||
+            this.lastLivePreviewRect.height !== rect.height ||
+            this.lastLivePreviewRect.dpr !== dpr;
+
+        if (needsResize) {
+            this.livePreviewCanvas.width = Math.max(1, Math.round(rect.width * dpr));
+            this.livePreviewCanvas.height = Math.max(1, Math.round(rect.height * dpr));
+            this.livePreviewCanvas.style.width = rect.width + 'px';
+            this.livePreviewCanvas.style.height = rect.height + 'px';
+        }
+
+        this.livePreviewCanvas.style.left = rect.left + 'px';
+        this.livePreviewCanvas.style.top = rect.top + 'px';
+        this.lastLivePreviewRect = { width: rect.width, height: rect.height, dpr };
+    }
+
+    clearLiveStrokePreview() {
+        if (!this.livePreviewCanvas || !this.livePreviewCtx) return;
+        this.livePreviewCtx.setTransform(1, 0, 0, 1, 0, 0);
+        this.livePreviewCtx.clearRect(0, 0, this.livePreviewCanvas.width, this.livePreviewCanvas.height);
+    }
+
+    hideLiveStrokePreview() {
+        if (this.livePreviewRafId) {
+            cancelAnimationFrame(this.livePreviewRafId);
+            this.livePreviewRafId = null;
+        }
+        this.livePreviewPendingDraw = false;
+        this.clearLiveStrokePreview();
+        if (this.livePreviewCanvas) {
+            this.livePreviewCanvas.style.display = 'none';
+        }
+    }
+
+    clearLiveEraserPreview() {
+        const svg = this.vectorSceneSvg && document.body.contains(this.vectorSceneSvg)
+            ? this.vectorSceneSvg
+            : document.getElementById('vector-scene-svg');
+        if (!svg) return;
+
+        const root = svg.querySelector('[data-vector-scene-root="true"]');
+        root?.removeAttribute('mask');
+        svg.querySelector(`#${this.liveEraserPreviewMaskId}`)?.remove();
+    }
+
+    hideLiveEraserPreview() {
+        if (this.liveEraserPreviewRafId) {
+            cancelAnimationFrame(this.liveEraserPreviewRafId);
+            this.liveEraserPreviewRafId = null;
+        }
+        this.liveEraserPreviewPendingDraw = false;
+        this.clearLiveEraserPreview();
+    }
+
+    hideActiveToolPreview() {
+        this.hideLiveStrokePreview();
+        this.hideLiveEraserPreview();
+    }
+
+    scheduleLiveStrokePreview() {
+        if (!this.shouldUseLiveStrokePreview()) {
+            this.hideLiveStrokePreview();
+            return;
+        }
+        if (this.livePreviewPendingDraw) return;
+
+        this.livePreviewPendingDraw = true;
+        this.livePreviewRafId = requestAnimationFrame(() => {
+            this.livePreviewPendingDraw = false;
+            this.livePreviewRafId = null;
+            this.renderLiveStrokePreview();
+        });
+    }
+
+    scheduleLiveEraserPreview() {
+        if (!this.shouldUseLiveEraserPreview()) {
+            this.hideLiveEraserPreview();
+            return;
+        }
+        if (this.liveEraserPreviewPendingDraw) return;
+
+        this.liveEraserPreviewPendingDraw = true;
+        this.liveEraserPreviewRafId = requestAnimationFrame(() => {
+            this.liveEraserPreviewPendingDraw = false;
+            this.liveEraserPreviewRafId = null;
+            this.renderLiveEraserPreview();
+        });
+    }
+
+    renderActiveToolPreview() {
+        if (this.currentTool === 'eraser') {
+            this.renderLiveEraserPreview();
+            this.hideLiveStrokePreview();
+            return;
+        }
+        if (this.currentTool === 'pen') {
+            this.renderLiveStrokePreview();
+            this.hideLiveEraserPreview();
+            return;
+        }
+        this.hideActiveToolPreview();
+    }
+
+    scheduleActiveToolPreview() {
+        if (this.currentTool === 'eraser') {
+            this.scheduleLiveEraserPreview();
+            return;
+        }
+        if (this.currentTool === 'pen') {
+            this.scheduleLiveStrokePreview();
+            return;
+        }
+        this.hideActiveToolPreview();
+    }
+
+    drawStrokePathPreview() {
+        if (!this.points.length) return;
+
+        const firstPoint = this.points[0];
+
+        if (this.penLineStyle === 'dotted' || this.penLineStyle === 'dashed') {
+            this.ctx.beginPath();
+            this.ctx.arc(firstPoint.x, firstPoint.y, this.penSize / 2, 0, Math.PI * 2);
+            this.ctx.fill();
+        } else {
+            this.ctx.beginPath();
+            this.ctx.moveTo(firstPoint.x, firstPoint.y);
+            this.ctx.lineTo(firstPoint.x, firstPoint.y);
+            this.ctx.stroke();
+        }
+
+        if (this.points.length === 1) return;
+
+        this.applyLineStyle();
+
+        const complexBrushes = ['pencil', 'brush', 'fountain', 'ballpoint', 'marker'];
+        const isComplex = complexBrushes.includes(this.penType) || this.penLineStyle === 'multi';
+
+        if (!isComplex) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(firstPoint.x, firstPoint.y);
+
+            for (let i = 1; i < this.points.length; i++) {
+                this.ctx.lineTo(this.points[i].x, this.points[i].y);
+            }
+
+            this.ctx.stroke();
+            return;
+        }
+
+        for (let i = 1; i < this.points.length; i++) {
+            const prevPoint = this.points[i - 1];
+            const currPoint = this.points[i];
+            const dx = currPoint.x - prevPoint.x;
+            const dy = currPoint.y - prevPoint.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            this.accumulatedDistance += distance;
+
+            if (this.penLineStyle === 'multi') {
+                this.drawMultiLine(prevPoint, currPoint);
+            } else if (this.penType === 'ballpoint') {
+                this.drawBallpointStroke(prevPoint, currPoint, distance);
+            } else if (this.penType === 'brush') {
+                this.drawBrushStroke(prevPoint, currPoint, distance);
+            } else if (this.penType === 'pencil') {
+                this.drawPencilStroke(prevPoint, currPoint, distance);
+            } else if (this.penType === 'fountain') {
+                this.drawFountainStroke(prevPoint, currPoint, distance);
+            } else if (this.penType === 'marker') {
+                this.drawMarkerStroke(prevPoint, currPoint, distance);
+            }
+        }
+    }
+
+    renderLiveStrokePreview() {
+        if (!this.shouldUseLiveStrokePreview() || !this.points.length) {
+            this.hideLiveStrokePreview();
+            return;
+        }
+
+        this.syncLivePreviewCanvas();
+        this.clearLiveStrokePreview();
+
+        const viewportScale = this.getViewportScale();
+        if (!Number.isFinite(viewportScale) || viewportScale <= 0) {
+            this.hideLiveStrokePreview();
+            return;
+        }
+
+        this.livePreviewCanvas.style.display = 'block';
+        this.livePreviewCtx.setTransform(
+            this.cachedLivePreviewDpr * viewportScale,
+            0,
+            0,
+            this.cachedLivePreviewDpr * viewportScale,
+            0,
+            0
+        );
+
+        const originalCtx = this.ctx;
+        const originalAccumulatedDistance = this.accumulatedDistance;
+        const originalMultiLineLastPerpX = this.multiLineLastPerpX;
+        const originalMultiLineLastPerpY = this.multiLineLastPerpY;
+        const originalMultiLineLastPoints = this.multiLineLastPoints;
+        const originalMultiLinePendingPoint = this.multiLinePendingPoint;
+
+        this.ctx = this.livePreviewCtx;
+        this.accumulatedDistance = 0;
+        this.multiLineLastPerpX = 0;
+        this.multiLineLastPerpY = 0;
+        this.multiLineLastPoints = null;
+        this.multiLinePendingPoint = null;
+
+        this.setupDrawingContext();
+        this.drawStrokePathPreview();
+
+        this.ctx = originalCtx;
+        this.accumulatedDistance = originalAccumulatedDistance;
+        this.multiLineLastPerpX = originalMultiLineLastPerpX;
+        this.multiLineLastPerpY = originalMultiLineLastPerpY;
+        this.multiLineLastPoints = originalMultiLineLastPoints;
+        this.multiLinePendingPoint = originalMultiLinePendingPoint;
+    }
+
+    renderLiveEraserPreview() {
+        if (!this.shouldUseLiveEraserPreview() || !this.points.length) {
+            this.hideLiveEraserPreview();
+            return;
+        }
+
+        const svg = this.ensureVectorSceneSvg();
+        if (!svg) {
+            this.hideLiveEraserPreview();
+            return;
+        }
+
+        const root = svg.querySelector('[data-vector-scene-root="true"]');
+        if (!root) {
+            this.hideLiveEraserPreview();
+            return;
+        }
+
+        const defs = this.ensureVectorSceneDefs(svg);
+        if (!defs) {
+            this.hideLiveEraserPreview();
+            return;
+        }
+
+        const canvasBounds = this.getCanvasLogicalBounds();
+        const padding = Math.max(64, this.getCanvasEraserSize());
+        const x = this.formatSvgNumber(canvasBounds.x - padding);
+        const y = this.formatSvgNumber(canvasBounds.y - padding);
+        const width = this.formatSvgNumber(canvasBounds.width + padding * 2);
+        const height = this.formatSvgNumber(canvasBounds.height + padding * 2);
+        const maskMarkup = this.buildSvgEraserMaskMarkup({
+            points: this.points,
+            size: this.getCanvasEraserSize(),
+            eraserShape: this.eraserShape
+        });
+
+        let mask = defs.querySelector(`#${this.liveEraserPreviewMaskId}`);
+        if (!mask) {
+            mask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
+            mask.id = this.liveEraserPreviewMaskId;
+            mask.setAttribute('maskUnits', 'userSpaceOnUse');
+            mask.setAttribute('maskContentUnits', 'userSpaceOnUse');
+            defs.appendChild(mask);
+        }
+
+        mask.setAttribute('x', String(x));
+        mask.setAttribute('y', String(y));
+        mask.setAttribute('width', String(width));
+        mask.setAttribute('height', String(height));
+        mask.innerHTML = `
+            <rect x="${x}" y="${y}" width="${width}" height="${height}" fill="white" />
+            ${maskMarkup}
+        `;
+
+        root.setAttribute('mask', `url(#${this.liveEraserPreviewMaskId})`);
     }
     
     setPenLineStyle(style) {
@@ -268,12 +607,19 @@ class DrawingEngine {
     }
 
     getCanvasLogicalBounds() {
-        const dpr = window.devicePixelRatio || 1;
+        const logicalWidth = this.canvas.clientWidth ||
+            this.canvas.offsetWidth ||
+            parseFloat(this.canvas.style.width) ||
+            this.canvas.width / (window.devicePixelRatio || 1);
+        const logicalHeight = this.canvas.clientHeight ||
+            this.canvas.offsetHeight ||
+            parseFloat(this.canvas.style.height) ||
+            this.canvas.height / (window.devicePixelRatio || 1);
         return {
             x: 0,
             y: 0,
-            width: this.canvas.width / dpr,
-            height: this.canvas.height / dpr
+            width: logicalWidth,
+            height: logicalHeight
         };
     }
 
@@ -524,9 +870,9 @@ class DrawingEngine {
         const svg = this.ensureVectorSceneSvg();
         if (!svg) return null;
 
-        const dpr = window.devicePixelRatio || 1;
-        const logicalWidth = this.canvas.width / dpr;
-        const logicalHeight = this.canvas.height / dpr;
+        const canvasBounds = this.getCanvasLogicalBounds();
+        const logicalWidth = canvasBounds.width;
+        const logicalHeight = canvasBounds.height;
 
         svg.style.width = `${logicalWidth}px`;
         svg.style.height = `${logicalHeight}px`;
@@ -561,6 +907,67 @@ class DrawingEngine {
         return this.escapeSvgText(value)
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    formatSvgNumber(value) {
+        return Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
+    }
+
+    getRectangleEraserSamplePoints(points = [], size = 1) {
+        if (!Array.isArray(points) || !points.length) return [];
+
+        const sampledPoints = [{ x: points[0].x, y: points[0].y }];
+        const step = Math.max(1, size * 0.22);
+
+        for (let i = 1; i < points.length; i++) {
+            const startPoint = points[i - 1];
+            const endPoint = points[i];
+            if (!startPoint || !endPoint) continue;
+
+            const dx = endPoint.x - startPoint.x;
+            const dy = endPoint.y - startPoint.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance === 0) {
+                sampledPoints.push({ x: endPoint.x, y: endPoint.y });
+                continue;
+            }
+
+            const steps = Math.max(1, Math.ceil(distance / step));
+            for (let stepIndex = 1; stepIndex <= steps; stepIndex++) {
+                const t = stepIndex / steps;
+                sampledPoints.push({
+                    x: startPoint.x + dx * t,
+                    y: startPoint.y + dy * t
+                });
+            }
+        }
+
+        return sampledPoints;
+    }
+
+    buildSvgRectangleEraserMaskPath(points = [], size = 1) {
+        const sampledPoints = this.getRectangleEraserSamplePoints(points, size);
+        if (!sampledPoints.length) return '';
+
+        const half = size / 2;
+        return sampledPoints.map((point) => {
+            const left = this.formatSvgNumber(point.x - half);
+            const top = this.formatSvgNumber(point.y - half);
+            const right = this.formatSvgNumber(point.x + half);
+            const bottom = this.formatSvgNumber(point.y + half);
+            return `M ${left} ${top} H ${right} V ${bottom} H ${left} Z`;
+        }).join(' ');
+    }
+
+    ensureVectorSceneDefs(svg) {
+        if (!svg) return null;
+        let defs = svg.querySelector('defs');
+        if (!defs) {
+            defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            svg.insertBefore(defs, svg.firstChild);
+        }
+        return defs;
     }
 
     buildSvgPathFromPoints(points = []) {
@@ -704,16 +1111,8 @@ class DrawingEngine {
         const eraserSize = Math.max(stroke.size || 1, 1);
 
         if (eraserShape === 'rectangle') {
-            if (stroke.points.length === 1) {
-                const point = stroke.points[0];
-                const half = eraserSize / 2;
-                return `<rect x="${point.x - half}" y="${point.y - half}" width="${eraserSize}" height="${eraserSize}" fill="black" />`;
-            }
-
-            return stroke.points.map(point => {
-                const half = eraserSize / 2;
-                return `<rect x="${point.x - half}" y="${point.y - half}" width="${eraserSize}" height="${eraserSize}" fill="black" />`;
-            }).join('');
+            const pathData = this.buildSvgRectangleEraserMaskPath(stroke.points, eraserSize);
+            return pathData ? `<path d="${pathData}" fill="black" />` : '';
         }
 
         if (stroke.points.length === 1) {
@@ -919,13 +1318,19 @@ class DrawingEngine {
 
         svg.innerHTML = `
             <defs>${defs.join('')}</defs>
-            <g data-vector-scene-root="true" transform="">
+            <g id="vector-scene-root" data-vector-scene-root="true" transform="">
                 ${content.join('')}
             </g>
         `;
 
         svg.setAttribute('overflow', 'visible');
         svg.setAttribute('viewBox', `0 0 ${logicalWidth} ${logicalHeight}`);
+
+        if (this.shouldUseLiveEraserPreview()) {
+            this.renderLiveEraserPreview();
+        } else {
+            this.clearLiveEraserPreview();
+        }
     }
     
     getPosition(e) {
@@ -1076,6 +1481,8 @@ class DrawingEngine {
             this.ctx.lineTo(pos.x, pos.y);
             this.ctx.stroke();
         }
+
+        this.renderActiveToolPreview();
     }
     
     draw(e) {
@@ -1127,6 +1534,7 @@ class DrawingEngine {
                 if (currIndex === 0) continue;
                 this.eraseRectangleSegment(this.points[currIndex - 1], this.points[currIndex]);
             }
+            this.scheduleActiveToolPreview();
             return;
         }
         
@@ -1195,6 +1603,8 @@ class DrawingEngine {
                 }
             }
         }
+
+        this.scheduleActiveToolPreview();
     }
     
     /**
@@ -1487,6 +1897,7 @@ class DrawingEngine {
         if (this.isDrawing) {
             this.isDrawing = false;
             this.isSnappedToEdge = false;
+            this.hideActiveToolPreview();
             
             // Reset edge drawing state
             if (this.edgeDrawingManager) {
@@ -1567,6 +1978,7 @@ class DrawingEngine {
     
     setTool(tool) {
         this.currentTool = tool;
+        this.hideActiveToolPreview();
     }
     
     setColor(color) {

@@ -13,6 +13,7 @@ const MAX_FEATURE_WIDGET_ZINDEX = 1900;
 const QUALITY_UPDATE_DEBOUNCE_MS = 120;
 const MIN_DYNAMIC_RENDER_SCALE = 1;
 const MAX_DYNAMIC_RENDER_SCALE = 4;
+const INTERACTION_DYNAMIC_RENDER_SCALE_CAP = 1.25;
 const RENDER_SCALE_SCHEDULE_THRESHOLD = 0.15;
 const RENDER_SCALE_APPLY_THRESHOLD = 0.05;
 const MAX_DYNAMIC_BACKING_DIMENSION = 8192;
@@ -1128,6 +1129,7 @@ class DrawingBoard {
             
             if (e.button === 1 || (e.button === 0 && e.shiftKey) || this.drawingEngine.currentTool === 'pan') {
                 this.drawingEngine.startPanning(e);
+                this.scheduleRenderQualityUpdate();
             } else if (this.drawingEngine.currentTool === 'select') {
                 // Handle selection tool
                 this.selectionManager.startSelection(e);
@@ -1137,12 +1139,14 @@ class DrawingBoard {
                     return;
                 }
                 this.shapeDrawingManager.startDrawing(e);
+                this.scheduleRenderQualityUpdate();
             } else if (this.drawingEngine.currentTool === 'pen' || this.drawingEngine.currentTool === 'eraser') {
                 // Don't start drawing if interacting with teaching tools
                 if (this.teachingToolsManager && this.teachingToolsManager.isInteracting) {
                     return;
                 }
                 this.drawingEngine.startDrawing(e);
+                this.scheduleRenderQualityUpdate();
                 // Show eraser cursor only when actually erasing on canvas
                 if (this.drawingEngine.currentTool === 'eraser') {
                     this.showEraserCursor();
@@ -1230,6 +1234,7 @@ class DrawingBoard {
             }
             this.handleDrawingComplete();
             this.drawingEngine.stopPanning();
+            this.scheduleRenderQualityUpdate();
             // Hide eraser cursor when erasing stops
             if (this.drawingEngine.currentTool === 'eraser') {
                 this.hideEraserCursor();
@@ -1246,6 +1251,7 @@ class DrawingBoard {
                     this.handlePointerPinchEnd();
                 }
             }
+            this.scheduleRenderQualityUpdate();
             // Hide eraser cursor when pointer is cancelled
             if (this.drawingEngine.currentTool === 'eraser') {
                 this.hideEraserCursor();
@@ -4247,6 +4253,7 @@ class DrawingBoard {
         if (this.drawingEngine.currentTool === 'shape') {
             this.shapeDrawingManager.stopDrawing();
             this.syncVectorPreviewState(true);
+            this.scheduleRenderQualityUpdate();
             return;
         }
         
@@ -4254,6 +4261,7 @@ class DrawingBoard {
             this.historyManager.saveState();
             this.saveSessionDebounced();
             this.syncVectorPreviewState(true);
+            this.scheduleRenderQualityUpdate();
             // Keep eraser config open after each erase stroke so users can continuously
             // fine-tune and erase without repeated reopen operations.
             if (this.drawingEngine.currentTool !== 'eraser') {
@@ -4703,8 +4711,18 @@ class DrawingBoard {
         if (!this.settingsManager.unlimitedZoom) {
             return MIN_DYNAMIC_RENDER_SCALE;
         }
+        const isInteractiveHighZoom = !!(
+            this.drawingEngine?.isDrawing ||
+            this.drawingEngine?.isPanning ||
+            this.isPinching ||
+            this.hasTwoFingers ||
+            this.shapeDrawingManager?.isDrawing
+        );
         const scale = this.drawingEngine?.canvasScale || 1;
-        const preferredScale = Math.min(MAX_DYNAMIC_RENDER_SCALE, Math.max(MIN_DYNAMIC_RENDER_SCALE, Math.sqrt(scale)));
+        const preferredScale = Math.min(
+            isInteractiveHighZoom ? INTERACTION_DYNAMIC_RENDER_SCALE_CAP : MAX_DYNAMIC_RENDER_SCALE,
+            Math.max(MIN_DYNAMIC_RENDER_SCALE, Math.sqrt(scale))
+        );
 
         const cssWidth = parseFloat(this.canvas.style.width) || this.settingsManager.canvasWidth;
         const cssHeight = parseFloat(this.canvas.style.height) || this.settingsManager.canvasHeight;
@@ -4742,13 +4760,6 @@ class DrawingBoard {
         const width = parseFloat(this.canvas.style.width) || this.settingsManager.canvasWidth;
         const height = parseFloat(this.canvas.style.height) || this.settingsManager.canvasHeight;
 
-        const oldCanvas = document.createElement('canvas');
-        oldCanvas.width = this.canvas.width;
-        oldCanvas.height = this.canvas.height;
-        const oldCtx = oldCanvas.getContext('2d');
-        if (!oldCtx) return;
-        oldCtx.drawImage(this.canvas, 0, 0);
-
         this.dynamicRenderScale = scale;
         const dpr = this.getRenderPixelRatio();
 
@@ -4769,8 +4780,10 @@ class DrawingBoard {
         this.ctx.scale(dpr, dpr);
         this.bgCtx.scale(dpr, dpr);
 
-        this.ctx.drawImage(oldCanvas, 0, 0, oldCanvas.width, oldCanvas.height, 0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.clearRect(0, 0, width, height);
+        this.bgCtx.clearRect(0, 0, width, height);
         this.backgroundManager.drawBackground();
+        this.drawingEngine.renderScene(this.insertTextManager || null);
     }
     
     applyCanvasSize() {
@@ -6321,6 +6334,7 @@ class DrawingBoard {
         const touch2 = e.touches[1];
         this.lastPinchDistance = this.getPinchDistance(touch1, touch2);
         this.lastPinchCenter = this.getPinchCenter(touch1, touch2);
+        this.scheduleRenderQualityUpdate();
     }
     
     handlePinchMove(e) {
@@ -6395,6 +6409,7 @@ class DrawingBoard {
         this.isPinching = false;
         this.lastPinchDistance = 0;
         this.lastPinchCenter = null;
+        this.scheduleRenderQualityUpdate();
 
         // Save state after pinch ends
         localStorage.setItem('canvasScale', this.drawingEngine.canvasScale);
@@ -6442,6 +6457,7 @@ class DrawingBoard {
         const p2 = pointers[1];
         this.lastPinchDistance = this.getPointerDistance(p1, p2);
         this.lastPinchCenter = this.getPointerCenter(p1, p2);
+        this.scheduleRenderQualityUpdate();
     }
     
     handlePointerPinchMove() {
@@ -6503,6 +6519,7 @@ class DrawingBoard {
         this.hasTwoFingers = false;
         this.lastPinchDistance = 0;
         this.lastPinchCenter = null;
+        this.scheduleRenderQualityUpdate();
         
         // Save state after pinch ends
         localStorage.setItem('canvasScale', this.drawingEngine.canvasScale);
@@ -6564,27 +6581,47 @@ class DrawingBoard {
         this.syncVectorPreviewState();
     }
 
+    shouldShowLiveStrokePreview() {
+        const finalScale = this.canvasFitScale * this.drawingEngine.canvasScale;
+        return finalScale > 1.05 && this.drawingEngine?.currentTool === 'pen';
+    }
+
+    shouldShowLiveEraserPreview() {
+        const finalScale = this.canvasFitScale * this.drawingEngine.canvasScale;
+        return finalScale > 1.05 && this.drawingEngine?.currentTool === 'eraser';
+    }
+
     hasVectorPreviewContent() {
         const hasText = !!(this.insertTextManager?.textObjects?.length);
+        const hasLiveStrokePreview = !!this.drawingEngine?.shouldUseLiveStrokePreview?.();
+        const hasLiveEraserPreview = !!this.drawingEngine?.shouldUseLiveEraserPreview?.();
+        const hasShapePreview = !!this.shapeDrawingManager?.isDrawing;
         return this.drawingEngine.strokes.length > 0 ||
             this.drawingEngine.stampedImages.length > 0 ||
-            hasText;
+            hasText ||
+            hasLiveStrokePreview ||
+            hasLiveEraserPreview ||
+            hasShapePreview;
     }
 
     shouldUseVectorPreview() {
         const finalScale = this.canvasFitScale * this.drawingEngine.canvasScale;
-        const hasTransientOverlay = !!(
-            this.drawingEngine.isDrawing ||
-            this.shapeDrawingManager?.isDrawing ||
+        const hasLiveDrawingPreview = !!(
+            this.drawingEngine?.shouldUseLiveStrokePreview?.() ||
+            this.drawingEngine?.shouldUseLiveEraserPreview?.()
+        );
+        const hasBlockingTransientOverlay = !!(
             this.insertImageManager?.isActive ||
             this.insertTextManager?.isActive ||
             this.selectionManager?.hasSelection?.() ||
-            this.strokeControls?.isActive
+            this.strokeControls?.isActive ||
+            (this.drawingEngine.isDrawing && !hasLiveDrawingPreview) ||
+            (this.shapeDrawingManager?.isDrawing && !this.shapeDrawingManager?.previewCanvas)
         );
 
         return finalScale > 1.05 &&
             this.hasVectorPreviewContent() &&
-            !hasTransientOverlay;
+            !hasBlockingTransientOverlay;
     }
 
     syncVectorPreviewState(forceRender = false) {
