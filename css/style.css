@@ -313,12 +313,12 @@ body.vector-preview-active #off-canvas-image-layer {
 /* Background config panel: center content vertically */
 #background-config.active {
     display: grid;
-    grid-template-columns: 112px minmax(0, 1fr);
+    grid-template-columns: 136px minmax(0, 1fr);
     align-items: start;
-    gap: 10px;
+    gap: 8px;
     padding-top: 4px;
     padding-right: 40px;
-    width: min(472px, calc(100vw - 56px));
+    width: min(468px, calc(100vw - 52px));
 }
 
 #background-config .config-group,
@@ -334,10 +334,7 @@ body.vector-preview-active #off-canvas-image-layer {
     gap: 6px;
 }
 
-#background-config .config-group:first-child {
-    min-width: 0;
-}
-
+#background-config .config-group:first-child,
 #background-config .config-group:last-child {
     min-width: 0;
 }
@@ -348,55 +345,56 @@ body.vector-preview-active #off-canvas-image-layer {
 
 #background-config .color-picker-main {
     display: grid;
-    grid-template-columns: repeat(4, 24px);
-    gap: 4px;
+    grid-template-columns: repeat(4, 30px);
+    gap: 5px;
     justify-content: start;
 }
 
 #background-config .color-btn {
-    width: 24px;
-    height: 24px;
-    border-width: 1.5px;
-    border-radius: 6px;
+    width: 30px;
+    height: 30px;
+    border-width: 2px;
+    border-radius: 7px;
     box-shadow: none;
 }
 
 #background-config .color-btn:hover {
-    transform: scale(1.05);
+    transform: scale(1.04);
     box-shadow: none;
 }
 
 #background-config .color-btn.active {
-    transform: scale(1.08);
-    box-shadow: 0 0 0 1.5px var(--theme-color);
+    transform: scale(1.06);
+    box-shadow: 0 0 0 2px var(--theme-color);
 }
 
 #background-config .color-picker-icon-btn {
     align-self: flex-start;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
 }
 
 #background-config .color-picker-icon-btn svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
 }
 
 #background-config .pattern-grid-compact {
-    gap: 6px;
+    gap: 5px;
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 #background-config .pattern-grid-compact .pattern-option-btn {
     min-width: 0;
-    min-height: 32px;
-    padding: 6px 8px;
-    font-size: 11px;
-    line-height: 1.2;
+    min-height: 30px;
+    padding: 5px 7px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.15;
     display: inline-flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 6px;
+    gap: 5px;
     white-space: nowrap;
     text-align: left;
     overflow: hidden;
@@ -410,19 +408,19 @@ body.vector-preview-active #off-canvas-image-layer {
 }
 
 #background-config .pattern-grid-compact .pattern-option-btn svg {
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     flex-shrink: 0;
 }
 
 #pattern-grid .pattern-option-btn[data-pattern] {
     flex-direction: row;
-    gap: 6px;
+    gap: 5px;
 }
 
 #pattern-grid .pattern-option-icon {
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     flex-shrink: 0;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -436,7 +434,7 @@ body.vector-preview-active #off-canvas-image-layer {
 }
 
 #background-config .upload-text {
-    font-size: 11px;
+    font-size: 12px;
 }
 
 #config-area.vertical #background-config.active {
