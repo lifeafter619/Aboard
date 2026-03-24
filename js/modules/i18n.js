@@ -462,18 +462,16 @@ class I18n {
             'english-lines': 'background.english4line',
             'music-staff': 'background.musicStaff',
             'coordinate': 'background.coordinate',
+            'polar': 'background.polar',
             'image': 'background.upload'
         };
         
         document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(btn => {
             const pattern = btn.getAttribute('data-pattern');
             if (pattern && patterns[pattern]) {
-                // For image button, keep the icon and translate the text in span
-                if (pattern === 'image') {
-                    const uploadSpan = btn.querySelector('.upload-text');
-                    if (uploadSpan) {
-                        uploadSpan.textContent = this.t(patterns[pattern]);
-                    }
+                const label = btn.querySelector('.pattern-option-label, .upload-text');
+                if (label) {
+                    label.textContent = this.t(patterns[pattern]);
                 } else {
                     btn.textContent = this.t(patterns[pattern]);
                 }
@@ -1016,6 +1014,7 @@ class I18n {
             'english-lines': 'background.english4line',
             'music-staff': 'background.musicStaff',
             'coordinate': 'background.coordinate',
+            'polar': 'background.polar',
             'image': 'background.image'
         };
         

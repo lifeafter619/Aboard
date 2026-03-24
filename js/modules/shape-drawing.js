@@ -191,6 +191,7 @@ class ShapeDrawingManager {
     
     startDrawing(e) {
         this.isDrawing = true;
+        window.drawingBoard?.syncVectorPreviewState?.();
         // Store both screen coordinates (for preview) and canvas coordinates (for final drawing)
         this.startPoint = this.getCanvasPosition(e);  // Canvas coords for final draw
         this.startScreenPoint = this.getPosition(e);   // Screen coords for preview
@@ -236,6 +237,11 @@ class ShapeDrawingManager {
         // Draw final shape on main canvas using canvas coordinates
         if (this.startPoint && this.endPoint) {
             this.drawFinalShape();
+
+            const storedStroke = this.createStoredShapeStroke();
+            if (storedStroke) {
+                this.drawingEngine.strokes.push(storedStroke);
+            }
             
             // Save to history
             if (this.historyManager) {
@@ -253,6 +259,7 @@ class ShapeDrawingManager {
         // Hide preview canvas
         this.clearPreview();
         this.previewCanvas.style.display = 'none';
+        window.drawingBoard?.syncVectorPreviewState?.(true);
     }
     
     clearPreview() {
@@ -401,6 +408,321 @@ class ShapeDrawingManager {
         // Reset context
         this.ctx.globalAlpha = 1.0;
         this.ctx.setLineDash([]);
+    }
+
+    createStoredShapeStroke() {
+        if (!this.startPoint || !this.endPoint || !this.drawingEngine) return null;
+
+        return {
+            points: this.getShapeSelectionPoints(this.currentShape, this.startPoint, this.endPoint),
+            color: this.drawingEngine.currentColor,
+            size: this.drawingEngine.penSize,
+            penType: this.drawingEngine.penType,
+            tool: 'pen',
+            lineStyle: this.lineStyle,
+            dashDensity: this.dashDensity,
+            rotation: 0,
+            layerOrder: this.drawingEngine.getNextLayerOrder(),
+            objectId: this.drawingEngine.getNextObjectId(),
+            groupId: null,
+            renderMode: 'shape',
+            shapeType: this.currentShape,
+            shapeStart: { ...this.startPoint },
+            shapeEnd: { ...this.endPoint },
+            shapeLineStyle: this.lineStyle,
+            shapeDashDensity: this.dashDensity,
+            shapeWaveDensity: this.waveDensity,
+            shapeMultiLineCount: this.multiLineCount,
+            shapeMultiLineSpacing: this.multiLineSpacing,
+            arrowSize: this.arrowSize
+        };
+    }
+
+    getShapeSelectionPoints(shapeType, start, end) {
+        if (!start || !end) return [];
+
+        switch (shapeType) {
+            case 'rectangle': {
+                const x = Math.min(start.x, end.x);
+                const y = Math.min(start.y, end.y);
+                const width = Math.abs(end.x - start.x);
+                const height = Math.abs(end.y - start.y);
+                return [
+                    { x, y },
+                    { x: x + width, y },
+                    { x: x + width, y: y + height },
+                    { x, y: y + height },
+                    { x, y }
+                ];
+            }
+            case 'circle': {
+                const dx = end.x - start.x;
+                const dy = end.y - start.y;
+                const radius = Math.sqrt(dx * dx + dy * dy);
+                return this.sampleEllipsePoints(start, radius, radius, 32, true);
+            }
+            case 'ellipse': {
+                const radiusX = Math.abs(end.x - start.x);
+                const radiusY = Math.abs(end.y - start.y);
+                return this.sampleEllipsePoints(start, radiusX, radiusY, 36, true);
+            }
+            case 'arrow':
+            case 'doubleArrow':
+            case 'line':
+            default:
+                return [
+                    { x: start.x, y: start.y },
+                    { x: end.x, y: end.y }
+                ];
+        }
+    }
+
+    sampleEllipsePoints(center, radiusX, radiusY, segments = 32, closePath = false) {
+        const points = [];
+        for (let i = 0; i < segments; i++) {
+            const angle = (i / segments) * Math.PI * 2;
+            points.push({
+                x: center.x + Math.cos(angle) * radiusX,
+                y: center.y + Math.sin(angle) * radiusY
+            });
+        }
+        if (closePath && points.length) {
+            points.push({ ...points[0] });
+        }
+        return points;
+    }
+
+    applyStoredShapeSettings(stroke) {
+        if (!stroke) return;
+        this.lineStyle = stroke.shapeLineStyle || stroke.lineStyle || 'solid';
+        this.dashDensity = stroke.shapeDashDensity || stroke.dashDensity || 10;
+        this.waveDensity = stroke.shapeWaveDensity || this.waveDensity;
+        this.multiLineCount = stroke.shapeMultiLineCount || this.multiLineCount;
+        this.multiLineSpacing = stroke.shapeMultiLineSpacing || this.multiLineSpacing;
+        this.arrowSize = stroke.arrowSize || this.arrowSize;
+    }
+
+    drawStoredShapeOnContext(ctx, stroke) {
+        if (!ctx || !stroke) return;
+
+        const fallbackStart = stroke.points?.[0] || stroke.shapeStart;
+        const fallbackEnd = stroke.points?.[stroke.points.length - 1] || stroke.shapeEnd;
+        if (!fallbackStart || !fallbackEnd) return;
+
+        const previousSettings = {
+            lineStyle: this.lineStyle,
+            dashDensity: this.dashDensity,
+            waveDensity: this.waveDensity,
+            multiLineCount: this.multiLineCount,
+            multiLineSpacing: this.multiLineSpacing,
+            arrowSize: this.arrowSize
+        };
+
+        this.applyStoredShapeSettings(stroke);
+
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = stroke.color;
+        ctx.fillStyle = stroke.color;
+        ctx.lineWidth = stroke.size;
+        ctx.setLineDash([]);
+
+        switch (stroke.penType) {
+            case 'pencil':
+                ctx.globalAlpha = 0.7;
+                break;
+            case 'ballpoint':
+                ctx.globalAlpha = 0.9;
+                break;
+            case 'fountain':
+                ctx.globalAlpha = 1.0;
+                break;
+            case 'brush':
+                ctx.globalAlpha = 0.85;
+                ctx.lineWidth = stroke.size * 1.5;
+                break;
+            case 'marker':
+                ctx.globalAlpha = 0.45;
+                ctx.lineWidth = stroke.size * 2.2;
+                ctx.lineCap = 'square';
+                break;
+            default:
+                ctx.globalAlpha = 1.0;
+                break;
+        }
+
+        this.applyLineStyle(ctx);
+
+        if (stroke.shapeType === 'arrow' || stroke.shapeType === 'doubleArrow') {
+            this.drawArrowLine(ctx, fallbackStart, fallbackEnd, stroke.shapeType === 'doubleArrow', false);
+        } else if (Array.isArray(stroke.points) && stroke.points.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+            for (let i = 1; i < stroke.points.length; i++) {
+                ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+            }
+            if (stroke.shapeType !== 'line') {
+                ctx.closePath();
+            }
+            ctx.stroke();
+        } else {
+            this.drawLineWithStyle(ctx, fallbackStart, fallbackEnd, false);
+        }
+
+        ctx.restore();
+        this.lineStyle = previousSettings.lineStyle;
+        this.dashDensity = previousSettings.dashDensity;
+        this.waveDensity = previousSettings.waveDensity;
+        this.multiLineCount = previousSettings.multiLineCount;
+        this.multiLineSpacing = previousSettings.multiLineSpacing;
+        this.arrowSize = previousSettings.arrowSize;
+    }
+
+    buildSvgShapeMarkup(stroke) {
+        if (!stroke) return '';
+
+        const fallbackStart = stroke.points?.[0] || stroke.shapeStart;
+        const fallbackEnd = stroke.points?.[stroke.points.length - 1] || stroke.shapeEnd;
+        if (!fallbackStart || !fallbackEnd) return '';
+
+        const previousSettings = {
+            lineStyle: this.lineStyle,
+            dashDensity: this.dashDensity,
+            waveDensity: this.waveDensity,
+            multiLineCount: this.multiLineCount,
+            multiLineSpacing: this.multiLineSpacing,
+            arrowSize: this.arrowSize
+        };
+
+        this.applyStoredShapeSettings(stroke);
+
+        const strokeColor = String(stroke.color || '#000000')
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        const appearance = {
+            lineWidth: stroke.size,
+            opacity: 1,
+            lineCap: 'round',
+            lineJoin: 'round'
+        };
+
+        switch (stroke.penType) {
+            case 'pencil':
+                appearance.opacity = 0.7;
+                break;
+            case 'ballpoint':
+                appearance.opacity = 0.9;
+                break;
+            case 'brush':
+                appearance.opacity = 0.85;
+                appearance.lineWidth = stroke.size * 1.5;
+                break;
+            case 'marker':
+                appearance.opacity = 0.45;
+                appearance.lineWidth = stroke.size * 2.2;
+                appearance.lineCap = 'square';
+                break;
+            default:
+                break;
+        }
+
+        const dashPattern = this.lineStyle === 'dashed'
+            ? `${Math.max(2, 400 / Math.max(1, this.dashDensity))} ${Math.max(2, 400 / Math.max(1, this.dashDensity)) * 0.6}`
+            : this.lineStyle === 'dotted'
+                ? `2 ${Math.max(2, 400 / Math.max(1, this.dashDensity)) * 0.6}`
+                : '';
+        const dashMarkup = dashPattern ? ` stroke-dasharray="${dashPattern}"` : '';
+
+        let markup = '';
+        if (stroke.shapeType === 'arrow' || stroke.shapeType === 'doubleArrow') {
+            markup = this.buildSvgArrowMarkup({
+                ...stroke,
+                shapeStart: fallbackStart,
+                shapeEnd: fallbackEnd
+            }, strokeColor, appearance);
+        } else {
+            const points = (stroke.points && stroke.points.length > 1)
+                ? stroke.points
+                : this.getShapeSelectionPoints(stroke.shapeType, fallbackStart, fallbackEnd);
+            const pathData = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+            const closeCommand = stroke.shapeType !== 'line' ? ' Z' : '';
+            markup = `<path d="${pathData}${closeCommand}" fill="none" stroke="${strokeColor}" stroke-width="${appearance.lineWidth}" stroke-linecap="${appearance.lineCap}" stroke-linejoin="${appearance.lineJoin}" stroke-opacity="${appearance.opacity}"${dashMarkup} />`;
+        }
+
+        this.lineStyle = previousSettings.lineStyle;
+        this.dashDensity = previousSettings.dashDensity;
+        this.waveDensity = previousSettings.waveDensity;
+        this.multiLineCount = previousSettings.multiLineCount;
+        this.multiLineSpacing = previousSettings.multiLineSpacing;
+        this.arrowSize = previousSettings.arrowSize;
+
+        return markup;
+    }
+
+    buildSvgArrowMarkup(stroke, strokeColor, appearance) {
+        const start = stroke.shapeStart;
+        const end = stroke.shapeEnd;
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        if (length < 0.001) return '';
+
+        const nx = dx / length;
+        const ny = dy / length;
+        const arrowSize = stroke.arrowSize || this.arrowSize;
+        const arrowAngle = this.ARROW_ANGLE;
+        const lineOffset = this.ARROW_LINE_OFFSET;
+
+        const dashPattern = this.lineStyle === 'dashed'
+            ? `${Math.max(2, 400 / Math.max(1, this.dashDensity))} ${Math.max(2, 400 / Math.max(1, this.dashDensity)) * 0.6}`
+            : this.lineStyle === 'dotted'
+                ? `2 ${Math.max(2, 400 / Math.max(1, this.dashDensity)) * 0.6}`
+                : '';
+        const dashMarkup = dashPattern ? ` stroke-dasharray="${dashPattern}"` : '';
+
+        const endArrowBase = {
+            x: end.x - nx * arrowSize * lineOffset,
+            y: end.y - ny * arrowSize * lineOffset
+        };
+        const endArrowLeft = {
+            x: end.x - nx * arrowSize * Math.cos(arrowAngle) - ny * arrowSize * Math.sin(arrowAngle),
+            y: end.y - ny * arrowSize * Math.cos(arrowAngle) + nx * arrowSize * Math.sin(arrowAngle)
+        };
+        const endArrowRight = {
+            x: end.x - nx * arrowSize * Math.cos(arrowAngle) + ny * arrowSize * Math.sin(arrowAngle),
+            y: end.y - ny * arrowSize * Math.cos(arrowAngle) - nx * arrowSize * Math.sin(arrowAngle)
+        };
+
+        let lineStart = start;
+        if (stroke.shapeType === 'doubleArrow') {
+            lineStart = {
+                x: start.x + nx * arrowSize * lineOffset,
+                y: start.y + ny * arrowSize * lineOffset
+            };
+        }
+
+        const parts = [
+            `<path d="M ${lineStart.x} ${lineStart.y} L ${endArrowBase.x} ${endArrowBase.y}" fill="none" stroke="${strokeColor}" stroke-width="${appearance.lineWidth}" stroke-linecap="${appearance.lineCap}" stroke-linejoin="${appearance.lineJoin}" stroke-opacity="${appearance.opacity}"${dashMarkup} />`,
+            `<path d="M ${end.x} ${end.y} L ${endArrowLeft.x} ${endArrowLeft.y} L ${endArrowRight.x} ${endArrowRight.y} Z" fill="${strokeColor}" fill-opacity="${appearance.opacity}" />`
+        ];
+
+        if (stroke.shapeType === 'doubleArrow') {
+            const startArrowLeft = {
+                x: start.x + nx * arrowSize * Math.cos(arrowAngle) - ny * arrowSize * Math.sin(arrowAngle),
+                y: start.y + ny * arrowSize * Math.cos(arrowAngle) + nx * arrowSize * Math.sin(arrowAngle)
+            };
+            const startArrowRight = {
+                x: start.x + nx * arrowSize * Math.cos(arrowAngle) + ny * arrowSize * Math.sin(arrowAngle),
+                y: start.y + ny * arrowSize * Math.cos(arrowAngle) - nx * arrowSize * Math.sin(arrowAngle)
+            };
+            parts.push(`<path d="M ${start.x} ${start.y} L ${startArrowLeft.x} ${startArrowLeft.y} L ${startArrowRight.x} ${startArrowRight.y} Z" fill="${strokeColor}" fill-opacity="${appearance.opacity}" />`);
+        }
+
+        return `<g>${parts.join('')}</g>`;
     }
     
     drawLineWithStyle(ctx, start, end, isPreview = false) {

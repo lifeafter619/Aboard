@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "一个简约的web白板，更适合老师体质",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "sync:version-badge": "node scripts/update-version-badge.js"
   },
   "devDependencies": {
     "serve": "^14.0.0"

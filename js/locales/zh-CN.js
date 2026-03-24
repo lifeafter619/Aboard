@@ -183,7 +183,8 @@ window.translations = {
         layerUp: '上移一层',
         layerDown: '下移一层',
         group: '组合',
-        ungroup: '取消组合'
+        ungroup: '取消组合',
+        position: '位置'
     },
 
     // Line Style Modal
@@ -215,6 +216,7 @@ window.translations = {
         english4line: '英语四线格',
         musicStaff: '五线谱',
         coordinate: '坐标系',
+        polar: '极坐标',
         coordinateOriginHint: '在移动模式下双击选中坐标系中心可拖动移动',
         image: '上传图片',
         imagePrefix: '图片',
@@ -232,7 +234,48 @@ window.translations = {
         preferenceHint: '选择在属性栏中显示的图案',
         upload: '上传',
         moveCoordinateOrigin: '移动坐标原点',
-        moveCoordinateOriginHint: '点击按钮后，可在画布上拖动移动坐标原点'
+        moveCoordinateOriginHint: '点击按钮后，可在画布上拖动移动坐标原点',
+        coordinateTools: '坐标设置',
+        showTicks: '显示刻度',
+        showLabels: '显示标签',
+        showPointLabels: '显示点标签',
+        connectPoints: '点间连线',
+        snapToGrid: '吸附网格',
+        addPoint: '取点',
+        drawPointLine: '绘制点线',
+        pointLineModeLineOnly: '仅绘制线',
+        pointLineModeAuto: '自动连线',
+        pointLineModeSelected: '选择连线',
+        addPointHint: '开启后点击画布依次添加坐标点并自动连线',
+        addPointHintLineOnly: '开启后点击画布依次添加坐标点，仅绘制折线',
+        addPointHintAuto: '开启后点击画布依次添加坐标点并自动连线',
+        addPointHintSelected: '开启后点击画布添加坐标点；切到选择工具后，仅选中的点会连线',
+        clearPoints: '清空点',
+        clearPlots: '清空图像',
+        pointsCount: '点数',
+        plotExpression: '函数表达式',
+        plot: '绘制',
+        inputPanel: '输入面板',
+        keypadNumbers: '数字',
+        keypadOperators: '符号',
+        keypadVariables: '变量',
+        keypadFunctions: '函数',
+        plotHintCartesian: '直角坐标：输入 y = f(x)，可用 sin cos PI',
+        plotHintPolar: '极坐标：输入 r = f(theta)，theta 为弧度，deg 为角度',
+        plotPlaceholderCartesian: '如：sin(x) + 2',
+        plotPlaceholderPolar: '如：2 * sin(4 * theta)',
+        noPlots: '暂无函数图像',
+        coordinateStatusAddPoint: '绘制点线模式已开启，点击画布依次添加坐标点',
+        coordinateStatusAddPointLineOnly: '仅绘制线模式已开启，点击画布依次添加坐标点',
+        coordinateStatusAddPointAuto: '自动连线模式已开启，点击画布依次添加坐标点',
+        coordinateStatusAddPointSelected: '选择连线模式已开启，点击画布添加坐标点',
+        coordinateStatusAddPointOff: '绘制点线模式已关闭',
+        pointAdded: '已添加坐标点',
+        pointsCleared: '坐标点已清空',
+        plotAdded: '函数图像已添加',
+        plotUpdated: '函数图像已更新',
+        plotError: '表达式无效，无法绘制',
+        plotsCleared: '函数图像已清空'
     },
 
     // Image Controls
@@ -258,7 +301,8 @@ window.translations = {
         layerUp: '上移一层',
         layerDown: '下移一层',
         group: '组合',
-        ungroup: '取消组合'
+        ungroup: '取消组合',
+        position: '位置'
     },
 
     // Page Navigation
@@ -426,7 +470,7 @@ window.translations = {
             size: '画布尺寸',
             sizeHint: '选择预设尺寸或自定义画布比例和大小',
             unlimitedZoom: '允许无限放大',
-            unlimitedZoomHint: '勾选后，画布可以无限放大（最高500倍）',
+            unlimitedZoomHint: '默认最多可放大到 1000%，勾选后可继续放大（最高 500 倍）',
             infiniteCanvas: '无限画布',
             pagination: '分页模式',
             presets: {

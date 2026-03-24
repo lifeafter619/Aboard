@@ -141,7 +141,7 @@ window.locale_translation_overrides = (() => {
                 },
                 canvas: {
                     unlimitedZoom: '無制限ズームを許可',
-                    unlimitedZoomHint: '有効にすると、キャンバスを制限なく拡大できます（最大500倍）'
+                    unlimitedZoomHint: '標準では最大1000%まで拡大でき、有効にするとさらに最大500倍まで拡大できます'
                 },
                 time: {
                     timezoneHint: '表示するタイムゾーンを選択します',
@@ -259,7 +259,7 @@ window.locale_translation_overrides = (() => {
                 },
                 canvas: {
                     unlimitedZoom: '무제한 확대 허용',
-                    unlimitedZoomHint: '활성화하면 캔버스를 제한 없이 확대할 수 있습니다(최대 500배)'
+                    unlimitedZoomHint: '기본 확대 한도는 1000%이며, 활성화하면 최대 500배까지 계속 확대할 수 있습니다'
                 },
                 time: {
                     timezoneHint: '표시할 시간대를 선택하세요',
@@ -377,7 +377,7 @@ window.locale_translation_overrides = (() => {
                 },
                 canvas: {
                     unlimitedZoom: 'Autoriser le zoom illimite',
-                    unlimitedZoomHint: 'Une fois active, la toile peut etre agrandie sans limite (jusqu\'a 500x)'
+                    unlimitedZoomHint: 'Le zoom par defaut monte desormais a 1000 % ; activez cette option pour continuer jusqu\'a 500x'
                 },
                 about: {
                     projectIntro: 'Presentation du projet',
@@ -522,7 +522,7 @@ window.locale_translation_overrides = (() => {
                 },
                 canvas: {
                     unlimitedZoom: 'Permitir zoom ilimitado',
-                    unlimitedZoomHint: 'Al activarlo, el lienzo puede ampliarse sin limite (hasta 500x)'
+                    unlimitedZoomHint: 'El zoom predeterminado ahora llega al 1000 %; activalo para seguir ampliando hasta 500x'
                 },
                 about: {
                     projectIntro: 'Introduccion del proyecto',
@@ -667,7 +667,7 @@ window.locale_translation_overrides = (() => {
                 },
                 canvas: {
                     unlimitedZoom: 'Unbegrenztes Zoomen erlauben',
-                    unlimitedZoomHint: 'Wenn aktiviert, kann die Leinwand unbegrenzt vergrosert werden (bis zu 500x)'
+                    unlimitedZoomHint: 'Standardmassig ist jetzt ein Zoom bis 1000 % moglich; aktiviert lasst sich weiter bis 500x vergrosern'
                 },
                 about: {
                     projectIntro: 'Projektubersicht',

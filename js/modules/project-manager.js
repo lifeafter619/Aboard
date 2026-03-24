@@ -101,6 +101,7 @@ class ProjectManager {
                 // Enhanced background state
                 coordinateOriginX: this.drawingBoard.backgroundManager.coordinateOriginX,
                 coordinateOriginY: this.drawingBoard.backgroundManager.coordinateOriginY,
+                coordinateOverlayState: this.drawingBoard.backgroundManager.getCoordinateOverlayState(),
                 imageTransform: this.drawingBoard.backgroundManager.imageTransform,
                 gifLoopCount: this.drawingBoard.backgroundManager.gifLoopCount
             };
@@ -203,6 +204,7 @@ class ProjectManager {
 
                 // Restore enhanced background state
                 if (typeof bg.coordinateOriginX !== 'undefined') bm.setCoordinateOrigin(bg.coordinateOriginX, bg.coordinateOriginY);
+                bm.setCoordinateOverlayState(bg.coordinateOverlayState, { persist: false, redraw: false });
                 if (bg.imageTransform) bm.updateImageTransform(bg.imageTransform);
                 if (typeof bg.gifLoopCount !== 'undefined') bm.setGifLoopCount(bg.gifLoopCount);
 

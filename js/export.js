@@ -270,7 +270,11 @@ class ExportManager {
         const activeTab = document.querySelector('.export-tab-btn.active').dataset.tab;
 
         if (activeTab === 'image') {
-            this.exportCanvas();
+            this.exportCanvas().catch(error => {
+                console.error('Export failed:', error);
+                const message = window.i18n?.t('export.failed') || '导出失败，请重试';
+                window.appDialog?.showAlert?.(message, 'error');
+            });
         } else {
             this.exportProject();
         }
@@ -322,153 +326,203 @@ class ExportManager {
     closeModal() {
         this.exportModal.classList.remove('show');
     }
-    
-    exportCanvas() {
-        const scope = document.querySelector('.export-scope-btn.active').dataset.scope;
-        const format = document.querySelector('.export-format-btn.active').dataset.format;
-        const filename = document.getElementById('export-filename').value || 'aboard-export';
-        const quality = parseInt(document.getElementById('export-quality-slider').value) / 100;
-        
-        if (scope === 'current') {
-            // Export current page
-            this.exportSinglePage(filename, format, quality);
-        } else if (scope === 'all' && this.drawingBoard) {
-            // Export all pages
-            this.exportAllPages(filename, format, quality);
-        } else if (scope === 'specific' && this.drawingBoard) {
-            // Export specific pages
-            this.exportSpecificPages(filename, format, quality);
-        } else {
-            // Fallback to current page if drawingBoard is not available
-            this.exportSinglePage(filename, format, quality);
-        }
-        
-        this.closeModal();
+
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
-    
-    exportSinglePage(filename, format, quality) {
-        // Create a temporary canvas to combine background and main canvas
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = this.canvas.width;
-        tempCanvas.height = this.canvas.height;
-        const tempCtx = tempCanvas.getContext('2d');
-        
-        // Draw background canvas first
-        tempCtx.drawImage(this.bgCanvas, 0, 0);
-        
-        // Draw main canvas on top
-        tempCtx.drawImage(this.canvas, 0, 0);
-        
-        // Convert to data URL based on format
-        let dataURL;
-        if (format === 'jpeg') {
-            dataURL = tempCanvas.toDataURL('image/jpeg', quality);
-        } else {
-            dataURL = tempCanvas.toDataURL('image/png');
+
+    loadImage(source) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = source;
+        });
+    }
+
+    getLogicalCanvasSize() {
+        const size = this.drawingBoard?.backgroundManager?.getCanvasLogicalSize?.();
+        if (size?.width && size?.height) {
+            return size;
         }
-        
-        // Create download link
+
+        const dpr = window.devicePixelRatio || 1;
+        return {
+            width: this.canvas.clientWidth || (this.canvas.width / dpr),
+            height: this.canvas.clientHeight || (this.canvas.height / dpr)
+        };
+    }
+
+    async drawSvgDocument(tempCtx, svgDocument, outputWidth, outputHeight) {
+        if (!svgDocument) return;
+        const source = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgDocument)}`;
+        const svgImage = await this.loadImage(source);
+        tempCtx.drawImage(svgImage, 0, 0, outputWidth, outputHeight);
+    }
+
+    async drawBackgroundImage(tempCtx, outputWidth, outputHeight) {
+        const backgroundManager = this.drawingBoard?.backgroundManager;
+        if (!backgroundManager || backgroundManager.backgroundPattern !== 'image' || !backgroundManager.backgroundImageData) {
+            return;
+        }
+
+        const logicalSize = this.getLogicalCanvasSize();
+        const scaleX = outputWidth / logicalSize.width;
+        const scaleY = outputHeight / logicalSize.height;
+        const image = await this.loadImage(backgroundManager.backgroundImageData);
+        let transform = backgroundManager.getBackgroundImageTransform?.();
+
+        if (!transform) {
+            const width = image.naturalWidth * (backgroundManager.imageSize || 1);
+            const height = image.naturalHeight * (backgroundManager.imageSize || 1);
+            transform = {
+                x: (logicalSize.width - width) / 2,
+                y: (logicalSize.height - height) / 2,
+                width,
+                height,
+                rotation: 0,
+                flipHorizontal: false,
+                flipVertical: false
+            };
+        }
+
+        tempCtx.save();
+        tempCtx.globalAlpha = backgroundManager.patternIntensity ?? 1;
+        tempCtx.translate((transform.x + transform.width / 2) * scaleX, (transform.y + transform.height / 2) * scaleY);
+        tempCtx.rotate(((transform.rotation || 0) * Math.PI) / 180);
+        tempCtx.scale(transform.flipHorizontal ? -1 : 1, transform.flipVertical ? -1 : 1);
+        tempCtx.drawImage(
+            image,
+            -(transform.width * scaleX) / 2,
+            -(transform.height * scaleY) / 2,
+            transform.width * scaleX,
+            transform.height * scaleY
+        );
+        tempCtx.restore();
+    }
+
+    async renderCurrentPageToCanvas(tempCanvas, tempCtx) {
+        const backgroundManager = this.drawingBoard?.backgroundManager;
+        const logicalSize = this.getLogicalCanvasSize();
+
+        tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+        tempCtx.drawImage(this.bgCanvas, 0, 0);
+        await this.drawBackgroundImage(tempCtx, tempCanvas.width, tempCanvas.height);
+
+        if (backgroundManager) {
+            await this.drawSvgDocument(
+                tempCtx,
+                backgroundManager.getBackgroundPatternSvgDocument?.(logicalSize.width, logicalSize.height),
+                tempCanvas.width,
+                tempCanvas.height
+            );
+        }
+
+        tempCtx.drawImage(this.canvas, 0, 0);
+
+        if (backgroundManager) {
+            await this.drawSvgDocument(
+                tempCtx,
+                backgroundManager.getCoordinateOverlaySvgDocument?.(logicalSize.width, logicalSize.height),
+                tempCanvas.width,
+                tempCanvas.height
+            );
+        }
+    }
+
+    downloadCanvas(tempCanvas, filename, format, quality) {
+        const dataURL = format === 'jpeg'
+            ? tempCanvas.toDataURL('image/jpeg', quality)
+            : tempCanvas.toDataURL('image/png');
+
         const link = document.createElement('a');
         link.download = `${filename}.${format}`;
         link.href = dataURL;
         link.click();
     }
     
-    exportAllPages(baseFilename, format, quality) {
-        if (!this.drawingBoard || !this.drawingBoard.pages || this.drawingBoard.pages.length === 0) {
-            // No pages to export, just export current
-            this.exportSinglePage(baseFilename, format, quality);
-            return;
+    async exportCanvas() {
+        const scope = document.querySelector('.export-scope-btn.active').dataset.scope;
+        const format = document.querySelector('.export-format-btn.active').dataset.format;
+        const filename = document.getElementById('export-filename').value || 'aboard-export';
+        const quality = parseInt(document.getElementById('export-quality-slider').value) / 100;
+
+        this.closeModal();
+
+        if (scope === 'current') {
+            await this.exportSinglePage(filename, format, quality);
+        } else if (scope === 'all' && this.drawingBoard) {
+            await this.exportAllPages(filename, format, quality);
+        } else if (scope === 'specific' && this.drawingBoard) {
+            await this.exportSpecificPages(filename, format, quality);
+        } else {
+            await this.exportSinglePage(filename, format, quality);
         }
-        
-        // Save current state
-        const currentPage = this.drawingBoard.currentPage;
-        
-        // Export each page sequentially
-        const exportPage = (pageIndex) => {
-            if (pageIndex >= this.drawingBoard.pages.length) {
-                // All pages exported, restore original page
-                if (currentPage !== this.drawingBoard.currentPage) {
-                    this.drawingBoard.goToPage(currentPage);
-                }
-                return;
-            }
-            
-            const pageNum = pageIndex + 1;
-            
-            // Switch to page
-            if (this.drawingBoard.currentPage !== pageNum) {
-                this.drawingBoard.goToPage(pageNum);
-            }
-            
-            // Wait a bit for the page to render
-            setTimeout(() => {
-                const filename = `${baseFilename}-${pageNum}`;
-                this.exportSinglePage(filename, format, quality);
-                
-                // Export next page
-                setTimeout(() => {
-                    exportPage(pageIndex + 1);
-                }, 100);
-            }, 100);
-        };
-        
-        // Start exporting from the first page
-        exportPage(0);
     }
     
-    exportSpecificPages(baseFilename, format, quality) {
+    async exportSinglePage(filename, format, quality) {
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = this.canvas.width;
+        tempCanvas.height = this.canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        await this.renderCurrentPageToCanvas(tempCanvas, tempCtx);
+        this.downloadCanvas(tempCanvas, filename, format, quality);
+    }
+    
+    async exportAllPages(baseFilename, format, quality) {
         if (!this.drawingBoard || !this.drawingBoard.pages || this.drawingBoard.pages.length === 0) {
-            // No pages to export, just export current
-            this.exportSinglePage(baseFilename, format, quality);
+            await this.exportSinglePage(baseFilename, format, quality);
+            return;
+        }
+
+        const currentPage = this.drawingBoard.currentPage;
+        try {
+            for (let pageNum = 1; pageNum <= this.drawingBoard.pages.length; pageNum++) {
+                if (this.drawingBoard.currentPage !== pageNum) {
+                    this.drawingBoard.goToPage(pageNum);
+                }
+                await this.sleep(160);
+                await this.exportSinglePage(`${baseFilename}-${pageNum}`, format, quality);
+                await this.sleep(80);
+            }
+        } finally {
+            if (currentPage !== this.drawingBoard.currentPage) {
+                this.drawingBoard.goToPage(currentPage);
+            }
+        }
+    }
+    
+    async exportSpecificPages(baseFilename, format, quality) {
+        if (!this.drawingBoard || !this.drawingBoard.pages || this.drawingBoard.pages.length === 0) {
+            await this.exportSinglePage(baseFilename, format, quality);
             return;
         }
         
-        // Get selected page buttons
         const selectedButtons = document.querySelectorAll('.page-selection-btn.selected');
         if (selectedButtons.length === 0) {
             window.appDialog?.showAlert(window.i18n.t('export.selectAtLeastOnePage') || '请至少选择一个页面进行导出', 'warning');
             return;
         }
         
-        // Get selected page numbers
         const selectedPages = Array.from(selectedButtons).map(btn => parseInt(btn.dataset.pageNum));
         selectedPages.sort((a, b) => a - b);
-        
-        // Save current state
         const currentPage = this.drawingBoard.currentPage;
-        
-        // Export selected pages sequentially
-        const exportPage = (pageIndex) => {
-            if (pageIndex >= selectedPages.length) {
-                // All selected pages exported, restore original page
-                if (currentPage !== this.drawingBoard.currentPage) {
-                    this.drawingBoard.goToPage(currentPage);
+
+        try {
+            for (const pageNum of selectedPages) {
+                if (this.drawingBoard.currentPage !== pageNum) {
+                    this.drawingBoard.goToPage(pageNum);
                 }
-                return;
+                await this.sleep(160);
+                await this.exportSinglePage(`${baseFilename}-${pageNum}`, format, quality);
+                await this.sleep(80);
             }
-            
-            const pageNum = selectedPages[pageIndex];
-            
-            // Switch to page
-            if (this.drawingBoard.currentPage !== pageNum) {
-                this.drawingBoard.goToPage(pageNum);
+        } finally {
+            if (currentPage !== this.drawingBoard.currentPage) {
+                this.drawingBoard.goToPage(currentPage);
             }
-            
-            // Wait a bit for the page to render
-            setTimeout(() => {
-                const filename = `${baseFilename}-${pageNum}`;
-                this.exportSinglePage(filename, format, quality);
-                
-                // Export next page
-                setTimeout(() => {
-                    exportPage(pageIndex + 1);
-                }, 100);
-            }, 100);
-        };
-        
-        // Start exporting from the first selected page
-        exportPage(0);
+        }
     }
 }
 

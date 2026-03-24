@@ -164,6 +164,7 @@ window.translations = {
 
     selection: {
         edit: 'Modifier',
+        color: 'Couleur',
         copy: 'Copier',
         delete: 'Supprimer',
         done: 'Terminé',
@@ -175,7 +176,8 @@ window.translations = {
         layerUp: 'Avancer d’un niveau',
         layerDown: 'Reculer d’un niveau',
         group: 'Grouper',
-        ungroup: 'Dissocier'
+        ungroup: 'Dissocier',
+        position: 'Position'
     },
 
     // Line Style Modal
@@ -208,6 +210,7 @@ window.translations = {
         english4line: 'Ligne anglaise 4',
         musicStaff: 'Portée musicale',
         coordinate: 'Coordonnées',
+        polar: 'Coordonnées polaires',
         coordinateOriginHint: 'Double-cliquez pour sélectionner l\'origine en mode Déplacer, puis faites glisser',
         image: 'Image',
         imagePrefix: 'Image',
@@ -221,7 +224,50 @@ window.translations = {
         contrastHint: 'Ajuster l\'obscurité des lignes du motif d\'arrière-plan',
         preference: 'Préférence de motif d\'arrière-plan',
         moveCoordinateOrigin: 'Déplacer l\'origine',
-        moveCoordinateOriginHint: 'Cliquez puis faites glisser sur le canevas pour déplacer l\'origine des coordonnées'
+        moveCoordinateOriginHint: 'Cliquez puis faites glisser sur le canevas pour déplacer l\'origine des coordonnées',
+        coordinateTools: 'Réglages de coordonnées',
+        showTicks: 'Afficher les graduations',
+        showLabels: 'Afficher les étiquettes',
+        showPointLabels: 'Étiquettes des points',
+        showOrigin: 'Afficher l\'origine',
+        connectPoints: 'Relier les points',
+        snapToGrid: 'Aligner sur la grille',
+        addPoint: 'Ajouter un point',
+        drawPointLine: 'Tracer points et ligne',
+        pointLineModeLineOnly: 'Ligne seule',
+        pointLineModeAuto: 'Liaison auto',
+        pointLineModeSelected: 'Lier la sélection',
+        addPointHint: 'Activez puis cliquez sur le canevas pour placer des points et les relier automatiquement',
+        addPointHintLineOnly: 'Une fois activé, cliquez sur le canevas pour placer des points et ne tracer que la ligne brisée',
+        addPointHintAuto: 'Une fois activé, cliquez sur le canevas pour placer des points et les relier automatiquement',
+        addPointHintSelected: 'Une fois activé, cliquez sur le canevas pour ajouter des points. Après passage à l’outil de sélection, seuls les points sélectionnés seront reliés',
+        clearPoints: 'Effacer les points',
+        clearPlots: 'Effacer les courbes',
+        pointsCount: 'Points',
+        plotExpression: 'Expression',
+        plot: 'Tracer',
+        inputPanel: 'Panneau de saisie',
+        keypadNumbers: 'Nombres',
+        keypadOperators: 'Symboles',
+        keypadVariables: 'Variables',
+        keypadFunctions: 'Fonctions',
+        plotHintCartesian: 'Cartésien : entrez y = f(x), sin cos PI sont disponibles',
+        plotHintPolar: 'Polaire : entrez r = f(theta), theta en radians et deg en degrés',
+        plotPlaceholderCartesian: 'ex. : sin(x) + 2',
+        plotPlaceholderPolar: 'ex. : 2 * sin(4 * theta)',
+        noPlots: 'Aucune courbe pour le moment',
+        coordinateStatusAddPoint: 'Mode tracé points et lignes activé',
+        coordinateStatusAddPointLineOnly: 'Mode ligne seule activé. Cliquez sur le canevas pour placer des points de coordonnées',
+        coordinateStatusAddPointAuto: 'Mode liaison automatique activé. Cliquez sur le canevas pour placer des points de coordonnées',
+        coordinateStatusAddPointSelected: 'Mode liaison par sélection activé. Cliquez sur le canevas pour placer des points de coordonnées',
+        coordinateStatusAddPointOff: 'Mode tracé points et lignes désactivé',
+        connectPointsEnabled: 'Ligne des points activée',
+        connectPointsDisabled: 'Ligne des points désactivée',
+        pointAdded: 'Point de coordonnées ajouté',
+        pointsCleared: 'Points de coordonnées effacés',
+        plotAdded: 'Courbe ajoutée',
+        plotError: 'Expression invalide, tracé impossible',
+        plotsCleared: 'Courbes effacées'
     },
 
     // Image Controls
@@ -239,6 +285,7 @@ window.translations = {
         delete: 'Supprimer',
         done: 'Terminé',
         edit: 'Modifier',
+        color: 'Couleur',
         rotate90: 'Rotation 90°',
         flipH: 'Retourner horizontalement',
         layer: 'Calque',
@@ -247,7 +294,8 @@ window.translations = {
         layerUp: 'Avancer d’un niveau',
         layerDown: 'Reculer d’un niveau',
         group: 'Grouper',
-        ungroup: 'Dissocier'
+        ungroup: 'Dissocier',
+        position: 'Position'
     },
 
     // Page Navigation
