@@ -742,6 +742,7 @@ class InsertTextManager {
         this.modal.classList.remove('show');
         // Reset editing state if user cancels the modal
         this.editingTextIndex = null;
+        window.drawingBoard?.syncVectorPreviewState?.();
     }
 
     confirmModal() {
@@ -802,6 +803,7 @@ class InsertTextManager {
         this.overlay.style.display = 'block';
         this.textScale = 1.0;
         this.textRotation = 0;
+        window.drawingBoard?.syncVectorPreviewState?.();
 
         // Calculate initial position (center of screen)
         const cx = window.innerWidth / 2;
@@ -865,6 +867,7 @@ class InsertTextManager {
     cancelOverlay() {
         this.isActive = false;
         this.overlay.style.display = 'none';
+        window.drawingBoard?.syncVectorPreviewState?.();
     }
 
     stampText() {
@@ -936,6 +939,7 @@ class InsertTextManager {
         
         this.historyManager.saveState();
         this.cancelOverlay();
+        window.drawingBoard?.syncVectorPreviewState?.(true);
     }
     
     // Draw all stored text objects on canvas
@@ -946,16 +950,16 @@ class InsertTextManager {
     }
     
     // Draw a single text object
-    drawTextObject(textObj) {
+    drawTextObject(textObj, targetCtx = this.ctx) {
         this.normalizeTextObjectScale(textObj);
-        this.ctx.save();
+        targetCtx.save();
         
         const fontSize = textObj.fontSize;
         const fontStyle = textObj.italic ? 'italic' : 'normal';
         const fontWeight = textObj.bold ? 'bold' : 'normal';
-        this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${this.normalizeFontFamilyForCanvas(textObj.fontFamily)}`;
-        this.ctx.textBaseline = 'top';
-        this.ctx.fillStyle = textObj.color;
+        targetCtx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${this.normalizeFontFamilyForCanvas(textObj.fontFamily)}`;
+        targetCtx.textBaseline = 'top';
+        targetCtx.fillStyle = textObj.color;
         
         const lines = textObj.text.split('\n');
         const lineHeight = fontSize * 1.2;
@@ -963,16 +967,16 @@ class InsertTextManager {
         // Center of text box
         let maxWidth = 0;
         lines.forEach(line => {
-            const m = this.ctx.measureText(line);
+            const m = targetCtx.measureText(line);
             if (m.width > maxWidth) maxWidth = m.width;
         });
         const totalHeight = lines.length * lineHeight;
         const centerX = textObj.x + maxWidth / 2;
         const centerY = textObj.y + totalHeight / 2;
         
-        this.ctx.translate(centerX, centerY);
-        this.ctx.rotate((textObj.rotation || 0) * Math.PI / 180);
-        this.ctx.translate(-centerX, -centerY);
+        targetCtx.translate(centerX, centerY);
+        targetCtx.rotate((textObj.rotation || 0) * Math.PI / 180);
+        targetCtx.translate(-centerX, -centerY);
         
         // Pre-calculate decoration constants
         const hasDecorations = textObj.underline || textObj.strikethrough;
@@ -986,65 +990,65 @@ class InsertTextManager {
             const padding = 4;
             const lineX = textObj.x + padding;
             const lineY = textObj.y + padding + (i * lineHeight);
-            this.ctx.fillText(line, lineX, lineY);
+            targetCtx.fillText(line, lineX, lineY);
             
             // Draw text decorations (underline, strikethrough)
             if (hasDecorations) {
-                const lineWidth = this.ctx.measureText(line).width;
-                if (lineWidth > 0) {
+                const measuredLineWidth = targetCtx.measureText(line).width;
+                if (measuredLineWidth > 0) {
                     if (textObj.underline) {
                         const underlineY = lineY + fontSize * UNDERLINE_Y_OFFSET;
-                        this.drawDecorationLine(lineX, underlineY, lineWidth, decorationStyle, decorationStrokeWidth, decorationColor);
+                        this.drawDecorationLine(lineX, underlineY, measuredLineWidth, decorationStyle, decorationStrokeWidth, decorationColor, targetCtx);
                     }
                     
                     if (textObj.strikethrough) {
                         const strikeY = lineY + fontSize * STRIKETHROUGH_Y_OFFSET;
-                        this.drawDecorationLine(lineX, strikeY, lineWidth, decorationStyle, decorationStrokeWidth, decorationColor);
+                        this.drawDecorationLine(lineX, strikeY, measuredLineWidth, decorationStyle, decorationStrokeWidth, decorationColor, targetCtx);
                     }
                 }
             }
         });
         
-        this.ctx.restore();
+        targetCtx.restore();
     }
 
-    drawDecorationLine(x, y, width, style, lineWidth, color) {
-        this.ctx.save();
-        this.ctx.strokeStyle = color;
-        this.ctx.lineWidth = lineWidth;
-        this.ctx.lineCap = 'round';
-        this.ctx.lineJoin = 'round';
+    drawDecorationLine(x, y, width, style, lineWidth, color, targetCtx = this.ctx) {
+        targetCtx.save();
+        targetCtx.strokeStyle = color;
+        targetCtx.lineWidth = lineWidth;
+        targetCtx.lineCap = 'round';
+        targetCtx.lineJoin = 'round';
 
         if (style === 'dashed') {
-            this.ctx.setLineDash([lineWidth * 4, lineWidth * 2]);
+            targetCtx.setLineDash([lineWidth * 4, lineWidth * 2]);
         } else if (style === 'dotted') {
-            this.ctx.setLineDash([lineWidth, lineWidth * this.DOTTED_LINE_GAP_MULTIPLIER]);
+            targetCtx.setLineDash([lineWidth, lineWidth * this.DOTTED_LINE_GAP_MULTIPLIER]);
         } else {
-            this.ctx.setLineDash([]);
+            targetCtx.setLineDash([]);
         }
 
         if (style === 'wavy') {
             const amplitude = Math.max(1, lineWidth * 1.2);
             const wavelength = Math.max(6, lineWidth * 4);
             const step = Math.max(2, wavelength / 4);
-            this.ctx.beginPath();
+            targetCtx.beginPath();
             for (let offset = 0; offset <= width; offset += step) {
                 const waveY = y + Math.sin((offset / wavelength) * Math.PI * 2) * amplitude;
                 if (offset === 0) {
-                    this.ctx.moveTo(x + offset, waveY);
+                    targetCtx.moveTo(x + offset, waveY);
                 } else {
-                    this.ctx.lineTo(x + offset, waveY);
+                    targetCtx.lineTo(x + offset, waveY);
                 }
             }
-            this.ctx.stroke();
+            targetCtx.stroke();
         } else {
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, y);
-            this.ctx.lineTo(x + width, y);
-            this.ctx.stroke();
+            targetCtx.beginPath();
+            targetCtx.moveTo(x, y);
+            targetCtx.lineTo(x + width, y);
+            targetCtx.stroke();
         }
 
-        this.ctx.restore();
+        targetCtx.restore();
     }
     
     // Draw selection indicator for selected text
@@ -1239,6 +1243,7 @@ class InsertTextManager {
     clearTextObjects() {
         this.textObjects = [];
         this.selectedTextIndex = null;
+        this.editingTextIndex = null;
     }
     
     // Trigger a canvas redraw 

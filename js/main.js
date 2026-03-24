@@ -13,6 +13,7 @@ const MAX_FEATURE_WIDGET_ZINDEX = 1900;
 const QUALITY_UPDATE_DEBOUNCE_MS = 120;
 const MIN_DYNAMIC_RENDER_SCALE = 1;
 const MAX_DYNAMIC_RENDER_SCALE = 4;
+const INTERACTION_DYNAMIC_RENDER_SCALE_CAP = 1.25;
 const RENDER_SCALE_SCHEDULE_THRESHOLD = 0.15;
 const RENDER_SCALE_APPLY_THRESHOLD = 0.05;
 const MAX_DYNAMIC_BACKING_DIMENSION = 8192;
@@ -87,6 +88,7 @@ class DrawingBoard {
         
         // Initialize shape drawing manager
         this.shapeDrawingManager = new ShapeDrawingManager(this.canvas, this.ctx, this.drawingEngine, this.historyManager);
+        this.drawingEngine.setShapeDrawingManager(this.shapeDrawingManager);
         
         // Initialize line style modal for both pen and shape tools
         this.lineStyleModal = new LineStyleModal(this.drawingEngine, this.shapeDrawingManager);
@@ -139,7 +141,7 @@ class DrawingBoard {
         
         // Canvas scale limits
         this.MIN_CANVAS_SCALE = 0.5;
-        this.NORMAL_MAX_SCALE = 5.0;
+        this.NORMAL_MAX_SCALE = 10.0;
         this.UNLIMITED_MAX_SCALE = 500.0;
         this.MAX_CANVAS_SCALE = this.settingsManager.unlimitedZoom ? this.UNLIMITED_MAX_SCALE : this.NORMAL_MAX_SCALE;
         this.dynamicRenderScale = 1;
@@ -163,11 +165,22 @@ class DrawingBoard {
         this.modalResizeState = null;
         this.modalDragState = null;
         this.cacheSizeRequestToken = 0;
+        this.cacheSizeRetryScheduled = false;
+        this.cacheStorageSizeSnapshotKey = 'aboardCacheStorageSizeSnapshot';
         
         // Coordinate origin dragging state
         this.isDraggingCoordinateOrigin = false;
         this.isCoordinateOriginDragMode = false; // Mode activated by button click
+        this.isCoordinatePointMode = false;
+        this.isCoordinateSettingsExpanded = false;
+        this.isCoordinatePointPanelVisible = false;
+        this.isCoordinateInputPanelVisible = false;
+        this.expandedCoordinatePlotId = null;
+        this.pendingCoordinateLineStartId = null;
         this.coordinateOriginDragStart = { x: 0, y: 0 };
+        this.openFontPreviewPanels = new Set();
+        this.editingFontAliasFont = null;
+        this.activeFontPreviewFont = null;
         
         // Uploaded images storage
         this.uploadedImages = this.loadUploadedImages();
@@ -202,6 +215,7 @@ class DrawingBoard {
             document.querySelectorAll('.resizable-modal-content').forEach(content => {
                 this.updateModalHeaderActionButtons(content);
             });
+            this.updateBackgroundUI();
         });
         this.backgroundManager.drawBackground();
         this.updateUI();
@@ -400,6 +414,32 @@ class DrawingBoard {
                 selector: '#announcement-modal .announcement-modal-content',
                 minWidth: 420,
                 minHeight: 280
+            },
+            {
+                key: 'coordinateToolsModal',
+                selector: '#coordinate-tools-modal .coordinate-tools-modal-content',
+                minWidth: 420,
+                minHeight: 320
+            },
+            {
+                key: 'coordinatePointModal',
+                selector: '#coordinate-point-modal .coordinate-point-modal-content',
+                minWidth: 320,
+                minHeight: 260,
+                showResizeHandles: false,
+                showHeaderActions: false
+            },
+            {
+                key: 'coordinateKeypadModal',
+                selector: '#coordinate-keypad-modal .coordinate-keypad-modal-content',
+                minWidth: 320,
+                minHeight: 300
+            },
+            {
+                key: 'fontPreviewModal',
+                selector: '#font-preview-modal .font-preview-modal-content',
+                minWidth: 520,
+                minHeight: 360
             }
         ];
     }
@@ -420,6 +460,9 @@ class DrawingBoard {
         if (!content || content.dataset.modalResizeRegistered === 'true') {
             return;
         }
+
+        const showResizeHandles = config.showResizeHandles !== false;
+        const showHeaderActions = config.showHeaderActions !== false;
 
         content.dataset.modalResizeRegistered = 'true';
         content.dataset.modalResizeKey = config.key;
@@ -456,7 +499,10 @@ class DrawingBoard {
                 titleGroup.appendChild(title);
             }
 
-            if (!titleGroup.querySelector('.modal-reset-size-btn')) {
+            if (!showHeaderActions) {
+                content.classList.add('no-modal-header-actions');
+                titleGroup.querySelectorAll('.modal-reset-size-btn, .modal-keep-centered-btn').forEach(btn => btn.remove());
+            } else if (!titleGroup.querySelector('.modal-reset-size-btn')) {
                 const resetButton = document.createElement('button');
                 resetButton.type = 'button';
                 resetButton.className = 'modal-reset-size-btn';
@@ -467,7 +513,7 @@ class DrawingBoard {
                 titleGroup.appendChild(resetButton);
             }
 
-            if (!titleGroup.querySelector('.modal-keep-centered-btn')) {
+            if (showHeaderActions && !titleGroup.querySelector('.modal-keep-centered-btn')) {
                 const keepCenteredButton = document.createElement('button');
                 keepCenteredButton.type = 'button';
                 keepCenteredButton.className = 'modal-keep-centered-btn';
@@ -479,13 +525,18 @@ class DrawingBoard {
             }
         }
 
-        ['top-left', 'top-right', 'bottom-left', 'bottom-right'].forEach(handleName => {
-            const handle = document.createElement('div');
-            handle.className = `modal-resize-handle ${handleName}`;
-            handle.dataset.handle = handleName;
-            handle.addEventListener('pointerdown', (event) => this.startModalResize(event, content, handleName));
-            content.appendChild(handle);
-        });
+        if (!showResizeHandles) {
+            content.classList.add('no-modal-resize-handles');
+            content.querySelectorAll('.modal-resize-handle').forEach(handle => handle.remove());
+        } else {
+            ['top-left', 'top-right', 'bottom-left', 'bottom-right'].forEach(handleName => {
+                const handle = document.createElement('div');
+                handle.className = `modal-resize-handle ${handleName}`;
+                handle.dataset.handle = handleName;
+                handle.addEventListener('pointerdown', (event) => this.startModalResize(event, content, handleName));
+                content.appendChild(handle);
+            });
+        }
 
         this.syncResizableModalState(content);
     }
@@ -1026,11 +1077,31 @@ class DrawingBoard {
                 }
             }
             
+            if (this.isCoordinatePointMode && this.backgroundManager.supportsMovableOrigin()) {
+                const point = this.getLogicalCanvasPointFromEvent(e);
+                const pointMode = this.getCoordinatePointLineMode();
+                if (pointMode === 'selected') {
+                    const hitPoint = this.backgroundManager.findCoordinatePointNearCanvasPoint(point.x, point.y);
+                    if (hitPoint) {
+                        this.handleSelectedCoordinateLinePointClick(hitPoint.id);
+                        return;
+                    }
+                }
+                const addedPoint = this.backgroundManager.addCoordinatePoint(point.x, point.y);
+                if (addedPoint?.duplicate) {
+                    return;
+                }
+                this.resetSelectedCoordinateLineConnection();
+                this.savePageBackground(this.currentPage);
+                this.updateBackgroundUI();
+                this.showCoordinateToast('background.pointAdded', '已添加坐标点', 'success');
+                return;
+            }
+
             // Check if clicking on coordinate origin point (in coordinate origin drag mode or background mode)
-            if (this.backgroundManager.backgroundPattern === 'coordinate') {
-                const rect = this.bgCanvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+            if (this.backgroundManager.supportsMovableOrigin()) {
+                const point = this.getLogicalCanvasPointFromEvent(e);
+                const { x, y } = point;
                 
                 // Check if in coordinate origin drag mode (button clicked)
                 if (this.isCoordinateOriginDragMode) {
@@ -1067,6 +1138,7 @@ class DrawingBoard {
             
             if (e.button === 1 || (e.button === 0 && e.shiftKey) || this.drawingEngine.currentTool === 'pan') {
                 this.drawingEngine.startPanning(e);
+                this.scheduleRenderQualityUpdate();
             } else if (this.drawingEngine.currentTool === 'select') {
                 // Handle selection tool
                 this.selectionManager.startSelection(e);
@@ -1076,12 +1148,14 @@ class DrawingBoard {
                     return;
                 }
                 this.shapeDrawingManager.startDrawing(e);
+                this.scheduleRenderQualityUpdate();
             } else if (this.drawingEngine.currentTool === 'pen' || this.drawingEngine.currentTool === 'eraser') {
                 // Don't start drawing if interacting with teaching tools
                 if (this.teachingToolsManager && this.teachingToolsManager.isInteracting) {
                     return;
                 }
                 this.drawingEngine.startDrawing(e);
+                this.scheduleRenderQualityUpdate();
                 // Show eraser cursor only when actually erasing on canvas
                 if (this.drawingEngine.currentTool === 'eraser') {
                     this.showEraserCursor();
@@ -1169,6 +1243,7 @@ class DrawingBoard {
             }
             this.handleDrawingComplete();
             this.drawingEngine.stopPanning();
+            this.scheduleRenderQualityUpdate();
             // Hide eraser cursor when erasing stops
             if (this.drawingEngine.currentTool === 'eraser') {
                 this.hideEraserCursor();
@@ -1185,6 +1260,7 @@ class DrawingBoard {
                     this.handlePointerPinchEnd();
                 }
             }
+            this.scheduleRenderQualityUpdate();
             // Hide eraser cursor when pointer is cancelled
             if (this.drawingEngine.currentTool === 'eraser') {
                 this.hideEraserCursor();
@@ -1195,10 +1271,9 @@ class DrawingBoard {
         this.canvas.addEventListener('dblclick', (e) => {
             // In pan mode, double-click to select coordinate origin
             if (this.drawingEngine.currentTool === 'pan' && 
-                this.backgroundManager.backgroundPattern === 'coordinate') {
-                const rect = this.bgCanvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+                this.backgroundManager.supportsMovableOrigin()) {
+                const point = this.getLogicalCanvasPointFromEvent(e);
+                const { x, y } = point;
                 
                 if (this.backgroundManager.isPointNearCoordinateOrigin(x, y)) {
                     this.isDraggingCoordinateOrigin = true;
@@ -1383,6 +1458,11 @@ class DrawingBoard {
             if (this.historyManager.undo()) {
                 // Clear stroke selection as strokes are no longer valid
                 this.drawingEngine.clearStrokes();
+                this.drawingEngine.stampedImages = [];
+                this.drawingEngine.objectGroups = [];
+                this.insertTextManager?.clearTextObjects?.();
+                this.drawingEngine.clearVectorScene();
+                this.drawingEngine.setVectorPreviewVisible(false);
                 this.updateUI();
                 this.saveSessionDebounced();
             }
@@ -1392,6 +1472,11 @@ class DrawingBoard {
             if (this.historyManager.redo()) {
                 // Clear stroke selection as strokes are no longer valid
                 this.drawingEngine.clearStrokes();
+                this.drawingEngine.stampedImages = [];
+                this.drawingEngine.objectGroups = [];
+                this.insertTextManager?.clearTextObjects?.();
+                this.drawingEngine.clearVectorScene();
+                this.drawingEngine.setVectorPreviewVisible(false);
                 this.updateUI();
                 this.saveSessionDebounced();
             }
@@ -1472,6 +1557,7 @@ class DrawingBoard {
                 this.repositionToolbarsOnResize();
                 // Reposition modals to ensure they stay within viewport
                 this.repositionModalsOnResize();
+                this.positionCoordinatePointPanel();
                 // Keep the adaptive default eraser size aligned with the current viewport.
                 this.refreshAdaptiveEraserSize();
                 this.syncInteractiveOverlays();
@@ -1577,7 +1663,7 @@ class DrawingBoard {
         });
         
         // Background pattern buttons
-        document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(btn => {
+        document.querySelectorAll('#pattern-grid .pattern-option-btn[data-pattern]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 // Use currentTarget to ensure we get the data from the button, not its children
                 const pattern = e.currentTarget.dataset.pattern;
@@ -1585,28 +1671,11 @@ class DrawingBoard {
                     document.getElementById('bg-image-upload').click();
                 } else {
                     this.backgroundManager.setBackgroundPattern(pattern);
-                    document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(b => b.classList.remove('active'));
-                    e.currentTarget.classList.add('active');
-                    document.getElementById('image-size-group').style.display = 'none';
-                    
-                    // Show/hide pattern density slider based on pattern
-                    const patternDensityGroup = document.getElementById('pattern-density-group');
-                    const moveOriginBtn = document.getElementById('move-origin-btn');
-                    if (pattern !== 'blank' && pattern !== 'image') {
-                        patternDensityGroup.style.display = 'flex';
-                        // Only show move-origin-btn for coordinate pattern
-                        if (moveOriginBtn) {
-                            moveOriginBtn.style.display = pattern === 'coordinate' ? 'inline-flex' : 'none';
-                        }
-                    } else {
-                        patternDensityGroup.style.display = 'none';
-                        if (moveOriginBtn) {
-                            moveOriginBtn.style.display = 'none';
-                        }
-                    }
+                    this.updateBackgroundUI();
 
-                    if (pattern !== 'coordinate') {
+                    if (!this.backgroundManager.supportsMovableOrigin(pattern)) {
                         this.disableCoordinateOriginDragMode();
+                        this.setCoordinatePointMode(false);
                     }
                     
                     // Save page background in paginated mode
@@ -1629,11 +1698,8 @@ class DrawingBoard {
                     this.imageControls.resetConfirmation();
                     
                     await this.backgroundManager.setBackgroundImage(imageData);
-                    document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(b => b.classList.remove('active'));
-                    document.querySelector('.pattern-option-btn[data-pattern="image"]').classList.add('active');
-                    document.getElementById('image-size-group').style.display = 'flex';
-                    // Hide pattern density when image is uploaded
-                    document.getElementById('pattern-density-group').style.display = 'none';
+                    this.updateBackgroundUI();
+                    this.setCoordinatePointMode(false);
                     
                     // Save uploaded image
                     this.saveUploadedImage(imageData);
@@ -1768,6 +1834,7 @@ class DrawingBoard {
                 if (isActive) {
                     this.disableCoordinateOriginDragMode();
                 } else {
+                    this.setCoordinatePointMode(false);
                     // Enable coordinate origin drag mode
                     moveOriginBtn.classList.add('active');
                     this.isCoordinateOriginDragMode = true;
@@ -1775,6 +1842,215 @@ class DrawingBoard {
                     // Change cursor to indicate dragging is available
                     this.canvas.style.cursor = 'move';
                 }
+            });
+        }
+
+        const bindCoordinateOverlayCheckbox = (id, key) => {
+            const checkbox = document.getElementById(id);
+            if (!checkbox) return;
+            checkbox.addEventListener('change', (e) => {
+                this.backgroundManager.updateCoordinateOverlayOptions({ [key]: e.target.checked });
+                this.savePageBackground(this.currentPage);
+                this.updateBackgroundUI();
+            });
+        };
+
+        bindCoordinateOverlayCheckbox('coordinate-show-ticks', 'showTicks');
+        bindCoordinateOverlayCheckbox('coordinate-show-labels', 'showLabels');
+        bindCoordinateOverlayCheckbox('coordinate-show-point-labels', 'showPointLabels');
+        bindCoordinateOverlayCheckbox('coordinate-show-origin', 'showOrigin');
+        bindCoordinateOverlayCheckbox('coordinate-snap-grid', 'snapToGrid');
+
+        const coordinateSettingsToggleBtn = document.getElementById('coordinate-settings-toggle-btn');
+        if (coordinateSettingsToggleBtn) {
+            coordinateSettingsToggleBtn.addEventListener('click', () => {
+                this.toggleCoordinateSettingsPanel();
+            });
+        }
+
+        const coordinatePointToggleBtn = document.getElementById('coordinate-point-toggle-btn');
+        if (coordinatePointToggleBtn) {
+            coordinatePointToggleBtn.addEventListener('click', () => {
+                this.toggleCoordinatePointPanel();
+            });
+        }
+
+        const coordinateToolsModal = document.getElementById('coordinate-tools-modal');
+        const coordinateToolsModalCloseBtn = document.getElementById('coordinate-tools-modal-close-btn');
+        const coordinateToolsModalOkBtn = document.getElementById('coordinate-tools-modal-ok-btn');
+        if (coordinateToolsModal) {
+            coordinateToolsModal.addEventListener('click', (e) => {
+                if (e.target === coordinateToolsModal) {
+                    this.toggleCoordinateSettingsPanel(false);
+                }
+            });
+        }
+        if (coordinateToolsModalCloseBtn) {
+            coordinateToolsModalCloseBtn.addEventListener('click', () => {
+                this.toggleCoordinateSettingsPanel(false);
+            });
+        }
+        if (coordinateToolsModalOkBtn) {
+            coordinateToolsModalOkBtn.addEventListener('click', () => {
+                this.toggleCoordinateSettingsPanel(false);
+            });
+        }
+
+        const coordinatePointModal = document.getElementById('coordinate-point-modal');
+        const coordinatePointModalCloseBtn = document.getElementById('coordinate-point-modal-close-btn');
+        const coordinatePointModalOkBtn = document.getElementById('coordinate-point-modal-ok-btn');
+        if (coordinatePointModal) {
+            coordinatePointModal.addEventListener('click', (e) => {
+                if (e.target === coordinatePointModal) {
+                    this.toggleCoordinatePointPanel(false);
+                }
+            });
+        }
+        if (coordinatePointModalCloseBtn) {
+            coordinatePointModalCloseBtn.addEventListener('click', () => {
+                this.toggleCoordinatePointPanel(false);
+            });
+        }
+        if (coordinatePointModalOkBtn) {
+            coordinatePointModalOkBtn.addEventListener('click', () => {
+                this.toggleCoordinatePointPanel(false);
+            });
+        }
+
+        const coordinateAddPointBtn = document.getElementById('coordinate-add-point-btn');
+        if (coordinateAddPointBtn) {
+            coordinateAddPointBtn.addEventListener('click', () => {
+                const nextEnabled = !this.isCoordinatePointMode;
+                this.setCoordinatePointMode(nextEnabled);
+                this.showCoordinatePointModeStatus(nextEnabled);
+            });
+        }
+
+        document.querySelectorAll('[data-coordinate-point-mode]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const nextMode = btn.dataset.coordinatePointMode;
+                if (!nextMode) return;
+                this.setCoordinatePointLineMode(nextMode);
+            });
+        });
+
+        const coordinateClearPointsBtn = document.getElementById('coordinate-clear-points-btn');
+        if (coordinateClearPointsBtn) {
+            coordinateClearPointsBtn.addEventListener('click', () => {
+                this.resetSelectedCoordinateLineConnection({ clearSelection: true });
+                this.backgroundManager.clearCoordinatePoints();
+                this.savePageBackground(this.currentPage);
+                this.updateBackgroundUI();
+                this.showCoordinateToast('background.pointsCleared', '坐标点已清空', 'success');
+            });
+        }
+
+        const coordinateClearPlotsBtn = document.getElementById('coordinate-clear-plots-btn');
+        if (coordinateClearPlotsBtn) {
+            coordinateClearPlotsBtn.addEventListener('click', () => {
+                this.expandedCoordinatePlotId = null;
+                this.backgroundManager.clearCoordinatePlots(this.backgroundManager.backgroundPattern);
+                this.savePageBackground(this.currentPage);
+                this.updateBackgroundUI();
+                this.showCoordinateToast('background.plotsCleared', '函数图像已清空', 'success');
+            });
+        }
+
+        const coordinatePlotBtn = document.getElementById('coordinate-plot-btn');
+        const coordinateExpressionInput = document.getElementById('coordinate-expression-input');
+        const addCoordinatePlot = () => {
+            const expression = coordinateExpressionInput?.value?.trim();
+            if (!expression || !this.backgroundManager.supportsMovableOrigin()) return;
+
+            try {
+                this.backgroundManager.addCoordinatePlot(expression, this.backgroundManager.backgroundPattern);
+                this.expandedCoordinatePlotId = null;
+                coordinateExpressionInput.value = '';
+                this.syncCoordinateExpressionDisplay();
+                this.savePageBackground(this.currentPage);
+                this.updateBackgroundUI();
+                this.showCoordinateToast('background.plotAdded', '函数图像已添加', 'success');
+            } catch (error) {
+                console.error('Failed to add coordinate plot:', error);
+                this.showCoordinateToast('background.plotError', '表达式无效，无法绘制', 'error');
+            }
+        };
+
+        if (coordinatePlotBtn) {
+            coordinatePlotBtn.addEventListener('click', addCoordinatePlot);
+        }
+
+        if (coordinateExpressionInput) {
+            coordinateExpressionInput.addEventListener('input', () => {
+                this.syncCoordinateExpressionDisplay();
+            });
+            coordinateExpressionInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCoordinatePlot();
+                }
+            });
+        }
+        this.syncCoordinateExpressionDisplay();
+
+        const coordinateKeypadToggleBtn = document.getElementById('coordinate-keypad-toggle-btn');
+        if (coordinateKeypadToggleBtn) {
+            coordinateKeypadToggleBtn.addEventListener('click', () => {
+                this.toggleCoordinateInputPanel();
+            });
+        }
+
+        const coordinateKeypadModal = document.getElementById('coordinate-keypad-modal');
+        const coordinateKeypadModalCloseBtn = document.getElementById('coordinate-keypad-modal-close-btn');
+        const coordinateKeypadConfirmBtn = document.getElementById('coordinate-keypad-confirm-btn');
+        if (coordinateKeypadModal) {
+            coordinateKeypadModal.addEventListener('click', (e) => {
+                if (e.target === coordinateKeypadModal) {
+                    this.toggleCoordinateInputPanel(false);
+                }
+            });
+        }
+        if (coordinateKeypadModalCloseBtn) {
+            coordinateKeypadModalCloseBtn.addEventListener('click', () => {
+                this.toggleCoordinateInputPanel(false);
+            });
+        }
+        if (coordinateKeypadConfirmBtn) {
+            coordinateKeypadConfirmBtn.addEventListener('click', () => {
+                this.syncCoordinateExpressionDisplay();
+                this.toggleCoordinateInputPanel(false);
+                coordinateExpressionInput?.focus();
+            });
+        }
+
+        const coordinateKeypadPanel = document.getElementById('coordinate-keypad-panel');
+        if (coordinateKeypadPanel) {
+            coordinateKeypadPanel.addEventListener('click', (e) => {
+                const button = e.target.closest('[data-coordinate-action], [data-coordinate-insert], [data-coordinate-variable-btn]');
+                if (!button) return;
+
+                if (button.dataset.coordinateAction) {
+                    this.handleCoordinateExpressionAction(button.dataset.coordinateAction);
+                    return;
+                }
+
+                let value = button.dataset.coordinateInsert;
+                if (button.hasAttribute('data-coordinate-variable-btn')) {
+                    value = this.backgroundManager.backgroundPattern === 'polar'
+                        ? button.dataset.insertPolar
+                        : button.dataset.insertCartesian;
+                }
+
+                if (value) {
+                    this.insertCoordinateExpressionAtCursor(value);
+                }
+            });
+        }
+
+        const coordinatePlotList = document.getElementById('coordinate-plot-list');
+        if (coordinatePlotList) {
+            coordinatePlotList.addEventListener('click', (e) => {
+                this.handleCoordinatePlotListClick(e);
             });
         }
         
@@ -2727,7 +3003,7 @@ class DrawingBoard {
 
     setupModalInteractionLock() {
         const updateModalState = () => {
-            const hasBlockingModal = !!document.querySelector('.modal.show, .time-fullscreen-modal.show, .timer-fullscreen-modal.show');
+            const hasBlockingModal = !!document.querySelector('.modal.show:not(.non-blocking-modal), .time-fullscreen-modal.show, .timer-fullscreen-modal.show');
             document.body.classList.toggle('overlay-modal-open', hasBlockingModal);
         };
         const observer = new MutationObserver(updateModalState);
@@ -2775,10 +3051,10 @@ class DrawingBoard {
             }
             
             // Zoom shortcuts
-            if (e.key === '+' || e.key === '=') {
+            if (!isEditableTarget && (e.key === '+' || e.key === '=')) {
                 e.preventDefault();
                 this.zoomIn();
-            } else if (e.key === '-' || e.key === '_') {
+            } else if (!isEditableTarget && (e.key === '-' || e.key === '_')) {
                 e.preventDefault();
                 this.zoomOut();
             }
@@ -3365,6 +3641,50 @@ class DrawingBoard {
         this.clampFloatingPanelToViewport(configArea);
 
     }
+
+    positionCoordinatePointPanel() {
+        const modal = document.getElementById('coordinate-point-modal');
+        const content = modal?.querySelector('.coordinate-point-modal-content');
+        const toggleBtn = document.getElementById('coordinate-point-toggle-btn');
+        const configArea = document.getElementById('config-area');
+
+        if (!modal || !content || !toggleBtn || !configArea || !modal.classList.contains('show')) {
+            return;
+        }
+
+        if (content.classList.contains('modal-custom-sized')) {
+            return;
+        }
+
+        const buttonRect = toggleBtn.getBoundingClientRect();
+        const configRect = configArea.getBoundingClientRect();
+        if (!buttonRect.width || !buttonRect.height || !configRect.width || !configRect.height) {
+            return;
+        }
+
+        const horizontalInset = 12;
+        const verticalInset = 12;
+        const gap = 14;
+        const measuredWidth = Math.min(content.offsetWidth || 328, window.innerWidth - horizontalInset * 2);
+        const measuredHeight = Math.min(content.offsetHeight || 420, window.innerHeight - verticalInset * 2);
+        const preferredLeft = buttonRect.left + (buttonRect.width / 2) - (measuredWidth / 2);
+        const left = Math.max(horizontalInset, Math.min(window.innerWidth - measuredWidth - horizontalInset, preferredLeft));
+        const preferredTop = Math.min(
+            buttonRect.top - measuredHeight - gap,
+            configRect.top - measuredHeight - gap
+        );
+        const top = Math.max(verticalInset, preferredTop);
+        const availableHeight = Math.max(240, window.innerHeight - top - verticalInset);
+
+        content.style.position = 'fixed';
+        content.style.left = `${left}px`;
+        content.style.top = `${top}px`;
+        content.style.right = 'auto';
+        content.style.bottom = 'auto';
+        content.style.margin = '0';
+        content.style.transform = 'none';
+        content.style.maxHeight = `${availableHeight}px`;
+    }
     
     positionFeatureArea() {
         // Position feature-area above the "更多" button
@@ -3398,6 +3718,13 @@ class DrawingBoard {
 
         if (this.isCoordinateOriginDragMode && tool !== 'background') {
             this.disableCoordinateOriginDragMode({ keepCursor: true });
+        }
+        if (this.isCoordinatePointMode && tool !== 'background') {
+            this.setCoordinatePointMode(false);
+        }
+        if (tool !== 'background') {
+            this.toggleCoordinateSettingsPanel(false);
+            this.toggleCoordinatePointPanel(false);
         }
         
         // Check if we're clicking the same tool button again (toggle behavior)
@@ -3434,6 +3761,10 @@ class DrawingBoard {
             // If clicking the same tool and config is visible, toggle it off
             if (isSameTool && isConfigVisible) {
                 configArea.classList.remove('show');
+                if (tool === 'background') {
+                    this.toggleCoordinateSettingsPanel(false);
+                    this.toggleCoordinatePointPanel(false);
+                }
             } else {
                 // Show config panel and position it above toolbar
                 configArea.classList.add('show');
@@ -3462,6 +3793,484 @@ class DrawingBoard {
             // For other tools (like pan, select), just hide panels
             configArea.classList.remove('show');
             featureArea.classList.remove('show');
+        }
+    }
+
+    showCoordinateToast(i18nKey, fallback, type = 'info') {
+        const message = window.i18n ? window.i18n.t(i18nKey) : fallback;
+        this.settingsManager?.toastManager?.show(message === i18nKey ? fallback : message, type);
+    }
+
+    getLogicalCanvasPointFromEvent(e) {
+        if (this.drawingEngine?.getPosition) {
+            return this.drawingEngine.getPosition(e);
+        }
+
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = rect.width ? this.canvas.offsetWidth / rect.width : 1;
+        const scaleY = rect.height ? this.canvas.offsetHeight / rect.height : 1;
+        return {
+            x: Math.max(0, Math.min((e.clientX - rect.left) * scaleX, this.canvas.offsetWidth || rect.width || 0)),
+            y: Math.max(0, Math.min((e.clientY - rect.top) * scaleY, this.canvas.offsetHeight || rect.height || 0))
+        };
+    }
+
+    resetSelectedCoordinateLineConnection(options = {}) {
+        const { clearSelection = false } = options;
+        this.pendingCoordinateLineStartId = null;
+
+        if (clearSelection && this.selectionManager?.isCoordinateSelection?.()) {
+            this.selectionManager.clearSelection();
+        }
+    }
+
+    handleSelectedCoordinateLinePointClick(pointId) {
+        if (!pointId || !this.backgroundManager) return false;
+
+        const startPointId = this.pendingCoordinateLineStartId;
+        if (!startPointId || startPointId === pointId) {
+            this.pendingCoordinateLineStartId = pointId;
+            this.showCoordinateToast(
+                'background.coordinateStatusSelectLineStartPoint',
+                '已选中第一个点，再点一个点即可连线'
+            );
+            return true;
+        }
+
+        const existingGroup = this.backgroundManager.findCoordinateGroupByPointIds?.([startPointId, pointId], { line: true });
+        if (existingGroup) {
+            this.resetSelectedCoordinateLineConnection();
+            this.showCoordinateToast(
+                'background.coordinateLineExists',
+                '这两个点之间已经有线段了'
+            );
+            return true;
+        }
+
+        const group = this.backgroundManager.createCoordinateGroup([startPointId, pointId], { line: true });
+        this.resetSelectedCoordinateLineConnection();
+        if (!group) {
+            return false;
+        }
+
+        this.savePageBackground(this.currentPage);
+        this.updateBackgroundUI();
+        this.showCoordinateToast('background.coordinateLineCreated', '线段已连接', 'success');
+        return true;
+    }
+
+    escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    getCoordinateExpressionPrefix(pattern = this.backgroundManager?.backgroundPattern) {
+        return pattern === 'polar' ? 'r = ' : 'y = ';
+    }
+
+    syncCoordinateExpressionDisplay() {
+        const display = document.getElementById('coordinate-keypad-expression-display');
+        const input = document.getElementById('coordinate-expression-input');
+        if (!display) return;
+        const prefix = this.getCoordinateExpressionPrefix();
+        const expression = input?.value || '';
+        display.textContent = `${prefix}${expression}`;
+    }
+
+    getCoordinatePlotAxisOptions(coordinateType = this.backgroundManager?.backgroundPattern) {
+        if (coordinateType === 'polar') {
+            return [
+                { value: 'theta', label: 'θ（弧度）' },
+                { value: 'r', label: 'r' }
+            ];
+        }
+
+        return [
+            { value: 'x', label: 'x' },
+            { value: 'y', label: 'y' }
+        ];
+    }
+
+    createCoordinatePlotRangeRowMarkup(segment = {}, coordinateType = this.backgroundManager?.backgroundPattern) {
+        const axisOptions = this.getCoordinatePlotAxisOptions(coordinateType)
+            .map(option => `<option value="${option.value}"${option.value === (segment.axis || this.getCoordinatePlotAxisOptions(coordinateType)[0].value) ? ' selected' : ''}>${this.escapeHtml(option.label)}</option>`)
+            .join('');
+        const minValue = segment.min ?? '';
+        const maxValue = segment.max ?? '';
+        const segmentId = segment.id || `segment-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+
+        return `
+            <div class="coordinate-plot-range-row" data-range-row data-segment-id="${this.escapeHtml(segmentId)}">
+                <select data-range-field="axis">${axisOptions}</select>
+                <input type="number" step="0.1" data-range-field="min" value="${this.escapeHtml(minValue)}" placeholder="最小值">
+                <input type="number" step="0.1" data-range-field="max" value="${this.escapeHtml(maxValue)}" placeholder="最大值">
+                <button type="button" class="coordinate-plot-range-remove" data-plot-range-remove="${this.escapeHtml(segmentId)}" title="删除范围段">✕</button>
+            </div>
+        `;
+    }
+
+    handleCoordinatePlotListClick(e) {
+        const actionButton = e.target.closest('[data-plot-toggle-edit], [data-plot-save], [data-plot-cancel], [data-plot-remove], [data-plot-add-segment], [data-plot-range-remove]');
+        if (!actionButton) return;
+
+        if (actionButton.dataset.plotToggleEdit) {
+            const plotId = actionButton.dataset.plotToggleEdit;
+            this.expandedCoordinatePlotId = this.expandedCoordinatePlotId === plotId ? null : plotId;
+            this.updateBackgroundUI();
+            return;
+        }
+
+        if (actionButton.dataset.plotCancel) {
+            this.expandedCoordinatePlotId = null;
+            this.updateBackgroundUI();
+            return;
+        }
+
+        if (actionButton.dataset.plotRemove) {
+            const plotId = actionButton.dataset.plotRemove;
+            if (this.expandedCoordinatePlotId === plotId) {
+                this.expandedCoordinatePlotId = null;
+            }
+            this.backgroundManager.removeCoordinatePlot(plotId);
+            this.savePageBackground(this.currentPage);
+            this.updateBackgroundUI();
+            return;
+        }
+
+        if (actionButton.dataset.plotSave) {
+            this.saveCoordinatePlotEditor(actionButton.dataset.plotSave);
+            return;
+        }
+
+        if (actionButton.dataset.plotAddSegment) {
+            this.addCoordinatePlotRangeRow(actionButton.dataset.plotAddSegment);
+            return;
+        }
+
+        if (actionButton.dataset.plotRangeRemove) {
+            const row = actionButton.closest('[data-range-row]');
+            row?.remove();
+            const editor = actionButton.closest('.coordinate-plot-editor');
+            const rangeList = editor?.querySelector('.coordinate-plot-range-list');
+            if (rangeList && !rangeList.querySelector('[data-range-row]')) {
+                rangeList.innerHTML = '<div class="coordinate-plot-range-empty">未限制显示范围，默认显示全部</div>';
+            }
+        }
+    }
+
+    addCoordinatePlotRangeRow(plotId) {
+        const plotItem = document.querySelector(`.coordinate-plot-item[data-plot-id="${plotId}"]`);
+        const rangeList = plotItem?.querySelector('.coordinate-plot-range-list');
+        if (!rangeList) return;
+
+        const coordinateType = plotItem.dataset.coordinateType || this.backgroundManager.backgroundPattern;
+        const emptyState = rangeList.querySelector('.coordinate-plot-range-empty');
+        if (emptyState) {
+            emptyState.remove();
+        }
+        rangeList.insertAdjacentHTML('beforeend', this.createCoordinatePlotRangeRowMarkup({}, coordinateType));
+    }
+
+    collectCoordinatePlotEditorSegments(plotId) {
+        const plotItem = document.querySelector(`.coordinate-plot-item[data-plot-id="${plotId}"]`);
+        if (!plotItem) return [];
+
+        return Array.from(plotItem.querySelectorAll('[data-range-row]')).map(row => ({
+            id: row.dataset.segmentId,
+            axis: row.querySelector('[data-range-field="axis"]')?.value,
+            min: row.querySelector('[data-range-field="min"]')?.value?.trim() ?? '',
+            max: row.querySelector('[data-range-field="max"]')?.value?.trim() ?? ''
+        }));
+    }
+
+    saveCoordinatePlotEditor(plotId) {
+        const plotItem = document.querySelector(`.coordinate-plot-item[data-plot-id="${plotId}"]`);
+        if (!plotItem) return;
+
+        const expression = plotItem.querySelector('[data-plot-field="expression"]')?.value?.trim() || '';
+        const color = plotItem.querySelector('[data-plot-field="color"]')?.value || '#2563eb';
+        const strokeWidth = plotItem.querySelector('[data-plot-field="strokeWidth"]')?.value || '2.5';
+        const dashStyle = plotItem.querySelector('[data-plot-field="dashStyle"]')?.value || 'solid';
+        const segments = this.collectCoordinatePlotEditorSegments(plotId);
+
+        try {
+            this.backgroundManager.updateCoordinatePlot(plotId, {
+                expression,
+                color,
+                strokeWidth,
+                dashStyle,
+                segments
+            });
+            this.expandedCoordinatePlotId = null;
+            this.savePageBackground(this.currentPage);
+            this.updateBackgroundUI();
+            this.showCoordinateToast('background.plotUpdated', '函数图像已更新', 'success');
+        } catch (error) {
+            console.error('Failed to update coordinate plot:', error);
+            this.showCoordinateToast('background.plotError', '表达式无效，无法绘制', 'error');
+        }
+    }
+
+    toggleCoordinateSettingsPanel(force) {
+        const supportsCoordinateTools = this.backgroundManager.supportsMovableOrigin(this.backgroundManager.backgroundPattern);
+        this.isCoordinateSettingsExpanded = supportsCoordinateTools && (typeof force === 'boolean'
+            ? force
+            : !this.isCoordinateSettingsExpanded);
+
+        const modal = document.getElementById('coordinate-tools-modal');
+        const toggleBtn = document.getElementById('coordinate-settings-toggle-btn');
+        if (modal) {
+            modal.classList.toggle('show', this.isCoordinateSettingsExpanded);
+        }
+        if (toggleBtn) {
+            toggleBtn.classList.toggle('active', this.isCoordinateSettingsExpanded);
+            toggleBtn.setAttribute('aria-expanded', this.isCoordinateSettingsExpanded ? 'true' : 'false');
+        }
+
+        if (!this.isCoordinateSettingsExpanded) {
+            this.toggleCoordinateInputPanel(false);
+        }
+
+        this.updateBackgroundUI();
+    }
+
+    toggleCoordinatePointPanel(force) {
+        const supportsCoordinateTools = this.backgroundManager.supportsMovableOrigin(this.backgroundManager.backgroundPattern);
+        this.isCoordinatePointPanelVisible = supportsCoordinateTools && (typeof force === 'boolean'
+            ? force
+            : !this.isCoordinatePointPanelVisible);
+
+        const modal = document.getElementById('coordinate-point-modal');
+        const toggleBtn = document.getElementById('coordinate-point-toggle-btn');
+        if (modal) {
+            modal.classList.toggle('show', this.isCoordinatePointPanelVisible);
+        }
+        if (toggleBtn) {
+            toggleBtn.classList.toggle('active', this.isCoordinatePointPanelVisible || this.isCoordinatePointMode);
+            toggleBtn.setAttribute('aria-expanded', this.isCoordinatePointPanelVisible ? 'true' : 'false');
+        }
+
+        if (this.isCoordinatePointPanelVisible) {
+            requestAnimationFrame(() => this.positionCoordinatePointPanel());
+        }
+
+        if (!this.isCoordinatePointPanelVisible) {
+            this.toggleCoordinateInputPanel(false);
+        }
+
+        this.updateBackgroundUI();
+    }
+
+    toggleCoordinateInputPanel(force) {
+        const supportsCoordinateTools = this.backgroundManager.supportsMovableOrigin(this.backgroundManager.backgroundPattern);
+        this.isCoordinateInputPanelVisible = supportsCoordinateTools && this.isCoordinatePointPanelVisible && (typeof force === 'boolean'
+            ? force
+            : !this.isCoordinateInputPanelVisible);
+
+        const keypadModal = document.getElementById('coordinate-keypad-modal');
+        const keypadToggleBtn = document.getElementById('coordinate-keypad-toggle-btn');
+
+        if (keypadModal) {
+            keypadModal.classList.toggle('show', this.isCoordinateInputPanelVisible);
+        }
+
+        if (keypadToggleBtn) {
+            keypadToggleBtn.classList.toggle('active', this.isCoordinateInputPanelVisible);
+            keypadToggleBtn.setAttribute('aria-expanded', this.isCoordinateInputPanelVisible ? 'true' : 'false');
+        }
+
+        if (this.isCoordinateInputPanelVisible) {
+            this.syncCoordinateInputPanelButtons();
+            this.syncCoordinateExpressionDisplay();
+        }
+    }
+
+    syncCoordinateInputPanelButtons() {
+        const variableBtn = document.querySelector('[data-coordinate-variable-btn]');
+        if (!variableBtn) return;
+
+        const isPolar = this.backgroundManager.backgroundPattern === 'polar';
+        variableBtn.textContent = isPolar ? 'θ' : 'x';
+        variableBtn.title = isPolar ? 'theta' : 'x';
+    }
+
+    insertCoordinateExpressionAtCursor(value) {
+        const input = document.getElementById('coordinate-expression-input');
+        if (!input) return;
+
+        input.focus();
+        const start = input.selectionStart ?? input.value.length;
+        const end = input.selectionEnd ?? input.value.length;
+
+        if (typeof input.setRangeText === 'function') {
+            input.setRangeText(value, start, end, 'end');
+            this.syncCoordinateExpressionDisplay();
+            return;
+        }
+
+        input.value = `${input.value.slice(0, start)}${value}${input.value.slice(end)}`;
+        const nextCursor = start + value.length;
+        input.setSelectionRange(nextCursor, nextCursor);
+        this.syncCoordinateExpressionDisplay();
+    }
+
+    handleCoordinateExpressionAction(action) {
+        const input = document.getElementById('coordinate-expression-input');
+        if (!input) return;
+
+        input.focus();
+        const start = input.selectionStart ?? input.value.length;
+        const end = input.selectionEnd ?? input.value.length;
+
+        if (action === 'clear') {
+            input.value = '';
+            input.setSelectionRange(0, 0);
+            this.syncCoordinateExpressionDisplay();
+            return;
+        }
+
+        if (action === 'backspace') {
+            if (typeof input.setRangeText === 'function') {
+                if (start !== end) {
+                    input.setRangeText('', start, end, 'end');
+                } else if (start > 0) {
+                    input.setRangeText('', start - 1, start, 'end');
+                }
+                this.syncCoordinateExpressionDisplay();
+                return;
+            }
+
+            if (start !== end) {
+                input.value = `${input.value.slice(0, start)}${input.value.slice(end)}`;
+                input.setSelectionRange(start, start);
+            } else if (start > 0) {
+                const nextCursor = start - 1;
+                input.value = `${input.value.slice(0, nextCursor)}${input.value.slice(start)}`;
+                input.setSelectionRange(nextCursor, nextCursor);
+            }
+            this.syncCoordinateExpressionDisplay();
+        }
+    }
+
+    getCoordinatePointLineMode() {
+        return this.backgroundManager?.getCoordinatePointLineMode?.() || 'auto';
+    }
+
+    getCoordinatePointLineModeMeta(mode = this.getCoordinatePointLineMode()) {
+        const normalizedMode = ['line', 'auto', 'selected'].includes(mode) ? mode : 'auto';
+        const modeConfig = {
+            line: {
+                hintKey: 'background.addPointHintLineOnly',
+                hintFallback: '开启后点击画布依次添加坐标点，仅绘制折线',
+                statusOnKey: 'background.coordinateStatusAddPointLineOnly',
+                statusOnFallback: '仅绘制线模式已开启，点击画布依次添加坐标点',
+                statusOffKey: 'background.coordinateStatusAddPointOff',
+                statusOffFallback: '绘制点线模式已关闭'
+            },
+            auto: {
+                hintKey: 'background.addPointHintAuto',
+                hintFallback: '开启后点击画布依次添加坐标点并自动连线',
+                statusOnKey: 'background.coordinateStatusAddPointAuto',
+                statusOnFallback: '自动连线模式已开启，点击画布依次添加坐标点',
+                statusOffKey: 'background.coordinateStatusAddPointOff',
+                statusOffFallback: '绘制点线模式已关闭'
+            },
+            selected: {
+                hintKey: 'background.addPointHintSelectedInteractive',
+                hintFallback: '开启后点击空白处添加坐标点；依次点击两个点即可连接线段',
+                statusOnKey: 'background.coordinateStatusAddPointSelectedInteractive',
+                statusOnFallback: '选择连线模式已开启，点击空白处添加点，点击两个点可连线',
+                statusOffKey: 'background.coordinateStatusAddPointOff',
+                statusOffFallback: '绘制点线模式已关闭'
+            }
+        };
+        return modeConfig[normalizedMode];
+    }
+
+    showCoordinatePointModeStatus(enabled) {
+        const modeMeta = this.getCoordinatePointLineModeMeta();
+        if (enabled) {
+            this.showCoordinateToast(modeMeta.statusOnKey, modeMeta.statusOnFallback);
+        } else {
+            this.showCoordinateToast(modeMeta.statusOffKey, modeMeta.statusOffFallback);
+        }
+    }
+
+    syncCoordinatePointModeSectionVisibility(forceVisible) {
+        const section = document.getElementById('coordinate-point-mode-section');
+        if (!section) return;
+
+        const isVisible = typeof forceVisible === 'boolean'
+            ? forceVisible
+            : !!this.isCoordinatePointMode && this.backgroundManager.supportsMovableOrigin(this.backgroundManager.backgroundPattern);
+        section.hidden = !isVisible;
+    }
+
+    setCoordinatePointLineMode(mode, options = {}) {
+        const normalizedMode = ['line', 'auto', 'selected'].includes(mode) ? mode : 'auto';
+        const currentMode = this.getCoordinatePointLineMode();
+        if (currentMode === normalizedMode) {
+            return false;
+        }
+
+        this.resetSelectedCoordinateLineConnection();
+        this.backgroundManager.updateCoordinateOverlayOptions({
+            pointLineMode: normalizedMode
+        });
+        this.savePageBackground(this.currentPage);
+        this.updateBackgroundUI();
+
+        if (!options.silent) {
+            const modeMeta = this.getCoordinatePointLineModeMeta(normalizedMode);
+            this.showCoordinateToast(modeMeta.statusOnKey, modeMeta.statusOnFallback, 'success');
+        }
+        return true;
+    }
+
+    setCoordinatePointMode(enabled) {
+        this.isCoordinatePointMode = !!enabled && this.backgroundManager.supportsMovableOrigin();
+        if (!this.isCoordinatePointMode) {
+            this.resetSelectedCoordinateLineConnection();
+        }
+
+        const addPointBtn = document.getElementById('coordinate-add-point-btn');
+        if (addPointBtn) {
+            addPointBtn.classList.toggle('active', this.isCoordinatePointMode);
+        }
+
+        const pointToggleBtn = document.getElementById('coordinate-point-toggle-btn');
+        if (pointToggleBtn) {
+            pointToggleBtn.classList.toggle('active', this.isCoordinatePointPanelVisible || this.isCoordinatePointMode);
+        }
+
+        this.syncCoordinatePointModeSectionVisibility();
+
+        if (this.isCoordinatePointMode) {
+            if (this.drawingEngine.currentTool !== 'background') {
+                this.setTool('background');
+            }
+            this.disableCoordinateOriginDragMode({ keepCursor: true });
+            this.canvas.style.cursor = 'copy';
+        } else if (!this.isCoordinateOriginDragMode) {
+            switch (this.drawingEngine.currentTool) {
+                case 'pan':
+                    this.canvas.style.cursor = 'grab';
+                    break;
+                case 'background':
+                case 'more':
+                    this.canvas.style.cursor = 'default';
+                    break;
+                case 'eraser':
+                    this.canvas.style.cursor = 'pointer';
+                    break;
+                default:
+                    this.canvas.style.cursor = 'crosshair';
+                    break;
+            }
         }
     }
 
@@ -3501,12 +4310,16 @@ class DrawingBoard {
         // Handle shape drawing completion
         if (this.drawingEngine.currentTool === 'shape') {
             this.shapeDrawingManager.stopDrawing();
+            this.syncVectorPreviewState(true);
+            this.scheduleRenderQualityUpdate();
             return;
         }
         
         if (this.drawingEngine.stopDrawing()) {
             this.historyManager.saveState();
             this.saveSessionDebounced();
+            this.syncVectorPreviewState(true);
+            this.scheduleRenderQualityUpdate();
             // Keep eraser config open after each erase stroke so users can continuously
             // fine-tune and erase without repeated reopen operations.
             if (this.drawingEngine.currentTool !== 'eraser') {
@@ -3530,6 +4343,8 @@ class DrawingBoard {
     
     closeConfigPanel() {
         document.getElementById('config-area').classList.remove('show');
+        this.toggleCoordinateSettingsPanel(false);
+        this.toggleCoordinatePointPanel(false);
         this.exitShapeMode();
     }
     
@@ -3954,8 +4769,18 @@ class DrawingBoard {
         if (!this.settingsManager.unlimitedZoom) {
             return MIN_DYNAMIC_RENDER_SCALE;
         }
+        const isInteractiveHighZoom = !!(
+            this.drawingEngine?.isDrawing ||
+            this.drawingEngine?.isPanning ||
+            this.isPinching ||
+            this.hasTwoFingers ||
+            this.shapeDrawingManager?.isDrawing
+        );
         const scale = this.drawingEngine?.canvasScale || 1;
-        const preferredScale = Math.min(MAX_DYNAMIC_RENDER_SCALE, Math.max(MIN_DYNAMIC_RENDER_SCALE, Math.sqrt(scale)));
+        const preferredScale = Math.min(
+            isInteractiveHighZoom ? INTERACTION_DYNAMIC_RENDER_SCALE_CAP : MAX_DYNAMIC_RENDER_SCALE,
+            Math.max(MIN_DYNAMIC_RENDER_SCALE, Math.sqrt(scale))
+        );
 
         const cssWidth = parseFloat(this.canvas.style.width) || this.settingsManager.canvasWidth;
         const cssHeight = parseFloat(this.canvas.style.height) || this.settingsManager.canvasHeight;
@@ -3993,13 +4818,6 @@ class DrawingBoard {
         const width = parseFloat(this.canvas.style.width) || this.settingsManager.canvasWidth;
         const height = parseFloat(this.canvas.style.height) || this.settingsManager.canvasHeight;
 
-        const oldCanvas = document.createElement('canvas');
-        oldCanvas.width = this.canvas.width;
-        oldCanvas.height = this.canvas.height;
-        const oldCtx = oldCanvas.getContext('2d');
-        if (!oldCtx) return;
-        oldCtx.drawImage(this.canvas, 0, 0);
-
         this.dynamicRenderScale = scale;
         const dpr = this.getRenderPixelRatio();
 
@@ -4020,8 +4838,10 @@ class DrawingBoard {
         this.ctx.scale(dpr, dpr);
         this.bgCtx.scale(dpr, dpr);
 
-        this.ctx.drawImage(oldCanvas, 0, 0, oldCanvas.width, oldCanvas.height, 0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.clearRect(0, 0, width, height);
+        this.bgCtx.clearRect(0, 0, width, height);
         this.backgroundManager.drawBackground();
+        this.drawingEngine.renderScene(this.insertTextManager || null);
     }
     
     applyCanvasSize() {
@@ -4327,7 +5147,256 @@ class DrawingBoard {
     }
 
     initFontManagement() {
+        const resetDefaultsBtn = document.getElementById('font-reset-defaults-btn');
+        resetDefaultsBtn?.addEventListener('click', () => {
+            const confirmed = window.confirm('恢复默认状态会删除已上传字体，并重置字体顺序、名称和预览设置。是否继续？');
+            if (!confirmed) return;
+            this.settingsManager.resetFontManagementToDefaults();
+            this.openFontPreviewPanels.clear();
+            this.editingFontAliasFont = null;
+            this.activeFontPreviewFont = null;
+            this.insertTextManager?.populateFonts?.();
+            this.renderFontManagementList();
+            this.closeFontPreviewModal();
+        });
+
+        this.initFontPreviewModal();
         this.renderFontManagementList();
+    }
+
+    getTextWithFallback(key, fallback) {
+        if (!window.i18n) return fallback;
+        const translated = window.i18n.t(key);
+        return translated && translated !== key ? translated : fallback;
+    }
+
+    getFontPreviewSettings() {
+        return this.settingsManager?.getFontPreviewSettings?.() || {
+            sampleText: '一个白板-Aboard-123',
+            fontSize: 48
+        };
+    }
+
+    updateSharedFontPreviewSettings(partialSettings = {}) {
+        this.settingsManager?.setFontPreviewSettings?.(partialSettings);
+        this.syncFontPreviewDisplays();
+    }
+
+    resetSharedFontPreviewSettings(options = {}) {
+        this.settingsManager?.resetFontPreviewSettings?.(options);
+        this.syncFontPreviewDisplays();
+    }
+
+    buildFontPreviewPanel(font) {
+        const settings = this.getFontPreviewSettings();
+        const previewPanel = document.createElement('div');
+        previewPanel.className = 'font-preview-panel';
+        previewPanel.hidden = !this.openFontPreviewPanels.has(font.value);
+
+        const previewToolbar = document.createElement('div');
+        previewToolbar.className = 'font-preview-toolbar';
+
+        const textField = document.createElement('label');
+        textField.className = 'font-preview-field';
+        const textLabel = document.createElement('span');
+        textLabel.textContent = this.getTextWithFallback('settings.general.fontPreviewText', '预览内容');
+        const textInput = document.createElement('input');
+        textInput.type = 'text';
+        textInput.className = 'font-preview-text-input';
+        textInput.dataset.fontPreviewControl = 'text';
+        textInput.value = settings.sampleText;
+        textField.appendChild(textLabel);
+        textField.appendChild(textInput);
+
+        const sizeField = document.createElement('div');
+        sizeField.className = 'font-preview-field';
+        const sizeLabel = document.createElement('span');
+        sizeLabel.textContent = this.getTextWithFallback('settings.general.fontPreviewSize', '预览字号');
+        const sizeRow = document.createElement('div');
+        sizeRow.className = 'font-preview-size-row';
+        const sizeRange = document.createElement('input');
+        sizeRange.type = 'range';
+        sizeRange.min = '16';
+        sizeRange.max = '160';
+        sizeRange.step = '1';
+        sizeRange.className = 'slider';
+        sizeRange.dataset.fontPreviewControl = 'size-range';
+        sizeRange.value = String(settings.fontSize);
+        const sizeInput = document.createElement('input');
+        sizeInput.type = 'number';
+        sizeInput.min = '16';
+        sizeInput.max = '160';
+        sizeInput.step = '1';
+        sizeInput.className = 'size-input';
+        sizeInput.dataset.fontPreviewControl = 'size-input';
+        sizeInput.value = String(settings.fontSize);
+        const sizeResetBtn = document.createElement('button');
+        sizeResetBtn.type = 'button';
+        sizeResetBtn.className = 'button-secondary font-preview-inline-btn';
+        sizeResetBtn.dataset.fontPreviewControl = 'size-reset';
+        sizeResetBtn.textContent = this.getTextWithFallback('common.restoreSize', '恢复大小');
+        const textResetBtn = document.createElement('button');
+        textResetBtn.type = 'button';
+        textResetBtn.className = 'button-secondary font-preview-inline-btn';
+        textResetBtn.dataset.fontPreviewControl = 'text-reset';
+        textResetBtn.textContent = this.getTextWithFallback('settings.general.fontPreviewResetText', '恢复内容');
+        sizeRow.appendChild(sizeRange);
+        sizeRow.appendChild(sizeInput);
+        sizeRow.appendChild(sizeResetBtn);
+        sizeField.appendChild(sizeLabel);
+        sizeField.appendChild(sizeRow);
+
+        previewToolbar.appendChild(textField);
+        previewToolbar.appendChild(sizeField);
+
+        const previewActions = document.createElement('div');
+        previewActions.className = 'font-preview-actions';
+        previewActions.appendChild(textResetBtn);
+
+        const previewSample = document.createElement('div');
+        previewSample.className = 'font-preview-sample';
+        previewSample.dataset.fontPreviewSample = font.value;
+
+        previewPanel.appendChild(previewToolbar);
+        previewPanel.appendChild(previewActions);
+        previewPanel.appendChild(previewSample);
+
+        textInput.addEventListener('input', (event) => {
+            this.updateSharedFontPreviewSettings({ sampleText: event.target.value || '' });
+        });
+
+        const handlePreviewSizeUpdate = (value) => {
+            const nextValue = Math.max(16, Math.min(160, parseInt(value, 10) || settings.fontSize));
+            this.updateSharedFontPreviewSettings({ fontSize: nextValue });
+        };
+        sizeRange.addEventListener('input', (event) => handlePreviewSizeUpdate(event.target.value));
+        sizeInput.addEventListener('input', (event) => handlePreviewSizeUpdate(event.target.value));
+
+        sizeResetBtn.addEventListener('click', () => {
+            this.resetSharedFontPreviewSettings({ text: false, size: true });
+        });
+
+        textResetBtn.addEventListener('click', () => {
+            this.resetSharedFontPreviewSettings({ text: true, size: false });
+        });
+
+        return previewPanel;
+    }
+
+    syncFontPreviewDisplays() {
+        const settings = this.getFontPreviewSettings();
+        document.querySelectorAll('.font-management-item').forEach((item) => {
+            const fontValue = item.dataset.font;
+            const previewSample = item.querySelector('.font-preview-sample');
+            const textInput = item.querySelector('[data-font-preview-control="text"]');
+            const sizeRange = item.querySelector('[data-font-preview-control="size-range"]');
+            const sizeInput = item.querySelector('[data-font-preview-control="size-input"]');
+            if (textInput && textInput.value !== settings.sampleText) {
+                textInput.value = settings.sampleText;
+            }
+            if (sizeRange && sizeRange.value !== String(settings.fontSize)) {
+                sizeRange.value = String(settings.fontSize);
+            }
+            if (sizeInput && sizeInput.value !== String(settings.fontSize)) {
+                sizeInput.value = String(settings.fontSize);
+            }
+            if (previewSample) {
+                previewSample.textContent = settings.sampleText;
+                previewSample.style.fontSize = `${settings.fontSize}px`;
+                previewSample.style.fontFamily = this.settingsManager.getFontFamilyStack(fontValue);
+            }
+        });
+
+        this.syncFontPreviewModal();
+    }
+
+    initFontPreviewModal() {
+        const modal = document.getElementById('font-preview-modal');
+        const closeBtn = document.getElementById('font-preview-modal-close-btn');
+        const textInput = document.getElementById('font-preview-modal-text-input');
+        const sizeRange = document.getElementById('font-preview-modal-size-range');
+        const sizeInput = document.getElementById('font-preview-modal-size-input');
+        const sizeIncreaseBtn = document.getElementById('font-preview-modal-size-increase-btn');
+        const sizeResetBtn = document.getElementById('font-preview-modal-size-reset-btn');
+        const textResetBtn = document.getElementById('font-preview-modal-text-reset-btn');
+
+        if (!modal) return;
+
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                this.closeFontPreviewModal();
+            }
+        });
+
+        closeBtn?.addEventListener('click', () => this.closeFontPreviewModal());
+        textInput?.addEventListener('input', (event) => {
+            this.updateSharedFontPreviewSettings({ sampleText: event.target.value || '' });
+        });
+
+        const handleModalSizeChange = (value) => {
+            const nextValue = Math.max(16, Math.min(160, parseInt(value, 10) || this.getFontPreviewSettings().fontSize));
+            this.updateSharedFontPreviewSettings({ fontSize: nextValue });
+        };
+        sizeRange?.addEventListener('input', (event) => handleModalSizeChange(event.target.value));
+        sizeInput?.addEventListener('input', (event) => handleModalSizeChange(event.target.value));
+        sizeIncreaseBtn?.addEventListener('click', () => {
+            handleModalSizeChange(this.getFontPreviewSettings().fontSize + 8);
+        });
+        sizeResetBtn?.addEventListener('click', () => {
+            this.resetSharedFontPreviewSettings({ text: false, size: true });
+        });
+        textResetBtn?.addEventListener('click', () => {
+            this.resetSharedFontPreviewSettings({ text: true, size: false });
+        });
+    }
+
+    openFontPreviewModal(fontValue) {
+        const modal = document.getElementById('font-preview-modal');
+        if (!modal) return;
+        this.activeFontPreviewFont = fontValue;
+        modal.classList.add('show');
+        this.syncFontPreviewModal();
+    }
+
+    closeFontPreviewModal() {
+        const modal = document.getElementById('font-preview-modal');
+        if (!modal) return;
+        modal.classList.remove('show');
+    }
+
+    syncFontPreviewModal() {
+        const modal = document.getElementById('font-preview-modal');
+        if (!modal) return;
+
+        const title = document.getElementById('font-preview-modal-title');
+        const sample = document.getElementById('font-preview-modal-sample');
+        const textInput = document.getElementById('font-preview-modal-text-input');
+        const sizeRange = document.getElementById('font-preview-modal-size-range');
+        const sizeInput = document.getElementById('font-preview-modal-size-input');
+        const settings = this.getFontPreviewSettings();
+        const fontOptions = this.settingsManager.getManagedFontOptions();
+        const activeFont = fontOptions.find(font => font.value === this.activeFontPreviewFont) || fontOptions[0];
+
+        if (!activeFont) return;
+
+        this.activeFontPreviewFont = activeFont.value;
+        if (title) {
+            title.textContent = `${this.getTextWithFallback('common.preview', '预览')} · ${activeFont.label}`;
+        }
+        if (sample) {
+            sample.textContent = settings.sampleText;
+            sample.style.fontFamily = this.settingsManager.getFontFamilyStack(activeFont.value);
+            sample.style.fontSize = `${settings.fontSize}px`;
+        }
+        if (textInput && textInput.value !== settings.sampleText) {
+            textInput.value = settings.sampleText;
+        }
+        if (sizeRange && sizeRange.value !== String(settings.fontSize)) {
+            sizeRange.value = String(settings.fontSize);
+        }
+        if (sizeInput && sizeInput.value !== String(settings.fontSize)) {
+            sizeInput.value = String(settings.fontSize);
+        }
     }
 
     renderFontManagementList() {
@@ -4335,6 +5404,13 @@ class DrawingBoard {
         if (!list || !this.settingsManager?.getManagedFontOptions) return;
 
         const fonts = this.settingsManager.getManagedFontOptions();
+        const showLabel = this.getTextWithFallback('settings.general.showFont', '显示字体');
+        const renameLabel = this.getTextWithFallback('settings.general.renameFont', '修改名称');
+        const previewLabel = this.getTextWithFallback('common.preview', '预览');
+        const expandLabel = this.getTextWithFallback('settings.general.expandPreview', '放大');
+        const confirmLabel = this.getTextWithFallback('common.confirm', '确定');
+        const cancelLabel = this.getTextWithFallback('common.cancel', '取消');
+        const deleteLabel = this.getTextWithFallback('common.delete', '删除');
         list.innerHTML = '';
 
         fonts.forEach(font => {
@@ -4342,15 +5418,6 @@ class DrawingBoard {
             item.className = 'font-management-item';
             item.dataset.font = font.value;
             item.draggable = true;
-            const tWithFallback = (key, fallback) => {
-                if (!window.i18n) return fallback;
-                const translated = window.i18n.t(key);
-                return translated && translated !== key ? translated : fallback;
-            };
-            const showLabel = tWithFallback('settings.general.showFont', 'Show font');
-            const renameLabel = tWithFallback('common.edit', 'Edit');
-            const previewLabel = tWithFallback('common.preview', 'Preview');
-            const previewSample = tWithFallback('settings.general.fontPreviewSample', 'Font Preview ABC abc 123');
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
@@ -4366,6 +5433,9 @@ class DrawingBoard {
             nameSpan.title = font.label;
             nameSpan.textContent = font.label;
 
+            const actionGroup = document.createElement('div');
+            actionGroup.className = 'font-action-group';
+
             const editButton = document.createElement('button');
             editButton.type = 'button';
             editButton.className = 'font-action-btn edit-btn';
@@ -4375,22 +5445,124 @@ class DrawingBoard {
             previewButton.type = 'button';
             previewButton.className = 'font-action-btn preview-btn';
             previewButton.textContent = previewLabel;
+            previewButton.classList.toggle('active', this.openFontPreviewPanels.has(font.value));
 
-            const previewDiv = document.createElement('div');
-            previewDiv.className = 'font-preview-sample';
-            const fontFamilyStack = this.settingsManager?.getFontFamilyStack
-                ? this.settingsManager.getFontFamilyStack(font.value)
-                : `"${String(font.value || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"')}", sans-serif`;
-            previewDiv.style.fontFamily = fontFamilyStack;
-            previewDiv.textContent = previewSample;
+            const expandButton = document.createElement('button');
+            expandButton.type = 'button';
+            expandButton.className = 'font-action-btn expand-btn';
+            expandButton.textContent = expandLabel;
+
+            actionGroup.appendChild(editButton);
+            actionGroup.appendChild(previewButton);
+            actionGroup.appendChild(expandButton);
+
+            if (font.isCustom) {
+                const deleteButton = document.createElement('button');
+                deleteButton.type = 'button';
+                deleteButton.className = 'font-action-btn danger-btn delete-btn';
+                deleteButton.textContent = deleteLabel;
+                actionGroup.appendChild(deleteButton);
+            }
 
             item.appendChild(checkbox);
             item.appendChild(dragHandle);
             item.appendChild(nameSpan);
-            item.appendChild(editButton);
-            item.appendChild(previewButton);
-            item.appendChild(previewDiv);
+            item.appendChild(actionGroup);
+
+            const aliasEditor = document.createElement('div');
+            aliasEditor.className = 'font-alias-editor';
+            aliasEditor.hidden = this.editingFontAliasFont !== font.value;
+            const aliasInput = document.createElement('input');
+            aliasInput.type = 'text';
+            aliasInput.className = 'font-alias-input';
+            aliasInput.value = font.label;
+            const aliasConfirmBtn = document.createElement('button');
+            aliasConfirmBtn.type = 'button';
+            aliasConfirmBtn.className = 'button-primary';
+            aliasConfirmBtn.textContent = confirmLabel;
+            const aliasCancelBtn = document.createElement('button');
+            aliasCancelBtn.type = 'button';
+            aliasCancelBtn.className = 'button-secondary';
+            aliasCancelBtn.textContent = cancelLabel;
+            aliasEditor.appendChild(aliasInput);
+            aliasEditor.appendChild(aliasConfirmBtn);
+            aliasEditor.appendChild(aliasCancelBtn);
+            item.appendChild(aliasEditor);
+
+            const previewPanel = this.buildFontPreviewPanel(font);
+            item.appendChild(previewPanel);
             list.appendChild(item);
+
+            checkbox.addEventListener('change', (event) => {
+                this.settingsManager.setFontVisibility(item.dataset.font, event.target.checked);
+                this.insertTextManager?.populateFonts?.();
+            });
+
+            editButton.addEventListener('click', () => {
+                this.editingFontAliasFont = font.value;
+                this.renderFontManagementList();
+                requestAnimationFrame(() => {
+                    const nextInput = list.querySelector(`.font-management-item[data-font="${CSS.escape(font.value)}"] .font-alias-input`);
+                    nextInput?.focus();
+                    nextInput?.select();
+                });
+            });
+
+            const confirmRename = () => {
+                this.settingsManager.setFontAlias(item.dataset.font, aliasInput.value.trim());
+                this.editingFontAliasFont = null;
+                this.renderFontManagementList();
+                this.insertTextManager?.populateFonts?.();
+            };
+            aliasConfirmBtn.addEventListener('click', confirmRename);
+            aliasCancelBtn.addEventListener('click', () => {
+                this.editingFontAliasFont = null;
+                this.renderFontManagementList();
+            });
+            aliasInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    confirmRename();
+                } else if (event.key === 'Escape') {
+                    this.editingFontAliasFont = null;
+                    this.renderFontManagementList();
+                }
+            });
+
+            previewButton.addEventListener('click', () => {
+                if (this.openFontPreviewPanels.has(font.value)) {
+                    this.openFontPreviewPanels.delete(font.value);
+                } else {
+                    this.openFontPreviewPanels.add(font.value);
+                }
+                previewPanel.hidden = !this.openFontPreviewPanels.has(font.value);
+                previewButton.classList.toggle('active', !previewPanel.hidden);
+                if (!previewPanel.hidden) {
+                    this.syncFontPreviewDisplays();
+                }
+            });
+
+            expandButton.addEventListener('click', () => {
+                this.openFontPreviewPanels.add(font.value);
+                this.openFontPreviewModal(font.value);
+                this.syncFontPreviewDisplays();
+            });
+
+            const deleteBtn = actionGroup.querySelector('.delete-btn');
+            deleteBtn?.addEventListener('click', () => {
+                const confirmed = window.confirm(`确定删除自定义字体“${font.label}”吗？`);
+                if (!confirmed) return;
+                if (this.settingsManager.deleteCustomFont(font.value)) {
+                    this.openFontPreviewPanels.delete(font.value);
+                    if (this.activeFontPreviewFont === font.value) {
+                        this.activeFontPreviewFont = null;
+                    }
+                    this.editingFontAliasFont = null;
+                    this.insertTextManager?.populateFonts?.();
+                    this.renderFontManagementList();
+                    this.syncFontPreviewModal();
+                }
+            });
         });
 
         let draggedItem = null;
@@ -4406,61 +5578,16 @@ class DrawingBoard {
                 this.saveFontOrderFromList();
             });
 
-            item.addEventListener('dragover', (e) => {
-                e.preventDefault();
+            item.addEventListener('dragover', (event) => {
+                event.preventDefault();
                 if (!draggedItem || draggedItem === item) return;
                 const rect = item.getBoundingClientRect();
-                const isBefore = e.clientY < rect.top + rect.height / 2;
+                const isBefore = event.clientY < rect.top + rect.height / 2;
                 list.insertBefore(draggedItem, isBefore ? item : item.nextSibling);
             });
-
-            const checkbox = item.querySelector('input[type="checkbox"]');
-            checkbox?.addEventListener('change', (e) => {
-                this.settingsManager.setFontVisibility(item.dataset.font, e.target.checked);
-                this.insertTextManager?.populateFonts?.();
-            });
-
-            const editBtn = item.querySelector('.edit-btn');
-            editBtn?.addEventListener('click', () => {
-                const nameEl = item.querySelector('.font-display-name');
-                if (!nameEl) return;
-                const current = nameEl.textContent || '';
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.className = 'font-alias-input';
-                input.value = current;
-                nameEl.replaceWith(input);
-                input.focus();
-                input.select();
-                let cancelled = false;
-
-                const finishEdit = () => {
-                    if (cancelled) return;
-                    const renamed = input.value.trim();
-                    this.settingsManager.setFontAlias(item.dataset.font, renamed);
-                    this.renderFontManagementList();
-                    this.insertTextManager?.populateFonts?.();
-                };
-                input.addEventListener('keydown', (event) => {
-                    if (event.key === 'Enter') {
-                        event.preventDefault();
-                        finishEdit();
-                    } else if (event.key === 'Escape') {
-                        cancelled = true;
-                        input.removeEventListener('blur', finishEdit);
-                        this.renderFontManagementList();
-                    }
-                });
-                input.addEventListener('blur', finishEdit, { once: true });
-            });
-
-            const previewBtn = item.querySelector('.preview-btn');
-            previewBtn?.addEventListener('click', () => {
-                const preview = item.querySelector('.font-preview-sample');
-                if (!preview) return;
-                preview.style.display = preview.style.display === 'block' ? 'none' : 'block';
-            });
         });
+
+        this.syncFontPreviewDisplays();
     }
 
     saveFontOrderFromList() {
@@ -4947,7 +6074,7 @@ class DrawingBoard {
         const patterns = this.settingsManager.getPatternPreferences();
         
         // Hide all pattern buttons first
-        patternGrid.querySelectorAll('.pattern-option-btn').forEach(btn => {
+        patternGrid.querySelectorAll('.pattern-option-btn[data-pattern]').forEach(btn => {
             const pattern = btn.dataset.pattern;
             if (patterns[pattern]) {
                 btn.style.display = 'block';
@@ -5161,6 +6288,9 @@ class DrawingBoard {
             bgOpacity: this.backgroundManager.bgOpacity,
             patternIntensity: this.backgroundManager.patternIntensity,
             patternDensity: this.backgroundManager.patternDensity,
+            coordinateOriginX: this.backgroundManager.coordinateOriginX,
+            coordinateOriginY: this.backgroundManager.coordinateOriginY,
+            coordinateOverlayState: this.backgroundManager.getCoordinateOverlayState(),
             backgroundImageData: this.backgroundManager.backgroundImageData,
             imageSize: this.backgroundManager.imageSize,
             // Enhanced background state
@@ -5190,6 +6320,7 @@ class DrawingBoard {
                 this.backgroundManager.coordinateOriginX = bg.coordinateOriginX;
                 this.backgroundManager.coordinateOriginY = bg.coordinateOriginY;
             }
+            this.backgroundManager.setCoordinateOverlayState(bg.coordinateOverlayState, { persist: false, redraw: false });
             if (bg.imageTransform) this.backgroundManager.imageTransform = bg.imageTransform;
             if (typeof bg.gifLoopCount !== 'undefined') this.backgroundManager.gifLoopCount = bg.gifLoopCount;
             if (typeof bg.backgroundOutsideLayerOrder !== 'undefined') {
@@ -5213,10 +6344,103 @@ class DrawingBoard {
         } else {
             // Use default/global background settings
             this.backgroundManager.drawBackground();
+            this.updateBackgroundUI();
         }
+    }
+
+    renderCoordinatePlotList(currentPattern) {
+        const plotList = document.getElementById('coordinate-plot-list');
+        if (!plotList) return;
+
+        const activePlots = this.backgroundManager
+            .getCoordinateOverlayState()
+            .plots
+            .filter(plot => plot.coordinateType === currentPattern);
+
+        if (activePlots.length === 0) {
+            const emptyText = window.i18n ? window.i18n.t('background.noPlots') : '暂无函数图像';
+            plotList.innerHTML = `<div class="coordinate-empty-state">${emptyText}</div>`;
+            return;
+        }
+
+        const editTitle = window.i18n ? window.i18n.t('selection.edit') : '编辑';
+        const deleteTitle = window.i18n ? window.i18n.t('selection.delete') : '删除';
+        const dashStyleLabels = {
+            solid: '实线',
+            dashed: '虚线',
+            dotted: '点线',
+            dashdot: '点划线'
+        };
+
+        plotList.innerHTML = activePlots.map(plot => {
+            const isExpanded = this.expandedCoordinatePlotId === plot.id;
+            const dashOptions = Object.entries(dashStyleLabels)
+                .map(([value, label]) => `<option value="${value}"${value === (plot.dashStyle || 'solid') ? ' selected' : ''}>${label}</option>`)
+                .join('');
+            const rangeRows = Array.isArray(plot.segments) && plot.segments.length
+                ? plot.segments.map(segment => this.createCoordinatePlotRangeRowMarkup(segment, plot.coordinateType)).join('')
+                : '<div class="coordinate-plot-range-empty">未限制显示范围，默认显示全部</div>';
+
+            return `
+                <div class="coordinate-plot-item ${isExpanded ? 'expanded' : ''}" data-plot-id="${this.escapeHtml(plot.id)}" data-coordinate-type="${this.escapeHtml(plot.coordinateType)}">
+                    <div class="coordinate-plot-summary">
+                        <span class="coordinate-plot-color" style="background:${plot.color};"></span>
+                        <span class="coordinate-plot-expression">${this.getCoordinateExpressionPrefix(plot.coordinateType)}${this.escapeHtml(plot.expression)}</span>
+                        <div class="coordinate-plot-actions">
+                            <button type="button" class="coordinate-plot-action-btn" data-plot-toggle-edit="${this.escapeHtml(plot.id)}" title="${this.escapeHtml(editTitle)}">✎</button>
+                            <button type="button" class="coordinate-plot-remove" data-plot-remove="${this.escapeHtml(plot.id)}" title="${this.escapeHtml(deleteTitle)}">×</button>
+                        </div>
+                    </div>
+                    <div class="coordinate-plot-editor">
+                        <div class="coordinate-plot-field">
+                            <label>表达式</label>
+                            <input type="text" data-plot-field="expression" value="${this.escapeHtml(plot.expression)}">
+                        </div>
+                        <div class="coordinate-plot-style-grid">
+                            <div class="coordinate-plot-field">
+                                <label>颜色</label>
+                                <input class="coordinate-plot-color-input" type="color" data-plot-field="color" value="${this.escapeHtml(plot.color)}">
+                            </div>
+                            <div class="coordinate-plot-field">
+                                <label>线型</label>
+                                <select data-plot-field="dashStyle">${dashOptions}</select>
+                            </div>
+                            <div class="coordinate-plot-field">
+                                <label>粗细</label>
+                                <input type="number" min="1" max="12" step="0.5" data-plot-field="strokeWidth" value="${this.escapeHtml(plot.strokeWidth ?? 2.5)}">
+                            </div>
+                        </div>
+                        <div class="coordinate-plot-field">
+                            <div class="coordinate-plot-range-title">显示范围（可组合多段）</div>
+                            <div class="coordinate-plot-range-header">
+                                <span>控制量</span>
+                                <span>最小值</span>
+                                <span>最大值</span>
+                                <span></span>
+                            </div>
+                            <div class="coordinate-plot-range-list">${rangeRows}</div>
+                        </div>
+                        <div class="coordinate-plot-editor-actions">
+                            <div class="coordinate-plot-editor-actions-left">
+                                <button type="button" class="coordinate-plot-editor-btn" data-plot-add-segment="${this.escapeHtml(plot.id)}">添加范围段</button>
+                            </div>
+                            <div class="coordinate-plot-editor-actions-right">
+                                <button type="button" class="coordinate-plot-editor-btn" data-plot-cancel="${this.escapeHtml(plot.id)}">收起</button>
+                                <button type="button" class="coordinate-plot-editor-btn primary" data-plot-save="${this.escapeHtml(plot.id)}">保存</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
     
     updateBackgroundUI() {
+        const currentPattern = this.backgroundManager.backgroundPattern;
+        const activeUploadedImage = currentPattern === 'image'
+            ? this.uploadedImages.find(image => image.data === this.backgroundManager.backgroundImageData)
+            : null;
+
         // Update background color buttons
         document.querySelectorAll('.color-btn[data-bg-color]').forEach(btn => {
             if (btn.dataset.bgColor === this.backgroundManager.backgroundColor) {
@@ -5228,20 +6452,188 @@ class DrawingBoard {
         
         // Update pattern buttons
         document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(btn => {
-            if (btn.dataset.pattern === this.backgroundManager.backgroundPattern) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
+            const isPatternMatch = btn.dataset.pattern && btn.dataset.pattern === currentPattern;
+            const isUploadedMatch = activeUploadedImage && btn.dataset.imageId === activeUploadedImage.id;
+            btn.classList.toggle('active', !!(isPatternMatch || isUploadedMatch));
         });
         
         // Update custom color picker
-        document.getElementById('custom-bg-color-picker').value = this.backgroundManager.backgroundColor;
+        const customBgColorPicker = document.getElementById('custom-bg-color-picker');
+        if (customBgColorPicker) {
+            customBgColorPicker.value = this.backgroundManager.backgroundColor;
+        }
+
+        const patternDensitySlider = document.getElementById('pattern-density-slider');
+        const patternDensityValue = document.getElementById('pattern-density-value');
+        if (patternDensitySlider && patternDensityValue) {
+            const densityPercent = Math.round((this.backgroundManager.patternDensity ?? 1) * 100);
+            patternDensitySlider.value = densityPercent;
+            patternDensityValue.textContent = densityPercent;
+        }
+
+        const bgImageSizeSlider = document.getElementById('bg-image-size-slider');
+        const bgImageSizeValue = document.getElementById('bg-image-size-value');
+        if (bgImageSizeSlider && bgImageSizeValue) {
+            const sizePercent = Math.round((this.backgroundManager.imageSize ?? 1) * 100);
+            bgImageSizeSlider.value = sizePercent;
+            bgImageSizeValue.textContent = sizePercent;
+        }
+
+        const bgOpacitySlider = document.getElementById('bg-opacity-slider');
+        const bgOpacityValue = document.getElementById('bg-opacity-value');
+        const bgOpacityInput = document.getElementById('bg-opacity-input');
+        if (bgOpacitySlider && bgOpacityValue && bgOpacityInput) {
+            const opacityPercent = Math.round((this.backgroundManager.bgOpacity ?? 1) * 100);
+            bgOpacitySlider.value = opacityPercent;
+            bgOpacityValue.textContent = opacityPercent;
+            bgOpacityInput.value = opacityPercent;
+        }
+
+        const patternIntensitySlider = document.getElementById('pattern-intensity-slider');
+        const patternIntensityValue = document.getElementById('pattern-intensity-value');
+        const patternIntensityInput = document.getElementById('pattern-intensity-input');
+        if (patternIntensitySlider && patternIntensityValue && patternIntensityInput) {
+            const intensityPercent = Math.round((this.backgroundManager.patternIntensity ?? 0.5) * 100);
+            patternIntensitySlider.value = intensityPercent;
+            patternIntensityValue.textContent = intensityPercent;
+            patternIntensityInput.value = intensityPercent;
+        }
+
+        const patternDensityGroup = document.getElementById('pattern-density-group');
+        if (patternDensityGroup) {
+            patternDensityGroup.style.display = currentPattern !== 'blank' && currentPattern !== 'image' ? 'flex' : 'none';
+        }
+
+        const imageSizeGroup = document.getElementById('image-size-group');
+        if (imageSizeGroup) {
+            imageSizeGroup.style.display = currentPattern === 'image' ? 'flex' : 'none';
+        }
+
+        const coordinateSettingsToggleBtn = document.getElementById('coordinate-settings-toggle-btn');
+        const coordinatePointToggleBtn = document.getElementById('coordinate-point-toggle-btn');
+        const backgroundCoordinateActions = document.getElementById('background-coordinate-actions');
+        const coordinateToolsModal = document.getElementById('coordinate-tools-modal');
+        const coordinatePointModal = document.getElementById('coordinate-point-modal');
+        const coordinateToolsGroup = document.getElementById('coordinate-tools-group');
+        const coordinateState = this.backgroundManager.getCoordinateOverlayState();
+        const supportsCoordinateTools = this.backgroundManager.supportsMovableOrigin(currentPattern);
+
+        if (!supportsCoordinateTools) {
+            this.isCoordinateSettingsExpanded = false;
+            this.isCoordinatePointPanelVisible = false;
+            this.isCoordinateInputPanelVisible = false;
+        }
+
+        if (backgroundCoordinateActions) {
+            backgroundCoordinateActions.style.display = supportsCoordinateTools ? 'flex' : 'none';
+        }
+
+        if (coordinateSettingsToggleBtn) {
+            coordinateSettingsToggleBtn.style.display = supportsCoordinateTools ? 'inline-flex' : 'none';
+            coordinateSettingsToggleBtn.classList.toggle('active', supportsCoordinateTools && this.isCoordinateSettingsExpanded);
+            coordinateSettingsToggleBtn.setAttribute('aria-expanded', supportsCoordinateTools && this.isCoordinateSettingsExpanded ? 'true' : 'false');
+        }
+
+        if (coordinatePointToggleBtn) {
+            coordinatePointToggleBtn.style.display = supportsCoordinateTools ? 'inline-flex' : 'none';
+            coordinatePointToggleBtn.classList.toggle('active', supportsCoordinateTools && (this.isCoordinatePointPanelVisible || this.isCoordinatePointMode));
+            coordinatePointToggleBtn.setAttribute('aria-expanded', supportsCoordinateTools && this.isCoordinatePointPanelVisible ? 'true' : 'false');
+        }
+
+        if (coordinateToolsModal) {
+            coordinateToolsModal.classList.toggle('show', supportsCoordinateTools && this.isCoordinateSettingsExpanded);
+        }
+
+        if (coordinatePointModal) {
+            coordinatePointModal.classList.toggle('show', supportsCoordinateTools && this.isCoordinatePointPanelVisible);
+            if (supportsCoordinateTools && this.isCoordinatePointPanelVisible) {
+                requestAnimationFrame(() => this.positionCoordinatePointPanel());
+            }
+        }
+
+        if (coordinateToolsGroup) {
+            coordinateToolsGroup.style.display = supportsCoordinateTools ? 'flex' : 'none';
+        }
+
+        const toggleMap = {
+            'coordinate-show-ticks': coordinateState.showTicks,
+            'coordinate-show-labels': coordinateState.showLabels,
+            'coordinate-show-point-labels': coordinateState.showPointLabels,
+            'coordinate-show-origin': coordinateState.showOrigin,
+            'coordinate-snap-grid': coordinateState.snapToGrid
+        };
+
+        Object.entries(toggleMap).forEach(([id, value]) => {
+            const checkbox = document.getElementById(id);
+            if (checkbox) {
+                checkbox.checked = !!value;
+            }
+        });
+
+        const pointCountValue = document.getElementById('coordinate-point-count-value');
+        if (pointCountValue) {
+            pointCountValue.textContent = coordinateState.points.length;
+        }
+
+        const coordinatePointMode = this.getCoordinatePointLineMode();
+        document.querySelectorAll('[data-coordinate-point-mode]').forEach((btn) => {
+            const btnMode = btn.dataset.coordinatePointMode;
+            btn.classList.toggle('active', supportsCoordinateTools && btnMode === coordinatePointMode);
+            btn.disabled = !supportsCoordinateTools;
+        });
+
+        const coordinatePointModeHint = document.getElementById('coordinate-point-mode-hint');
+        if (coordinatePointModeHint) {
+            const modeMeta = this.getCoordinatePointLineModeMeta(coordinatePointMode);
+            const translated = window.i18n ? window.i18n.t(modeMeta.hintKey) : modeMeta.hintFallback;
+            coordinatePointModeHint.textContent = translated === modeMeta.hintKey ? modeMeta.hintFallback : translated;
+        }
+
+        const coordinatePlotHint = document.getElementById('coordinate-plot-hint');
+        if (coordinatePlotHint) {
+            const hintKey = currentPattern === 'polar' ? 'background.plotHintPolar' : 'background.plotHintCartesian';
+            const fallback = currentPattern === 'polar'
+                ? '极坐标：输入 r = f(theta)，theta 为弧度，deg 为角度'
+                : '直角坐标：输入 y = f(x)，可用 sin cos PI';
+            const translated = window.i18n ? window.i18n.t(hintKey) : fallback;
+            coordinatePlotHint.textContent = translated === hintKey ? fallback : translated;
+        }
+
+        const coordinateExpressionInput = document.getElementById('coordinate-expression-input');
+        if (coordinateExpressionInput) {
+            const placeholderKey = currentPattern === 'polar'
+                ? 'background.plotPlaceholderPolar'
+                : 'background.plotPlaceholderCartesian';
+            const fallback = currentPattern === 'polar' ? '如：2 * sin(4 * theta)' : '如：sin(x) + 2';
+            const translated = window.i18n ? window.i18n.t(placeholderKey) : fallback;
+            coordinateExpressionInput.placeholder = translated === placeholderKey ? fallback : translated;
+        }
+
+        const coordinateAddPointBtn = document.getElementById('coordinate-add-point-btn');
+        if (coordinateAddPointBtn) {
+            coordinateAddPointBtn.classList.toggle('active', supportsCoordinateTools && this.isCoordinatePointMode);
+        }
+
+        this.syncCoordinatePointModeSectionVisibility(supportsCoordinateTools && this.isCoordinatePointMode);
+
+        if (!coordinateState.plots.some(plot => plot.id === this.expandedCoordinatePlotId && plot.coordinateType === currentPattern)) {
+            this.expandedCoordinatePlotId = null;
+        }
+
+        this.syncCoordinateInputPanelButtons();
+        this.syncCoordinateExpressionDisplay();
+        this.toggleCoordinateInputPanel(this.isCoordinateInputPanelVisible);
+        this.renderCoordinatePlotList(currentPattern);
         
         // Update move-origin-btn visibility based on current pattern
         const moveOriginBtn = document.getElementById('move-origin-btn');
         if (moveOriginBtn) {
-            moveOriginBtn.style.display = this.backgroundManager.backgroundPattern === 'coordinate' ? 'inline-flex' : 'none';
+            moveOriginBtn.style.display = this.backgroundManager.supportsMovableOrigin(currentPattern) ? 'inline-flex' : 'none';
+        }
+
+        if (!this.backgroundManager.supportsMovableOrigin(currentPattern)) {
+            this.disableCoordinateOriginDragMode();
+            this.setCoordinatePointMode(false);
         }
     }
     
@@ -5315,6 +6707,7 @@ class DrawingBoard {
         const touch2 = e.touches[1];
         this.lastPinchDistance = this.getPinchDistance(touch1, touch2);
         this.lastPinchCenter = this.getPinchCenter(touch1, touch2);
+        this.scheduleRenderQualityUpdate();
     }
     
     handlePinchMove(e) {
@@ -5389,6 +6782,7 @@ class DrawingBoard {
         this.isPinching = false;
         this.lastPinchDistance = 0;
         this.lastPinchCenter = null;
+        this.scheduleRenderQualityUpdate();
 
         // Save state after pinch ends
         localStorage.setItem('canvasScale', this.drawingEngine.canvasScale);
@@ -5436,6 +6830,7 @@ class DrawingBoard {
         const p2 = pointers[1];
         this.lastPinchDistance = this.getPointerDistance(p1, p2);
         this.lastPinchCenter = this.getPointerCenter(p1, p2);
+        this.scheduleRenderQualityUpdate();
     }
     
     handlePointerPinchMove() {
@@ -5497,6 +6892,7 @@ class DrawingBoard {
         this.hasTwoFingers = false;
         this.lastPinchDistance = 0;
         this.lastPinchCenter = null;
+        this.scheduleRenderQualityUpdate();
         
         // Save state after pinch ends
         localStorage.setItem('canvasScale', this.drawingEngine.canvasScale);
@@ -5549,11 +6945,65 @@ class DrawingBoard {
     }
 
     syncInteractiveOverlays() {
+        this.backgroundManager?.renderCoordinateOverlay?.();
         this.selectionManager?.updateControlBox?.();
         this.strokeControls?.updateControlBox?.();
         if (this.imageControls?.isActive) {
             this.imageControls.updateControlBox();
         }
+        this.syncVectorPreviewState();
+    }
+
+    shouldShowLiveStrokePreview() {
+        const finalScale = this.canvasFitScale * this.drawingEngine.canvasScale;
+        return finalScale > 1.05 && this.drawingEngine?.currentTool === 'pen';
+    }
+
+    shouldShowLiveEraserPreview() {
+        const finalScale = this.canvasFitScale * this.drawingEngine.canvasScale;
+        return finalScale > 1.05 && this.drawingEngine?.currentTool === 'eraser';
+    }
+
+    hasVectorPreviewContent() {
+        const hasText = !!(this.insertTextManager?.textObjects?.length);
+        const hasLiveStrokePreview = !!this.drawingEngine?.shouldUseLiveStrokePreview?.();
+        const hasLiveEraserPreview = !!this.drawingEngine?.shouldUseLiveEraserPreview?.();
+        const hasShapePreview = !!this.shapeDrawingManager?.isDrawing;
+        return this.drawingEngine.strokes.length > 0 ||
+            this.drawingEngine.stampedImages.length > 0 ||
+            hasText ||
+            hasLiveStrokePreview ||
+            hasLiveEraserPreview ||
+            hasShapePreview;
+    }
+
+    shouldUseVectorPreview() {
+        const finalScale = this.canvasFitScale * this.drawingEngine.canvasScale;
+        const hasLiveDrawingPreview = !!(
+            this.drawingEngine?.shouldUseLiveStrokePreview?.() ||
+            this.drawingEngine?.shouldUseLiveEraserPreview?.()
+        );
+        const hasBlockingTransientOverlay = !!(
+            this.insertImageManager?.isActive ||
+            this.insertTextManager?.isActive ||
+            this.selectionManager?.hasSelection?.() ||
+            this.strokeControls?.isActive ||
+            (this.drawingEngine.isDrawing && !hasLiveDrawingPreview) ||
+            (this.shapeDrawingManager?.isDrawing && !this.shapeDrawingManager?.previewCanvas)
+        );
+
+        return finalScale > 1.05 &&
+            this.hasVectorPreviewContent() &&
+            !hasBlockingTransientOverlay;
+    }
+
+    syncVectorPreviewState(forceRender = false) {
+        if (forceRender || this.hasVectorPreviewContent()) {
+            this.drawingEngine.renderVectorScene(this.insertTextManager || null);
+        }
+
+        const shouldShow = this.shouldUseVectorPreview();
+        this.drawingEngine.setVectorPreviewVisible(shouldShow);
     }
     
     loadUploadedImages() {
@@ -5624,10 +7074,7 @@ class DrawingBoard {
             btn.addEventListener('click', async () => {
                 this.imageControls.resetConfirmation();
                 await this.backgroundManager.setBackgroundImage(image.data);
-                document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                document.getElementById('image-size-group').style.display = 'flex';
-                document.getElementById('pattern-density-group').style.display = 'none';
+                this.updateBackgroundUI();
                 const imgData = this.backgroundManager.getImageData();
                 if (imgData) {
                     this.imageControls.showControls(imgData);
@@ -5643,8 +7090,9 @@ class DrawingBoard {
     dragCoordinateOrigin(e) {
         if (!this.isDraggingCoordinateOrigin) return;
         
-        const deltaX = e.clientX - this.coordinateOriginDragStart.x;
-        const deltaY = e.clientY - this.coordinateOriginDragStart.y;
+        const viewportScale = this.drawingEngine?.getViewportScale?.() || 1;
+        const deltaX = (e.clientX - this.coordinateOriginDragStart.x) / viewportScale;
+        const deltaY = (e.clientY - this.coordinateOriginDragStart.y) / viewportScale;
         
         const origin = this.backgroundManager.getCoordinateOrigin();
         this.backgroundManager.setCoordinateOrigin(origin.x + deltaX, origin.y + deltaY);
@@ -5655,6 +7103,7 @@ class DrawingBoard {
     stopDraggingCoordinateOrigin() {
         if (this.isDraggingCoordinateOrigin) {
             this.isDraggingCoordinateOrigin = false;
+            this.savePageBackground(this.currentPage);
             // Restore cursor based on current tool or mode
             if (this.isCoordinateOriginDragMode) {
                 this.canvas.style.cursor = 'move';
@@ -5699,6 +7148,9 @@ class DrawingBoard {
                 bgOpacity: this.backgroundManager.bgOpacity,
                 patternIntensity: this.backgroundManager.patternIntensity,
                 patternDensity: this.backgroundManager.patternDensity,
+                coordinateOriginX: this.backgroundManager.coordinateOriginX,
+                coordinateOriginY: this.backgroundManager.coordinateOriginY,
+                coordinateOverlayState: this.backgroundManager.getCoordinateOverlayState(),
                 imageSize: this.backgroundManager.imageSize,
                 backgroundImageData: this.backgroundManager.backgroundImageData,
                 backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder || 1,
@@ -5713,6 +7165,19 @@ class DrawingBoard {
                     size: s.size,
                     penType: s.penType,
                     tool: s.tool,
+                    lineStyle: s.lineStyle || 'solid',
+                    dashDensity: s.dashDensity || 10,
+                    renderMode: s.renderMode || null,
+                    shapeType: s.shapeType || null,
+                    shapeStart: s.shapeStart ? { ...s.shapeStart } : null,
+                    shapeEnd: s.shapeEnd ? { ...s.shapeEnd } : null,
+                    shapeLineStyle: s.shapeLineStyle || null,
+                    shapeDashDensity: s.shapeDashDensity || null,
+                    shapeWaveDensity: s.shapeWaveDensity || null,
+                    shapeMultiLineCount: s.shapeMultiLineCount || null,
+                    shapeMultiLineSpacing: s.shapeMultiLineSpacing || null,
+                    arrowSize: s.arrowSize || null,
+                    eraserShape: s.eraserShape || null,
                     rotation: s.rotation || 0,
                     layerOrder: s.layerOrder || 0,
                     objectId: s.objectId || this.drawingEngine.getNextObjectId(),
@@ -5811,10 +7276,15 @@ class DrawingBoard {
                 if (settings.pageBackgrounds) this.pageBackgrounds = settings.pageBackgrounds;
                 if (settings.backgroundColor) this.backgroundManager.backgroundColor = settings.backgroundColor;
                 if (settings.backgroundPattern) this.backgroundManager.backgroundPattern = settings.backgroundPattern;
-                if (settings.bgOpacity) this.backgroundManager.bgOpacity = settings.bgOpacity;
-                if (settings.patternIntensity) this.backgroundManager.patternIntensity = settings.patternIntensity;
-                if (settings.patternDensity) this.backgroundManager.patternDensity = settings.patternDensity;
-                if (settings.imageSize) this.backgroundManager.imageSize = settings.imageSize;
+                if (typeof settings.bgOpacity !== 'undefined') this.backgroundManager.bgOpacity = settings.bgOpacity;
+                if (typeof settings.patternIntensity !== 'undefined') this.backgroundManager.patternIntensity = settings.patternIntensity;
+                if (typeof settings.patternDensity !== 'undefined') this.backgroundManager.patternDensity = settings.patternDensity;
+                if (typeof settings.coordinateOriginX !== 'undefined') {
+                    this.backgroundManager.coordinateOriginX = settings.coordinateOriginX;
+                    this.backgroundManager.coordinateOriginY = settings.coordinateOriginY;
+                }
+                this.backgroundManager.setCoordinateOverlayState(settings.coordinateOverlayState, { persist: false, redraw: false });
+                if (typeof settings.imageSize !== 'undefined') this.backgroundManager.imageSize = settings.imageSize;
                 if (settings.backgroundImageData) this.backgroundManager.backgroundImageData = settings.backgroundImageData;
                 if (settings.backgroundOutsideLayerOrder) this.backgroundManager.backgroundOutsideLayerOrder = settings.backgroundOutsideLayerOrder;
 
@@ -5834,7 +7304,12 @@ class DrawingBoard {
 
                 // Restore strokes for selection support
                 if (settings.strokes && settings.strokes.length > 0) {
-                    this.drawingEngine.strokes = settings.strokes;
+                    this.drawingEngine.strokes = settings.strokes.map(stroke => ({
+                        ...stroke,
+                        lineStyle: stroke.lineStyle || 'solid',
+                        dashDensity: stroke.dashDensity || 10,
+                        groupId: stroke.groupId || null
+                    }));
                 } else {
                     this.drawingEngine.strokes = [];
                 }
@@ -5967,46 +7442,182 @@ class DrawingBoard {
         return new Blob([`${key}${value || ''}`]).size;
     }
 
-    async getBrowserStorageEstimate() {
-        if (!navigator.storage?.estimate) {
-            return null;
+    async withTimeout(promise, timeoutMs, fallbackValue = null) {
+        let timerId = null;
+        try {
+            return await Promise.race([
+                Promise.resolve(promise),
+                new Promise(resolve => {
+                    timerId = window.setTimeout(() => resolve(fallbackValue), timeoutMs);
+                })
+            ]);
+        } finally {
+            if (timerId !== null) {
+                window.clearTimeout(timerId);
+            }
+        }
+    }
+
+    async waitForServiceWorkerCacheReady(timeoutMs = 2000) {
+        if (!('serviceWorker' in navigator)) {
+            return false;
+        }
+        if (navigator.serviceWorker.controller) {
+            return true;
         }
         try {
-            return await navigator.storage.estimate();
+            const readyResult = await this.withTimeout(
+                navigator.serviceWorker.ready.then(() => true).catch(() => false),
+                timeoutMs,
+                false
+            );
+            return !!readyResult;
         } catch (e) {
-            console.warn('Failed to read navigator.storage estimate:', e);
+            console.warn('Failed while waiting for Service Worker cache readiness:', e);
+            return false;
+        }
+    }
+
+    scheduleCacheSizeRetryWhenReady() {
+        if (this.cacheSizeRetryScheduled || !('serviceWorker' in navigator) || navigator.serviceWorker.controller) {
+            return;
+        }
+
+        this.cacheSizeRetryScheduled = true;
+        navigator.serviceWorker.ready
+            .then(() => {
+                this.cacheSizeRetryScheduled = false;
+                const settingsModal = document.getElementById('settings-modal');
+                if (settingsModal?.classList.contains('show')) {
+                    this.updateCacheSizeDisplay();
+                }
+            })
+            .catch(() => {
+                this.cacheSizeRetryScheduled = false;
+            });
+    }
+
+    getCacheStorageSizeSnapshot() {
+        try {
+            const raw = localStorage.getItem(this.cacheStorageSizeSnapshotKey);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            const bytes = Number(parsed?.bytes);
+            const fingerprint = typeof parsed?.fingerprint === 'string' ? parsed.fingerprint : '';
+            if (!Number.isFinite(bytes) || bytes < 0 || !fingerprint) {
+                return null;
+            }
+            return { fingerprint, bytes: Math.round(bytes) };
+        } catch (e) {
+            console.warn('Failed to read cache storage size snapshot:', e);
             return null;
         }
     }
 
-    async getCacheStorageUsageFallback() {
+    setCacheStorageSizeSnapshot(fingerprint, bytes) {
+        try {
+            const normalizedBytes = Math.max(0, Math.round(Number(bytes) || 0));
+            if (!fingerprint) {
+                localStorage.removeItem(this.cacheStorageSizeSnapshotKey);
+                return;
+            }
+            localStorage.setItem(this.cacheStorageSizeSnapshotKey, JSON.stringify({
+                fingerprint,
+                bytes: normalizedBytes
+            }));
+        } catch (e) {
+            console.warn('Failed to persist cache storage size snapshot:', e);
+        }
+    }
+
+    clearCacheStorageSizeSnapshot() {
+        try {
+            localStorage.removeItem(this.cacheStorageSizeSnapshotKey);
+        } catch (e) {
+            console.warn('Failed to clear cache storage size snapshot:', e);
+        }
+    }
+
+    async buildCacheStorageFingerprint() {
+        if (!('caches' in window)) {
+            return 'unsupported';
+        }
+        try {
+            const cacheNames = await caches.keys();
+            if (cacheNames.length === 0) {
+                return 'empty';
+            }
+            cacheNames.sort();
+            const parts = [];
+            for (const cacheName of cacheNames) {
+                const cache = await caches.open(cacheName);
+                const requests = await cache.keys();
+                const urls = requests.map(request => request.url).sort();
+                parts.push(`${cacheName}::${urls.length}::${urls.join('|')}`);
+            }
+            return parts.join('||');
+        } catch (e) {
+            console.warn('Failed to build Cache Storage fingerprint:', e);
+            return '';
+        }
+    }
+
+    async measureExactCacheStorageUsage() {
         let total = 0;
         if (!('caches' in window)) {
             return total;
         }
         try {
             const cacheKeys = await caches.keys();
-            for (const cacheName of cacheKeys) {
+            const totals = await Promise.all(cacheKeys.map(async (cacheName) => {
                 const cache = await caches.open(cacheName);
                 const requests = await cache.keys();
-                for (const request of requests) {
-                    const response = await cache.match(request);
-                    if (!response) {
-                        continue;
+                const responseSizes = await Promise.all(requests.map(async (request) => {
+                    try {
+                        const response = await cache.match(request);
+                        if (!response) {
+                            return 0;
+                        }
+                        const contentLength = Number(response.headers.get('content-length'));
+                        if (Number.isFinite(contentLength) && contentLength >= 0) {
+                            return contentLength;
+                        }
+                        const blob = await response.clone().blob();
+                        return blob.size;
+                    } catch (innerError) {
+                        console.warn('Failed to inspect cached response size:', request.url, innerError);
+                        return 0;
                     }
-                    const contentLength = Number(response.headers.get('content-length'));
-                    if (Number.isFinite(contentLength) && contentLength > 0) {
-                        total += contentLength;
-                        continue;
-                    }
-                    const blob = await response.clone().blob();
-                    total += blob.size;
-                }
-            }
+                }));
+                return responseSizes.reduce((sum, size) => sum + size, 0);
+            }));
+            total = totals.reduce((sum, size) => sum + size, 0);
         } catch (e) {
             console.warn('Failed to estimate Cache Storage size:', e);
         }
         return total;
+    }
+
+    async getExactCacheStorageUsage() {
+        if (!('caches' in window)) {
+            this.clearCacheStorageSizeSnapshot();
+            return 0;
+        }
+
+        const fingerprint = await this.buildCacheStorageFingerprint();
+        if (fingerprint === 'unsupported' || fingerprint === 'empty') {
+            this.setCacheStorageSizeSnapshot(fingerprint, 0);
+            return 0;
+        }
+
+        const snapshot = this.getCacheStorageSizeSnapshot();
+        if (snapshot && snapshot.fingerprint === fingerprint) {
+            return snapshot.bytes;
+        }
+
+        const measuredBytes = await this.measureExactCacheStorageUsage();
+        this.setCacheStorageSizeSnapshot(fingerprint, measuredBytes);
+        return measuredBytes;
     }
 
     formatBytes(bytes) {
@@ -6020,13 +7631,13 @@ class DrawingBoard {
     async getCacheSizeSummary() {
         const { settingsKeys, canvasKeys } = this.getCacheKeyGroups();
         const summary = { settings: 0, canvas: 0, other: 0 };
-        let localAndSessionTotal = 0;
+        const internalKeys = new Set([this.cacheStorageSizeSnapshotKey]);
 
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
+            if (!key || internalKeys.has(key)) continue;
             const val = localStorage.getItem(key);
             const size = this.getStorageEntrySize(key, val);
-            localAndSessionTotal += size;
             if (settingsKeys.has(key)) summary.settings += size;
             else if (canvasKeys.has(key)) summary.canvas += size;
             else summary.other += size;
@@ -6034,18 +7645,13 @@ class DrawingBoard {
 
         for (let i = 0; i < sessionStorage.length; i++) {
             const key = sessionStorage.key(i);
+            if (!key || internalKeys.has(key)) continue;
             const val = sessionStorage.getItem(key);
             const size = this.getStorageEntrySize(key, val);
-            localAndSessionTotal += size;
             if (settingsKeys.has(key)) summary.settings += size;
             else if (canvasKeys.has(key)) summary.canvas += size;
             else summary.other += size;
         }
-
-        const browserEstimate = await this.getBrowserStorageEstimate();
-        const usageDetails = browserEstimate?.usageDetails || {};
-        const estimatedIndexedDbUsage = Number.isFinite(usageDetails.indexedDB) ? usageDetails.indexedDB : null;
-        const estimatedCacheUsage = Number.isFinite(usageDetails.caches) ? usageDetails.caches : null;
 
         let indexedDbCanvasUsage = this.storageManager?.getSessionSizeEstimate?.() || 0;
         if (!indexedDbCanvasUsage) {
@@ -6059,23 +7665,22 @@ class DrawingBoard {
                 console.warn('Failed to estimate IndexedDB size:', e);
             }
         }
-        summary.canvas += estimatedIndexedDbUsage !== null
-            ? Math.max(indexedDbCanvasUsage, estimatedIndexedDbUsage)
-            : indexedDbCanvasUsage;
+        summary.canvas += indexedDbCanvasUsage;
 
-        const cacheUsage = estimatedCacheUsage !== null
-            ? estimatedCacheUsage
-            : await this.getCacheStorageUsageFallback();
-        summary.other += cacheUsage;
-
-        const browserUsage = Number.isFinite(browserEstimate?.usage) ? browserEstimate.usage : null;
-        if (browserUsage !== null) {
-            const knownUsage = localAndSessionTotal + (estimatedIndexedDbUsage ?? indexedDbCanvasUsage) + cacheUsage;
-            const residualUsage = Math.max(0, browserUsage - knownUsage);
-            if (residualUsage > 0) {
-                summary.other += residualUsage;
+        let cacheUsage = 0;
+        const shouldWaitForServiceWorker = 'serviceWorker' in navigator && !navigator.serviceWorker.controller;
+        if (shouldWaitForServiceWorker) {
+            const serviceWorkerReady = await this.waitForServiceWorkerCacheReady();
+            if (!serviceWorkerReady) {
+                this.scheduleCacheSizeRetryWhenReady();
             }
         }
+        cacheUsage = await this.withTimeout(
+            this.getExactCacheStorageUsage(),
+            2500,
+            this.getCacheStorageSizeSnapshot()?.bytes || 0
+        );
+        summary.other += cacheUsage;
 
         return summary;
     }
@@ -6149,6 +7754,7 @@ class DrawingBoard {
                 const cacheKeys = await caches.keys();
                 await Promise.all(cacheKeys.map(key => caches.delete(key)));
             }
+            this.setCacheStorageSizeSnapshot('empty', 0);
         }
     }
 
@@ -6182,6 +7788,7 @@ class DrawingBoard {
                 const cacheKeys = await caches.keys();
                 await Promise.all(cacheKeys.map(key => caches.delete(key)));
             }
+            this.setCacheStorageSizeSnapshot('empty', 0);
         } finally {
             this.isClearingLocalData = false;
         }

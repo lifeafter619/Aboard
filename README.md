@@ -7,7 +7,9 @@
 [简体中文](README.md) | [繁體中文](public/README.zh-TW.md) | [English](public/README.en.md)
 
 [![Demo](https://img.shields.io/badge/Demo-Online-22c55e?style=for-the-badge&labelColor=111827&logo=googlechrome&logoColor=fff)](https://aboard.pp.ua)
+<!-- version-badge:start -->
 [![Version](https://img.shields.io/badge/Version-2.4.2-f59e0b?style=for-the-badge&labelColor=111827)](version.txt)
+<!-- version-badge:end -->
 [![License](https://img.shields.io/badge/License-MIT-3b82f6?style=for-the-badge&labelColor=111827&logo=open-source-initiative&logoColor=fff)](LICENSE)
 [![PWA](https://img.shields.io/badge/PWA-Ready-8b5cf6?style=for-the-badge&labelColor=111827&logo=pwa&logoColor=fff)](manifest.json)
 [![Vanilla JS](https://img.shields.io/badge/Vanilla-JavaScript-facc15?style=for-the-badge&labelColor=111827&logo=javascript&logoColor=000)](js/main.js)
@@ -37,6 +39,8 @@
 - 常用白板能力齐全：画笔、形状、橡皮、背景、插图、插字、选择编辑。
 - 课堂辅助功能完整：时间显示、计时器、随机点名、计分板、教具等。
 - 体验偏向真实教学场景：分页画布、自动保存恢复、PWA、多语言、配置导入导出。
+- 高倍率缩放时会自动切换到 SVG 矢量预览，让文字、图片、笔迹与形状在放大查看时更清晰。
+- 默认缩放上限已提升到 `1000%`，需要更高倍率时仍可开启“允许无限放大”。
 - 响应式与触控做了专门优化。
 
 ```mermaid
@@ -142,4 +146,14 @@ graph LR
 
 [![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/lifeafter619/Aboard)
 
-如果这个项目对你有帮助，欢迎点个 Star。
+## 🌟 致谢
+
+感谢所有贡献者和使用者！如果这个项目对您有帮助，欢迎给个Star⭐，这样就对我很有帮助了
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=lifeafter619/Aboard&type=date&legend=top-left)](https://www.star-history.com/#lifeafter619/Aboard&type=date&legend=top-left)
+
+---
+
+Made with ❤️ for educators and creators
+

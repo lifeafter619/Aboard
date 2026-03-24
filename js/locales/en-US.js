@@ -172,6 +172,7 @@ window.translations = {
 
     selection: {
         edit: 'Edit',
+        color: 'Color',
         copy: 'Copy',
         delete: 'Delete',
         done: 'Done',
@@ -183,7 +184,8 @@ window.translations = {
         layerUp: 'Move Forward',
         layerDown: 'Move Backward',
         group: 'Group',
-        ungroup: 'Ungroup'
+        ungroup: 'Ungroup',
+        position: 'Position'
     },
 
     // Line Style Modal
@@ -215,6 +217,7 @@ window.translations = {
         english4line: 'English 4-Line',
         musicStaff: 'Music Staff',
         coordinate: 'Coordinate',
+        polar: 'Polar Coordinate',
         coordinateOriginHint: 'Double-click coordinate center in Move mode to drag origin',
         image: 'Upload Image',
         imagePrefix: 'Image ',
@@ -232,7 +235,51 @@ window.translations = {
         preferenceHint: 'Choose patterns shown in properties bar',
         upload: 'Upload',
         moveCoordinateOrigin: 'Move Origin',
-        moveCoordinateOriginHint: 'Click and drag on canvas to move coordinate origin'
+        moveCoordinateOriginHint: 'Click and drag on canvas to move coordinate origin',
+        coordinateTools: 'Coordinate Settings',
+        showTicks: 'Show Ticks',
+        showLabels: 'Show Labels',
+        showPointLabels: 'Show Point Labels',
+        showOrigin: 'Show Origin',
+        connectPoints: 'Connect Points',
+        snapToGrid: 'Snap to Grid',
+        addPoint: 'Add Point',
+        drawPointLine: 'Draw Points & Line',
+        pointLineModeLineOnly: 'Line Only',
+        pointLineModeAuto: 'Auto Connect',
+        pointLineModeSelected: 'Selected Connect',
+        addPointHint: 'When enabled, click the canvas to place coordinate points and connect them automatically',
+        addPointHintLineOnly: 'When enabled, click the canvas to place coordinate points and draw only the polyline',
+        addPointHintAuto: 'When enabled, click the canvas to place coordinate points and connect them automatically',
+        addPointHintSelected: 'When enabled, click the canvas to add coordinate points. After switching to Select, only the selected points will connect',
+        clearPoints: 'Clear Points',
+        clearPlots: 'Clear Plots',
+        pointsCount: 'Points',
+        plotExpression: 'Function Expression',
+        plot: 'Plot',
+        inputPanel: 'Input Panel',
+        keypadNumbers: 'Numbers',
+        keypadOperators: 'Operators',
+        keypadVariables: 'Variables',
+        keypadFunctions: 'Functions',
+        plotHintCartesian: 'Cartesian: enter y = f(x), you can use sin cos PI',
+        plotHintPolar: 'Polar: enter r = f(theta), theta is radians and deg is degrees',
+        plotPlaceholderCartesian: 'e.g. sin(x) + 2',
+        plotPlaceholderPolar: 'e.g. 2 * sin(4 * theta)',
+        noPlots: 'No plotted functions yet',
+        coordinateStatusAddPoint: 'Draw points & lines mode enabled',
+        coordinateStatusAddPointLineOnly: 'Line-only mode enabled. Click the canvas to place coordinate points',
+        coordinateStatusAddPointAuto: 'Auto-connect mode enabled. Click the canvas to place coordinate points',
+        coordinateStatusAddPointSelected: 'Selected-connect mode enabled. Click the canvas to place coordinate points',
+        coordinateStatusAddPointOff: 'Draw points & lines mode disabled',
+        connectPointsEnabled: 'Point line enabled',
+        connectPointsDisabled: 'Point line disabled',
+        pointAdded: 'Coordinate point added',
+        pointsCleared: 'Coordinate points cleared',
+        plotAdded: 'Function plot added',
+        plotUpdated: 'Function plot updated',
+        plotError: 'Invalid expression, unable to plot',
+        plotsCleared: 'Function plots cleared'
     },
 
     // Image Controls
@@ -250,6 +297,7 @@ window.translations = {
         delete: 'Delete',
         done: 'Done',
         edit: 'Edit',
+        color: 'Color',
         rotate90: 'Rotate 90°',
         flipH: 'Flip Horizontal',
         layer: 'Layer',
@@ -258,7 +306,8 @@ window.translations = {
         layerUp: 'Move Forward',
         layerDown: 'Move Backward',
         group: 'Group',
-        ungroup: 'Ungroup'
+        ungroup: 'Ungroup',
+        position: 'Position'
     },
 
     // Page Navigation
@@ -426,7 +475,7 @@ window.translations = {
             size: 'Canvas Size',
             sizeHint: 'Choose preset size or custom size/ratio',
             unlimitedZoom: 'Unlimited Zoom',
-            unlimitedZoomHint: 'Allow canvas to zoom infinitely (up to 500x)',
+            unlimitedZoomHint: 'Default zoom now reaches 1000%; enable this to continue zooming up to 500x',
             infiniteCanvas: 'Infinite Canvas',
             pagination: 'Pagination Mode',
             presets: {

@@ -166,6 +166,7 @@ window.translations = {
 
     selection: {
         edit: '編集',
+        color: '色',
         copy: 'コピー',
         delete: '削除',
         done: '完了',
@@ -177,7 +178,8 @@ window.translations = {
         layerUp: '前面へ',
         layerDown: '背面へ',
         group: 'グループ化',
-        ungroup: 'グループ解除'
+        ungroup: 'グループ解除',
+        position: '位置'
     },
 
     // Line Style Modal
@@ -210,6 +212,7 @@ window.translations = {
         english4line: '英語4線',
         musicStaff: '五線譜',
         coordinate: '座標系',
+        polar: '極座標',
         coordinateOriginHint: '移動モードでダブルクリックして座標原点を選択し、ドラッグして移動',
         image: '画像',
         density: '密度',
@@ -225,7 +228,50 @@ window.translations = {
         preference: '背景パターンの設定',
         upload: 'アップロード',
         moveCoordinateOrigin: '原点を移動',
-        moveCoordinateOriginHint: 'ボタンをクリックしてキャンバス上でドラッグして座標原点を移動'
+        moveCoordinateOriginHint: 'ボタンをクリックしてキャンバス上でドラッグして座標原点を移動',
+        coordinateTools: '座標設定',
+        showTicks: '目盛りを表示',
+        showLabels: 'ラベルを表示',
+        showPointLabels: '点ラベルを表示',
+        showOrigin: '原点を表示',
+        connectPoints: '点を結ぶ',
+        snapToGrid: 'グリッドに吸着',
+        addPoint: '点を追加',
+        drawPointLine: '点と線を描画',
+        pointLineModeLineOnly: '線のみ',
+        pointLineModeAuto: '自動連結',
+        pointLineModeSelected: '選択連結',
+        addPointHint: '有効にしてキャンバスをクリックすると、座標点を順に配置して自動で結びます',
+        addPointHintLineOnly: '有効にするとキャンバスを順にクリックして座標点を追加し、折れ線だけを描画します',
+        addPointHintAuto: '有効にするとキャンバスを順にクリックして座標点を追加し、自動で結びます',
+        addPointHintSelected: '有効にするとキャンバスで座標点を追加できます。選択ツールに切り替えると、選択した点だけが結ばれます',
+        clearPoints: '点を消去',
+        clearPlots: 'グラフを消去',
+        pointsCount: '点数',
+        plotExpression: '式',
+        plot: '描画',
+        inputPanel: '入力パネル',
+        keypadNumbers: '数字',
+        keypadOperators: '記号',
+        keypadVariables: '変数',
+        keypadFunctions: '関数',
+        plotHintCartesian: '直交座標： y = f(x) を入力。sin cos PI が使えます',
+        plotHintPolar: '極座標： r = f(theta) を入力。theta はラジアン、deg は度数です',
+        plotPlaceholderCartesian: '例：sin(x) + 2',
+        plotPlaceholderPolar: '例：2 * sin(4 * theta)',
+        noPlots: 'まだ関数グラフはありません',
+        coordinateStatusAddPoint: '点と線の描画モードを有効にしました',
+        coordinateStatusAddPointLineOnly: '線のみモードを有効にしました。キャンバスをクリックして座標点を追加してください',
+        coordinateStatusAddPointAuto: '自動連結モードを有効にしました。キャンバスをクリックして座標点を追加してください',
+        coordinateStatusAddPointSelected: '選択連結モードを有効にしました。キャンバスをクリックして座標点を追加してください',
+        coordinateStatusAddPointOff: '点と線の描画モードを無効にしました',
+        connectPointsEnabled: '点線表示を有効にしました',
+        connectPointsDisabled: '点線表示を無効にしました',
+        pointAdded: '座標点を追加しました',
+        pointsCleared: '座標点を消去しました',
+        plotAdded: '関数グラフを追加しました',
+        plotError: '式が無効なため描画できません',
+        plotsCleared: '関数グラフを消去しました'
     },
 
     // Image Controls
@@ -243,6 +289,7 @@ window.translations = {
         delete: '削除',
         done: '完了',
         edit: '編集',
+        color: '色',
         rotate90: '90°回転',
         flipH: '左右反転',
         layer: 'レイヤー',
@@ -251,7 +298,8 @@ window.translations = {
         layerUp: '前面へ',
         layerDown: '背面へ',
         group: 'グループ化',
-        ungroup: 'グループ解除'
+        ungroup: 'グループ解除',
+        position: '位置'
     },
 
     // Page Navigation

@@ -1,0 +1,41 @@
+name: Sync Version Badge
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - version.txt
+  workflow_dispatch:
+
+jobs:
+  sync-version-badge:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Sync README version badge
+        run: npm run sync:version-badge
+
+      - name: Commit updated badges
+        run: |
+          if git diff --quiet -- README.md public/README*.md; then
+            echo "No badge changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md public/README*.md
+          git commit -m "chore: sync version badge [skip ci]"
+          git push

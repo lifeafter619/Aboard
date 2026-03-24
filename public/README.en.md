@@ -7,7 +7,9 @@
 [Simplified Chinese](../README.md) | [Traditional Chinese](README.zh-TW.md) | [English](README.en.md)
 
 [![Demo](https://img.shields.io/badge/Demo-Online-22c55e?style=for-the-badge&labelColor=111827&logo=googlechrome&logoColor=fff)](https://aboard.pp.ua)
-[![Version](https://img.shields.io/badge/Version-2.4.1-f59e0b?style=for-the-badge&labelColor=111827)](../version.txt)
+<!-- version-badge:start -->
+[![Version](https://img.shields.io/badge/Version-2.4.2-f59e0b?style=for-the-badge&labelColor=111827)](../version.txt)
+<!-- version-badge:end -->
 [![License](https://img.shields.io/badge/License-MIT-3b82f6?style=for-the-badge&labelColor=111827&logo=open-source-initiative&logoColor=fff)](../LICENSE)
 [![PWA](https://img.shields.io/badge/PWA-Ready-8b5cf6?style=for-the-badge&labelColor=111827&logo=pwa&logoColor=fff)](../manifest.json)
 [![Vanilla JS](https://img.shields.io/badge/Vanilla-JavaScript-facc15?style=for-the-badge&labelColor=111827&logo=javascript&logoColor=000)](../js/main.js)
@@ -37,6 +39,8 @@ You can quickly try this project through the **Demo link** below, or visit **my 
 - Complete common whiteboard capabilities: pen, shapes, eraser, background, image insertion, text insertion, and selection editing.
 - Complete classroom helper functions: time display, timer, random picker, scoreboard, teaching tools, and more.
 - The experience is oriented toward real teaching scenarios: paginated canvas, automatic save and restore, PWA, multilingual support, and configuration import/export.
+- At higher zoom levels, Aboard automatically switches to an SVG vector preview so text, images, strokes, and shapes stay sharper while magnified.
+- The default zoom ceiling has been raised to `1000%`, and the unlimited zoom option can still extend beyond that.
 - Responsive layout and touch interaction have been specially optimized.
 
 ```mermaid

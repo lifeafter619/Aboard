@@ -7,7 +7,9 @@
 [簡體中文](../README.md) | [繁體中文](README.zh-TW.md) | [English](README.en.md)
 
 [![Demo](https://img.shields.io/badge/Demo-Online-22c55e?style=for-the-badge&labelColor=111827&logo=googlechrome&logoColor=fff)](https://aboard.pp.ua)
-[![Version](https://img.shields.io/badge/Version-2.4.1-f59e0b?style=for-the-badge&labelColor=111827)](../version.txt)
+<!-- version-badge:start -->
+[![Version](https://img.shields.io/badge/Version-2.4.2-f59e0b?style=for-the-badge&labelColor=111827)](../version.txt)
+<!-- version-badge:end -->
 [![License](https://img.shields.io/badge/License-MIT-3b82f6?style=for-the-badge&labelColor=111827&logo=open-source-initiative&logoColor=fff)](../LICENSE)
 [![PWA](https://img.shields.io/badge/PWA-Ready-8b5cf6?style=for-the-badge&labelColor=111827&logo=pwa&logoColor=fff)](../manifest.json)
 [![Vanilla JS](https://img.shields.io/badge/Vanilla-JavaScript-facc15?style=for-the-badge&labelColor=111827&logo=javascript&logoColor=000)](../js/main.js)
@@ -37,6 +39,8 @@
 - 常用白板能力齊全：畫筆、形狀、橡皮擦、背景、插圖、插字、選擇編輯。
 - 課堂輔助功能完整：時間顯示、計時器、隨機點名、計分板、教具等。
 - 體驗偏向真實教學場景：分頁畫布、自動儲存恢復、PWA、多語言、設定匯入匯出。
+- 高倍率縮放時會自動切換到 SVG 向量預覽，讓文字、圖片、筆跡與形狀在放大查看時更清晰。
+- 預設縮放上限已提升到 `1000%`，若需要更高倍率仍可開啟「允許無限放大」。
 - 針對響應式與觸控做了專門優化。
 
 ```mermaid
