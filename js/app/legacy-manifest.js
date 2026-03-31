@@ -26,6 +26,10 @@ export const LEGACY_STARTUP_SCRIPTS = [
   'js/modules/shape-drawing.js',
   'js/modules/line-style-modal.js',
   'js/modules/board-construction.js',
+  'js/modules/layout-runtime.js',
+  'js/modules/coordinate-panel-runtime.js',
+  'js/modules/panel-runtime.js',
+  'js/modules/modal-runtime.js',
   'js/modules/lazy-manager-runtime.js',
   'js/main.js'
 ];

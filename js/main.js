@@ -3,13 +3,6 @@
 const DEFAULT_MIN_FIT_SCALE = 0.1;
 const DEFAULT_TARGET_COVERAGE = 0.7;
 const DEFAULT_MIN_DEFAULT_SCALE = 0.9;
-const TOOL_CONFIG_PANEL_GAP = 8;
-const EDGE_SNAP_DISTANCE = 30;
-const PANEL_EDGE_MARGIN = 10;
-const MIN_EDGE_UNSNAP_DISTANCE = 90;
-const EDGE_UNSNAP_BUFFER = 20;
-// Keep floating feature panels below modal layer (modal starts at 2000 in CSS).
-const MAX_FEATURE_WIDGET_ZINDEX = 1900;
 const QUALITY_UPDATE_DEBOUNCE_MS = 120;
 const MIN_DYNAMIC_RENDER_SCALE = 1;
 const MAX_DYNAMIC_RENDER_SCALE = 4;
@@ -18,12 +11,11 @@ const RENDER_SCALE_SCHEDULE_THRESHOLD = 0.15;
 const RENDER_SCALE_APPLY_THRESHOLD = 0.05;
 const MAX_DYNAMIC_BACKING_DIMENSION = 8192;
 const MAX_DYNAMIC_BACKING_PIXELS = 64 * 1024 * 1024;
-const PANEL_DRAG_START_THRESHOLD = 8;
-const MODAL_DRAG_START_THRESHOLD = 8;
-const MODAL_RESIZE_EDGE_MARGIN = 20;
-const MODAL_RESIZE_MIN_WIDTH = 360;
-const MODAL_RESIZE_MIN_HEIGHT = 280;
 const boardConstruction = window.AboardBoardConstruction || {};
+const panelRuntime = window.AboardPanelRuntime || {};
+const layoutRuntime = window.AboardLayoutRuntime || {};
+const coordinatePanelRuntime = window.AboardCoordinatePanelRuntime || {};
+const modalRuntime = window.AboardModalRuntime || {};
 const lazyManagerRuntime = window.AboardLazyManagerRuntime || {};
 
 class DrawingBoard {
@@ -314,514 +306,73 @@ class DrawingBoard {
         return lazyManagerRuntime.preloadMoreFeatureManagers?.(this);
     }
 
+
     getResizableModalConfigs() {
-        return [
-            {
-                key: 'settingsModal',
-                selector: '#settings-modal .settings-modal-content',
-                minWidth: 700,
-                minHeight: 420
-            },
-            {
-                key: 'timeDisplaySettingsModal',
-                selector: '#time-display-settings-modal .timer-modal-content',
-                minWidth: 440,
-                minHeight: 360
-            },
-            {
-                key: 'timerSettingsModal',
-                selector: '#timer-settings-modal .timer-modal-content',
-                minWidth: 460,
-                minHeight: 420
-            },
-            {
-                key: 'randomPickerSettingsModal',
-                selector: '#random-picker-settings-modal .random-picker-modal-content',
-                minWidth: 440,
-                minHeight: 360
-            },
-            {
-                key: 'helpModal',
-                selector: '#help-modal .help-modal-content',
-                minWidth: 420,
-                minHeight: 320
-            },
-            {
-                key: 'announcementModal',
-                selector: '#announcement-modal .announcement-modal-content',
-                minWidth: 420,
-                minHeight: 280
-            },
-            {
-                key: 'coordinateToolsModal',
-                selector: '#coordinate-tools-modal .coordinate-tools-modal-content',
-                minWidth: 420,
-                minHeight: 320
-            },
-            {
-                key: 'coordinatePointModal',
-                selector: '#coordinate-point-modal .coordinate-point-modal-content',
-                minWidth: 320,
-                minHeight: 260,
-                showResizeHandles: false,
-                showHeaderActions: false
-            },
-            {
-                key: 'coordinateKeypadModal',
-                selector: '#coordinate-keypad-modal .coordinate-keypad-modal-content',
-                minWidth: 320,
-                minHeight: 300
-            },
-            {
-                key: 'fontPreviewModal',
-                selector: '#font-preview-modal .font-preview-modal-content',
-                minWidth: 520,
-                minHeight: 360
-            }
-        ];
+        return modalRuntime.getResizableModalConfigs?.() || [];
     }
 
     initResizableModals() {
-        this.getResizableModalConfigs().forEach(config => {
-            this.registerResizableModal(config);
-        });
+        return modalRuntime.initResizableModals?.(this);
     }
 
     getLocaleText(key, fallback) {
-        const translated = window.i18n?.t(key);
-        return translated && translated !== key ? translated : fallback;
+        return modalRuntime.getLocaleText?.(key, fallback) ?? fallback;
     }
 
     registerResizableModal(config) {
-        const content = document.querySelector(config.selector);
-        if (!content || content.dataset.modalResizeRegistered === 'true') {
-            return;
-        }
-
-        const showResizeHandles = config.showResizeHandles !== false;
-        const showHeaderActions = config.showHeaderActions !== false;
-
-        content.dataset.modalResizeRegistered = 'true';
-        content.dataset.modalResizeKey = config.key;
-        content.dataset.modalResizeMinWidth = String(config.minWidth || MODAL_RESIZE_MIN_WIDTH);
-        content.dataset.modalResizeMinHeight = String(config.minHeight || MODAL_RESIZE_MIN_HEIGHT);
-        content.dataset.defaultInlineWidth = content.style.width || '';
-        content.dataset.defaultInlineHeight = content.style.height || '';
-        content.dataset.defaultInlineMaxWidth = content.style.maxWidth || '';
-        content.dataset.defaultInlineMaxHeight = content.style.maxHeight || '';
-        content.dataset.defaultInlineLeft = content.style.left || '';
-        content.dataset.defaultInlineTop = content.style.top || '';
-        content.dataset.defaultInlineRight = content.style.right || '';
-        content.dataset.defaultInlineBottom = content.style.bottom || '';
-        content.dataset.defaultInlinePosition = content.style.position || '';
-        content.dataset.defaultInlineMargin = content.style.margin || '';
-        content.dataset.defaultInlineTransform = content.style.transform || '';
-
-        content.classList.add('resizable-modal-content');
-
-        const header = content.querySelector('.modal-header, .timer-modal-header');
-        const title = header?.querySelector('h2');
-        if (header && title) {
-            header.classList.add('modal-draggable-header');
-            if (header.dataset.modalDragBound !== 'true') {
-                header.dataset.modalDragBound = 'true';
-                header.addEventListener('pointerdown', (event) => this.startModalDrag(event, content, header));
-            }
-
-            let titleGroup = header.querySelector('.modal-title-group');
-            if (!titleGroup) {
-                titleGroup = document.createElement('div');
-                titleGroup.className = 'modal-title-group';
-                header.insertBefore(titleGroup, title);
-                titleGroup.appendChild(title);
-            }
-
-            if (!showHeaderActions) {
-                content.classList.add('no-modal-header-actions');
-                titleGroup.querySelectorAll('.modal-reset-size-btn, .modal-keep-centered-btn').forEach(btn => btn.remove());
-            } else if (!titleGroup.querySelector('.modal-reset-size-btn')) {
-                const resetButton = document.createElement('button');
-                resetButton.type = 'button';
-                resetButton.className = 'modal-reset-size-btn';
-                resetButton.addEventListener('click', (event) => {
-                    event.stopPropagation();
-                    this.resetResizableModalSize(content);
-                });
-                titleGroup.appendChild(resetButton);
-            }
-
-            if (showHeaderActions && !titleGroup.querySelector('.modal-keep-centered-btn')) {
-                const keepCenteredButton = document.createElement('button');
-                keepCenteredButton.type = 'button';
-                keepCenteredButton.className = 'modal-keep-centered-btn';
-                keepCenteredButton.addEventListener('click', (event) => {
-                    event.stopPropagation();
-                    this.toggleModalKeepCentered(content);
-                });
-                titleGroup.appendChild(keepCenteredButton);
-            }
-        }
-
-        if (!showResizeHandles) {
-            content.classList.add('no-modal-resize-handles');
-            content.querySelectorAll('.modal-resize-handle').forEach(handle => handle.remove());
-        } else {
-            ['top-left', 'top-right', 'bottom-left', 'bottom-right'].forEach(handleName => {
-                const handle = document.createElement('div');
-                handle.className = `modal-resize-handle ${handleName}`;
-                handle.dataset.handle = handleName;
-                handle.addEventListener('pointerdown', (event) => this.startModalResize(event, content, handleName));
-                content.appendChild(handle);
-            });
-        }
-
-        this.syncResizableModalState(content);
+        return modalRuntime.registerResizableModal?.(this, config);
     }
 
     syncResizableModalState(target) {
-        const content = typeof target === 'string'
-            ? document.querySelector(`#${target} .settings-modal-content, #${target} .timer-modal-content, #${target} .random-picker-modal-content, #${target} .help-modal-content, #${target} .announcement-modal-content`)
-            : target;
-        if (!content) {
-            return;
-        }
-
-        const modalKey = content.dataset.modalResizeKey;
-        const savedSize = this.settingsManager.getModalSizePreference(modalKey);
-        const keepCentered = this.settingsManager.getModalCenterPreference(modalKey);
-        if (savedSize) {
-            this.applyCustomModalLayout(content, savedSize.width, savedSize.height, keepCentered);
-        } else {
-            this.restoreDefaultModalLayout(content);
-        }
-        this.updateModalHeaderActionButtons(content);
+        return modalRuntime.syncResizableModalState?.(this, target);
     }
 
     startModalDrag(event, content, header) {
-        if (!content || !header) {
-            return;
-        }
-
-        if (event.pointerType === 'mouse' && event.button !== 0) {
-            return;
-        }
-
-        if (event.target?.closest('.modal-resize-handle, button, input, select, textarea, a, [contenteditable="true"]')) {
-            return;
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        const startRect = content.getBoundingClientRect();
-        this.modalDragState = {
-            content,
-            header,
-            pointerId: Number.isFinite(event.pointerId) ? event.pointerId : null,
-            startX: event.clientX,
-            startY: event.clientY,
-            offsetX: event.clientX - startRect.left,
-            offsetY: event.clientY - startRect.top,
-            width: startRect.width,
-            height: startRect.height,
-            keepCentered: this.settingsManager.getModalCenterPreference(content.dataset.modalResizeKey),
-            hasStarted: false,
-            moveHandler: null,
-            endHandler: null
-        };
-
-        const moveHandler = (moveEvent) => this.handleModalDrag(moveEvent);
-        const endHandler = (endEvent) => this.finishModalDrag(endEvent);
-        this.modalDragState.moveHandler = moveHandler;
-        this.modalDragState.endHandler = endHandler;
-
-        document.addEventListener('pointermove', moveHandler);
-        document.addEventListener('pointerup', endHandler);
-        document.addEventListener('pointercancel', endHandler);
+        return modalRuntime.startModalDrag?.(this, event, content, header);
     }
 
     handleModalDrag(event) {
-        const state = this.modalDragState;
-        if (!state?.content) {
-            return;
-        }
-
-        if (state.pointerId !== null && event.pointerId !== state.pointerId) {
-            return;
-        }
-
-        if (event.pointerType === 'mouse' && event.buttons === 0) {
-            this.finishModalDrag(event);
-            return;
-        }
-
-        const dx = event.clientX - state.startX;
-        const dy = event.clientY - state.startY;
-
-        if (!state.hasStarted) {
-            if (Math.hypot(dx, dy) < MODAL_DRAG_START_THRESHOLD) {
-                return;
-            }
-
-            state.hasStarted = true;
-
-            if (state.keepCentered) {
-                this.settingsManager.setModalCenterPreference(state.content.dataset.modalResizeKey, false);
-                this.updateModalHeaderActionButtons(state.content);
-            }
-
-            this.applyCustomModalLayout(state.content, state.width, state.height, false);
-            state.content.classList.add('modal-dragging');
-        }
-
-        event.preventDefault();
-
-        let left = event.clientX - state.offsetX;
-        let top = event.clientY - state.offsetY;
-
-        const maxLeft = Math.max(MODAL_RESIZE_EDGE_MARGIN, window.innerWidth - MODAL_RESIZE_EDGE_MARGIN - state.width);
-        const maxTop = Math.max(MODAL_RESIZE_EDGE_MARGIN, window.innerHeight - MODAL_RESIZE_EDGE_MARGIN - state.height);
-
-        left = Math.min(maxLeft, Math.max(MODAL_RESIZE_EDGE_MARGIN, left));
-        top = Math.min(maxTop, Math.max(MODAL_RESIZE_EDGE_MARGIN, top));
-
-        state.content.style.left = `${Math.round(left)}px`;
-        state.content.style.top = `${Math.round(top)}px`;
+        return modalRuntime.handleModalDrag?.(this, event);
     }
 
     finishModalDrag(event = null) {
-        const state = this.modalDragState;
-        if (!state?.content) {
-            return;
-        }
-
-        if (event && state.pointerId !== null && event.pointerId !== state.pointerId) {
-            return;
-        }
-
-        document.removeEventListener('pointermove', state.moveHandler);
-        document.removeEventListener('pointerup', state.endHandler);
-        document.removeEventListener('pointercancel', state.endHandler);
-
-        state.content.classList.remove('modal-dragging');
-        this.modalDragState = null;
+        return modalRuntime.finishModalDrag?.(this, event);
     }
 
     updateModalHeaderActionButtons(content) {
-        const resetButton = content?.querySelector('.modal-reset-size-btn');
-        const keepCenteredButton = content?.querySelector('.modal-keep-centered-btn');
-        if (!resetButton && !keepCenteredButton) {
-            return;
-        }
-        const modalKey = content.dataset.modalResizeKey;
-        const hasCustomSize = Boolean(this.settingsManager.getModalSizePreference(modalKey));
-        const keepCentered = this.settingsManager.getModalCenterPreference(modalKey);
-        const restoreSizeText = this.getLocaleText('common.restoreSize', 'Restore Size');
-        const keepCenteredText = this.getLocaleText('common.keepCentered', 'Keep Centered');
-
-        if (resetButton) {
-            resetButton.textContent = restoreSizeText;
-            resetButton.classList.toggle('show', hasCustomSize);
-        }
-        if (keepCenteredButton) {
-            keepCenteredButton.textContent = keepCenteredText;
-            keepCenteredButton.classList.toggle('show', hasCustomSize);
-            keepCenteredButton.classList.toggle('active', hasCustomSize && keepCentered);
-            keepCenteredButton.setAttribute('aria-pressed', String(hasCustomSize && keepCentered));
-        }
+        return modalRuntime.updateModalHeaderActionButtons?.(this, content);
     }
 
     getModalLayoutBounds(content) {
-        const availableWidth = Math.max(260, window.innerWidth - MODAL_RESIZE_EDGE_MARGIN * 2);
-        const availableHeight = Math.max(220, window.innerHeight - MODAL_RESIZE_EDGE_MARGIN * 2);
-        const configuredMinWidth = Math.max(MODAL_RESIZE_MIN_WIDTH, parseFloat(content.dataset.modalResizeMinWidth) || MODAL_RESIZE_MIN_WIDTH);
-        const configuredMinHeight = Math.max(MODAL_RESIZE_MIN_HEIGHT, parseFloat(content.dataset.modalResizeMinHeight) || MODAL_RESIZE_MIN_HEIGHT);
-        const maxWidth = availableWidth;
-        const maxHeight = availableHeight;
-        const minWidth = Math.min(configuredMinWidth, maxWidth);
-        const minHeight = Math.min(configuredMinHeight, maxHeight);
-        return { minWidth, minHeight, maxWidth, maxHeight };
+        return modalRuntime.getModalLayoutBounds?.(content);
     }
 
     applyCustomModalLayout(content, desiredWidth, desiredHeight, centerInViewport = false) {
-        if (!content) return;
-
-        const { minWidth, minHeight, maxWidth, maxHeight } = this.getModalLayoutBounds(content);
-        const width = Math.min(maxWidth, Math.max(minWidth, Math.round(desiredWidth)));
-        const height = Math.min(maxHeight, Math.max(minHeight, Math.round(desiredHeight)));
-
-        content.classList.add('modal-custom-sized');
-        content.style.position = 'fixed';
-        content.style.width = `${width}px`;
-        content.style.height = `${height}px`;
-        content.style.maxWidth = `${maxWidth}px`;
-        content.style.maxHeight = `${maxHeight}px`;
-        content.style.right = 'auto';
-        content.style.bottom = 'auto';
-        content.style.margin = '0';
-        content.style.transform = 'none';
-
-        let left = parseFloat(content.style.left);
-        let top = parseFloat(content.style.top);
-
-        if (centerInViewport || !Number.isFinite(left) || !Number.isFinite(top)) {
-            left = Math.round((window.innerWidth - width) / 2);
-            top = Math.round((window.innerHeight - height) / 2);
-        }
-
-        const maxLeft = Math.max(MODAL_RESIZE_EDGE_MARGIN, window.innerWidth - MODAL_RESIZE_EDGE_MARGIN - width);
-        const maxTop = Math.max(MODAL_RESIZE_EDGE_MARGIN, window.innerHeight - MODAL_RESIZE_EDGE_MARGIN - height);
-
-        content.style.left = `${Math.min(maxLeft, Math.max(MODAL_RESIZE_EDGE_MARGIN, left))}px`;
-        content.style.top = `${Math.min(maxTop, Math.max(MODAL_RESIZE_EDGE_MARGIN, top))}px`;
+        return modalRuntime.applyCustomModalLayout?.(this, content, desiredWidth, desiredHeight, centerInViewport);
     }
 
     restoreDefaultModalLayout(content) {
-        if (!content) return;
-
-        content.classList.remove('modal-custom-sized');
-        content.style.width = content.dataset.defaultInlineWidth || '';
-        content.style.height = content.dataset.defaultInlineHeight || '';
-        content.style.maxWidth = content.dataset.defaultInlineMaxWidth || '';
-        content.style.maxHeight = content.dataset.defaultInlineMaxHeight || '';
-        content.style.left = content.dataset.defaultInlineLeft || '';
-        content.style.top = content.dataset.defaultInlineTop || '';
-        content.style.right = content.dataset.defaultInlineRight || '';
-        content.style.bottom = content.dataset.defaultInlineBottom || '';
-        content.style.position = content.dataset.defaultInlinePosition || '';
-        content.style.margin = content.dataset.defaultInlineMargin || '';
-        content.style.transform = content.dataset.defaultInlineTransform || '';
+        return modalRuntime.restoreDefaultModalLayout?.(content);
     }
 
     resetResizableModalSize(content) {
-        if (!content) return;
-        const modalKey = content.dataset.modalResizeKey;
-        this.settingsManager.resetModalSizePreference(modalKey);
-        this.settingsManager.resetModalCenterPreference(modalKey);
-        this.restoreDefaultModalLayout(content);
-        this.updateModalHeaderActionButtons(content);
+        return modalRuntime.resetResizableModalSize?.(this, content);
     }
 
     toggleModalKeepCentered(content) {
-        if (!content) return;
-        const modalKey = content.dataset.modalResizeKey;
-        if (!this.settingsManager.getModalSizePreference(modalKey)) {
-            return;
-        }
-        const nextValue = !this.settingsManager.getModalCenterPreference(modalKey);
-        this.settingsManager.setModalCenterPreference(modalKey, nextValue);
-        if (nextValue) {
-            const rect = content.getBoundingClientRect();
-            this.applyCustomModalLayout(content, rect.width, rect.height, true);
-        }
-        this.updateModalHeaderActionButtons(content);
+        return modalRuntime.toggleModalKeepCentered?.(this, content);
     }
 
     startModalResize(event, content, handleName) {
-        if (!content || !handleName) return;
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        const rect = content.getBoundingClientRect();
-        this.applyCustomModalLayout(content, rect.width, rect.height, false);
-
-        this.modalResizeState = {
-            content,
-            handleName,
-            startX: event.clientX,
-            startY: event.clientY,
-            startRect: content.getBoundingClientRect(),
-            keepCentered: this.settingsManager.getModalCenterPreference(content.dataset.modalResizeKey)
-        };
-
-        content.classList.add('modal-resizing');
-        const moveHandler = (moveEvent) => this.handleModalResize(moveEvent);
-        const endHandler = () => this.finishModalResize();
-        this.modalResizeState.moveHandler = moveHandler;
-        this.modalResizeState.endHandler = endHandler;
-
-        document.addEventListener('pointermove', moveHandler);
-        document.addEventListener('pointerup', endHandler, { once: true });
-        document.addEventListener('pointercancel', endHandler, { once: true });
+        return modalRuntime.startModalResize?.(this, event, content, handleName);
     }
 
     handleModalResize(event) {
-        const state = this.modalResizeState;
-        if (!state?.content) {
-            return;
-        }
-
-        event.preventDefault();
-
-        const { content, handleName, startRect, startX, startY, keepCentered } = state;
-        const { minWidth, minHeight, maxWidth, maxHeight } = this.getModalLayoutBounds(content);
-        const startRight = startRect.left + startRect.width;
-        const startBottom = startRect.top + startRect.height;
-        const dx = event.clientX - startX;
-        const dy = event.clientY - startY;
-
-        let left = startRect.left;
-        let top = startRect.top;
-        let width = startRect.width;
-        let height = startRect.height;
-
-        if (handleName.includes('left')) {
-            left = Math.min(startRight - minWidth, Math.max(MODAL_RESIZE_EDGE_MARGIN, startRect.left + dx));
-            width = startRight - left;
-        } else {
-            width = Math.max(minWidth, Math.min(maxWidth, startRect.width + dx));
-        }
-
-        if (handleName.includes('top')) {
-            top = Math.min(startBottom - minHeight, Math.max(MODAL_RESIZE_EDGE_MARGIN, startRect.top + dy));
-            height = startBottom - top;
-        } else {
-            height = Math.max(minHeight, Math.min(maxHeight, startRect.height + dy));
-        }
-
-        width = Math.min(maxWidth, Math.max(minWidth, width));
-        height = Math.min(maxHeight, Math.max(minHeight, height));
-
-        if (keepCentered) {
-            left = (window.innerWidth - width) / 2;
-            top = (window.innerHeight - height) / 2;
-        } else {
-            if (handleName.includes('left')) {
-                left = startRight - width;
-            } else {
-                left = Math.min(Math.max(MODAL_RESIZE_EDGE_MARGIN, left), window.innerWidth - MODAL_RESIZE_EDGE_MARGIN - width);
-            }
-
-            if (handleName.includes('top')) {
-                top = startBottom - height;
-            } else {
-                top = Math.min(Math.max(MODAL_RESIZE_EDGE_MARGIN, top), window.innerHeight - MODAL_RESIZE_EDGE_MARGIN - height);
-            }
-        }
-
-        content.style.left = `${Math.round(left)}px`;
-        content.style.top = `${Math.round(top)}px`;
-        content.style.width = `${Math.round(width)}px`;
-        content.style.height = `${Math.round(height)}px`;
+        return modalRuntime.handleModalResize?.(this, event);
     }
 
     finishModalResize() {
-        const state = this.modalResizeState;
-        if (!state?.content) {
-            return;
-        }
-
-        document.removeEventListener('pointermove', state.moveHandler);
-        state.content.classList.remove('modal-resizing');
-
-        const rect = state.content.getBoundingClientRect();
-        this.settingsManager.setModalSizePreference(state.content.dataset.modalResizeKey, {
-            width: rect.width,
-            height: rect.height
-        });
-        this.updateModalHeaderActionButtons(state.content);
-        this.modalResizeState = null;
+        return modalRuntime.finishModalResize?.(this);
     }
 
     syncEraserSizeControls() {
@@ -3012,424 +2563,22 @@ class DrawingBoard {
     }
     
     repositionToolbarsOnResize() {
-        // Dynamic toolbar positioning based on window orientation
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
-        const isPortrait = windowHeight > windowWidth;
-        const toolbar = document.getElementById('toolbar');
-        
-        // On portrait orientation (typically phones), position toolbar on right side
-        if (isPortrait && toolbar && !toolbar.classList.contains('user-positioned')) {
-            // Apply right side positioning for portrait mode
-            toolbar.classList.add('vertical');
-            toolbar.style.right = '20px';
-            toolbar.style.left = 'auto';
-            toolbar.style.top = '50%';
-            toolbar.style.bottom = 'auto';
-            toolbar.style.transform = 'translateY(-50%)';
-        } else if (!isPortrait && toolbar && !toolbar.classList.contains('user-positioned')) {
-            // For landscape mode, use bottom center positioning
-            toolbar.classList.remove('vertical');
-            toolbar.style.left = '50%';
-            toolbar.style.right = 'auto';
-            toolbar.style.top = 'auto';
-            toolbar.style.bottom = '20px';
-            toolbar.style.transform = 'translateX(-50%)';
-        }
-        
-        // Ensure all toolbars and panels stay within viewport after window resize
-        const EDGE_SPACING = 10; // Minimum spacing from viewport edges
-        const panels = [
-            document.getElementById('toolbar'),
-            document.getElementById('history-controls'),
-            document.getElementById('config-area'),
-            document.getElementById('time-display-area'),
-            document.getElementById('feature-area'),
-            document.getElementById('pagination-controls'),
-            document.getElementById('timer-display')
-        ];
-        
-        panels.forEach(panel => {
-            if (!panel) return;
-            
-            let rect = panel.getBoundingClientRect();
-            const appliedRelative = this.applyRelativePanelPosition(panel, rect, windowWidth, windowHeight, EDGE_SPACING);
-            if (appliedRelative) {
-                rect = panel.getBoundingClientRect();
-            }
-            const computedStyle = window.getComputedStyle(panel);
-            
-            // Get current position
-            let left = computedStyle.left;
-            let top = computedStyle.top;
-            let right = computedStyle.right;
-            let bottom = computedStyle.bottom;
-            
-            // Check if panel has been dragged (has explicit positioning)
-            // Include both translateX (horizontal centering) and translateY (vertical centering) checks
-            const hasCenteredPosition = left === '50%' || 
-                                        computedStyle.transform.includes('translateX') || 
-                                        computedStyle.transform.includes('translateY');
-            const hasExplicitPosition = !hasCenteredPosition && (left !== 'auto' || top !== 'auto' || right !== 'auto' || bottom !== 'auto');
-            
-            // For centered panels, check if they overflow the viewport and reposition if needed
-            if (hasCenteredPosition && !hasExplicitPosition) {
-                if (rect.right > windowWidth - EDGE_SPACING) {
-                    panel.style.left = `${Math.max(EDGE_SPACING, windowWidth - rect.width - EDGE_SPACING)}px`;
-                    panel.style.right = 'auto';
-                    panel.style.transform = panel.style.transform ? panel.style.transform.replace(/translateX\([^)]*\)/, '') : '';
-                } else if (rect.left < EDGE_SPACING) {
-                    panel.style.left = `${EDGE_SPACING}px`;
-                    panel.style.right = 'auto';
-                    panel.style.transform = panel.style.transform ? panel.style.transform.replace(/translateX\([^)]*\)/, '') : '';
-                }
-                if (rect.bottom > windowHeight - EDGE_SPACING) {
-                    const newBottom = EDGE_SPACING;
-                    panel.style.bottom = `${newBottom}px`;
-                    panel.style.top = 'auto';
-                } else if (rect.top < EDGE_SPACING) {
-                    panel.style.top = `${EDGE_SPACING}px`;
-                    panel.style.bottom = 'auto';
-                }
-                return;
-            }
-            
-            if (!hasExplicitPosition) return;
-            
-            // Convert to numbers
-            left = parseFloat(left) || 0;
-            top = parseFloat(top) || 0;
-            right = right !== 'auto' ? parseFloat(right) : null;
-            bottom = bottom !== 'auto' ? parseFloat(bottom) : null;
-            
-            // Adjust position if overflowing
-            if (right !== null) {
-                // Panel is right-aligned - check if actual left position would be negative
-                const actualLeft = windowWidth - right - rect.width;
-                if (actualLeft < 0) {
-                    panel.style.right = `${EDGE_SPACING}px`;
-                }
-            } else if (left + rect.width > windowWidth - EDGE_SPACING) {
-                // Panel overflows right edge (accounting for edge spacing)
-                const newLeft = Math.max(EDGE_SPACING, windowWidth - rect.width - EDGE_SPACING);
-                panel.style.left = `${newLeft}px`;
-                panel.style.right = 'auto';
-            }
-            
-            if (bottom !== null) {
-                // Panel is bottom-aligned - check if actual top position would be negative
-                const actualTop = windowHeight - bottom - rect.height;
-                if (actualTop < 0) {
-                    panel.style.bottom = `${EDGE_SPACING}px`;
-                }
-            } else if (top + rect.height > windowHeight - EDGE_SPACING) {
-                // Panel overflows bottom edge (accounting for edge spacing)
-                const newTop = Math.max(EDGE_SPACING, windowHeight - rect.height - EDGE_SPACING);
-                panel.style.top = `${newTop}px`;
-                panel.style.bottom = 'auto';
-            }
-            
-            // Also ensure panel doesn't overflow left or top edges
-            if (left < EDGE_SPACING && left !== 0) {
-                panel.style.left = `${EDGE_SPACING}px`;
-            }
-            if (top < EDGE_SPACING && top !== 0) {
-                panel.style.top = `${EDGE_SPACING}px`;
-            }
-        });
+        return panelRuntime.repositionToolbarsOnResize?.(this);
     }
-
     applyRelativePanelPosition(panel, rect, windowWidth, windowHeight, edgeSpacing) {
-        const relativeLeft = panel.dataset.relativeLeft;
-        const relativeTop = panel.dataset.relativeTop;
-        let applied = false;
-
-        if (relativeLeft !== undefined) {
-            const availableWidth = Math.max(1, windowWidth - rect.width);
-            const ratio = Math.min(1, Math.max(0, parseFloat(relativeLeft)));
-            const newLeft = availableWidth * ratio;
-            panel.style.left = `${Math.min(windowWidth - rect.width - edgeSpacing, Math.max(edgeSpacing, newLeft))}px`;
-            panel.style.right = 'auto';
-            applied = true;
-        }
-
-        if (relativeTop !== undefined) {
-            const availableHeight = Math.max(1, windowHeight - rect.height);
-            const ratio = Math.min(1, Math.max(0, parseFloat(relativeTop)));
-            const newTop = availableHeight * ratio;
-            panel.style.top = `${Math.min(windowHeight - rect.height - edgeSpacing, Math.max(edgeSpacing, newTop))}px`;
-            panel.style.bottom = 'auto';
-            applied = true;
-        }
-
-        return applied;
+        return panelRuntime.applyRelativePanelPosition?.(panel, rect, windowWidth, windowHeight, edgeSpacing) || false;
     }
-
     storePanelRelativePosition(panel) {
-        if (!panel) return;
-        const rect = panel.getBoundingClientRect();
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
-        const availableWidth = Math.max(1, windowWidth - rect.width);
-        const availableHeight = Math.max(1, windowHeight - rect.height);
-
-        const nextLeft = Math.min(1, Math.max(0, rect.left / availableWidth)).toFixed(3);
-        const nextTop = Math.min(1, Math.max(0, rect.top / availableHeight)).toFixed(3);
-
-        if (panel.dataset.relativeLeft !== nextLeft) {
-            panel.dataset.relativeLeft = nextLeft;
-        }
-        if (panel.dataset.relativeTop !== nextTop) {
-            panel.dataset.relativeTop = nextTop;
-        }
+        return panelRuntime.storePanelRelativePosition?.(panel);
     }
-    
+
     repositionModalsOnResize() {
-        this.getResizableModalConfigs().forEach(config => {
-            const modalContent = document.querySelector(config.selector);
-            if (!modalContent) return;
-
-            const modalKey = modalContent.dataset.modalResizeKey;
-            const savedSize = this.settingsManager.getModalSizePreference(modalKey);
-            const keepCentered = this.settingsManager.getModalCenterPreference(modalKey);
-            if (savedSize) {
-                this.applyCustomModalLayout(modalContent, savedSize.width, savedSize.height, keepCentered);
-            } else {
-                this.restoreDefaultModalLayout(modalContent);
-            }
-            this.updateModalHeaderActionButtons(modalContent);
-        });
+        return modalRuntime.repositionModalsOnResize?.(this);
     }
-    
+
     setupDraggablePanels() {
-        const historyControls = document.getElementById('history-controls');
-        const configArea = document.getElementById('config-area');
-        const timeDisplayArea = document.getElementById('time-display-area');
-        const featureArea = document.getElementById('feature-area');
-        const toolbar = document.getElementById('toolbar');
-        const paginationControls = document.getElementById('pagination-controls');
-        
-        // Unified start handler for mouse and touch events
-        const handleDragStart = (e, element) => {
-            if (typeof e.button === 'number' && e.button !== 0) {
-                return;
-            }
-
-            // Always allow dragging from the drag handle
-            const isDragHandle = e.target.closest('.panel-drag-handle');
-            
-            // Block drag if clicking on interactive elements (unless it's a drag handle)
-            if (!isDragHandle && (e.target.closest('button') || e.target.closest('input'))) return;
-            
-            e.stopPropagation(); // Prevent drawing on canvas
-            
-            const rect = element.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            
-            // Calculate offset in scaled coordinates (what we see on screen)
-            // getBoundingClientRect returns already-scaled dimensions
-            this.dragOffset.x = clientX - rect.left;
-            this.dragOffset.y = clientY - rect.top;
-            
-            this.draggedElementWidth = rect.width;
-            this.draggedElementHeight = rect.height;
-            if (this.settingsManager.edgeSnapEnabled && element.classList.contains('vertical')) {
-                const nearLeftEdge = rect.left <= EDGE_SNAP_DISTANCE;
-                const nearRightEdge = (window.innerWidth - rect.right) <= EDGE_SNAP_DISTANCE;
-                this.dragSnapSide = nearLeftEdge ? 'left' : (nearRightEdge ? 'right' : null);
-            } else {
-                this.dragSnapSide = null;
-            }
-
-            this.pendingPanelDrag = {
-                element,
-                startX: clientX,
-                startY: clientY
-            };
-            
-            e.preventDefault();
-        };
-        
-        [historyControls, configArea, timeDisplayArea, featureArea, toolbar, paginationControls].filter(Boolean).forEach(element => {
-            // Pointer events for mouse, pen, and touch
-            element.addEventListener('pointerdown', (e) => handleDragStart(e, element));
-            // Mouse fallback for environments without Pointer Events
-            element.addEventListener('mousedown', (e) => handleDragStart(e, element));
-            // Touch fallback - improve compatibility with large-screen touch devices
-            element.addEventListener('touchstart', (e) => handleDragStart(e, element), { passive: false });
-        });
-        
-        // Unified move handler for mouse and touch events
-        const handleDragMove = (e) => {
-            if ((e.type === 'mousemove' || e.type === 'pointermove') && typeof e.buttons === 'number' && e.buttons === 0) {
-                handleDragEnd();
-                return;
-            }
-
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-            if (!this.isDraggingPanel && this.pendingPanelDrag) {
-                const distance = Math.hypot(clientX - this.pendingPanelDrag.startX, clientY - this.pendingPanelDrag.startY);
-                if (distance < PANEL_DRAG_START_THRESHOLD) {
-                    return;
-                }
-
-                this.isDraggingPanel = true;
-                this.draggedElement = this.pendingPanelDrag.element;
-                this.draggedElement.classList.add('dragging');
-                this.draggedElement.style.transition = 'none';
-            }
-
-            if (!this.isDraggingPanel || !this.draggedElement) return;
-            
-            let x = clientX - this.dragOffset.x;
-            let y = clientY - this.dragOffset.y;
-            
-            const edgeSnapDistance = EDGE_SNAP_DISTANCE;
-            const edgeUnsnapDistance = Math.max(MIN_EDGE_UNSNAP_DISTANCE, edgeSnapDistance + EDGE_UNSNAP_BUFFER);
-            const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight;
-            const isToolbar = this.draggedElement.id === 'toolbar';
-            const isConfigArea = this.draggedElement.id === 'config-area';
-            const isTimeDisplayArea = this.draggedElement.id === 'time-display-area';
-            const isFeatureArea = this.draggedElement.id === 'feature-area';
-            const shouldApplyVerticalLive = isConfigArea || isTimeDisplayArea || isFeatureArea;
-            
-            let snappedToEdge = false;
-            let isVertical = false;
-            let snappedLeft = false;
-            let snappedRight = false;
-            
-            // Get current element dimensions (updated during drag)
-            const currentRect = this.draggedElement.getBoundingClientRect();
-            const currentWidth = currentRect.width;
-            const currentHeight = currentRect.height;
-            
-            if (this.settingsManager.edgeSnapEnabled) {
-                const keepSnapLeft = this.dragSnapSide === 'left' && x <= edgeUnsnapDistance;
-                const keepSnapRight = this.dragSnapSide === 'right' && (x + currentWidth) >= windowWidth - edgeUnsnapDistance;
-                const canSnapLeft = x <= edgeSnapDistance;
-                const canSnapRight = (x + currentWidth) >= windowWidth - edgeSnapDistance;
-                
-                // Use explicit left/right snap state hysteresis to avoid oscillation near edge thresholds
-                if (keepSnapLeft || canSnapLeft) {
-                    x = PANEL_EDGE_MARGIN;
-                    snappedToEdge = true;
-                    isVertical = true;
-                    snappedLeft = true;
-                    this.dragSnapSide = 'left';
-                } else if (keepSnapRight || canSnapRight) {
-                    x = windowWidth - currentWidth - PANEL_EDGE_MARGIN;
-                    snappedToEdge = true;
-                    isVertical = true;
-                    snappedRight = true;
-                    this.dragSnapSide = 'right';
-                } else if (this.dragSnapSide) {
-                    this.dragSnapSide = null;
-                }
-                // Snap to top
-                if (y < edgeSnapDistance) {
-                    y = PANEL_EDGE_MARGIN;
-                    snappedToEdge = true;
-                }
-                // Snap to bottom
-                if (y + currentHeight > windowHeight - edgeSnapDistance) {
-                    y = windowHeight - currentHeight - PANEL_EDGE_MARGIN;
-                    snappedToEdge = true;
-                }
-            }
-            
-            if (shouldApplyVerticalLive && snappedToEdge && isVertical) {
-                this.draggedElement.classList.add('vertical');
-                // Recalculate position after adding vertical class to account for dimension changes
-                if (snappedRight) {
-                    const newWidth = this.draggedElement.getBoundingClientRect().width;
-                    x = windowWidth - newWidth - PANEL_EDGE_MARGIN;
-                } else if (snappedLeft) {
-                    x = PANEL_EDGE_MARGIN;
-                }
-                // Update height after dimension change for vertical layout
-                const newRect = this.draggedElement.getBoundingClientRect();
-                this.draggedElementWidth = newRect.width;
-                this.draggedElementHeight = newRect.height;
-            } else if (shouldApplyVerticalLive) {
-                this.draggedElement.classList.remove('vertical');
-                // Update dimensions when switching back to horizontal
-                const newRect = this.draggedElement.getBoundingClientRect();
-                this.draggedElementWidth = newRect.width;
-                this.draggedElementHeight = newRect.height;
-            }
-            
-            // Constrain to viewport boundaries (prevent overflow)
-            const finalRect = this.draggedElement.getBoundingClientRect();
-            x = Math.max(0, Math.min(x, windowWidth - finalRect.width));
-            y = Math.max(0, Math.min(y, windowHeight - finalRect.height));
-            
-            this.draggedElement.style.left = `${x}px`;
-            this.draggedElement.style.top = `${y}px`;
-            // For config-area, preserve the scale transform while dragging
-            // Use transform-origin: top left to prevent position jump due to scaling
-            if (this.draggedElement.id === 'config-area') {
-                const scale = this.settingsManager.configScale || 1;
-                this.draggedElement.style.transformOrigin = 'top left';
-                this.draggedElement.style.transform = `scale(${scale})`;
-            } else {
-                this.draggedElement.style.transform = 'none';
-            }
-            this.draggedElement.style.right = 'auto';
-            this.draggedElement.style.bottom = 'auto';
-        };
-        
-        // Unified end handler for mouse and touch events
-        const handleDragEnd = () => {
-            if (this.isDraggingPanel && this.draggedElement) {
-                this.draggedElement.classList.remove('dragging');
-                this.draggedElement.style.transition = '';
-                
-                // Mark toolbar as user-positioned to prevent auto-repositioning
-                if (this.draggedElement.id === 'toolbar') {
-                    this.draggedElement.classList.add('user-positioned');
-                    if (this.settingsManager.edgeSnapEnabled) {
-                        const rect = this.draggedElement.getBoundingClientRect();
-                        const nearLeftEdge = rect.left <= EDGE_SNAP_DISTANCE;
-                        const nearRightEdge = (window.innerWidth - rect.right) <= EDGE_SNAP_DISTANCE;
-                        if (nearLeftEdge) {
-                            this.draggedElement.style.left = `${PANEL_EDGE_MARGIN}px`;
-                        } else if (nearRightEdge) {
-                            this.draggedElement.style.left = `${window.innerWidth - rect.width - PANEL_EDGE_MARGIN}px`;
-                        }
-                    }
-                }
-                
-                // Mark floating config/feature panels as user-dragged so reopen keeps manual position
-                if (this.draggedElement.id === 'config-area' ||
-                    this.draggedElement.id === 'feature-area' ||
-                    this.draggedElement.id === 'time-display-area') {
-                    this.draggedElement.dataset.userDragged = 'true';
-                }
-
-                this.storePanelRelativePosition(this.draggedElement);
-                
-                this.isDraggingPanel = false;
-                this.draggedElement = null;
-                this.dragSnapSide = null;
-            }
-            this.pendingPanelDrag = null;
-        };
-        
-        // Add both mouse and touch event listeners for better touch device support
-        document.addEventListener('mousemove', handleDragMove);
-        document.addEventListener('pointermove', handleDragMove);
-        document.addEventListener('mouseup', handleDragEnd);
-        document.addEventListener('pointerup', handleDragEnd);
-        document.addEventListener('pointercancel', handleDragEnd);
-        document.addEventListener('touchmove', handleDragMove, { passive: false });
-        document.addEventListener('touchend', handleDragEnd);
-        document.addEventListener('touchcancel', handleDragEnd);
+        return panelRuntime.setupDraggablePanels?.(this);
     }
-    
     updatePenLineStyleSettings(lineStyle) {
         const penLineStyleSettings = document.getElementById('pen-line-style-settings');
         const penDashDensitySetting = document.getElementById('pen-dash-density-setting');
@@ -3454,193 +2603,17 @@ class DrawingBoard {
     }
 
     clampFloatingPanelToViewport(panel, edgeSpacing = 12) {
-        if (!panel) return;
-
-        const rect = panel.getBoundingClientRect();
-        let dx = 0;
-        let dy = 0;
-
-        if (rect.left < edgeSpacing) {
-            dx = edgeSpacing - rect.left;
-        } else if (rect.right > window.innerWidth - edgeSpacing) {
-            dx = window.innerWidth - edgeSpacing - rect.right;
-        }
-
-        if (rect.top < edgeSpacing) {
-            dy = edgeSpacing - rect.top;
-        } else if (rect.bottom > window.innerHeight - edgeSpacing) {
-            dy = window.innerHeight - edgeSpacing - rect.bottom;
-        }
-
-        if (dx !== 0) {
-            if (panel.style.left && panel.style.left !== 'auto') {
-                panel.style.left = `${parseFloat(panel.style.left) + dx}px`;
-            } else if (panel.style.right && panel.style.right !== 'auto') {
-                panel.style.right = `${parseFloat(panel.style.right) - dx}px`;
-            }
-        }
-
-        if (dy !== 0) {
-            if (panel.style.top && panel.style.top !== 'auto') {
-                panel.style.top = `${parseFloat(panel.style.top) + dy}px`;
-            } else if (panel.style.bottom && panel.style.bottom !== 'auto') {
-                panel.style.bottom = `${parseFloat(panel.style.bottom) - dy}px`;
-            }
-        }
+        return layoutRuntime.clampFloatingPanelToViewport?.(panel, edgeSpacing);
     }
-    
     positionConfigArea() {
-        // Position config-area above the toolbar
-        const configArea = document.getElementById('config-area');
-        const toolbar = document.getElementById('toolbar');
-        const featureArea = document.getElementById('feature-area');
-        
-        // Only position if config-area hasn't been dragged by user
-        if (configArea.dataset.userDragged === 'true') {
-            return;
-        }
-        
-        const toolbarRect = toolbar.getBoundingClientRect();
-        const isVertical = toolbar.classList.contains('vertical');
-        const tool = this.drawingEngine.currentTool;
-        const gap = TOOL_CONFIG_PANEL_GAP;
-        let toolButtonId = null;
-        if (!tool) {
-            console.warn('No active tool found for toolbar mapping.');
-        } else {
-            toolButtonId = this.toolButtonIds[tool];
-            if (!toolButtonId) {
-                console.warn(`No toolbar button mapping found for tool '${tool}'. Expected one of: ${Object.keys(this.toolButtonIds).join(', ')}.`);
-            }
-        }
-        const toolButton = toolButtonId ? document.getElementById(toolButtonId) : null;
-        if (toolButtonId && !toolButton) {
-            console.warn(`Toolbar button element not found for tool '${tool}' (ID: ${toolButtonId}).`);
-        }
-        const toolRect = toolButton ? toolButton.getBoundingClientRect() : null;
-        const referenceRect = toolRect || toolbarRect;
-        
-        // Reset inline styles first to get proper dimensions
-        configArea.style.left = '';
-        configArea.style.top = '';
-        configArea.style.bottom = '';
-        configArea.style.right = '';
-        configArea.style.transform = '';
-        configArea.style.transformOrigin = '';
-        
-        const scale = this.settingsManager.configScale || 1;
-        const shouldAnchorToShapeFeature = tool === 'shape' &&
-            featureArea?.classList.contains('show') &&
-            toolRect;
-
-        if (shouldAnchorToShapeFeature) {
-            const referenceCenterY = referenceRect.top + referenceRect.height / 2;
-            const placeOnLeft = referenceRect.left > window.innerWidth / 2;
-            configArea.style.left = placeOnLeft
-                ? `${referenceRect.left - gap}px`
-                : `${referenceRect.right + gap}px`;
-            configArea.style.right = 'auto';
-            configArea.style.top = `${referenceCenterY}px`;
-            configArea.style.bottom = 'auto';
-            configArea.style.transformOrigin = placeOnLeft ? 'right center' : 'left center';
-            configArea.style.transform = placeOnLeft
-                ? `translate(-100%, -50%) scale(${scale})`
-                : `translate(0, -50%) scale(${scale})`;
-            this.clampFloatingPanelToViewport(configArea);
-            return;
-        }
-        
-        if (isVertical) {
-            // Toolbar is on left or right side
-            const referenceCenterY = referenceRect.top + referenceRect.height / 2;
-            if (toolbarRect.left < window.innerWidth / 2) {
-                // Toolbar on left side - position config to the right of toolbar
-                configArea.style.left = `${referenceRect.right + gap}px`;
-            } else {
-                // Toolbar on right side - position config to the left of toolbar
-                configArea.style.right = `${window.innerWidth - referenceRect.left + gap}px`;
-                configArea.style.left = 'auto';
-            }
-            configArea.style.top = `${referenceCenterY}px`;
-            configArea.style.transformOrigin = 'center center';
-            configArea.style.transform = `translateY(-50%) scale(${scale})`;
-        } else {
-            // Toolbar is horizontal (bottom)
-            const referenceCenterX = referenceRect.left + referenceRect.width / 2;
-            const referenceTop = referenceRect.top;
-            configArea.style.left = `${referenceCenterX}px`;
-            configArea.style.bottom = `${window.innerHeight - referenceTop + gap}px`;
-            configArea.style.top = 'auto';
-            configArea.style.transformOrigin = 'center bottom';
-            configArea.style.transform = `translateX(-50%) scale(${scale})`;
-        }
-
-        this.clampFloatingPanelToViewport(configArea);
-
+        return layoutRuntime.positionConfigArea?.(this);
     }
-
     positionCoordinatePointPanel() {
-        const modal = document.getElementById('coordinate-point-modal');
-        const content = modal?.querySelector('.coordinate-point-modal-content');
-        const toggleBtn = document.getElementById('coordinate-point-toggle-btn');
-        const configArea = document.getElementById('config-area');
-
-        if (!modal || !content || !toggleBtn || !configArea || !modal.classList.contains('show')) {
-            return;
-        }
-
-        if (content.classList.contains('modal-custom-sized')) {
-            return;
-        }
-
-        const buttonRect = toggleBtn.getBoundingClientRect();
-        const configRect = configArea.getBoundingClientRect();
-        if (!buttonRect.width || !buttonRect.height || !configRect.width || !configRect.height) {
-            return;
-        }
-
-        const horizontalInset = 12;
-        const verticalInset = 12;
-        const gap = 14;
-        const measuredWidth = Math.min(content.offsetWidth || 328, window.innerWidth - horizontalInset * 2);
-        const measuredHeight = Math.min(content.offsetHeight || 420, window.innerHeight - verticalInset * 2);
-        const preferredLeft = buttonRect.left + (buttonRect.width / 2) - (measuredWidth / 2);
-        const left = Math.max(horizontalInset, Math.min(window.innerWidth - measuredWidth - horizontalInset, preferredLeft));
-        const preferredTop = Math.min(
-            buttonRect.top - measuredHeight - gap,
-            configRect.top - measuredHeight - gap
-        );
-        const top = Math.max(verticalInset, preferredTop);
-        const availableHeight = Math.max(240, window.innerHeight - top - verticalInset);
-
-        content.style.position = 'fixed';
-        content.style.left = `${left}px`;
-        content.style.top = `${top}px`;
-        content.style.right = 'auto';
-        content.style.bottom = 'auto';
-        content.style.margin = '0';
-        content.style.transform = 'none';
-        content.style.maxHeight = `${availableHeight}px`;
+        return layoutRuntime.positionCoordinatePointPanel?.();
     }
-    
     positionFeatureArea() {
-        // Position feature-area above the "更多" button
-        const featureArea = document.getElementById('feature-area');
-        if (featureArea.dataset.userDragged === 'true') {
-            return;
-        }
-        const moreBtn = document.getElementById('more-btn');
-        const gap = TOOL_CONFIG_PANEL_GAP + 8;
-        const moreBtnRect = moreBtn.getBoundingClientRect();
-        
-        featureArea.style.left = `${moreBtnRect.left + (moreBtnRect.width / 2)}px`;
-        featureArea.style.top = `${moreBtnRect.top - gap}px`;
-        featureArea.style.right = 'auto';
-        featureArea.style.bottom = 'auto';
-        featureArea.style.transform = 'translate(-50%, -100%)';
-        this.clampFloatingPanelToViewport(featureArea);
+        return layoutRuntime.positionFeatureArea?.();
     }
-
     exitShapeMode() {
         if (this.drawingEngine.currentTool !== 'shape') return;
         this.shapeDrawingManager.stopDrawing();
@@ -3953,146 +2926,23 @@ class DrawingBoard {
     }
 
     toggleCoordinateSettingsPanel(force) {
-        const supportsCoordinateTools = this.backgroundManager.supportsMovableOrigin(this.backgroundManager.backgroundPattern);
-        this.isCoordinateSettingsExpanded = supportsCoordinateTools && (typeof force === 'boolean'
-            ? force
-            : !this.isCoordinateSettingsExpanded);
-
-        const modal = document.getElementById('coordinate-tools-modal');
-        const toggleBtn = document.getElementById('coordinate-settings-toggle-btn');
-        if (modal) {
-            modal.classList.toggle('show', this.isCoordinateSettingsExpanded);
-        }
-        if (toggleBtn) {
-            toggleBtn.classList.toggle('active', this.isCoordinateSettingsExpanded);
-            toggleBtn.setAttribute('aria-expanded', this.isCoordinateSettingsExpanded ? 'true' : 'false');
-        }
-
-        if (!this.isCoordinateSettingsExpanded) {
-            this.toggleCoordinateInputPanel(false);
-        }
-
-        this.updateBackgroundUI();
+        return coordinatePanelRuntime.toggleCoordinateSettingsPanel?.(this, force);
     }
-
     toggleCoordinatePointPanel(force) {
-        const supportsCoordinateTools = this.backgroundManager.supportsMovableOrigin(this.backgroundManager.backgroundPattern);
-        this.isCoordinatePointPanelVisible = supportsCoordinateTools && (typeof force === 'boolean'
-            ? force
-            : !this.isCoordinatePointPanelVisible);
-
-        const modal = document.getElementById('coordinate-point-modal');
-        const toggleBtn = document.getElementById('coordinate-point-toggle-btn');
-        if (modal) {
-            modal.classList.toggle('show', this.isCoordinatePointPanelVisible);
-        }
-        if (toggleBtn) {
-            toggleBtn.classList.toggle('active', this.isCoordinatePointPanelVisible || this.isCoordinatePointMode);
-            toggleBtn.setAttribute('aria-expanded', this.isCoordinatePointPanelVisible ? 'true' : 'false');
-        }
-
-        if (this.isCoordinatePointPanelVisible) {
-            requestAnimationFrame(() => this.positionCoordinatePointPanel());
-        }
-
-        if (!this.isCoordinatePointPanelVisible) {
-            this.toggleCoordinateInputPanel(false);
-        }
-
-        this.updateBackgroundUI();
+        return coordinatePanelRuntime.toggleCoordinatePointPanel?.(this, force);
     }
-
     toggleCoordinateInputPanel(force) {
-        const supportsCoordinateTools = this.backgroundManager.supportsMovableOrigin(this.backgroundManager.backgroundPattern);
-        this.isCoordinateInputPanelVisible = supportsCoordinateTools && this.isCoordinatePointPanelVisible && (typeof force === 'boolean'
-            ? force
-            : !this.isCoordinateInputPanelVisible);
-
-        const keypadModal = document.getElementById('coordinate-keypad-modal');
-        const keypadToggleBtn = document.getElementById('coordinate-keypad-toggle-btn');
-
-        if (keypadModal) {
-            keypadModal.classList.toggle('show', this.isCoordinateInputPanelVisible);
-        }
-
-        if (keypadToggleBtn) {
-            keypadToggleBtn.classList.toggle('active', this.isCoordinateInputPanelVisible);
-            keypadToggleBtn.setAttribute('aria-expanded', this.isCoordinateInputPanelVisible ? 'true' : 'false');
-        }
-
-        if (this.isCoordinateInputPanelVisible) {
-            this.syncCoordinateInputPanelButtons();
-            this.syncCoordinateExpressionDisplay();
-        }
+        return coordinatePanelRuntime.toggleCoordinateInputPanel?.(this, force);
     }
-
     syncCoordinateInputPanelButtons() {
-        const variableBtn = document.querySelector('[data-coordinate-variable-btn]');
-        if (!variableBtn) return;
-
-        const isPolar = this.backgroundManager.backgroundPattern === 'polar';
-        variableBtn.textContent = isPolar ? 'θ' : 'x';
-        variableBtn.title = isPolar ? 'theta' : 'x';
+        return coordinatePanelRuntime.syncCoordinateInputPanelButtons?.(this);
     }
-
     insertCoordinateExpressionAtCursor(value) {
-        const input = document.getElementById('coordinate-expression-input');
-        if (!input) return;
-
-        input.focus();
-        const start = input.selectionStart ?? input.value.length;
-        const end = input.selectionEnd ?? input.value.length;
-
-        if (typeof input.setRangeText === 'function') {
-            input.setRangeText(value, start, end, 'end');
-            this.syncCoordinateExpressionDisplay();
-            return;
-        }
-
-        input.value = `${input.value.slice(0, start)}${value}${input.value.slice(end)}`;
-        const nextCursor = start + value.length;
-        input.setSelectionRange(nextCursor, nextCursor);
-        this.syncCoordinateExpressionDisplay();
+        return coordinatePanelRuntime.insertCoordinateExpressionAtCursor?.(this, value);
     }
-
     handleCoordinateExpressionAction(action) {
-        const input = document.getElementById('coordinate-expression-input');
-        if (!input) return;
-
-        input.focus();
-        const start = input.selectionStart ?? input.value.length;
-        const end = input.selectionEnd ?? input.value.length;
-
-        if (action === 'clear') {
-            input.value = '';
-            input.setSelectionRange(0, 0);
-            this.syncCoordinateExpressionDisplay();
-            return;
-        }
-
-        if (action === 'backspace') {
-            if (typeof input.setRangeText === 'function') {
-                if (start !== end) {
-                    input.setRangeText('', start, end, 'end');
-                } else if (start > 0) {
-                    input.setRangeText('', start - 1, start, 'end');
-                }
-                this.syncCoordinateExpressionDisplay();
-                return;
-            }
-
-            if (start !== end) {
-                input.value = `${input.value.slice(0, start)}${input.value.slice(end)}`;
-                input.setSelectionRange(start, start);
-            } else if (start > 0) {
-                const nextCursor = start - 1;
-                input.value = `${input.value.slice(0, nextCursor)}${input.value.slice(start)}`;
-                input.setSelectionRange(nextCursor, nextCursor);
-            }
-            this.syncCoordinateExpressionDisplay();
-        }
+        return coordinatePanelRuntime.handleCoordinateExpressionAction?.(this, action);
     }
-
     getCoordinatePointLineMode() {
         return this.backgroundManager?.getCoordinatePointLineMode?.() || 'auto';
     }
@@ -4290,26 +3140,11 @@ class DrawingBoard {
     }
 
     bringElementToFront(element) {
-        if (!element) return;
-        if (this.featureWidgetZIndex > MAX_FEATURE_WIDGET_ZINDEX) {
-            const floatingPanels = document.querySelectorAll('.feature-widget, .timer-display-widget, #feature-area, #config-area, #time-display-area');
-            this.featureWidgetZIndex = 1200;
-            floatingPanels.forEach(panel => {
-                this.featureWidgetZIndex += 1;
-                panel.style.zIndex = String(this.featureWidgetZIndex);
-            });
-        }
-        this.featureWidgetZIndex += 1;
-        element.style.zIndex = String(this.featureWidgetZIndex);
+        return layoutRuntime.bringElementToFront?.(this, element);
     }
-
     bringLatestElement(selector) {
-        const elements = document.querySelectorAll(selector);
-        if (elements.length > 0) {
-            this.bringElementToFront(elements[elements.length - 1]);
-        }
+        return layoutRuntime.bringLatestElement?.(this, selector);
     }
-
     handleMoreFeaturePanelAfterAction() {
         if (!this.settingsManager.keepMorePanelOpen) {
             this.closeFeaturePanel();
