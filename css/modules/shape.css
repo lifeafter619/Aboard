@@ -27,6 +27,16 @@
     display: block;
 }
 
+/* Keep the injected help button clear of the shared config close button */
+#shape-config .config-group:first-child .help-inline-container {
+    width: calc(100% - 48px) !important;
+    padding-right: 4px;
+}
+
+#shape-config .config-group:first-child .help-inline-container label {
+    min-width: 0;
+}
+
 /* Shape type buttons grid */
 .shape-type-grid {
     display: grid;

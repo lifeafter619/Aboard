@@ -1,4 +1,7 @@
 node_modules/
+dist/
+.npm-cache/
+.playwright-cli/
 
 # Development artifacts
 *.log

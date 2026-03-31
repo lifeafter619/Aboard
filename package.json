@@ -3,10 +3,14 @@
   "version": "1.0.0",
   "description": "一个简约的web白板，更适合老师体质",
   "scripts": {
+    "build": "node scripts/build-static.js",
     "start": "node server.js",
     "sync:version-badge": "node scripts/update-version-badge.js"
   },
   "devDependencies": {
-    "serve": "^14.0.0"
+    "clean-css": "^5.3.3",
+    "html-minifier-terser": "^7.2.0",
+    "serve": "^14.0.0",
+    "terser": "^5.46.1"
   }
 }

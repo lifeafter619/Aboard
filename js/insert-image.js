@@ -818,3 +818,5 @@ class InsertImageManager {
         this.isRotating = false;
     }
 }
+
+window.InsertImageManager = InsertImageManager;

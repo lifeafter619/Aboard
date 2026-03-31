@@ -2,6 +2,7 @@ const LAZY_MANAGER_SCRIPTS = {
     ExportManager: 'js/export.js',
     ProjectManager: 'js/modules/project-manager.js',
     TimerManager: 'js/modules/timer.js',
+    InsertImageManager: 'js/insert-image.js',
     InsertTextManager: 'js/modules/insert-text-manager.js',
     RandomPickerManager: 'js/modules/random-picker.js',
     ScoreboardManager: 'js/modules/scoreboard.js'
@@ -73,6 +74,14 @@ async function getInsertTextManager(board) {
     return board.insertTextManager;
 }
 
+async function getInsertImageManager(board) {
+    if (!board.insertImageManager) {
+        const InsertImageManagerCtor = await loadManagerConstructor(board, 'InsertImageManager');
+        board.insertImageManager = new InsertImageManagerCtor(board.canvas, board.ctx, board.historyManager, board.drawingEngine);
+    }
+    return board.insertImageManager;
+}
+
 async function getRandomPickerManager(board) {
     if (!board.randomPickerManager) {
         const RandomPickerManagerCtor = await loadManagerConstructor(board, 'RandomPickerManager');
@@ -99,22 +108,34 @@ function scheduleMoreFeaturePreload(board) {
     const kickoff = () => {
         window.setTimeout(() => {
             void preloadMoreFeatureManagers(board);
-        }, 400);
+        }, 120);
     };
 
-    if (typeof window.requestIdleCallback === 'function') {
-        window.requestIdleCallback(() => kickoff(), { timeout: 1500 });
-    } else {
-        window.setTimeout(kickoff, 1200);
+    const afterFirstPaint = () => {
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                kickoff();
+            });
+        });
+    };
+
+    if (document.readyState === 'complete') {
+        afterFirstPaint();
+        return;
     }
+
+    window.addEventListener('load', afterFirstPaint, { once: true });
 }
 
 async function preloadMoreFeatureManagers(board) {
     const preloadTasks = [
-        () => getTimerManager(board),
+        () => getInsertImageManager(board),
         () => getInsertTextManager(board),
+        () => getTimerManager(board),
         () => getRandomPickerManager(board),
-        () => getScoreboardManager(board)
+        () => getScoreboardManager(board),
+        () => getExportManager(board),
+        () => getProjectManager(board)
     ];
 
     for (const preload of preloadTasks) {
@@ -124,7 +145,7 @@ async function preloadMoreFeatureManagers(board) {
             console.warn('Silent more-feature preload failed:', error);
         }
 
-        await new Promise(resolve => window.setTimeout(resolve, 120));
+        await new Promise(resolve => window.setTimeout(resolve, 90));
     }
 }
 
@@ -135,6 +156,7 @@ window.AboardLazyManagerRuntime = {
     getExportManager,
     getProjectManager,
     getTimerManager,
+    getInsertImageManager,
     getInsertTextManager,
     getRandomPickerManager,
     getScoreboardManager,

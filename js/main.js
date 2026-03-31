@@ -15,6 +15,7 @@ const boardConstruction = window.AboardBoardConstruction || {};
 const panelRuntime = window.AboardPanelRuntime || {};
 const layoutRuntime = window.AboardLayoutRuntime || {};
 const coordinatePanelRuntime = window.AboardCoordinatePanelRuntime || {};
+const overlayUiRuntime = window.AboardOverlayUiRuntime || {};
 const modalRuntime = window.AboardModalRuntime || {};
 const lazyManagerRuntime = window.AboardLazyManagerRuntime || {};
 
@@ -284,6 +285,10 @@ class DrawingBoard {
 
     async getTimerManager() {
         return lazyManagerRuntime.getTimerManager?.(this);
+    }
+
+    async getInsertImageManager() {
+        return lazyManagerRuntime.getInsertImageManager?.(this);
     }
 
     async getInsertTextManager() {
@@ -1790,13 +1795,15 @@ class DrawingBoard {
         // Insert Image Feature Button
         const insertImageBtn = document.getElementById('insert-image-feature-btn');
         if (insertImageBtn) {
-            insertImageBtn.addEventListener('click', () => {
-                this.exitShapeMode();
-                if (!this.insertImageManager) {
-                    this.insertImageManager = new InsertImageManager(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
+            insertImageBtn.addEventListener('click', async () => {
+                try {
+                    this.exitShapeMode();
+                    const insertImageManager = await this.getInsertImageManager();
+                    insertImageManager.triggerSelect();
+                    this.handleMoreFeaturePanelAfterAction();
+                } catch (error) {
+                    this.showLazyLoadError('图片插入', error);
                 }
-                this.insertImageManager.triggerSelect();
-                this.handleMoreFeaturePanelAfterAction();
             });
         }
         
@@ -3129,16 +3136,11 @@ class DrawingBoard {
     }
     
     closeConfigPanel() {
-        document.getElementById('config-area').classList.remove('show');
-        this.toggleCoordinateSettingsPanel(false);
-        this.toggleCoordinatePointPanel(false);
-        this.exitShapeMode();
+        return overlayUiRuntime.closeConfigPanel?.(this);
     }
-    
     closeFeaturePanel() {
-        document.getElementById('feature-area').classList.remove('show');
+        return overlayUiRuntime.closeFeaturePanel?.();
     }
-
     bringElementToFront(element) {
         return layoutRuntime.bringElementToFront?.(this, element);
     }
@@ -3146,114 +3148,14 @@ class DrawingBoard {
         return layoutRuntime.bringLatestElement?.(this, selector);
     }
     handleMoreFeaturePanelAfterAction() {
-        if (!this.settingsManager.keepMorePanelOpen) {
-            this.closeFeaturePanel();
-        }
+        return overlayUiRuntime.handleMoreFeaturePanelAfterAction?.(this);
     }
-    
     openSettings() {
-        this.syncResizableModalState('settings-modal');
-        document.getElementById('settings-modal').classList.add('show');
-        this.updateCacheSizeDisplay();
-        
-        // Update time display settings UI with current values (elements may not exist if removed from Settings > More)
-        const timeDisplayCheckbox = document.getElementById('show-time-display-checkbox');
-        if (timeDisplayCheckbox) {
-            timeDisplayCheckbox.checked = this.timeDisplayManager.enabled;
-        }
-        
-        // Show/hide time display settings based on enabled state (elements may not exist)
-        const timeDisplaySettings = document.getElementById('time-display-settings');
-        const timezoneSettings = document.getElementById('timezone-settings');
-        const timeFormatSettings = document.getElementById('time-format-settings');
-        const dateFormatSettings = document.getElementById('date-format-settings');
-        const timeColorSettings = document.getElementById('time-color-settings');
-        const timeFontSizeSettings = document.getElementById('time-font-size-settings');
-        const timeOpacitySettings = document.getElementById('time-opacity-settings');
-        const timeFullscreenSettings = document.getElementById('time-fullscreen-settings');
-        const timeFullscreenFontSizeSettings = document.getElementById('time-fullscreen-font-size-settings');
-        
-        const isEnabled = this.timeDisplayManager.enabled;
-        if (timeDisplaySettings) timeDisplaySettings.style.display = isEnabled ? 'flex' : 'none';
-        if (timezoneSettings) timezoneSettings.style.display = isEnabled ? 'flex' : 'none';
-        if (timeFormatSettings) timeFormatSettings.style.display = isEnabled ? 'flex' : 'none';
-        if (dateFormatSettings) dateFormatSettings.style.display = isEnabled ? 'flex' : 'none';
-        if (timeColorSettings) timeColorSettings.style.display = isEnabled ? 'flex' : 'none';
-        if (timeFontSizeSettings) timeFontSizeSettings.style.display = isEnabled ? 'flex' : 'none';
-        if (timeOpacitySettings) timeOpacitySettings.style.display = isEnabled ? 'flex' : 'none';
-        if (timeFullscreenSettings) timeFullscreenSettings.style.display = isEnabled ? 'flex' : 'none';
-        if (timeFullscreenFontSizeSettings) timeFullscreenFontSizeSettings.style.display = isEnabled ? 'flex' : 'none';
-        
-        // Set active display type button
-        document.querySelectorAll('.display-option-btn').forEach(btn => btn.classList.remove('active'));
-        let displayType = 'both';
-        if (this.timeDisplayManager.showDate && !this.timeDisplayManager.showTime) {
-            displayType = 'date-only';
-        } else if (!this.timeDisplayManager.showDate && this.timeDisplayManager.showTime) {
-            displayType = 'time-only';
-        }
-        const activeBtn = document.querySelector(`.display-option-btn[data-display-type="${displayType}"]`);
-        if (activeBtn) activeBtn.classList.add('active');
-        
-        // Set timezone selector (may not exist)
-        const timezoneSelect = document.getElementById('timezone-select');
-        if (timezoneSelect) timezoneSelect.value = this.timeDisplayManager.timezone;
-        
-        const timeFormatSelect = document.getElementById('time-format-select');
-        if (timeFormatSelect) timeFormatSelect.value = this.timeDisplayManager.timeFormat;
-        
-        const dateFormatSelect = document.getElementById('date-format-select');
-        if (dateFormatSelect) dateFormatSelect.value = this.timeDisplayManager.dateFormat;
-        
-        const timeFontSizeSlider = document.getElementById('time-font-size-slider');
-        if (timeFontSizeSlider) timeFontSizeSlider.value = this.timeDisplayManager.fontSize;
-        
-        const timeFontSizeValue = document.getElementById('time-font-size-value');
-        if (timeFontSizeValue) timeFontSizeValue.textContent = this.timeDisplayManager.fontSize;
-        
-        const timeFontSizeInput = document.getElementById('time-font-size-input');
-        if (timeFontSizeInput) timeFontSizeInput.value = this.timeDisplayManager.fontSize;
-        
-        const timeOpacitySlider = document.getElementById('time-opacity-slider');
-        if (timeOpacitySlider) timeOpacitySlider.value = this.timeDisplayManager.opacity;
-        
-        const timeOpacityValue = document.getElementById('time-opacity-value');
-        if (timeOpacityValue) timeOpacityValue.textContent = this.timeDisplayManager.opacity;
-        
-        const timeOpacityInput = document.getElementById('time-opacity-input');
-        if (timeOpacityInput) timeOpacityInput.value = this.timeDisplayManager.opacity;
-        
-        const customTimeColorPicker = document.getElementById('custom-time-color-picker');
-        if (customTimeColorPicker) customTimeColorPicker.value = this.timeDisplayManager.color;
-        
-        const defaultBgColor = '#FFFFFF'; // Default background color constant
-        const customTimeBgColorPicker = document.getElementById('custom-time-bg-color-picker');
-        if (customTimeBgColorPicker) customTimeBgColorPicker.value = this.timeDisplayManager.bgColor === 'transparent' ? defaultBgColor : this.timeDisplayManager.bgColor;
-        
-        // Set fullscreen mode buttons
-        document.querySelectorAll('.fullscreen-mode-btn').forEach(btn => {
-            if (btn.dataset.mode === this.timeDisplayManager.fullscreenMode) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
-        
-        // Set fullscreen font size values
-        const timeFullscreenFontSizeSlider = document.getElementById('time-fullscreen-font-size-slider');
-        if (timeFullscreenFontSizeSlider) {
-            timeFullscreenFontSizeSlider.value = this.timeDisplayManager.fullscreenFontSize;
-            const timeFullscreenFontSizeValue = document.getElementById('time-fullscreen-font-size-value');
-            if (timeFullscreenFontSizeValue) timeFullscreenFontSizeValue.textContent = this.timeDisplayManager.fullscreenFontSize;
-            const timeFullscreenFontSizeInput = document.getElementById('time-fullscreen-font-size-input');
-            if (timeFullscreenFontSizeInput) timeFullscreenFontSizeInput.value = this.timeDisplayManager.fullscreenFontSize;
-        }
+        return overlayUiRuntime.openSettings?.(this);
     }
-    
     closeSettings() {
-        document.getElementById('settings-modal').classList.remove('show');
+        return overlayUiRuntime.closeSettings?.();
     }
-
     showConfigDiffModal(diff, newSettings) {
         const modal = document.getElementById('config-diff-modal');
         const list = document.getElementById('config-diff-list');

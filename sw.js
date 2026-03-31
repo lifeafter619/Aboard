@@ -1,5 +1,5 @@
-const CORE_CACHE_NAME = 'aboard-core-v7';
-const RUNTIME_CACHE_NAME = 'aboard-runtime-v7';
+const CORE_CACHE_NAME = 'aboard-core-v9';
+const RUNTIME_CACHE_NAME = 'aboard-runtime-v9';
 const RUNTIME_CACHE_MAX_ENTRIES = 24;
 const RUNTIME_CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'worker', 'image', 'font', 'manifest']);
 const RUNTIME_CACHEABLE_EXTENSIONS = /\.(?:css|gif|ico|jpe?g|js|json|png|svg|webp|woff2?)$/i;
@@ -44,7 +44,6 @@ const CORE_ASSETS = [
   './js/history.js',
   './js/background.js',
   './js/image-controls.js',
-  './js/insert-image.js',
   './js/stroke-controls.js',
   './js/selection.js',
   './js/collapsible.js',
@@ -58,6 +57,7 @@ const CORE_ASSETS = [
   './js/modules/board-construction.js',
   './js/modules/layout-runtime.js',
   './js/modules/coordinate-panel-runtime.js',
+  './js/modules/overlay-ui-runtime.js',
   './js/modules/panel-runtime.js',
   './js/modules/modal-runtime.js',
   './js/modules/lazy-manager-runtime.js',
