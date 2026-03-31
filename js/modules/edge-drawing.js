@@ -390,4 +390,5 @@ class EdgeDrawingManager {
 // Export for use
 if (typeof window !== 'undefined') {
     window.EdgeDrawingManager = EdgeDrawingManager;
+    window.AboardEdgeDrawingManager = EdgeDrawingManager;
 }

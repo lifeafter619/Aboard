@@ -702,4 +702,5 @@ class LineStyleModal {
 // Export for use
 if (typeof window !== 'undefined') {
     window.LineStyleModal = LineStyleModal;
+    window.AboardLineStyleModal = LineStyleModal;
 }

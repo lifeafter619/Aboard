@@ -2682,3 +2682,6 @@ class DrawingEngine {
         return true;
     }
 }
+
+window.DrawingEngine = DrawingEngine;
+window.AboardDrawingEngine = DrawingEngine;

@@ -1,5 +1,5 @@
-const CORE_CACHE_NAME = 'aboard-core-v3';
-const RUNTIME_CACHE_NAME = 'aboard-runtime-v3';
+const CORE_CACHE_NAME = 'aboard-core-v4';
+const RUNTIME_CACHE_NAME = 'aboard-runtime-v4';
 const RUNTIME_CACHE_MAX_ENTRIES = 24;
 const RUNTIME_CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'worker', 'image', 'font', 'manifest']);
 const RUNTIME_CACHEABLE_EXTENSIONS = /\.(?:css|gif|ico|jpe?g|js|json|png|svg|webp|woff2?)$/i;
@@ -23,6 +23,23 @@ const CORE_ASSETS = [
   './css/modules/project.css',
   './css/modules/toast.css',
   './css/modules/diff.css',
+  './js/app/bootstrap.js',
+  './js/app/create-app.js',
+  './js/app/create-app-context.js',
+  './js/app/create-app-services.js',
+  './js/app/create-board-dependencies.js',
+  './js/app/create-board-runtime-dependencies.js',
+  './js/app/legacy-manifest.js',
+  './js/app/legacy-script-loader.js',
+  './js/app/resolve-legacy-constructor.js',
+  './js/legacy/runtime-bridge.js',
+  './js/infra/browser-check.js',
+  './js/infra/dialog-manager.js',
+  './js/infra/rich-text-parser.js',
+  './js/infra/script-loader.js',
+  './js/features/toast/toast-manager.js',
+  './js/features/announcement/announcement-manager.js',
+  './js/features/media/gif-manager.js',
   './js/drawing.js',
   './js/history.js',
   './js/background.js',
@@ -38,17 +55,10 @@ const CORE_ASSETS = [
   './js/modules/teaching-tools.js',
   './js/modules/shape-drawing.js',
   './js/modules/line-style-modal.js',
-  './js/modules/dialog-manager.js',
   './js/modules/settings-manager.js',
-  './js/announcement.js',
   './js/modules/i18n.js',
-  './js/modules/rich-text-parser.js',
-  './js/modules/script-loader.js',
-  './js/modules/gif-manager.js',
-  './js/modules/browser-check.js',
   './js/modules/help-system.js',
   './js/modules/storage-manager.js',
-  './js/modules/toast-manager.js',
   './js/modules/pwa-manager.js',
   './js/main.js'
 ];

@@ -570,3 +570,6 @@ class TimeDisplayManager {
         }
     }
 }
+
+window.TimeDisplayManager = TimeDisplayManager;
+window.AboardTimeDisplayManager = TimeDisplayManager;

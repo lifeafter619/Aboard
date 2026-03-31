@@ -32,33 +32,137 @@ const LAZY_MANAGER_SCRIPTS = {
     ScoreboardManager: 'js/modules/scoreboard.js'
 };
 
+function resolveLegacyClass(name) {
+    try {
+        const resolvedFromEval = window.eval?.(name);
+        if (typeof resolvedFromEval === 'function') {
+            return resolvedFromEval;
+        }
+    } catch (error) {
+        // Ignore lookup failures and fall back to window properties.
+    }
+
+    return typeof window[name] === 'function' ? window[name] : null;
+}
+
+function instantiateLegacyClass(name, args = []) {
+    const LegacyClass = resolveLegacyClass(name);
+    return typeof LegacyClass === 'function' ? Reflect.construct(LegacyClass, args) : null;
+}
+
+function instantiatePreferredLegacyClass(names, args = []) {
+    for (const name of names) {
+        const instance = instantiateLegacyClass(name, args);
+        if (instance) {
+            return instance;
+        }
+    }
+
+    return null;
+}
+
+function createTimeDisplayDependencies(options, settingsManager) {
+    const timeDisplayManager = options.timeDisplayManager || instantiatePreferredLegacyClass(['AboardTimeDisplayManager', 'TimeDisplayManager'], [settingsManager]);
+
+    return {
+        timeDisplayManager,
+        timeDisplayControls: options.timeDisplayControls || (
+            timeDisplayManager ? instantiatePreferredLegacyClass(['AboardTimeDisplayControls', 'TimeDisplayControls'], [timeDisplayManager]) : null
+        ),
+        timeDisplaySettingsModal: options.timeDisplaySettingsModal || (
+            timeDisplayManager ? instantiatePreferredLegacyClass(['AboardTimeDisplaySettingsModal', 'TimeDisplaySettingsModal'], [timeDisplayManager]) : null
+        )
+    };
+}
+
+function createCoreRuntimeDependencies(options, refs) {
+    const drawingEngine = options.drawingEngine || instantiatePreferredLegacyClass(['AboardDrawingEngine', 'DrawingEngine'], [refs.canvas, refs.ctx]);
+    const historyManager = options.historyManager || instantiatePreferredLegacyClass(['AboardHistoryManager', 'HistoryManager'], [refs.canvas, refs.ctx]);
+    const backgroundManager = options.backgroundManager || instantiatePreferredLegacyClass(['AboardBackgroundManager', 'BackgroundManager'], [refs.bgCanvas, refs.bgCtx]);
+    const imageControls = options.imageControls || (backgroundManager ? instantiatePreferredLegacyClass(['AboardImageControls', 'ImageControls'], [backgroundManager]) : null);
+    const strokeControls = options.strokeControls || (
+        drawingEngine && historyManager
+            ? instantiatePreferredLegacyClass(['AboardStrokeControls', 'StrokeControls'], [drawingEngine, refs.canvas, refs.ctx, historyManager])
+            : null
+    );
+    const selectionManager = options.selectionManager || (
+        drawingEngine && strokeControls
+            ? instantiatePreferredLegacyClass(['AboardSelectionManager', 'SelectionManager'], [refs.canvas, refs.ctx, drawingEngine, strokeControls])
+            : null
+    );
+
+    selectionManager?.setHistoryManager?.(historyManager);
+    selectionManager?.setBackgroundManager?.(backgroundManager);
+
+    const teachingToolsManager = options.teachingToolsManager || (
+        historyManager ? instantiatePreferredLegacyClass(['AboardTeachingToolsManager', 'TeachingToolsManager'], [refs.canvas, refs.ctx, historyManager]) : null
+    );
+    const shapeDrawingManager = options.shapeDrawingManager || (
+        drawingEngine && historyManager
+            ? instantiatePreferredLegacyClass(['AboardShapeDrawingManager', 'ShapeDrawingManager'], [refs.canvas, refs.ctx, drawingEngine, historyManager])
+            : null
+    );
+    drawingEngine?.setShapeDrawingManager?.(shapeDrawingManager);
+
+    const lineStyleModal = options.lineStyleModal || (
+        drawingEngine && shapeDrawingManager
+            ? instantiatePreferredLegacyClass(['AboardLineStyleModal', 'LineStyleModal'], [drawingEngine, shapeDrawingManager])
+            : null
+    );
+    const edgeDrawingManager = options.edgeDrawingManager || (
+        teachingToolsManager && drawingEngine
+            ? instantiatePreferredLegacyClass(['AboardEdgeDrawingManager', 'EdgeDrawingManager'], [teachingToolsManager, drawingEngine])
+            : null
+    );
+    drawingEngine?.setEdgeDrawingManager?.(edgeDrawingManager);
+
+    return {
+        drawingEngine,
+        historyManager,
+        backgroundManager,
+        imageControls,
+        strokeControls,
+        selectionManager,
+        teachingToolsManager,
+        shapeDrawingManager,
+        lineStyleModal,
+        edgeDrawingManager
+    };
+}
+
 class DrawingBoard {
-    constructor() {
+    constructor(options = {}) {
         // Canvas setup
-        this.canvas = document.getElementById('canvas');
-        this.ctx = this.canvas.getContext('2d', { 
+        this.canvas = options.canvas || document.getElementById('canvas');
+        this.ctx = options.ctx || this.canvas.getContext('2d', { 
             desynchronized: true,
             alpha: true
         });
         
-        this.bgCanvas = document.getElementById('background-canvas');
-        this.bgCtx = this.bgCanvas.getContext('2d');
+        this.bgCanvas = options.bgCanvas || document.getElementById('background-canvas');
+        this.bgCtx = options.bgCtx || this.bgCanvas.getContext('2d');
         
-        this.eraserCursor = document.getElementById('eraser-cursor');
+        this.eraserCursor = options.eraserCursor || document.getElementById('eraser-cursor');
         
         // Initialize modules
-        this.settingsManager = new SettingsManager();
-        this.drawingEngine = new DrawingEngine(this.canvas, this.ctx);
-        this.historyManager = new HistoryManager(this.canvas, this.ctx);
-        this.backgroundManager = new BackgroundManager(this.bgCanvas, this.bgCtx);
-        this.imageControls = new ImageControls(this.backgroundManager);
-        this.strokeControls = new StrokeControls(this.drawingEngine, this.canvas, this.ctx, this.historyManager);
-        this.selectionManager = new SelectionManager(this.canvas, this.ctx, this.drawingEngine, this.strokeControls);
-        this.selectionManager.setHistoryManager(this.historyManager);
-        this.selectionManager.setBackgroundManager(this.backgroundManager);
-        this.timeDisplayManager = new TimeDisplayManager(this.settingsManager);
-        this.timeDisplayControls = new TimeDisplayControls(this.timeDisplayManager);
-        this.timeDisplaySettingsModal = new TimeDisplaySettingsModal(this.timeDisplayManager);
+        const settingsManager = options.settingsManager || new SettingsManager();
+        this.settingsManager = settingsManager;
+        const coreRuntimeDependencies = createCoreRuntimeDependencies(options, {
+            canvas: this.canvas,
+            ctx: this.ctx,
+            bgCanvas: this.bgCanvas,
+            bgCtx: this.bgCtx
+        });
+        this.drawingEngine = coreRuntimeDependencies.drawingEngine;
+        this.historyManager = coreRuntimeDependencies.historyManager;
+        this.backgroundManager = coreRuntimeDependencies.backgroundManager;
+        this.imageControls = coreRuntimeDependencies.imageControls;
+        this.strokeControls = coreRuntimeDependencies.strokeControls;
+        this.selectionManager = coreRuntimeDependencies.selectionManager;
+        const timeDisplayDependencies = createTimeDisplayDependencies(options, this.settingsManager);
+        this.timeDisplayManager = timeDisplayDependencies.timeDisplayManager;
+        this.timeDisplayControls = timeDisplayDependencies.timeDisplayControls;
+        this.timeDisplaySettingsModal = timeDisplayDependencies.timeDisplaySettingsModal;
         // Lazy loaded managers
         this.timerManager = null;
         this.randomPickerManager = null;
@@ -68,9 +172,9 @@ class DrawingBoard {
         this.projectManager = null;
         this.exportManager = null;
 
-        this.collapsibleManager = new CollapsibleManager();
-        this.announcementManager = new AnnouncementManager();
-        this.teachingToolsManager = new TeachingToolsManager(this.canvas, this.ctx, this.historyManager);
+        this.collapsibleManager = options.collapsibleManager || new CollapsibleManager();
+        this.announcementManager = options.announcementManager || new AnnouncementManager();
+        this.teachingToolsManager = coreRuntimeDependencies.teachingToolsManager;
         this.toolButtonIds = {
             pen: 'pen-btn',
             eraser: 'eraser-btn',
@@ -87,17 +191,20 @@ class DrawingBoard {
         };
         
         // Initialize shape drawing manager
-        this.shapeDrawingManager = new ShapeDrawingManager(this.canvas, this.ctx, this.drawingEngine, this.historyManager);
-        this.drawingEngine.setShapeDrawingManager(this.shapeDrawingManager);
+        this.shapeDrawingManager = coreRuntimeDependencies.shapeDrawingManager;
+        this.drawingEngine?.setShapeDrawingManager?.(this.shapeDrawingManager);
         
         // Initialize line style modal for both pen and shape tools
-        this.lineStyleModal = new LineStyleModal(this.drawingEngine, this.shapeDrawingManager);
+        this.lineStyleModal = coreRuntimeDependencies.lineStyleModal;
         
         // Initialize edge drawing manager for teaching tools
-        this.edgeDrawingManager = new EdgeDrawingManager(this.teachingToolsManager, this.drawingEngine);
+        this.edgeDrawingManager = coreRuntimeDependencies.edgeDrawingManager;
 
         // Initialize Help System
-        if (window.HelpSystem) {
+        if (options.helpSystem) {
+            this.helpSystem = options.helpSystem;
+            this.helpSystem.init?.();
+        } else if (window.HelpSystem) {
             this.helpSystem = new HelpSystem();
             this.helpSystem.init();
         }
@@ -189,7 +296,7 @@ class DrawingBoard {
         this.drawingEngine.setEdgeDrawingManager(this.edgeDrawingManager);
         
         // Initialize StorageManager
-        this.storageManager = new StorageManager();
+        this.storageManager = options.storageManager || new StorageManager();
 
         // Debounced save function
         this.saveTimeout = null;
@@ -7795,27 +7902,4 @@ class DrawingBoard {
     }
 }
 
-// Initialize the application
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', async () => {
-        // Initialize i18n first
-        if (window.BrowserCheck) {
-            window.BrowserCheck.init();
-        }
-        if (window.i18n) {
-            await window.i18n.init();
-        }
-        window.drawingBoard = new DrawingBoard();
-    });
-} else {
-    // If DOM is already loaded, initialize immediately
-    (async () => {
-        if (window.BrowserCheck) {
-            window.BrowserCheck.init();
-        }
-        if (window.i18n) {
-            await window.i18n.init();
-        }
-        window.drawingBoard = new DrawingBoard();
-    })();
-}
+window.DrawingBoard = DrawingBoard;

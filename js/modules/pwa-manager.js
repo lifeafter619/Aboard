@@ -773,4 +773,5 @@ class PWAManager {
 }
 
 // Initialize
-window.pwaManager = new PWAManager();
+window.PWAManager = PWAManager;
+window.AboardPWAManager = PWAManager;

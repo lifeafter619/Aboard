@@ -90,3 +90,6 @@ class TimeDisplayControls {
         this.timeDisplayArea.classList.remove('show');
     }
 }
+
+window.TimeDisplayControls = TimeDisplayControls;
+window.AboardTimeDisplayControls = TimeDisplayControls;

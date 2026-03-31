@@ -70,3 +70,6 @@ class HistoryManager {
         return this.historyStep < this.history.length - 1;
     }
 }
+
+window.HistoryManager = HistoryManager;
+window.AboardHistoryManager = HistoryManager;

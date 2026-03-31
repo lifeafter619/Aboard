@@ -1446,4 +1446,5 @@ class TeachingToolsManager {
 // Export for use
 if (typeof window !== 'undefined') {
     window.TeachingToolsManager = TeachingToolsManager;
+    window.AboardTeachingToolsManager = TeachingToolsManager;
 }

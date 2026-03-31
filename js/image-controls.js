@@ -780,3 +780,6 @@ class ImageControls {
         };
     }
 }
+
+window.ImageControls = ImageControls;
+window.AboardImageControls = ImageControls;

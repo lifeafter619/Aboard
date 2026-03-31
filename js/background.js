@@ -2806,3 +2806,6 @@ class BackgroundManager {
         return distance < threshold;
     }
 }
+
+window.BackgroundManager = BackgroundManager;
+window.AboardBackgroundManager = BackgroundManager;

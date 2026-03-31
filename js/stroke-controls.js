@@ -549,3 +549,6 @@ class StrokeControls {
         window.drawingBoard?.syncVectorPreviewState?.();
     }
 }
+
+window.StrokeControls = StrokeControls;
+window.AboardStrokeControls = StrokeControls;

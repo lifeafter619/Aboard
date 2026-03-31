@@ -554,6 +554,9 @@ class TimeDisplaySettingsModal {
     }
 }
 
+window.TimeDisplaySettingsModal = TimeDisplaySettingsModal;
+window.AboardTimeDisplaySettingsModal = TimeDisplaySettingsModal;
+
 // Export for use in main.js
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = TimeDisplaySettingsModal;

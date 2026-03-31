@@ -1182,4 +1182,5 @@ class ShapeDrawingManager {
 // Export for use
 if (typeof window !== 'undefined') {
     window.ShapeDrawingManager = ShapeDrawingManager;
+    window.AboardShapeDrawingManager = ShapeDrawingManager;
 }

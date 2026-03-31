@@ -1255,3 +1255,6 @@ class SettingsManager {
         this.loadSettings();
     }
 }
+
+window.SettingsManager = SettingsManager;
+window.AboardSettingsManager = SettingsManager;

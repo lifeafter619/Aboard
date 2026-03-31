@@ -179,3 +179,6 @@ class CollapsibleManager {
         });
     }
 }
+
+window.CollapsibleManager = CollapsibleManager;
+window.AboardCollapsibleManager = CollapsibleManager;

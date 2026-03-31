@@ -1363,5 +1363,5 @@ class I18n {
     }
 }
 
-// Create global i18n instance
-window.i18n = new I18n();
+window.I18n = I18n;
+window.AboardI18n = I18n;

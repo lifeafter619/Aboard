@@ -3851,3 +3851,6 @@ class SelectionManager {
         return inside;
     }
 }
+
+window.SelectionManager = SelectionManager;
+window.AboardSelectionManager = SelectionManager;

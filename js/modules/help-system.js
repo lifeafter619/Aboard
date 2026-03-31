@@ -386,3 +386,4 @@ class HelpSystem {
 }
 
 window.HelpSystem = HelpSystem;
+window.AboardHelpSystem = HelpSystem;
