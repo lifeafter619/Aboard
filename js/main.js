@@ -23,112 +23,8 @@ const MODAL_DRAG_START_THRESHOLD = 8;
 const MODAL_RESIZE_EDGE_MARGIN = 20;
 const MODAL_RESIZE_MIN_WIDTH = 360;
 const MODAL_RESIZE_MIN_HEIGHT = 280;
-const LAZY_MANAGER_SCRIPTS = {
-    ExportManager: 'js/export.js',
-    ProjectManager: 'js/modules/project-manager.js',
-    TimerManager: 'js/modules/timer.js',
-    InsertTextManager: 'js/modules/insert-text-manager.js',
-    RandomPickerManager: 'js/modules/random-picker.js',
-    ScoreboardManager: 'js/modules/scoreboard.js'
-};
-
-function resolveLegacyClass(name) {
-    try {
-        const resolvedFromEval = window.eval?.(name);
-        if (typeof resolvedFromEval === 'function') {
-            return resolvedFromEval;
-        }
-    } catch (error) {
-        // Ignore lookup failures and fall back to window properties.
-    }
-
-    return typeof window[name] === 'function' ? window[name] : null;
-}
-
-function instantiateLegacyClass(name, args = []) {
-    const LegacyClass = resolveLegacyClass(name);
-    return typeof LegacyClass === 'function' ? Reflect.construct(LegacyClass, args) : null;
-}
-
-function instantiatePreferredLegacyClass(names, args = []) {
-    for (const name of names) {
-        const instance = instantiateLegacyClass(name, args);
-        if (instance) {
-            return instance;
-        }
-    }
-
-    return null;
-}
-
-function createTimeDisplayDependencies(options, settingsManager) {
-    const timeDisplayManager = options.timeDisplayManager || instantiatePreferredLegacyClass(['AboardTimeDisplayManager', 'TimeDisplayManager'], [settingsManager]);
-
-    return {
-        timeDisplayManager,
-        timeDisplayControls: options.timeDisplayControls || (
-            timeDisplayManager ? instantiatePreferredLegacyClass(['AboardTimeDisplayControls', 'TimeDisplayControls'], [timeDisplayManager]) : null
-        ),
-        timeDisplaySettingsModal: options.timeDisplaySettingsModal || (
-            timeDisplayManager ? instantiatePreferredLegacyClass(['AboardTimeDisplaySettingsModal', 'TimeDisplaySettingsModal'], [timeDisplayManager]) : null
-        )
-    };
-}
-
-function createCoreRuntimeDependencies(options, refs) {
-    const drawingEngine = options.drawingEngine || instantiatePreferredLegacyClass(['AboardDrawingEngine', 'DrawingEngine'], [refs.canvas, refs.ctx]);
-    const historyManager = options.historyManager || instantiatePreferredLegacyClass(['AboardHistoryManager', 'HistoryManager'], [refs.canvas, refs.ctx]);
-    const backgroundManager = options.backgroundManager || instantiatePreferredLegacyClass(['AboardBackgroundManager', 'BackgroundManager'], [refs.bgCanvas, refs.bgCtx]);
-    const imageControls = options.imageControls || (backgroundManager ? instantiatePreferredLegacyClass(['AboardImageControls', 'ImageControls'], [backgroundManager]) : null);
-    const strokeControls = options.strokeControls || (
-        drawingEngine && historyManager
-            ? instantiatePreferredLegacyClass(['AboardStrokeControls', 'StrokeControls'], [drawingEngine, refs.canvas, refs.ctx, historyManager])
-            : null
-    );
-    const selectionManager = options.selectionManager || (
-        drawingEngine && strokeControls
-            ? instantiatePreferredLegacyClass(['AboardSelectionManager', 'SelectionManager'], [refs.canvas, refs.ctx, drawingEngine, strokeControls])
-            : null
-    );
-
-    selectionManager?.setHistoryManager?.(historyManager);
-    selectionManager?.setBackgroundManager?.(backgroundManager);
-
-    const teachingToolsManager = options.teachingToolsManager || (
-        historyManager ? instantiatePreferredLegacyClass(['AboardTeachingToolsManager', 'TeachingToolsManager'], [refs.canvas, refs.ctx, historyManager]) : null
-    );
-    const shapeDrawingManager = options.shapeDrawingManager || (
-        drawingEngine && historyManager
-            ? instantiatePreferredLegacyClass(['AboardShapeDrawingManager', 'ShapeDrawingManager'], [refs.canvas, refs.ctx, drawingEngine, historyManager])
-            : null
-    );
-    drawingEngine?.setShapeDrawingManager?.(shapeDrawingManager);
-
-    const lineStyleModal = options.lineStyleModal || (
-        drawingEngine && shapeDrawingManager
-            ? instantiatePreferredLegacyClass(['AboardLineStyleModal', 'LineStyleModal'], [drawingEngine, shapeDrawingManager])
-            : null
-    );
-    const edgeDrawingManager = options.edgeDrawingManager || (
-        teachingToolsManager && drawingEngine
-            ? instantiatePreferredLegacyClass(['AboardEdgeDrawingManager', 'EdgeDrawingManager'], [teachingToolsManager, drawingEngine])
-            : null
-    );
-    drawingEngine?.setEdgeDrawingManager?.(edgeDrawingManager);
-
-    return {
-        drawingEngine,
-        historyManager,
-        backgroundManager,
-        imageControls,
-        strokeControls,
-        selectionManager,
-        teachingToolsManager,
-        shapeDrawingManager,
-        lineStyleModal,
-        edgeDrawingManager
-    };
-}
+const boardConstruction = window.AboardBoardConstruction || {};
+const lazyManagerRuntime = window.AboardLazyManagerRuntime || {};
 
 class DrawingBoard {
     constructor(options = {}) {
@@ -147,19 +43,34 @@ class DrawingBoard {
         // Initialize modules
         const settingsManager = options.settingsManager || new SettingsManager();
         this.settingsManager = settingsManager;
-        const coreRuntimeDependencies = createCoreRuntimeDependencies(options, {
+        const coreRuntimeDependencies = boardConstruction.createCoreRuntimeDependencies?.(options, {
             canvas: this.canvas,
             ctx: this.ctx,
             bgCanvas: this.bgCanvas,
             bgCtx: this.bgCtx
-        });
+        }) || {
+            drawingEngine: options.drawingEngine,
+            historyManager: options.historyManager,
+            backgroundManager: options.backgroundManager,
+            imageControls: options.imageControls,
+            strokeControls: options.strokeControls,
+            selectionManager: options.selectionManager,
+            teachingToolsManager: options.teachingToolsManager,
+            shapeDrawingManager: options.shapeDrawingManager,
+            lineStyleModal: options.lineStyleModal,
+            edgeDrawingManager: options.edgeDrawingManager
+        };
         this.drawingEngine = coreRuntimeDependencies.drawingEngine;
         this.historyManager = coreRuntimeDependencies.historyManager;
         this.backgroundManager = coreRuntimeDependencies.backgroundManager;
         this.imageControls = coreRuntimeDependencies.imageControls;
         this.strokeControls = coreRuntimeDependencies.strokeControls;
         this.selectionManager = coreRuntimeDependencies.selectionManager;
-        const timeDisplayDependencies = createTimeDisplayDependencies(options, this.settingsManager);
+        const timeDisplayDependencies = boardConstruction.createTimeDisplayDependencies?.(options, this.settingsManager) || {
+            timeDisplayManager: options.timeDisplayManager,
+            timeDisplayControls: options.timeDisplayControls,
+            timeDisplaySettingsModal: options.timeDisplaySettingsModal
+        };
         this.timeDisplayManager = timeDisplayDependencies.timeDisplayManager;
         this.timeDisplayControls = timeDisplayDependencies.timeDisplayControls;
         this.timeDisplaySettingsModal = timeDisplayDependencies.timeDisplaySettingsModal;
@@ -364,124 +275,43 @@ class DrawingBoard {
     }
 
     async loadManagerConstructor(name) {
-        const existingCtor = window[name];
-        if (typeof existingCtor === 'function') {
-            return existingCtor;
-        }
-
-        const src = LAZY_MANAGER_SCRIPTS[name];
-        if (!src) {
-            throw new Error(`No lazy script registered for ${name}`);
-        }
-        if (!window.ScriptLoader?.load) {
-            throw new Error('ScriptLoader is not available');
-        }
-
-        await window.ScriptLoader.load(src);
-        const ctor = window[name];
-        if (typeof ctor !== 'function') {
-            throw new Error(`${name} did not register on window after loading ${src}`);
-        }
-        return ctor;
+        return lazyManagerRuntime.loadManagerConstructor?.(this, name);
     }
 
     showLazyLoadError(featureName, error) {
-        console.error(`Failed to load ${featureName}:`, error);
-        const message = `加载${featureName}功能失败，请刷新页面后重试。`;
-        if (this.settingsManager?.toastManager) {
-            this.settingsManager.toastManager.show(message, 'error');
-            return;
-        }
-        window.appDialog?.showAlert(message, 'error');
+        return lazyManagerRuntime.showLazyLoadError?.(this, featureName, error);
     }
 
     async getExportManager() {
-        if (!this.exportManager) {
-            const ExportManagerCtor = await this.loadManagerConstructor('ExportManager');
-            this.exportManager = new ExportManagerCtor(this.canvas, this.bgCanvas, this);
-        }
-        return this.exportManager;
+        return lazyManagerRuntime.getExportManager?.(this);
     }
 
     async getProjectManager() {
-        if (!this.projectManager) {
-            const ProjectManagerCtor = await this.loadManagerConstructor('ProjectManager');
-            this.projectManager = new ProjectManagerCtor(this);
-        }
-        return this.projectManager;
+        return lazyManagerRuntime.getProjectManager?.(this);
     }
 
     async getTimerManager() {
-        if (!this.timerManager) {
-            const TimerManagerCtor = await this.loadManagerConstructor('TimerManager');
-            this.timerManager = new TimerManagerCtor();
-            this.initResizableModals();
-        }
-        return this.timerManager;
+        return lazyManagerRuntime.getTimerManager?.(this);
     }
 
     async getInsertTextManager() {
-        if (!this.insertTextManager) {
-            const InsertTextManagerCtor = await this.loadManagerConstructor('InsertTextManager');
-            this.insertTextManager = new InsertTextManagerCtor(this.canvas, this.ctx, this.historyManager, this.drawingEngine);
-            this.selectionManager.setTextManager(this.insertTextManager);
-        }
-        return this.insertTextManager;
+        return lazyManagerRuntime.getInsertTextManager?.(this);
     }
 
     async getRandomPickerManager() {
-        if (!this.randomPickerManager) {
-            const RandomPickerManagerCtor = await this.loadManagerConstructor('RandomPickerManager');
-            this.randomPickerManager = new RandomPickerManagerCtor();
-            this.initResizableModals();
-        }
-        return this.randomPickerManager;
+        return lazyManagerRuntime.getRandomPickerManager?.(this);
     }
 
     async getScoreboardManager() {
-        if (!this.scoreboardManager) {
-            const ScoreboardManagerCtor = await this.loadManagerConstructor('ScoreboardManager');
-            this.scoreboardManager = new ScoreboardManagerCtor();
-        }
-        return this.scoreboardManager;
+        return lazyManagerRuntime.getScoreboardManager?.(this);
     }
 
     scheduleMoreFeaturePreload() {
-        if (this.moreFeaturePreloadScheduled) {
-            return;
-        }
-        this.moreFeaturePreloadScheduled = true;
-
-        const kickoff = () => {
-            window.setTimeout(() => {
-                void this.preloadMoreFeatureManagers();
-            }, 400);
-        };
-
-        if (typeof window.requestIdleCallback === 'function') {
-            window.requestIdleCallback(() => kickoff(), { timeout: 1500 });
-        } else {
-            window.setTimeout(kickoff, 1200);
-        }
+        return lazyManagerRuntime.scheduleMoreFeaturePreload?.(this);
     }
 
     async preloadMoreFeatureManagers() {
-        const preloadTasks = [
-            () => this.getTimerManager(),
-            () => this.getInsertTextManager(),
-            () => this.getRandomPickerManager(),
-            () => this.getScoreboardManager()
-        ];
-
-        for (const preload of preloadTasks) {
-            try {
-                await preload();
-            } catch (error) {
-                console.warn('Silent more-feature preload failed:', error);
-            }
-
-            await new Promise(resolve => window.setTimeout(resolve, 120));
-        }
+        return lazyManagerRuntime.preloadMoreFeatureManagers?.(this);
     }
 
     getResizableModalConfigs() {

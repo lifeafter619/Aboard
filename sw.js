@@ -55,6 +55,8 @@ const CORE_ASSETS = [
   './js/modules/teaching-tools.js',
   './js/modules/shape-drawing.js',
   './js/modules/line-style-modal.js',
+  './js/modules/board-construction.js',
+  './js/modules/lazy-manager-runtime.js',
   './js/modules/settings-manager.js',
   './js/modules/i18n.js',
   './js/modules/help-system.js',
