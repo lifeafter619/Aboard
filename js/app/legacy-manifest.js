@@ -31,5 +31,12 @@ export const LEGACY_STARTUP_SCRIPTS = [
   'js/modules/panel-runtime.js',
   'js/modules/modal-runtime.js',
   'js/modules/lazy-manager-runtime.js',
+  'js/modules/ui-listeners-runtime.js',
+  'js/modules/session-runtime.js',
+  'js/modules/font-management-runtime.js',
+  'js/modules/config-import-runtime.js',
+  'js/modules/background-ui-runtime.js',
+  'js/modules/cache-runtime.js',
+  'js/modules/customization-runtime.js',
   'js/main.js'
 ];
