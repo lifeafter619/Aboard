@@ -38,5 +38,9 @@ export const LEGACY_STARTUP_SCRIPTS = [
   'js/modules/background-ui-runtime.js',
   'js/modules/cache-runtime.js',
   'js/modules/customization-runtime.js',
+  'js/modules/display-runtime.js',
+  'js/modules/pagination-runtime.js',
+  'js/modules/interaction-runtime.js',
+  'js/modules/uploaded-images-runtime.js',
   'js/main.js'
 ];

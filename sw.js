@@ -1,5 +1,5 @@
-const CORE_CACHE_NAME = 'aboard-core-v14';
-const RUNTIME_CACHE_NAME = 'aboard-runtime-v14';
+const CORE_CACHE_NAME = 'aboard-core-v16';
+const RUNTIME_CACHE_NAME = 'aboard-runtime-v16';
 const RUNTIME_CACHE_MAX_ENTRIES = 24;
 const RUNTIME_CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'worker', 'image', 'font', 'manifest']);
 const RUNTIME_CACHEABLE_EXTENSIONS = /\.(?:css|gif|ico|jpe?g|js|json|png|svg|webp|woff2?)$/i;
@@ -68,6 +68,10 @@ const CORE_ASSETS = [
   './js/modules/background-ui-runtime.js',
   './js/modules/cache-runtime.js',
   './js/modules/customization-runtime.js',
+  './js/modules/display-runtime.js',
+  './js/modules/pagination-runtime.js',
+  './js/modules/interaction-runtime.js',
+  './js/modules/uploaded-images-runtime.js',
   './js/modules/settings-manager.js',
   './js/modules/i18n.js',
   './js/modules/help-system.js',
