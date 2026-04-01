@@ -42,5 +42,18 @@ export const LEGACY_STARTUP_SCRIPTS = [
   'js/modules/pagination-runtime.js',
   'js/modules/interaction-runtime.js',
   'js/modules/uploaded-images-runtime.js',
+  'js/modules/zoom-runtime.js',
+  'js/modules/session-persistence-runtime.js',
+  'js/modules/coordinate-origin-runtime.js',
+  'js/modules/coordinate-tools-runtime.js',
+  'js/modules/event-setup-runtime.js',
+  'js/modules/canvas-view-runtime.js',
+  'js/modules/overlay-lock-runtime.js',
+  'js/modules/drawing-actions-runtime.js',
+  'js/modules/view-controls-runtime.js',
+  'js/modules/render-quality-runtime.js',
+  'js/modules/board-helpers-runtime.js',
+  'js/modules/deferred-init-runtime.js',
+  'js/modules/tool-runtime.js',
   'js/main.js'
 ];

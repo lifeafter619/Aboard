@@ -17,9 +17,12 @@ function handleMoreFeaturePanelAfterAction(board) {
 }
 
 function openSettings(board) {
+    board.ensureSettingsSurfaceReady?.();
     board.syncResizableModalState('settings-modal');
     document.getElementById('settings-modal')?.classList.add('show');
-    board.updateCacheSizeDisplay();
+    window.requestAnimationFrame(() => {
+        board.updateCacheSizeDisplay();
+    });
 
     const timeDisplayCheckbox = document.getElementById('show-time-display-checkbox');
     if (timeDisplayCheckbox) {

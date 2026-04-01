@@ -1,4 +1,4 @@
-// Extracted UI listener runtime from main.js
+﻿// Extracted UI listener runtime from main.js
 // Keeps legacy instance semantics by executing with board as this.
 
 function setupToolConfigListeners() {
@@ -59,6 +59,365 @@ function setupToolConfigListeners() {
             });
         });
         
+        // Sliders
+        const penSizeSlider = document.getElementById('pen-size-slider');
+        const penSizeValue = document.getElementById('pen-size-value');
+        const shapeSizeSlider = document.getElementById('shape-size-slider');
+        const shapeSizeValue = document.getElementById('shape-size-value');
+        const arrowSizeSlider = document.getElementById('arrow-size-slider');
+        const arrowSizeValue = document.getElementById('arrow-size-value');
+        
+        // Pen size slider - syncs with shape slider
+        penSizeSlider.addEventListener('input', (e) => {
+            const size = parseInt(e.target.value);
+            this.drawingEngine.setPenSize(size);
+            // Ensure penSizeValue element exists and update text content
+            if (penSizeValue) {
+                penSizeValue.textContent = size;
+            }
+            // Sync shape slider
+            if (shapeSizeSlider) {
+                shapeSizeSlider.value = size;
+                shapeSizeValue.textContent = size;
+            }
+
+            // Enforce arrow size constraint
+            if (arrowSizeSlider && arrowSizeValue) {
+                if (parseInt(arrowSizeSlider.value) < size) {
+                    arrowSizeSlider.value = size;
+                    arrowSizeValue.textContent = size;
+                    this.shapeDrawingManager.setArrowSize(size);
+                }
+            }
+        });
+        
+        // Shape size slider - syncs with pen slider
+        if (shapeSizeSlider) {
+            shapeSizeSlider.addEventListener('input', (e) => {
+                const size = parseInt(e.target.value);
+                this.drawingEngine.setPenSize(size);
+                shapeSizeValue.textContent = size;
+                // Sync pen slider
+                penSizeSlider.value = size;
+                penSizeValue.textContent = size;
+
+                // Enforce arrow size constraint
+                if (arrowSizeSlider && arrowSizeValue) {
+                    if (parseInt(arrowSizeSlider.value) < size) {
+                        arrowSizeSlider.value = size;
+                        arrowSizeValue.textContent = size;
+                        this.shapeDrawingManager.setArrowSize(size);
+                    }
+                }
+            });
+        }
+        
+        // Eraser shape buttons
+        document.querySelectorAll('.eraser-shape-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const targetBtn = e.currentTarget;
+                this.drawingEngine.setEraserShape(targetBtn.dataset.eraserShape);
+                document.querySelectorAll('.eraser-shape-btn').forEach(b => b.classList.remove('active'));
+                targetBtn.classList.add('active');
+                // Update cursor shape
+                this.updateEraserCursorShape();
+            });
+        });
+        
+        const eraserSizeSlider = document.getElementById('eraser-size-slider');
+        const eraserSizeValue = document.getElementById('eraser-size-value');
+        eraserSizeSlider.addEventListener('input', (e) => {
+            this.drawingEngine.setEraserSize(parseInt(e.target.value));
+            eraserSizeValue.textContent = e.target.value;
+            if (this.drawingEngine.currentTool === 'eraser') {
+                this.eraserCursor.style.width = e.target.value + 'px';
+                this.eraserCursor.style.height = e.target.value + 'px';
+            }
+        });
+        this.syncEraserSizeControls();
+        
+        // Line style settings buttons (open modal)
+        const penLineStyleSettingsBtn = document.getElementById('pen-line-style-settings-btn');
+        if (penLineStyleSettingsBtn) {
+            penLineStyleSettingsBtn.addEventListener('click', () => {
+                this.lineStyleModal.show('pen');
+            });
+        }
+
+}
+
+function setupShapeToolConfigListeners() {
+        const shapeSizeSlider = document.getElementById('shape-size-slider');
+        const shapeSizeValue = document.getElementById('shape-size-value');
+        const arrowSizeSlider = document.getElementById('arrow-size-slider');
+        const arrowSizeValue = document.getElementById('arrow-size-value');
+        const arrowSizeGroup = document.getElementById('arrow-size-group');
+        const shapeCustomColorPicker = document.getElementById('shape-custom-color-picker');
+        const shapeCustomColorPickerBtn = document.querySelector('label[for="shape-custom-color-picker"]');
+        const penColorPicker = document.getElementById('custom-color-picker');
+        const penColorPickerBtn = document.querySelector('label[for="custom-color-picker"]');
+
+        if (shapeSizeSlider && shapeSizeValue) {
+            shapeSizeSlider.value = this.drawingEngine.penSize;
+            shapeSizeValue.textContent = this.drawingEngine.penSize;
+
+            shapeSizeSlider.addEventListener('input', (e) => {
+                const size = parseInt(e.target.value);
+                this.drawingEngine.setPenSize(size);
+                shapeSizeValue.textContent = size;
+
+                const penSizeSlider = document.getElementById('pen-size-slider');
+                const penSizeValue = document.getElementById('pen-size-value');
+                if (penSizeSlider) {
+                    penSizeSlider.value = size;
+                }
+                if (penSizeValue) {
+                    penSizeValue.textContent = size;
+                }
+
+                if (arrowSizeSlider && arrowSizeValue && parseInt(arrowSizeSlider.value) < size) {
+                    arrowSizeSlider.value = size;
+                    arrowSizeValue.textContent = size;
+                    this.shapeDrawingManager.setArrowSize(size);
+                }
+            });
+        }
+
+        if (arrowSizeSlider && arrowSizeValue) {
+            arrowSizeSlider.value = this.shapeDrawingManager.arrowSize;
+            arrowSizeValue.textContent = this.shapeDrawingManager.arrowSize;
+
+            arrowSizeSlider.addEventListener('input', (e) => {
+                let val = parseInt(e.target.value);
+                const minSize = this.drawingEngine.penSize;
+                if (val < minSize) {
+                    val = minSize;
+                    e.target.value = val;
+                }
+                this.shapeDrawingManager.setArrowSize(val);
+                arrowSizeValue.textContent = val;
+            });
+        }
+
+        if (shapeCustomColorPicker) {
+            shapeCustomColorPicker.value = this.drawingEngine.currentColor;
+            shapeCustomColorPicker.addEventListener('input', (e) => {
+                this.drawingEngine.setColor(e.target.value);
+                document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
+                if (shapeCustomColorPickerBtn) {
+                    shapeCustomColorPickerBtn.classList.add('active');
+                }
+                if (penColorPicker) {
+                    penColorPicker.value = e.target.value;
+                }
+                if (penColorPickerBtn) {
+                    penColorPickerBtn.classList.add('active');
+                }
+            });
+        }
+
+        document.querySelectorAll('.shape-type-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.shapeType === this.shapeDrawingManager.currentShape);
+            btn.addEventListener('click', (e) => {
+                const shapeType = e.target.closest('.shape-type-btn').dataset.shapeType;
+                this.shapeDrawingManager.setShape(shapeType);
+                document.querySelectorAll('.shape-type-btn').forEach(b => b.classList.remove('active'));
+                e.target.closest('.shape-type-btn').classList.add('active');
+
+                if (arrowSizeGroup) {
+                    arrowSizeGroup.style.display = (shapeType === 'arrow' || shapeType === 'doubleArrow') ? '' : 'none';
+                }
+            });
+        });
+
+        if (arrowSizeGroup) {
+            const currentShape = this.shapeDrawingManager.currentShape;
+            arrowSizeGroup.style.display = (currentShape === 'arrow' || currentShape === 'doubleArrow') ? '' : 'none';
+        }
+
+        const shapeLineStyleSettingsBtn = document.getElementById('shape-line-style-settings-btn');
+        if (shapeLineStyleSettingsBtn) {
+            shapeLineStyleSettingsBtn.addEventListener('click', () => {
+                this.lineStyleModal.show('shape');
+            });
+        }
+}
+
+function setupSelectToolConfigListeners() {
+        document.querySelectorAll('.select-mode-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === this.selectionManager?.selectionMode);
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.select-mode-btn').forEach(b => b.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                const mode = e.currentTarget.dataset.mode;
+                if (this.selectionManager) {
+                    this.selectionManager.selectionMode = mode;
+                }
+            });
+        });
+}
+
+function setupMoreFeatureToolConfigListeners() {
+        // More config panel (time display checkboxes)
+        const showDateCheckboxMore = document.getElementById('show-date-checkbox-more');
+        const showTimeCheckboxMore = document.getElementById('show-time-checkbox-more');
+        
+        // Time Display Feature Button
+        const timeDisplayFeatureBtn = document.getElementById('time-display-feature-btn');
+        const timeDisplayControls = document.getElementById('time-display-controls');
+        
+        if (timeDisplayFeatureBtn && timeDisplayControls) {
+            timeDisplayFeatureBtn.addEventListener('click', () => {
+                this.exitShapeMode();
+                // Toggle the time display controls visibility
+                const isVisible = timeDisplayControls.style.display !== 'none';
+                if (isVisible) {
+                    timeDisplayControls.style.display = 'none';
+                    timeDisplayFeatureBtn.classList.remove('active');
+                    // Auto-switch to pen tool after closing time display settings
+                    this.handleMoreFeaturePanelAfterAction();
+                    this.switchToPen();
+                } else {
+                    timeDisplayControls.style.display = 'flex';
+                    timeDisplayFeatureBtn.classList.add('active');
+                    // Refresh collapsible groups after showing new content
+                    if (this.collapsibleManager) {
+                        setTimeout(() => this.collapsibleManager.refreshAll(), 50);
+                    }
+                }
+            });
+        }
+        
+        // Timer Feature Button
+        const timerFeatureBtn = document.getElementById('timer-feature-btn');
+        if (timerFeatureBtn) {
+            timerFeatureBtn.addEventListener('click', async () => {
+                this.exitShapeMode();
+                try {
+                    const timerManager = await this.getTimerManager();
+                    timerManager.showSettingsModal();
+                    this.handleMoreFeaturePanelAfterAction();
+                } catch (error) {
+                    this.showLazyLoadError('计时器', error);
+                }
+            });
+        }
+
+        // Insert Text Feature Button
+        const insertTextBtn = document.getElementById('insert-text-feature-btn');
+        if (insertTextBtn) {
+            insertTextBtn.addEventListener('click', async () => {
+                this.exitShapeMode();
+                try {
+                    const insertTextManager = await this.getInsertTextManager();
+                    insertTextManager.trigger();
+                    this.handleMoreFeaturePanelAfterAction();
+                } catch (error) {
+                    this.showLazyLoadError('文字插入', error);
+                }
+            });
+        }
+
+        // Random Picker Feature Button
+        const randomPickerBtn = document.getElementById('random-picker-feature-btn');
+        if (randomPickerBtn) {
+            randomPickerBtn.addEventListener('click', async () => {
+                this.exitShapeMode();
+                try {
+                    const randomPickerManager = await this.getRandomPickerManager();
+                    randomPickerManager.create();
+                    this.bringLatestElement('.random-picker-widget');
+                    this.handleMoreFeaturePanelAfterAction();
+                } catch (error) {
+                    this.showLazyLoadError('随机点名', error);
+                }
+            });
+        }
+
+        // Scoreboard Feature Button
+        const scoreboardBtn = document.getElementById('scoreboard-feature-btn');
+        if (scoreboardBtn) {
+            scoreboardBtn.addEventListener('click', async () => {
+                this.exitShapeMode();
+                try {
+                    const scoreboardManager = await this.getScoreboardManager();
+                    scoreboardManager.create();
+                    this.bringLatestElement('.scoreboard-widget');
+                    this.handleMoreFeaturePanelAfterAction();
+                } catch (error) {
+                    this.showLazyLoadError('计分板', error);
+                }
+            });
+        }
+
+        // Insert Image Feature Button
+        const insertImageBtn = document.getElementById('insert-image-feature-btn');
+        if (insertImageBtn) {
+            insertImageBtn.addEventListener('click', async () => {
+                try {
+                    this.exitShapeMode();
+                    const insertImageManager = await this.getInsertImageManager();
+                    insertImageManager.triggerSelect();
+                    this.handleMoreFeaturePanelAfterAction();
+                } catch (error) {
+                    this.showLazyLoadError('图片插入', error);
+                }
+            });
+        }
+        
+        // Timer settings modal close button
+        const timerSettingsCloseBtn = document.getElementById('timer-settings-close-btn');
+        if (timerSettingsCloseBtn) {
+            timerSettingsCloseBtn.addEventListener('click', () => {
+                if (this.timerManager) {
+                    this.timerManager.hideSettingsModal();
+                }
+            });
+        }
+        
+        // Load initial checkbox states
+        if (showDateCheckboxMore && showTimeCheckboxMore) {
+            showDateCheckboxMore.checked = this.timeDisplayManager.showDate;
+            showTimeCheckboxMore.checked = this.timeDisplayManager.showTime;
+            
+            // Set initial button state based on whether time display is enabled
+            if (timeDisplayFeatureBtn) {
+                if (this.timeDisplayManager.enabled) {
+                    timeDisplayFeatureBtn.classList.add('active');
+                    timeDisplayControls.style.display = 'flex';
+                }
+            }
+            
+            // Update visibility based on initial state
+            if (showDateCheckboxMore.checked || showTimeCheckboxMore.checked) {
+                this.timeDisplayManager.show();
+            } else {
+                this.timeDisplayManager.hide();
+            }
+            
+            showDateCheckboxMore.addEventListener('change', (e) => {
+                this.timeDisplayManager.setShowDate(e.target.checked);
+                // Hide if both unchecked
+                if (!showDateCheckboxMore.checked && !showTimeCheckboxMore.checked) {
+                    this.timeDisplayManager.hide();
+                } else {
+                    this.timeDisplayManager.show();
+                }
+            });
+            
+            showTimeCheckboxMore.addEventListener('change', (e) => {
+                this.timeDisplayManager.setShowTime(e.target.checked);
+                // Hide if both unchecked
+                if (!showDateCheckboxMore.checked && !showTimeCheckboxMore.checked) {
+                    this.timeDisplayManager.hide();
+                } else {
+                    this.timeDisplayManager.show();
+                }
+            });
+        }
+}
+
+function setupBackgroundToolConfigListeners() {
         // Background color picker
         document.querySelectorAll('.color-btn[data-bg-color]').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -487,328 +846,6 @@ function setupToolConfigListeners() {
             });
         }
         
-        // Sliders
-        const penSizeSlider = document.getElementById('pen-size-slider');
-        const penSizeValue = document.getElementById('pen-size-value');
-        const shapeSizeSlider = document.getElementById('shape-size-slider');
-        const shapeSizeValue = document.getElementById('shape-size-value');
-        
-        // Pen size slider - syncs with shape slider
-        penSizeSlider.addEventListener('input', (e) => {
-            const size = parseInt(e.target.value);
-            this.drawingEngine.setPenSize(size);
-            // Ensure penSizeValue element exists and update text content
-            if (penSizeValue) {
-                penSizeValue.textContent = size;
-            }
-            // Sync shape slider
-            if (shapeSizeSlider) {
-                shapeSizeSlider.value = size;
-                shapeSizeValue.textContent = size;
-            }
-
-            // Enforce arrow size constraint
-            if (arrowSizeSlider && arrowSizeValue) {
-                if (parseInt(arrowSizeSlider.value) < size) {
-                    arrowSizeSlider.value = size;
-                    arrowSizeValue.textContent = size;
-                    this.shapeDrawingManager.setArrowSize(size);
-                }
-            }
-        });
-        
-        // Shape size slider - syncs with pen slider
-        if (shapeSizeSlider) {
-            shapeSizeSlider.addEventListener('input', (e) => {
-                const size = parseInt(e.target.value);
-                this.drawingEngine.setPenSize(size);
-                shapeSizeValue.textContent = size;
-                // Sync pen slider
-                penSizeSlider.value = size;
-                penSizeValue.textContent = size;
-
-                // Enforce arrow size constraint
-                if (arrowSizeSlider && arrowSizeValue) {
-                    if (parseInt(arrowSizeSlider.value) < size) {
-                        arrowSizeSlider.value = size;
-                        arrowSizeValue.textContent = size;
-                        this.shapeDrawingManager.setArrowSize(size);
-                    }
-                }
-            });
-        }
-        
-        // Arrow size slider (independent control)
-        const arrowSizeSlider = document.getElementById('arrow-size-slider');
-        const arrowSizeValue = document.getElementById('arrow-size-value');
-        if (arrowSizeSlider && arrowSizeValue) {
-            arrowSizeSlider.addEventListener('input', (e) => {
-                let val = parseInt(e.target.value);
-                // Enforce constraint: Arrow size cannot be smaller than line thickness
-                const minSize = this.drawingEngine.penSize;
-                if (val < minSize) {
-                    val = minSize;
-                    e.target.value = val;
-                }
-                this.shapeDrawingManager.setArrowSize(val);
-                arrowSizeValue.textContent = val;
-            });
-            // Initialize from saved value
-            arrowSizeSlider.value = this.shapeDrawingManager.arrowSize;
-            arrowSizeValue.textContent = this.shapeDrawingManager.arrowSize;
-        }
-        
-        // Shape custom color picker - syncs with pen color picker
-        const shapeCustomColorPicker = document.getElementById('shape-custom-color-picker');
-        const shapeCustomColorPickerBtn = document.querySelector('label[for="shape-custom-color-picker"]');
-        if (shapeCustomColorPicker) {
-            shapeCustomColorPicker.addEventListener('input', (e) => {
-                this.drawingEngine.setColor(e.target.value);
-                document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
-                // Mark color picker button as active
-                if (shapeCustomColorPickerBtn) {
-                    shapeCustomColorPickerBtn.classList.add('active');
-                }
-                // Sync pen color picker value and active state
-                const penColorPicker = document.getElementById('custom-color-picker');
-                const penColorPickerBtn = document.querySelector('label[for="custom-color-picker"]');
-                if (penColorPicker) {
-                    penColorPicker.value = e.target.value;
-                }
-                if (penColorPickerBtn) {
-                    penColorPickerBtn.classList.add('active');
-                }
-            });
-        }
-        
-        // Eraser shape buttons
-        document.querySelectorAll('.eraser-shape-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const targetBtn = e.currentTarget;
-                this.drawingEngine.setEraserShape(targetBtn.dataset.eraserShape);
-                document.querySelectorAll('.eraser-shape-btn').forEach(b => b.classList.remove('active'));
-                targetBtn.classList.add('active');
-                // Update cursor shape
-                this.updateEraserCursorShape();
-            });
-        });
-        
-        const eraserSizeSlider = document.getElementById('eraser-size-slider');
-        const eraserSizeValue = document.getElementById('eraser-size-value');
-        eraserSizeSlider.addEventListener('input', (e) => {
-            this.drawingEngine.setEraserSize(parseInt(e.target.value));
-            eraserSizeValue.textContent = e.target.value;
-            if (this.drawingEngine.currentTool === 'eraser') {
-                this.eraserCursor.style.width = e.target.value + 'px';
-                this.eraserCursor.style.height = e.target.value + 'px';
-            }
-        });
-        this.syncEraserSizeControls();
-        
-        // Shape type buttons
-        document.querySelectorAll('.shape-type-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const shapeType = e.target.closest('.shape-type-btn').dataset.shapeType;
-                this.shapeDrawingManager.setShape(shapeType);
-                document.querySelectorAll('.shape-type-btn').forEach(b => b.classList.remove('active'));
-                e.target.closest('.shape-type-btn').classList.add('active');
-                
-                // Show/hide arrow size control based on shape type
-                const arrowSizeGroup = document.getElementById('arrow-size-group');
-                if (arrowSizeGroup) {
-                    if (shapeType === 'arrow' || shapeType === 'doubleArrow') {
-                        arrowSizeGroup.style.display = '';
-                    } else {
-                        arrowSizeGroup.style.display = 'none';
-                    }
-                }
-            });
-        });
-        
-        // Line style settings buttons (open modal)
-        const penLineStyleSettingsBtn = document.getElementById('pen-line-style-settings-btn');
-        if (penLineStyleSettingsBtn) {
-            penLineStyleSettingsBtn.addEventListener('click', () => {
-                this.lineStyleModal.show('pen');
-            });
-        }
-        
-        const shapeLineStyleSettingsBtn = document.getElementById('shape-line-style-settings-btn');
-        if (shapeLineStyleSettingsBtn) {
-            shapeLineStyleSettingsBtn.addEventListener('click', () => {
-                this.lineStyleModal.show('shape');
-            });
-        }
-        
-        // More config panel (time display checkboxes)
-        const showDateCheckboxMore = document.getElementById('show-date-checkbox-more');
-        const showTimeCheckboxMore = document.getElementById('show-time-checkbox-more');
-        
-        // Time Display Feature Button
-        const timeDisplayFeatureBtn = document.getElementById('time-display-feature-btn');
-        const timeDisplayControls = document.getElementById('time-display-controls');
-        
-        if (timeDisplayFeatureBtn && timeDisplayControls) {
-            timeDisplayFeatureBtn.addEventListener('click', () => {
-                this.exitShapeMode();
-                // Toggle the time display controls visibility
-                const isVisible = timeDisplayControls.style.display !== 'none';
-                if (isVisible) {
-                    timeDisplayControls.style.display = 'none';
-                    timeDisplayFeatureBtn.classList.remove('active');
-                    // Auto-switch to pen tool after closing time display settings
-                    this.handleMoreFeaturePanelAfterAction();
-                    this.switchToPen();
-                } else {
-                    timeDisplayControls.style.display = 'flex';
-                    timeDisplayFeatureBtn.classList.add('active');
-                    // Refresh collapsible groups after showing new content
-                    if (this.collapsibleManager) {
-                        setTimeout(() => this.collapsibleManager.refreshAll(), 50);
-                    }
-                }
-            });
-        }
-        
-        // Timer Feature Button
-        const timerFeatureBtn = document.getElementById('timer-feature-btn');
-        if (timerFeatureBtn) {
-            timerFeatureBtn.addEventListener('click', async () => {
-                this.exitShapeMode();
-                try {
-                    const timerManager = await this.getTimerManager();
-                    timerManager.showSettingsModal();
-                    this.handleMoreFeaturePanelAfterAction();
-                } catch (error) {
-                    this.showLazyLoadError('计时器', error);
-                }
-            });
-        }
-
-        // Insert Text Feature Button
-        const insertTextBtn = document.getElementById('insert-text-feature-btn');
-        if (insertTextBtn) {
-            insertTextBtn.addEventListener('click', async () => {
-                this.exitShapeMode();
-                try {
-                    const insertTextManager = await this.getInsertTextManager();
-                    insertTextManager.trigger();
-                    this.handleMoreFeaturePanelAfterAction();
-                } catch (error) {
-                    this.showLazyLoadError('文字插入', error);
-                }
-            });
-        }
-
-        // Random Picker Feature Button
-        const randomPickerBtn = document.getElementById('random-picker-feature-btn');
-        if (randomPickerBtn) {
-            randomPickerBtn.addEventListener('click', async () => {
-                this.exitShapeMode();
-                try {
-                    const randomPickerManager = await this.getRandomPickerManager();
-                    randomPickerManager.create();
-                    this.bringLatestElement('.random-picker-widget');
-                    this.handleMoreFeaturePanelAfterAction();
-                } catch (error) {
-                    this.showLazyLoadError('随机点名', error);
-                }
-            });
-        }
-
-        // Scoreboard Feature Button
-        const scoreboardBtn = document.getElementById('scoreboard-feature-btn');
-        if (scoreboardBtn) {
-            scoreboardBtn.addEventListener('click', async () => {
-                this.exitShapeMode();
-                try {
-                    const scoreboardManager = await this.getScoreboardManager();
-                    scoreboardManager.create();
-                    this.bringLatestElement('.scoreboard-widget');
-                    this.handleMoreFeaturePanelAfterAction();
-                } catch (error) {
-                    this.showLazyLoadError('计分板', error);
-                }
-            });
-        }
-
-        // Insert Image Feature Button
-        const insertImageBtn = document.getElementById('insert-image-feature-btn');
-        if (insertImageBtn) {
-            insertImageBtn.addEventListener('click', async () => {
-                try {
-                    this.exitShapeMode();
-                    const insertImageManager = await this.getInsertImageManager();
-                    insertImageManager.triggerSelect();
-                    this.handleMoreFeaturePanelAfterAction();
-                } catch (error) {
-                    this.showLazyLoadError('图片插入', error);
-                }
-            });
-        }
-        
-        // Timer settings modal close button
-        const timerSettingsCloseBtn = document.getElementById('timer-settings-close-btn');
-        if (timerSettingsCloseBtn) {
-            timerSettingsCloseBtn.addEventListener('click', () => {
-                if (this.timerManager) {
-                    this.timerManager.hideSettingsModal();
-                }
-            });
-        }
-        
-        // Load initial checkbox states
-        if (showDateCheckboxMore && showTimeCheckboxMore) {
-            showDateCheckboxMore.checked = this.timeDisplayManager.showDate;
-            showTimeCheckboxMore.checked = this.timeDisplayManager.showTime;
-            
-            // Set initial button state based on whether time display is enabled
-            if (timeDisplayFeatureBtn) {
-                if (this.timeDisplayManager.enabled) {
-                    timeDisplayFeatureBtn.classList.add('active');
-                    timeDisplayControls.style.display = 'flex';
-                }
-            }
-            
-            // Update visibility based on initial state
-            if (showDateCheckboxMore.checked || showTimeCheckboxMore.checked) {
-                this.timeDisplayManager.show();
-            } else {
-                this.timeDisplayManager.hide();
-            }
-            
-            showDateCheckboxMore.addEventListener('change', (e) => {
-                this.timeDisplayManager.setShowDate(e.target.checked);
-                // Hide if both unchecked
-                if (!showDateCheckboxMore.checked && !showTimeCheckboxMore.checked) {
-                    this.timeDisplayManager.hide();
-                } else {
-                    this.timeDisplayManager.show();
-                }
-            });
-            
-            showTimeCheckboxMore.addEventListener('change', (e) => {
-                this.timeDisplayManager.setShowTime(e.target.checked);
-                // Hide if both unchecked
-                if (!showDateCheckboxMore.checked && !showTimeCheckboxMore.checked) {
-                    this.timeDisplayManager.hide();
-                } else {
-                    this.timeDisplayManager.show();
-                }
-            });
-        }
-        
-        // Select mode buttons
-        document.querySelectorAll('.select-mode-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.select-mode-btn').forEach(b => b.classList.remove('active'));
-                e.currentTarget.classList.add('active');
-                const mode = e.currentTarget.dataset.mode;
-                if (this.selectionManager) {
-                    this.selectionManager.selectionMode = mode;
-                }
-            });
-        });
 }
 
 function setupSettingsListeners() {
@@ -1028,14 +1065,8 @@ document.getElementById('settings-close-btn').addEventListener('click', () => th
             });
         }
         
-        // Toolbar customization handlers
-        this.initToolbarCustomization();
-
-        // Font management handlers
-        this.initFontManagement();
-        
-        // Control button settings handlers
-        this.initControlButtonSettings();
+        // Settings-heavy customization/font/control initialization is deferred
+        // until after first paint or the first Settings open.
         
         // Theme color buttons
         document.querySelectorAll('.color-btn[data-theme-color]').forEach(btn => {
@@ -1439,6 +1470,18 @@ document.getElementById('settings-close-btn').addEventListener('click', () => th
 window.AboardUiListenersRuntime = {
     setupToolConfigListeners(board) {
         return setupToolConfigListeners.call(board);
+    },
+    setupShapeToolConfigListeners(board) {
+        return setupShapeToolConfigListeners.call(board);
+    },
+    setupSelectToolConfigListeners(board) {
+        return setupSelectToolConfigListeners.call(board);
+    },
+    setupMoreFeatureToolConfigListeners(board) {
+        return setupMoreFeatureToolConfigListeners.call(board);
+    },
+    setupBackgroundToolConfigListeners(board) {
+        return setupBackgroundToolConfigListeners.call(board);
     },
     setupSettingsListeners(board) {
         return setupSettingsListeners.call(board);

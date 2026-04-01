@@ -29,9 +29,9 @@
 ## 摘要
 **大一小登的AI-Agent项目**，目标是想做一个**功能简单、部署简单，使用极其简单且符合直觉**的白板，主要是为**国内的初高中一体机教学使用设计**
 
-由于本人实际开发能力薄弱，所以本项目大量运用了**AI-Agent技术**（就是调用GitHub Agent功能来帮助我开发和高效推进功能的实现），所以代码可能没有“人味”，也可能存在**相当多不合理的bug和开发方式**，**望大佬您轻喷**
+由于本人的实际开发能力.....，所以本项目大量运用了**Agent Coding**，所以代码可能没有“人味”，也可能存在**相当多不合理的bug和开发方式**，**望大佬您轻喷**
 
-您可以在下面的**Demo链接**中快速体验本项目，也可以前往**我的博客**看看我做这个项目的前因后果。
+您可以在下面的[**Demo链接**](https://aboard.pp.ua)中体验到本项目的全部，也可以前往[**我的博客**](https://619.pp.ua/article/aboard)看看我做这个项目的前因后果。
 
 **如果大佬您觉得好的话，请给我点个star🌟吧~~~大学生真的很需要这个**
 
@@ -49,8 +49,8 @@ graph LR
     A --> D[在线Demo]
     A --> E[博客文章]
     
-    click D "https://aboard.pp.ua" "在线演示"
-    click E "https://66619.eu.org/article/aboard" "技术文章"
+    click D "https://aboard.pp.ua" "在线演示链接"
+    click E "https://619.pp.ua/article/aboard" "博客文章链接"
 ```
 ## 当前分支和部署版本
 
@@ -148,12 +148,8 @@ graph LR
 
 ## 🌟 致谢
 
-感谢所有贡献者和使用者！如果这个项目对您有帮助，欢迎给个Star⭐，这样就对我很有帮助了
+感谢所有贡献者和使用者！如果这个项目对您有帮助，欢迎给个Star⭐，这样就对我很有帮助咯~~
+
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=lifeafter619/Aboard&type=date&legend=top-left)](https://www.star-history.com/#lifeafter619/Aboard&type=date&legend=top-left)
-
----
-
-Made with ❤️ for educators and creators
-

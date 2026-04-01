@@ -1,5 +1,5 @@
-const CORE_CACHE_NAME = 'aboard-core-v16';
-const RUNTIME_CACHE_NAME = 'aboard-runtime-v16';
+const CORE_CACHE_NAME = 'aboard-core-v31';
+const RUNTIME_CACHE_NAME = 'aboard-runtime-v31';
 const RUNTIME_CACHE_MAX_ENTRIES = 24;
 const RUNTIME_CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'worker', 'image', 'font', 'manifest']);
 const RUNTIME_CACHEABLE_EXTENSIONS = /\.(?:css|gif|ico|jpe?g|js|json|png|svg|webp|woff2?)$/i;
@@ -72,6 +72,19 @@ const CORE_ASSETS = [
   './js/modules/pagination-runtime.js',
   './js/modules/interaction-runtime.js',
   './js/modules/uploaded-images-runtime.js',
+  './js/modules/zoom-runtime.js',
+  './js/modules/session-persistence-runtime.js',
+  './js/modules/coordinate-origin-runtime.js',
+  './js/modules/coordinate-tools-runtime.js',
+  './js/modules/event-setup-runtime.js',
+  './js/modules/canvas-view-runtime.js',
+  './js/modules/overlay-lock-runtime.js',
+  './js/modules/drawing-actions-runtime.js',
+  './js/modules/view-controls-runtime.js',
+  './js/modules/render-quality-runtime.js',
+  './js/modules/board-helpers-runtime.js',
+  './js/modules/deferred-init-runtime.js',
+  './js/modules/tool-runtime.js',
   './js/modules/settings-manager.js',
   './js/modules/i18n.js',
   './js/modules/help-system.js',
