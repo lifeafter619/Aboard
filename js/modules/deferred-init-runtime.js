@@ -1,8 +1,17 @@
 // Extracted deferred initialization runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+function hasRuntimeMethod(runtimeName, methodName) {
+    return typeof window[runtimeName]?.[methodName] === 'function';
+}
+
 function ensureSettingsInfrastructureInitialized() {
     if (this.settingsInfrastructureInitialized) {
+        return;
+    }
+    if (!hasRuntimeMethod('AboardCustomizationRuntime', 'initToolbarCustomization')
+        || !hasRuntimeMethod('AboardFontManagementRuntime', 'initFontManagement')
+        || !hasRuntimeMethod('AboardCustomizationRuntime', 'initControlButtonSettings')) {
         return;
     }
     this.initToolbarCustomization();
@@ -13,6 +22,9 @@ function ensureSettingsInfrastructureInitialized() {
 
 function ensureSettingsListenersInitialized() {
     if (this.settingsListenersInitialized) {
+        return;
+    }
+    if (!hasRuntimeMethod('AboardUiListenersRuntime', 'setupSettingsListeners')) {
         return;
     }
     this.setupSettingsListeners();
@@ -28,6 +40,9 @@ function ensureShapeToolConfigListenersInitialized() {
     if (this.shapeToolConfigListenersInitialized) {
         return;
     }
+    if (!hasRuntimeMethod('AboardUiListenersRuntime', 'setupShapeToolConfigListeners')) {
+        return;
+    }
     this.setupShapeToolConfigListeners();
     this.shapeToolConfigListenersInitialized = true;
 }
@@ -36,12 +51,19 @@ function ensureSelectToolConfigListenersInitialized() {
     if (this.selectToolConfigListenersInitialized) {
         return;
     }
+    if (!hasRuntimeMethod('AboardUiListenersRuntime', 'setupSelectToolConfigListeners')) {
+        return;
+    }
     this.setupSelectToolConfigListeners();
     this.selectToolConfigListenersInitialized = true;
 }
 
 function ensureBackgroundPanelPrepared() {
     if (!this.backgroundPanelPrepared) {
+        if (!hasRuntimeMethod('AboardDisplayRuntime', 'updatePatternGrid')
+            || !hasRuntimeMethod('AboardUploadedImagesRuntime', 'updateUploadedImagesButtons')) {
+            return;
+        }
         this.updatePatternGrid();
         this.updateUploadedImagesButtons();
         this.backgroundPanelPrepared = true;
@@ -53,12 +75,18 @@ function ensureMoreFeatureToolConfigListenersInitialized() {
     if (this.moreFeatureToolConfigListenersInitialized) {
         return;
     }
+    if (!hasRuntimeMethod('AboardUiListenersRuntime', 'setupMoreFeatureToolConfigListeners')) {
+        return;
+    }
     this.setupMoreFeatureToolConfigListeners();
     this.moreFeatureToolConfigListenersInitialized = true;
 }
 
 function ensureBackgroundToolConfigListenersInitialized() {
     if (this.backgroundToolConfigListenersInitialized) {
+        return;
+    }
+    if (!hasRuntimeMethod('AboardUiListenersRuntime', 'setupBackgroundToolConfigListeners')) {
         return;
     }
     this.setupBackgroundToolConfigListeners();
@@ -110,11 +138,7 @@ function scheduleDeferredUiInitialization() {
         });
     };
 
-    if (document.readyState === 'complete') {
-        afterFirstPaint();
-    } else {
-        window.addEventListener('load', afterFirstPaint, { once: true });
-    }
+    afterFirstPaint();
 }
 
 window.AboardDeferredInitRuntime = {

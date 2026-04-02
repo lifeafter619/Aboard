@@ -3,37 +3,48 @@
 const DEFAULT_MIN_FIT_SCALE = 0.1;
 const DEFAULT_TARGET_COVERAGE = 0.7;
 const DEFAULT_MIN_DEFAULT_SCALE = 0.9;
-const boardConstruction = window.AboardBoardConstruction || {};
-const panelRuntime = window.AboardPanelRuntime || {};
-const layoutRuntime = window.AboardLayoutRuntime || {};
-const coordinatePanelRuntime = window.AboardCoordinatePanelRuntime || {};
-const overlayUiRuntime = window.AboardOverlayUiRuntime || {};
-const modalRuntime = window.AboardModalRuntime || {};
-const lazyManagerRuntime = window.AboardLazyManagerRuntime || {};
-const uiListenersRuntime = window.AboardUiListenersRuntime || {};
-const sessionRuntime = window.AboardSessionRuntime || {};
-const fontManagementRuntime = window.AboardFontManagementRuntime || {};
-const configImportRuntime = window.AboardConfigImportRuntime || {};
-const backgroundUiRuntime = window.AboardBackgroundUiRuntime || {};
-const cacheRuntime = window.AboardCacheRuntime || {};
-const customizationRuntime = window.AboardCustomizationRuntime || {};
-const displayRuntime = window.AboardDisplayRuntime || {};
-const paginationRuntime = window.AboardPaginationRuntime || {};
-const interactionRuntime = window.AboardInteractionRuntime || {};
-const uploadedImagesRuntime = window.AboardUploadedImagesRuntime || {};
-const zoomRuntime = window.AboardZoomRuntime || {};
-const sessionPersistenceRuntime = window.AboardSessionPersistenceRuntime || {};
-const coordinateOriginRuntime = window.AboardCoordinateOriginRuntime || {};
-const eventSetupRuntime = window.AboardEventSetupRuntime || {};
-const canvasViewRuntime = window.AboardCanvasViewRuntime || {};
-const overlayLockRuntime = window.AboardOverlayLockRuntime || {};
-const toolRuntime = window.AboardToolRuntime || {};
-const coordinateToolsRuntime = window.AboardCoordinateToolsRuntime || {};
-const drawingActionsRuntime = window.AboardDrawingActionsRuntime || {};
-const viewControlsRuntime = window.AboardViewControlsRuntime || {};
-const renderQualityRuntime = window.AboardRenderQualityRuntime || {};
-const boardHelpersRuntime = window.AboardBoardHelpersRuntime || {};
-const deferredInitRuntime = window.AboardDeferredInitRuntime || {};
+
+function createWindowRuntimeProxy(name) {
+    return new Proxy({}, {
+        get(_target, property) {
+            const runtime = window[name] || {};
+            return runtime[property];
+        }
+    });
+}
+
+const boardConstruction = createWindowRuntimeProxy('AboardBoardConstruction');
+const panelRuntime = createWindowRuntimeProxy('AboardPanelRuntime');
+const layoutRuntime = createWindowRuntimeProxy('AboardLayoutRuntime');
+const coordinatePanelRuntime = createWindowRuntimeProxy('AboardCoordinatePanelRuntime');
+const overlayUiRuntime = createWindowRuntimeProxy('AboardOverlayUiRuntime');
+const modalRuntime = createWindowRuntimeProxy('AboardModalRuntime');
+const lazyManagerRuntime = createWindowRuntimeProxy('AboardLazyManagerRuntime');
+const uiListenersCoreRuntime = createWindowRuntimeProxy('AboardUiListenersCoreRuntime');
+const uiListenersRuntime = createWindowRuntimeProxy('AboardUiListenersRuntime');
+const sessionRuntime = createWindowRuntimeProxy('AboardSessionRuntime');
+const fontManagementRuntime = createWindowRuntimeProxy('AboardFontManagementRuntime');
+const configImportRuntime = createWindowRuntimeProxy('AboardConfigImportRuntime');
+const backgroundUiRuntime = createWindowRuntimeProxy('AboardBackgroundUiRuntime');
+const cacheRuntime = createWindowRuntimeProxy('AboardCacheRuntime');
+const customizationRuntime = createWindowRuntimeProxy('AboardCustomizationRuntime');
+const displayRuntime = createWindowRuntimeProxy('AboardDisplayRuntime');
+const paginationRuntime = createWindowRuntimeProxy('AboardPaginationRuntime');
+const interactionRuntime = createWindowRuntimeProxy('AboardInteractionRuntime');
+const uploadedImagesRuntime = createWindowRuntimeProxy('AboardUploadedImagesRuntime');
+const zoomRuntime = createWindowRuntimeProxy('AboardZoomRuntime');
+const sessionPersistenceRuntime = createWindowRuntimeProxy('AboardSessionPersistenceRuntime');
+const coordinateOriginRuntime = createWindowRuntimeProxy('AboardCoordinateOriginRuntime');
+const eventSetupRuntime = createWindowRuntimeProxy('AboardEventSetupRuntime');
+const canvasViewRuntime = createWindowRuntimeProxy('AboardCanvasViewRuntime');
+const overlayLockRuntime = createWindowRuntimeProxy('AboardOverlayLockRuntime');
+const toolRuntime = createWindowRuntimeProxy('AboardToolRuntime');
+const coordinateToolsRuntime = createWindowRuntimeProxy('AboardCoordinateToolsRuntime');
+const drawingActionsRuntime = createWindowRuntimeProxy('AboardDrawingActionsRuntime');
+const viewControlsRuntime = createWindowRuntimeProxy('AboardViewControlsRuntime');
+const renderQualityRuntime = createWindowRuntimeProxy('AboardRenderQualityRuntime');
+const boardHelpersRuntime = createWindowRuntimeProxy('AboardBoardHelpersRuntime');
+const deferredInitRuntime = createWindowRuntimeProxy('AboardDeferredInitRuntime');
 
 class DrawingBoard {
     constructor(options = {}) {
@@ -105,10 +116,12 @@ class DrawingBoard {
         };
         
         // Set callback for teaching tools insertion to auto-switch to pen
-        this.teachingToolsManager.onToolsInserted = () => {
-            this.closeFeaturePanel();
-            this.switchToPen();
-        };
+        if (this.teachingToolsManager) {
+            this.teachingToolsManager.onToolsInserted = () => {
+                this.closeFeaturePanel();
+                this.switchToPen();
+            };
+        }
         
         // Initialize shape drawing manager
         this.shapeDrawingManager = coreRuntimeDependencies.shapeDrawingManager;
@@ -217,7 +230,7 @@ class DrawingBoard {
         this.backgroundPanelPrepared = false;
         
         // Uploaded images storage
-        this.uploadedImages = this.loadUploadedImages();
+        this.uploadedImages = this.loadUploadedImages() || [];
         
         // Connect edge drawing manager to drawing engine
         this.drawingEngine.setEdgeDrawingManager(this.edgeDrawingManager);
@@ -426,7 +439,7 @@ class DrawingBoard {
     }
     
     setupToolConfigListeners() {
-        return uiListenersRuntime.setupToolConfigListeners?.(this);
+        return uiListenersCoreRuntime.setupToolConfigListeners?.(this);
     }
 
     setupShapeToolConfigListeners() {

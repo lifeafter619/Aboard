@@ -105,26 +105,15 @@ function scheduleMoreFeaturePreload(board) {
     }
     board.moreFeaturePreloadScheduled = true;
 
-    const kickoff = () => {
-        window.setTimeout(() => {
-            void preloadMoreFeatureManagers(board);
-        }, 120);
-    };
-
     const afterFirstPaint = () => {
         window.requestAnimationFrame(() => {
             window.requestAnimationFrame(() => {
-                kickoff();
+                void preloadMoreFeatureManagers(board);
             });
         });
     };
 
-    if (document.readyState === 'complete') {
-        afterFirstPaint();
-        return;
-    }
-
-    window.addEventListener('load', afterFirstPaint, { once: true });
+    afterFirstPaint();
 }
 
 async function preloadMoreFeatureManagers(board) {
@@ -138,15 +127,12 @@ async function preloadMoreFeatureManagers(board) {
         () => getProjectManager(board)
     ];
 
-    for (const preload of preloadTasks) {
-        try {
-            await preload();
-        } catch (error) {
-            console.warn('Silent more-feature preload failed:', error);
+    const results = await Promise.allSettled(preloadTasks.map(preload => preload()));
+    results.forEach((result) => {
+        if (result.status === 'rejected') {
+            console.warn('Silent more-feature preload failed:', result.reason);
         }
-
-        await new Promise(resolve => window.setTimeout(resolve, 90));
-    }
+    });
 }
 
 window.AboardLazyManagerRuntime = {

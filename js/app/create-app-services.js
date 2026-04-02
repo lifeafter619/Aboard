@@ -19,8 +19,9 @@ function createGlobalService(win, instanceName, classNames) {
 }
 
 export async function createAppServices(win = window) {
+  const hadI18nInstance = Boolean(win.i18n);
   const i18n = createGlobalService(win, 'i18n', ['AboardI18n', 'I18n']);
-  if (i18n?.init) {
+  if (i18n?.init && !hadI18nInstance) {
     await i18n.init();
   }
 

@@ -1,5 +1,5 @@
-const CORE_CACHE_NAME = 'aboard-core-v31';
-const RUNTIME_CACHE_NAME = 'aboard-runtime-v31';
+const CORE_CACHE_NAME = 'aboard-core-v32';
+const RUNTIME_CACHE_NAME = 'aboard-runtime-v32';
 const RUNTIME_CACHE_MAX_ENTRIES = 24;
 const RUNTIME_CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'worker', 'image', 'font', 'manifest']);
 const RUNTIME_CACHEABLE_EXTENSIONS = /\.(?:css|gif|ico|jpe?g|js|json|png|svg|webp|woff2?)$/i;
@@ -61,6 +61,7 @@ const CORE_ASSETS = [
   './js/modules/panel-runtime.js',
   './js/modules/modal-runtime.js',
   './js/modules/lazy-manager-runtime.js',
+  './js/modules/ui-listeners-core-runtime.js',
   './js/modules/ui-listeners-runtime.js',
   './js/modules/session-runtime.js',
   './js/modules/font-management-runtime.js',
