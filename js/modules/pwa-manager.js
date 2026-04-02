@@ -1,6 +1,7 @@
 // Timeout for resolving manual update checks (milliseconds).
 const UPDATE_CHECK_TIMEOUT = 1200;
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+const APP_VERSION_URLS = ['version.txt', './version.txt', '/api/version'];
 
 class PWAManager {
     constructor() {
@@ -19,6 +20,7 @@ class PWAManager {
         // Update elements
         this.updateModal = null;
         this.version = null;
+        this.latestAvailableVersion = null;
         this.announcementVersionRow = null;
 
         // Local Translations
@@ -219,32 +221,71 @@ class PWAManager {
         }
     }
 
-    loadVersion() {
-        return fetch('version.txt', { cache: 'no-store' })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Failed to load version.txt: ${response.status}`);
-                }
-                return response.text();
-            })
-            .then(text => {
-                const version = text.trim();
-                if (!version) {
-                    console.warn('Empty version in version.txt.');
-                    return null;
-                }
-                if (!SEMVER_PATTERN.test(version)) {
-                    console.warn('Invalid version format in version.txt:', version);
-                    return null;
-                }
-                this.version = version;
-                this.updateVersionDisplays();
-                return version;
-            })
-            .catch(error => {
-                console.warn('Failed to load version.txt:', error);
+    getEmbeddedBuildVersion() {
+        return this.normalizeVersion(window.__ABOARD_BUILD_VERSION__);
+    }
+
+    normalizeVersion(value) {
+        const version = typeof value === 'string' ? value.trim() : '';
+        if (!version) {
+            return null;
+        }
+        if (!SEMVER_PATTERN.test(version)) {
+            console.warn('Invalid version format:', version);
+            return null;
+        }
+        return version;
+    }
+
+    async fetchVersionFromSource(url) {
+        try {
+            const response = await fetch(url, { cache: 'no-store' });
+            if (!response.ok) {
                 return null;
-            });
+            }
+
+            if (url.endsWith('/api/version')) {
+                const data = await response.json();
+                return this.normalizeVersion(data?.version);
+            }
+
+            return this.normalizeVersion(await response.text());
+        } catch (error) {
+            console.warn(`Failed to fetch version from ${url}:`, error);
+            return null;
+        }
+    }
+
+    async getLatestAvailableVersion() {
+        for (const url of APP_VERSION_URLS) {
+            const version = await this.fetchVersionFromSource(url);
+            if (version) {
+                this.latestAvailableVersion = version;
+                return version;
+            }
+        }
+
+        const embeddedBuildVersion = this.getEmbeddedBuildVersion();
+        this.latestAvailableVersion = embeddedBuildVersion;
+        return embeddedBuildVersion;
+    }
+
+    async loadVersion() {
+        const embeddedBuildVersion = this.getEmbeddedBuildVersion();
+        if (embeddedBuildVersion) {
+            this.version = embeddedBuildVersion;
+            this.updateVersionDisplays();
+            return embeddedBuildVersion;
+        }
+
+        const latestVersion = await this.getLatestAvailableVersion();
+        if (latestVersion) {
+            this.version = latestVersion;
+            this.updateVersionDisplays();
+            return latestVersion;
+        }
+
+        return null;
     }
 
     compareVersions(versionA, versionB) {
@@ -269,19 +310,6 @@ class PWAManager {
         if (a.pre && !b.pre) return -1;
         if (a.pre && b.pre) return a.pre.localeCompare(b.pre);
         return 0;
-    }
-
-    async fetchVersionFromApi() {
-        try {
-            const response = await fetch('/api/version', { cache: 'no-store' });
-            if (!response.ok) return null;
-            const data = await response.json();
-            const version = typeof data?.version === 'string' ? data.version.trim() : '';
-            return SEMVER_PATTERN.test(version) ? version : null;
-        } catch (error) {
-            console.warn('Failed to fetch /api/version:', error);
-            return null;
-        }
     }
 
     registerServiceWorker() {
@@ -418,6 +446,7 @@ class PWAManager {
 
             // App Status Title
             const statusTitle = document.createElement('h4');
+            statusTitle.dataset.pwaStatusTitle = 'true';
             statusTitle.textContent = this.getTranslation('statusTitle');
 
             const statusContainer = document.createElement('div');
@@ -612,13 +641,9 @@ class PWAManager {
         const checkUpdateBtn = document.getElementById('pwa-check-update-btn');
         if (checkUpdateBtn) checkUpdateBtn.textContent = this.getTranslation('checkUpdate');
 
-        const statusTitle = document.querySelector('#about-settings .about-section h4');
-        if (statusTitle && statusTitle.textContent.includes('Status')) {
-             // We can check if it matches any of our statusTitle translations to be safer,
-             // or just replace it if we are sure it's the status section.
-             // Given the structure, it is the last h4 we added.
-             // Ideally we should have given it an ID. But this works for now.
-             statusTitle.textContent = this.getTranslation('statusTitle');
+        const statusTitle = document.querySelector('[data-pwa-status-title="true"]');
+        if (statusTitle) {
+            statusTitle.textContent = this.getTranslation('statusTitle');
         }
 
         // Update Announcement UI
@@ -690,14 +715,14 @@ class PWAManager {
             }
         };
 
-        const localVersion = this.version || await this.loadVersion();
-        const latestVersion = await this.fetchVersionFromApi();
-        const hasNewerVersion = !!(localVersion && latestVersion && this.compareVersions(latestVersion, localVersion) > 0);
+        const effectiveCurrentVersion = this.getEmbeddedBuildVersion() || this.version || await this.loadVersion();
+        const latestVersion = await this.getLatestAvailableVersion();
+        const hasNewerVersion = !!(effectiveCurrentVersion && latestVersion && this.compareVersions(latestVersion, effectiveCurrentVersion) > 0);
 
         if (manual && hasNewerVersion && window.drawingBoard?.settingsManager?.toastManager) {
             const message = this.getTranslation('versionUpdateFound')
                 .replace('{latest}', latestVersion)
-                .replace('{current}', localVersion);
+                .replace('{current}', effectiveCurrentVersion);
             window.drawingBoard.settingsManager.toastManager.show(message, 'warning');
         }
 

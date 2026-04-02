@@ -1,16 +1,68 @@
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
-async function saveSession() {
-        if (this.isClearingLocalData) return;
+function buildSyncSnapshot() {
         try {
-            // Save current page to pages array first
             if (this.currentPage > 0 && this.currentPage <= this.pages.length) {
                 this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
             }
-            
-            // Save background settings for current page to ensure they are up to date
             this.savePageBackground(this.currentPage);
+
+            return {
+                timestamp: Date.now(),
+                currentPage: this.currentPage,
+                canvasWidth: this.canvas.width,
+                canvasHeight: this.canvas.height,
+                pageDataUrl: this.canvas.toDataURL('image/png'),
+                settings: {
+                    currentTool: this.drawingEngine.currentTool,
+                    penSize: this.drawingEngine.penSize,
+                    penColor: this.drawingEngine.currentColor,
+                    penType: this.drawingEngine.penType,
+                    eraserSize: this.drawingEngine.eraserSize,
+                    eraserShape: this.drawingEngine.eraserShape,
+                    canvasScale: this.drawingEngine.canvasScale,
+                    panOffset: this.drawingEngine.panOffset,
+                    pageBackgrounds: this.pageBackgrounds,
+                    backgroundColor: this.backgroundManager.backgroundColor,
+                    backgroundPattern: this.backgroundManager.backgroundPattern,
+                    bgOpacity: this.backgroundManager.bgOpacity,
+                    patternIntensity: this.backgroundManager.patternIntensity,
+                    patternDensity: this.backgroundManager.patternDensity,
+                    coordinateOriginX: this.backgroundManager.coordinateOriginX,
+                    coordinateOriginY: this.backgroundManager.coordinateOriginY,
+                    coordinateOverlayState: this.backgroundManager.getCoordinateOverlayState(),
+                    imageSize: this.backgroundManager.imageSize,
+                    backgroundImageData: this.backgroundManager.backgroundImageData,
+                    backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder || 1,
+                    uploadedImages: this.uploadedImages
+                }
+            };
+        } catch (e) {
+            console.warn('Failed to build sync session snapshot:', e);
+            return null;
+        }
+}
+
+function saveSessionSnapshotSync() {
+        const snapshot = buildSyncSnapshot.call(this);
+        if (!snapshot) {
+            return null;
+        }
+
+        try {
+            localStorage.setItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot', JSON.stringify(snapshot));
+        } catch (e) {
+            console.warn('Failed to save sync session snapshot:', e);
+        }
+
+        return snapshot;
+}
+
+async function saveSession() {
+        if (this.isClearingLocalData) return;
+        try {
+            saveSessionSnapshotSync.call(this);
 
             // Convert all pages to Blobs
             const pagesBlobs = await Promise.all(this.pages.map(page => StorageManager.imageDataToBlob(page)));
@@ -101,7 +153,20 @@ async function saveSession() {
 async function checkForRecovery() {
         try {
             const hasSession = await this.storageManager.hasSession();
-            if (hasSession) {
+            const rawSyncSnapshot = localStorage.getItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot');
+            let hasSyncSnapshot = false;
+
+            if (rawSyncSnapshot) {
+                try {
+                    JSON.parse(rawSyncSnapshot);
+                    hasSyncSnapshot = true;
+                } catch (snapshotError) {
+                    console.warn('Ignoring invalid sync session snapshot:', snapshotError);
+                    localStorage.removeItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot');
+                }
+            }
+
+            if (hasSession || hasSyncSnapshot) {
                 this.showRecoveryModal();
             }
         } catch (e) {
@@ -111,6 +176,9 @@ async function checkForRecovery() {
 }
 
 window.AboardSessionPersistenceRuntime = {
+    saveSessionSnapshotSync(board) {
+        return saveSessionSnapshotSync.call(board);
+    },
     saveSession(board) {
         return saveSession.call(board);
     },

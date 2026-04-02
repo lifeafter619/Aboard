@@ -20,7 +20,6 @@
 [![GitHub issues](https://img.shields.io/github/issues/lifeafter619/Aboard?style=for-the-badge&labelColor=111827&color=f97316&logo=github)](https://github.com/lifeafter619/Aboard/issues)
 [![GitHub last commit](https://img.shields.io/github/last-commit/lifeafter619/Aboard?style=for-the-badge&labelColor=111827&color=14b8a6&logo=git)](https://github.com/lifeafter619/Aboard/commits/main)
 [![Repo size](https://img.shields.io/github/repo-size/lifeafter619/Aboard?style=for-the-badge&labelColor=111827&color=6366f1&logo=github)](https://github.com/lifeafter619/Aboard)
-[![Docs](https://img.shields.io/badge/Docs-Architecture%20%26%20Guide-a855f7?style=for-the-badge&labelColor=111827&logo=readthedocs&logoColor=fff)](../docs/en/architecture.md)
 
 </div>
 
@@ -112,8 +111,6 @@ graph LR
 - Note: do not double-click `index.html` directly. Some multilingual, help, and version-check features depend on an HTTP environment.
 
 ## Documentation
-- Architecture design: [`../docs/en/architecture.md`](../docs/en/architecture.md)
-- Advanced notes: [`../docs/en/advanced.md`](../docs/en/advanced.md)
 - English document: [`README.en.md`](README.en.md)
 - Traditional Chinese document: [`README.zh-TW.md`](README.zh-TW.md)
 

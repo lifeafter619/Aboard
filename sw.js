@@ -3,6 +3,26 @@ const RUNTIME_CACHE_NAME = 'aboard-runtime-v32';
 const RUNTIME_CACHE_MAX_ENTRIES = 24;
 const RUNTIME_CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'worker', 'image', 'font', 'manifest']);
 const RUNTIME_CACHEABLE_EXTENSIONS = /\.(?:css|gif|ico|jpe?g|js|json|png|svg|webp|woff2?)$/i;
+const LOCALE_ASSETS = [
+  './js/locales/zh-CN.js',
+  './js/locales/zh-TW.js',
+  './js/locales/en-US.js',
+  './js/locales/ja-JP.js',
+  './js/locales/ko-KR.js',
+  './js/locales/fr-FR.js',
+  './js/locales/de-DE.js',
+  './js/locales/es-ES.js',
+  './js/locales/overrides.js',
+  './js/locales/help/zh-CN.js',
+  './js/locales/help/zh-TW.js',
+  './js/locales/help/en-US.js',
+  './js/locales/help/ja-JP.js',
+  './js/locales/help/ko-KR.js',
+  './js/locales/help/fr-FR.js',
+  './js/locales/help/de-DE.js',
+  './js/locales/help/es-ES.js'
+];
+
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -91,7 +111,8 @@ const CORE_ASSETS = [
   './js/modules/help-system.js',
   './js/modules/storage-manager.js',
   './js/modules/pwa-manager.js',
-  './js/main.js'
+  './js/main.js',
+  ...LOCALE_ASSETS
 ];
 
 function isSameOrigin(requestUrl) {

@@ -6,6 +6,7 @@ const CleanCSS = require('clean-css');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const DIST_DIR = path.join(ROOT_DIR, 'dist');
+const BUILD_VERSION_PLACEHOLDER = '__ABOARD_BUILD_VERSION_PLACEHOLDER__';
 
 const INCLUDED_PATHS = [
     'css',
@@ -48,6 +49,12 @@ async function pathExists(targetPath) {
 
 async function minifyContent(relativePath, content) {
     const ext = path.extname(relativePath).toLowerCase();
+    const normalizedPath = relativePath.split(path.sep).join('/');
+
+    if (normalizedPath === 'js/app/bootstrap.js') {
+        const version = (await fs.readFile(path.join(ROOT_DIR, 'version.txt'), 'utf8')).trim();
+        content = content.replace(BUILD_VERSION_PLACEHOLDER, version);
+    }
 
     if (ext === '.html') {
         return minifyHtml(content, {

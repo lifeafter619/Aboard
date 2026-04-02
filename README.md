@@ -20,7 +20,6 @@
 [![GitHub issues](https://img.shields.io/github/issues/lifeafter619/Aboard?style=for-the-badge&labelColor=111827&color=f97316&logo=github)](https://github.com/lifeafter619/Aboard/issues)
 [![GitHub last commit](https://img.shields.io/github/last-commit/lifeafter619/Aboard?style=for-the-badge&labelColor=111827&color=14b8a6&logo=git)](https://github.com/lifeafter619/Aboard/commits/main)
 [![Repo size](https://img.shields.io/github/repo-size/lifeafter619/Aboard?style=for-the-badge&labelColor=111827&color=6366f1&logo=github)](https://github.com/lifeafter619/Aboard)
-[![Docs](https://img.shields.io/badge/Docs-Architecture%20%26%20Guide-a855f7?style=for-the-badge&labelColor=111827&logo=readthedocs&logoColor=fff)](docs/zh-CN/architecture.md)
 
 </div>
 
@@ -112,8 +111,6 @@ graph LR
 - 注意：不要直接双击 `index.html`，部分多语言、帮助与版本检查功能依赖 HTTP 环境。
 
 ## 文档导航
-- 架构设计：[`docs/zh-CN/architecture.md`](docs/zh-CN/architecture.md)
-- 进阶说明：[`docs/zh-CN/advanced.md`](docs/zh-CN/advanced.md)
 - 英文文档：[`public/README.en.md`](public/README.en.md)
 - 繁体中文文档：[`public/README.zh-TW.md`](public/README.zh-TW.md)
 

@@ -207,6 +207,7 @@ class DrawingBoard {
         this.cacheSizeRequestToken = 0;
         this.cacheSizeRetryScheduled = false;
         this.cacheStorageSizeSnapshotKey = 'aboardCacheStorageSizeSnapshot';
+        this.syncSessionSnapshotKey = 'aboardSyncSessionSnapshot';
         
         // Coordinate origin dragging state
         this.isDraggingCoordinateOrigin = false;
@@ -288,7 +289,8 @@ class DrawingBoard {
         
         // Save canvas data before page unload (Attempt synchronous save, though IndexedDB is async)
         window.addEventListener('beforeunload', (e) => {
-            this.saveSession();
+            this.saveSessionSnapshotSync();
+            void this.saveSession();
             // Show warning message when user tries to refresh or close the page
             const message = window.i18n ? window.i18n.t('tools.refresh.warning') : 'Refreshing will clear all canvas content and cannot be recovered. Are you sure you want to refresh?';
             e.preventDefault();
@@ -1030,6 +1032,10 @@ class DrawingBoard {
     }
     
     // Save session data to IndexedDB via StorageManager
+    saveSessionSnapshotSync() {
+        return sessionPersistenceRuntime.saveSessionSnapshotSync?.(this);
+    }
+    
     async saveSession() {
         return sessionPersistenceRuntime.saveSession?.(this);
     }
