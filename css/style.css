@@ -822,6 +822,18 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     flex-direction: column;
 }
 
+.timer-modal-content.settings-panel-modal-content,
+.modal-content.settings-panel-modal-content {
+    border-radius: 16px;
+    max-height: 85vh;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.settings-panel-modal-wide {
+    max-width: 580px;
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -1350,6 +1362,12 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     gap: 8px;
 }
 
+.button-size-options-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
 .pen-type-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -1387,7 +1405,9 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .position-option-btn,
-.display-option-btn {
+.display-option-btn,
+.update-preference-option-btn,
+.fullscreen-mode-btn {
     flex: 1;
     padding: 12px 16px;
     border: 3px solid #ddd;
@@ -1401,16 +1421,42 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .position-option-btn:hover,
-.display-option-btn:hover {
+.display-option-btn:hover,
+.update-preference-option-btn:hover,
+.fullscreen-mode-btn:hover {
     background-color: #f0f0f0;
     border-color: #ccc;
 }
 
 .position-option-btn.active,
-.display-option-btn.active {
+.display-option-btn.active,
+.update-preference-option-btn.active,
+.fullscreen-mode-btn.active {
     background-color: var(--theme-color);
     color: #ffffff;
     border-color: var(--theme-color);
+}
+
+.settings-action-btn {
+    flex: 1;
+    padding: 12px 14px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #666;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.settings-action-btn:hover {
+    background-color: #f0f0f0;
+    border-color: #ccc;
 }
 
 /* Toolbar customization list */
@@ -1848,6 +1894,44 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     margin: 4px 0 0 0;
     font-size: 12px;
     color: #999;
+}
+
+.settings-hint-compact {
+    font-size: 11px;
+    margin: 4px 0 8px 0;
+}
+
+.settings-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.settings-input-row .slider {
+    flex: 1;
+}
+
+.settings-color-sections {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.settings-color-section {
+    flex: 1;
+    min-width: 200px;
+}
+
+.settings-sub-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: #666;
+}
+
+.settings-color-picker-icon {
+    margin-top: 8px;
 }
 
 /* Pagination controls */

@@ -786,14 +786,6 @@
                             <p class="settings-hint" data-i18n="settings.general.touchZoomHint">允许使用双指捏合手势缩放画布</p>
                         </div>
                         <div class="settings-group">
-                            <label for="update-preference-select" data-i18n="settings.general.updatePreference">更新方式</label>
-                            <p class="settings-hint" data-i18n="settings.general.updatePreferenceHint">检测到新版本时，默认推荐哪种刷新方式</p>
-                            <select id="update-preference-select" class="format-select">
-                                <option value="prompt" data-i18n="settings.general.updatePreferencePrompt">默认推荐“空闲时刷新更新”</option>
-                                <option value="auto" data-i18n="settings.general.updatePreferenceAuto">默认推荐“立即刷新更新”</option>
-                            </select>
-                        </div>
-                        <div class="settings-group">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="keep-more-panel-open-checkbox">
                                 <span data-i18n="settings.general.morePanelBehaviorLabel">更多功能面板行为</span>
@@ -1157,6 +1149,15 @@
                                 <h4 data-i18n="settings.about.version">版本</h4>
                                 <p id="app-version">--</p>
                             </div>
+                            
+                            <div class="about-section settings-group">
+                                <h4 data-i18n="settings.general.updatePreference">更新方式</h4>
+                                <p class="settings-hint" data-i18n="settings.general.updatePreferenceHint">检测到新版本时，选择更新方式</p>
+                                <div class="button-size-options button-size-options-2">
+                                    <button class="update-preference-option-btn active" data-update-preference="prompt" type="button" data-i18n="settings.general.updatePreferencePrompt" aria-pressed="true">空闲时更新</button>
+                                    <button class="update-preference-option-btn" data-update-preference="auto" type="button" data-i18n="settings.general.updatePreferenceAuto" aria-pressed="false">立即更新</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1176,7 +1177,7 @@
                             <label>配置管理</label>
                             <p class="settings-hint">导出或导入当前的应用程序设置</p>
                             <div class="button-size-options button-size-options-2">
-                                <button id="export-config-btn" class="pattern-option-btn" style="display: flex; align-items: center; justify-content: center; gap: 5px;">
+                                <button id="export-config-btn" class="settings-action-btn">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                         <polyline points="7 10 12 15 17 10"></polyline>
@@ -1184,7 +1185,7 @@
                                     </svg>
                                     导出配置
                                 </button>
-                                <button id="import-config-btn" class="pattern-option-btn" style="display: flex; align-items: center; justify-content: center; gap: 5px;">
+                                <button id="import-config-btn" class="settings-action-btn">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                         <polyline points="17 8 12 3 7 8"></polyline>
@@ -1203,7 +1204,7 @@
                                 <label class="checkbox-label"><input type="checkbox" id="clear-other-cache-checkbox"><span><span data-i18n="settings.more.clearOtherCache">清除其他缓存</span>（<span id="other-cache-size" data-i18n="settings.more.cacheSizeCalculating">计算中...</span>）</span></label>
                             </div>
                             <div class="button-size-options button-size-options-2">
-                                <button id="clear-local-cache-btn" class="pattern-option-btn" style="display: flex; align-items: center; justify-content: center; gap: 5px;">
+                                <button id="clear-local-cache-btn" class="settings-action-btn">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M3 6h18"></path>
                                         <path d="M8 6V4h8v2"></path>
@@ -1678,7 +1679,7 @@
 
     <!-- Time Display Settings Modal -->
     <div id="time-display-settings-modal" class="timer-modal">
-        <div class="timer-modal-content" style="max-width: 580px; max-height: 85vh; overflow-y: auto;">
+        <div class="timer-modal-content settings-panel-modal-content settings-panel-modal-wide">
             <div class="timer-modal-header">
                 <h2 data-i18n="timeDisplay.settingsTitle">时间显示设置</h2>
                 <button id="time-display-settings-close-btn" class="modal-close-btn">
@@ -1696,14 +1697,14 @@
                 </div>
 
                 <!-- Widget Tab Content -->
-                <div id="td-tab-content-widget" class="td-tab-content active">
-                    <!-- Display Options -->
-                    <div class="timer-input-group">
-                        <label data-i18n="timeDisplay.displayOptions">显示选项</label>
-                        <div class="button-size-options" style="grid-template-columns: 1fr 1fr 1fr;">
-                            <button class="display-option-btn active" data-td-display-type="both" data-i18n="timeDisplay.dateAndTime">日期和时间</button>
-                            <button class="display-option-btn" data-td-display-type="date-only" data-i18n="timeDisplay.dateOnly">仅日期</button>
-                            <button class="display-option-btn" data-td-display-type="time-only" data-i18n="timeDisplay.timeOnly">仅时间</button>
+                    <div id="td-tab-content-widget" class="td-tab-content active">
+                        <!-- Display Options -->
+                        <div class="timer-input-group">
+                            <label data-i18n="timeDisplay.displayOptions">显示选项</label>
+                            <div class="button-size-options button-size-options-3">
+                                <button class="display-option-btn active" data-td-display-type="both" data-i18n="timeDisplay.dateAndTime">日期和时间</button>
+                                <button class="display-option-btn" data-td-display-type="date-only" data-i18n="timeDisplay.dateOnly">仅日期</button>
+                                <button class="display-option-btn" data-td-display-type="time-only" data-i18n="timeDisplay.timeOnly">仅时间</button>
                         </div>
                     </div>
 
@@ -1753,9 +1754,9 @@
                     <!-- Colors -->
                     <div class="timer-input-group">
                         <label data-i18n="timeDisplay.colorSettings">颜色设置</label>
-                        <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px;">
-                            <div style="flex: 1; min-width: 200px;">
-                                <label style="font-size: 12px; color: #666; display: block; margin-bottom: 8px;" data-i18n="timeDisplay.textColor">字体颜色</label>
+                        <div class="settings-color-sections">
+                            <div class="settings-color-section">
+                                <label class="settings-sub-label" data-i18n="timeDisplay.textColor">字体颜色</label>
                                 <div class="color-picker-row">
                                     <div class="color-picker-main">
                                         <button class="color-btn active" data-td-time-color="#000000" style="background-color: #000000;"></button>
@@ -1770,7 +1771,7 @@
                                         <button class="color-btn" data-td-time-color="#8800FF" style="background-color: #8800FF;"></button>
                                     </div>
                                 </div>
-                                <label class="color-picker-icon-btn" for="td-custom-time-color-picker" style="margin-top: 8px;">
+                                <label class="color-picker-icon-btn settings-color-picker-icon" for="td-custom-time-color-picker">
                                     <svg width="24" height="24" viewBox="-0.4 -5 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polygon points="18 2 22 6 12 16 8 16 8 12 18 2" style="position: relative; z-index: 2;"></polygon>
                                         <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34" style="position: relative; z-index: 2;"></path>
@@ -1778,8 +1779,8 @@
                                     <input type="color" id="td-custom-time-color-picker" class="custom-color-picker-input" value="#000000">
                                 </label>
                             </div>
-                            <div style="flex: 1; min-width: 200px;">
-                                <label style="font-size: 12px; color: #666; display: block; margin-bottom: 8px;" data-i18n="timeDisplay.bgColor">背景颜色</label>
+                            <div class="settings-color-section">
+                                <label class="settings-sub-label" data-i18n="timeDisplay.bgColor">背景颜色</label>
                                 <div class="color-picker-row">
                                     <div class="color-picker-main">
                                         <button class="color-btn active" data-td-time-bg-color="#000000" style="background-color: #000000;"></button>
@@ -1794,7 +1795,7 @@
                                         <button class="color-btn" data-td-time-bg-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;"></button>
                                     </div>
                                 </div>
-                                <label class="color-picker-icon-btn" for="td-custom-bg-color-picker" style="margin-top: 8px;">
+                                <label class="color-picker-icon-btn settings-color-picker-icon" for="td-custom-bg-color-picker">
                                     <svg width="24" height="24" viewBox="-0.4 -5 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polygon points="18 2 22 6 12 16 8 16 8 12 18 2" style="position: relative; z-index: 2;"></polygon>
                                         <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34" style="position: relative; z-index: 2;"></path>
@@ -1808,8 +1809,8 @@
                     <!-- Font Size -->
                     <div class="timer-input-group">
                         <label><span data-i18n="timeDisplay.fontSizeLabel">字体大小：当前</span> <span id="td-time-font-size-value">16</span>px</label>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <input type="range" id="td-time-font-size-slider" min="12" max="48" value="16" class="slider" style="flex: 1;">
+                        <div class="settings-input-row">
+                            <input type="range" id="td-time-font-size-slider" min="12" max="48" value="16" class="slider">
                             <input type="number" id="td-time-font-size-input" min="12" max="48" value="16" class="size-input">
                         </div>
                     </div>
@@ -1817,31 +1818,31 @@
                     <!-- Opacity -->
                     <div class="timer-input-group">
                         <label><span data-i18n="timeDisplay.opacityLabel">透明度：当前</span> <span id="td-time-opacity-value">100</span>%</label>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <input type="range" id="td-time-opacity-slider" min="10" max="100" value="100" class="slider" style="flex: 1;">
+                        <div class="settings-input-row">
+                            <input type="range" id="td-time-opacity-slider" min="10" max="100" value="100" class="slider">
                             <input type="number" id="td-time-opacity-input" min="10" max="100" value="100" class="size-input">
                         </div>
                     </div>
                 </div>
 
                 <!-- Fullscreen Tab Content -->
-                <div id="td-tab-content-fullscreen" class="td-tab-content">
-                    <!-- Fullscreen Mode -->
-                    <div class="timer-input-group">
-                        <label data-i18n="timeDisplay.fullscreenMode">全屏模式</label>
-                        <div class="button-size-options" style="grid-template-columns: 1fr 1fr 1fr;">
-                            <button class="fullscreen-mode-btn" data-td-mode="disabled" data-i18n="timeDisplay.fullscreenDisabled">关闭</button>
-                            <button class="fullscreen-mode-btn" data-td-mode="single" data-i18n="timeDisplay.fullscreenSingle">单击</button>
-                            <button class="fullscreen-mode-btn active" data-td-mode="double" data-i18n="timeDisplay.fullscreenDouble">双击</button>
+                    <div id="td-tab-content-fullscreen" class="td-tab-content">
+                        <!-- Fullscreen Mode -->
+                        <div class="timer-input-group">
+                            <label data-i18n="timeDisplay.fullscreenMode">全屏模式</label>
+                            <div class="button-size-options button-size-options-3">
+                                <button class="fullscreen-mode-btn" data-td-mode="disabled" data-i18n="timeDisplay.fullscreenDisabled">关闭</button>
+                                <button class="fullscreen-mode-btn" data-td-mode="single" data-i18n="timeDisplay.fullscreenSingle">单击</button>
+                                <button class="fullscreen-mode-btn active" data-td-mode="double" data-i18n="timeDisplay.fullscreenDouble">双击</button>
                         </div>
                     </div>
 
                     <!-- Fullscreen Font Size -->
                     <div class="timer-input-group">
                         <label><span data-i18n="timeDisplay.fullscreenFontSizeLabel">全屏字体大小：当前</span> <span id="td-time-fullscreen-font-size-value">15</span>%</label>
-                        <p class="settings-hint" style="font-size: 11px; color: #999; margin: 4px 0 8px 0;" data-i18n="timeDisplay.fullscreenFontSizeHint">调整全屏时间显示的字体大小，范围10%-85%</p>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <input type="range" id="td-time-fullscreen-font-size-slider" min="10" max="85" value="15" class="slider" style="flex: 1;">
+                        <p class="settings-hint settings-hint-compact" data-i18n="timeDisplay.fullscreenFontSizeHint">调整全屏时间显示的字体大小，范围10%-85%</p>
+                        <div class="settings-input-row">
+                            <input type="range" id="td-time-fullscreen-font-size-slider" min="10" max="85" value="15" class="slider">
                             <input type="number" id="td-time-fullscreen-font-size-input" min="10" max="85" value="15" class="size-input">
                         </div>
                     </div>
@@ -1849,9 +1850,9 @@
                     <!-- Fullscreen Colors -->
                     <div class="timer-input-group">
                         <label data-i18n="timeDisplay.fullscreenColorSettings">全屏颜色设置</label>
-                        <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px;">
-                            <div style="flex: 1; min-width: 200px;">
-                                <label style="font-size: 12px; color: #666; display: block; margin-bottom: 8px;" data-i18n="timeDisplay.textColor">字体颜色</label>
+                        <div class="settings-color-sections">
+                            <div class="settings-color-section">
+                                <label class="settings-sub-label" data-i18n="timeDisplay.textColor">字体颜色</label>
                                 <div class="color-picker-row">
                                     <div class="color-picker-main">
                                         <button class="color-btn active" data-td-fs-color="#ffffff" style="background-color: #ffffff; border: 1px solid #ccc;"></button>
@@ -1866,7 +1867,7 @@
                                         <button class="color-btn" data-td-fs-color="#8800FF" style="background-color: #8800FF;"></button>
                                     </div>
                                 </div>
-                                <label class="color-picker-icon-btn" for="td-custom-fs-color-picker" style="margin-top: 8px;">
+                                <label class="color-picker-icon-btn settings-color-picker-icon" for="td-custom-fs-color-picker">
                                     <svg width="24" height="24" viewBox="-0.4 -5 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polygon points="18 2 22 6 12 16 8 16 8 12 18 2" style="position: relative; z-index: 2;"></polygon>
                                         <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34" style="position: relative; z-index: 2;"></path>
@@ -1874,8 +1875,8 @@
                                     <input type="color" id="td-custom-fs-color-picker" class="custom-color-picker-input" value="#ffffff">
                                 </label>
                             </div>
-                            <div style="flex: 1; min-width: 200px;">
-                                <label style="font-size: 12px; color: #666; display: block; margin-bottom: 8px;" data-i18n="timeDisplay.bgColor">背景颜色</label>
+                            <div class="settings-color-section">
+                                <label class="settings-sub-label" data-i18n="timeDisplay.bgColor">背景颜色</label>
                                 <div class="color-picker-row">
                                     <div class="color-picker-main">
                                         <button class="color-btn active" data-td-fs-bg-color="#000000" style="background-color: #000000;"></button>
@@ -1890,7 +1891,7 @@
                                         <button class="color-btn" data-td-fs-bg-color="#8800FF" style="background-color: #8800FF;"></button>
                                     </div>
                                 </div>
-                                <label class="color-picker-icon-btn" for="td-custom-fs-bg-color-picker" style="margin-top: 8px;">
+                                <label class="color-picker-icon-btn settings-color-picker-icon" for="td-custom-fs-bg-color-picker">
                                     <svg width="24" height="24" viewBox="-0.4 -5 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polygon points="18 2 22 6 12 16 8 16 8 12 18 2" style="position: relative; z-index: 2;"></polygon>
                                         <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34" style="position: relative; z-index: 2;"></path>
@@ -1904,8 +1905,8 @@
                     <!-- Fullscreen Opacity -->
                     <div class="timer-input-group">
                         <label><span data-i18n="timeDisplay.opacityLabel">透明度：当前</span> <span id="td-fs-opacity-value">95</span>%</label>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <input type="range" id="td-fs-opacity-slider" min="10" max="100" value="95" class="slider" style="flex: 1;">
+                        <div class="settings-input-row">
+                            <input type="range" id="td-fs-opacity-slider" min="10" max="100" value="95" class="slider">
                             <input type="number" id="td-fs-opacity-input" min="10" max="100" value="95" class="size-input">
                         </div>
                     </div>
@@ -1918,7 +1919,7 @@
 
     <!-- Timer Settings Modal -->
     <div id="timer-settings-modal">
-        <div class="timer-modal-content">
+        <div class="timer-modal-content settings-panel-modal-content">
             <div class="timer-modal-header">
                 <h2 data-i18n="timer.settingsTitle">计时器设置</h2>
                 <button id="timer-settings-close-btn" class="modal-close-btn">

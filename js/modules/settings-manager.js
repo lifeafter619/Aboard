@@ -15,7 +15,7 @@ class SettingsManager {
         this.controlPosition = localStorage.getItem('controlPosition') || 'top-right';
         this.edgeSnapEnabled = localStorage.getItem('edgeSnapEnabled') !== 'false';
         this.touchZoomEnabled = localStorage.getItem('touchZoomEnabled') !== 'false';
-        this.updatePreference = localStorage.getItem('updatePreference') === 'auto' ? 'auto' : 'prompt';
+        this.updatePreference = this.normalizeUpdatePreference(localStorage.getItem('updatePreference'));
         this.unlimitedZoom = localStorage.getItem('unlimitedZoom') === 'true';
         this.infiniteCanvas = false; // Always use pagination mode
         this.showZoomControls = localStorage.getItem('showZoomControls') !== 'false';
@@ -775,6 +775,26 @@ class SettingsManager {
             timeDisplayManager.updatePosition();
         }
     }
+
+    normalizeUpdatePreference(value) {
+        return value === 'auto' ? 'auto' : 'prompt';
+    }
+
+    syncUpdatePreferenceButtons() {
+        document.querySelectorAll('.update-preference-option-btn').forEach(btn => {
+            const isActive = btn.dataset.updatePreference === this.updatePreference;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+    }
+
+    setUpdatePreference(value) {
+        this.updatePreference = this.normalizeUpdatePreference(value);
+        localStorage.setItem('updatePreference', this.updatePreference);
+        this.syncUpdatePreferenceButtons();
+        window.pwaManager?.setUpdatePreference?.(this.updatePreference);
+        return this.updatePreference;
+    }
     
     loadSettings() {
         document.getElementById('toolbar-size-slider').value = this.toolbarSize;
@@ -791,10 +811,7 @@ class SettingsManager {
         
         document.getElementById('edge-snap-checkbox').checked = this.edgeSnapEnabled;
         document.getElementById('touch-zoom-checkbox').checked = this.touchZoomEnabled;
-        const updatePreferenceSelect = document.getElementById('update-preference-select');
-        if (updatePreferenceSelect) {
-            updatePreferenceSelect.value = this.updatePreference;
-        }
+        this.setUpdatePreference(this.updatePreference);
         document.getElementById('unlimited-zoom-checkbox').checked = this.unlimitedZoom;
         document.getElementById('show-zoom-controls-checkbox').checked = this.showZoomControls;
         const showImportExportBtnCheckbox = document.getElementById('show-import-export-btn-checkbox');
@@ -984,7 +1001,10 @@ class SettingsManager {
             // Handle language change without page reload
             languageSelect.addEventListener('change', async (e) => {
                 const newLocale = e.target.value;
-                await window.i18n.changeLocale(newLocale);
+                const didChangeLocale = await window.i18n.changeLocale(newLocale);
+                if (didChangeLocale === false) {
+                    e.target.value = window.i18n.getCurrentLocale();
+                }
                 // No reload - translations are applied dynamically
             });
         }
@@ -1259,7 +1279,6 @@ class SettingsManager {
         }
 
         // Apply changes visually
-        window.pwaManager?.setUpdatePreference?.(this.updatePreference);
         this.loadSettings();
     }
 }

@@ -906,11 +906,11 @@ function setupSettingsListeners() {
             localStorage.setItem('touchZoomEnabled', e.target.checked);
         });
 
-        bindIfPresent(document.getElementById('update-preference-select'), 'change', (e) => {
-            const nextPreference = e.target.value === 'auto' ? 'auto' : 'prompt';
-            this.settingsManager.updatePreference = nextPreference;
-            localStorage.setItem('updatePreference', nextPreference);
-            window.pwaManager?.setUpdatePreference?.(nextPreference);
+        document.querySelectorAll('.update-preference-option-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const nextPreference = e.currentTarget?.dataset?.updatePreference;
+                this.settingsManager.setUpdatePreference(nextPreference);
+            });
         });
 
         bindIfPresent(document.getElementById('unlimited-zoom-checkbox'), 'change', (e) => {

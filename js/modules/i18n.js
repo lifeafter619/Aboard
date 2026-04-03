@@ -19,6 +19,8 @@ class I18n {
         this.fallbackTranslations = {};
         this.fallbackLocale = 'zh-CN';
         this.localeOverrides = null;
+        this.coreLocales = ['zh-CN', 'en-US'];
+        this.downloadedLocalesStorageKey = 'aboardDownloadedLocales';
         
         // Available languages
         this.availableLocales = {
@@ -38,7 +40,7 @@ class I18n {
      */
     async init() {
         // Load saved language preference or detect browser language
-        this.currentLocale = this.getSavedLocale() || this.detectBrowserLocale();
+        this.currentLocale = this.resolveInitialLocale();
         
         // Load translation files
         await this.loadTranslations();
@@ -64,29 +66,89 @@ class I18n {
         localStorage.setItem('locale', locale);
     }
 
+    isCoreLocale(locale) {
+        return this.coreLocales.includes(locale);
+    }
+
+    getDownloadedLocales() {
+        try {
+            const raw = localStorage.getItem(this.downloadedLocalesStorageKey);
+            if (!raw) {
+                return [];
+            }
+
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) {
+                return [];
+            }
+
+            return Array.from(new Set(
+                parsed.filter(locale => this.availableLocales[locale] && !this.isCoreLocale(locale))
+            ));
+        } catch (error) {
+            console.warn('Failed to parse downloaded locales, ignoring cache:', error);
+            return [];
+        }
+    }
+
+    saveDownloadedLocales(locales) {
+        const normalizedLocales = Array.from(new Set(
+            (Array.isArray(locales) ? locales : [])
+                .filter(locale => this.availableLocales[locale] && !this.isCoreLocale(locale))
+        ));
+        localStorage.setItem(this.downloadedLocalesStorageKey, JSON.stringify(normalizedLocales));
+    }
+
+    markLocaleDownloaded(locale) {
+        if (!this.availableLocales[locale] || this.isCoreLocale(locale)) {
+            return;
+        }
+
+        const downloadedLocales = this.getDownloadedLocales();
+        if (!downloadedLocales.includes(locale)) {
+            downloadedLocales.push(locale);
+            this.saveDownloadedLocales(downloadedLocales);
+        }
+    }
+
+    canUseLocaleImmediately(locale) {
+        if (!locale || !this.availableLocales[locale]) {
+            return false;
+        }
+
+        return this.isCoreLocale(locale) || this.getDownloadedLocales().includes(locale);
+    }
+
+    resolveInitialLocale() {
+        const savedLocale = this.getSavedLocale();
+        if (this.canUseLocaleImmediately(savedLocale)) {
+            return savedLocale;
+        }
+
+        return this.detectBrowserLocale();
+    }
+
+    getLocaleDownloadPrompt(locale) {
+        const localeName = this.availableLocales[locale] || locale;
+        const promptLocale = this.currentLocale === 'en-US' ? 'en-US' : 'zh-CN';
+        if (promptLocale === 'en-US') {
+            return `Download the ${localeName} language pack now?`;
+        }
+
+        return `切换到 ${localeName} 需要先下载语言包，现在下载吗？`;
+    }
+
     /**
      * Detect browser language
      */
     detectBrowserLocale() {
-        // Try navigator.languages first (ordered preference list)
         const languages = navigator.languages || [navigator.language || navigator.userLanguage];
         
         for (const lang of languages) {
             if (!lang) continue;
-
-            // Check exact match
-            if (this.availableLocales[lang]) {
-                return lang;
-            }
-
-            // Check language family match
             const langFamily = lang.split('-')[0];
-            const matchingLocale = Object.keys(this.availableLocales).find(
-                locale => locale.startsWith(langFamily)
-            );
-
-            if (matchingLocale) {
-                return matchingLocale;
+            if (langFamily === 'en') {
+                return 'en-US';
             }
         }
         
@@ -122,11 +184,30 @@ class I18n {
                 return JSON.parse(JSON.stringify(source));
             };
 
-            const fallbackLocaleTranslations = await loadLocaleFile(this.fallbackLocale) || {};
-            let effectiveLocale = this.currentLocale;
+            const requestedLocale = this.currentLocale;
+            const fallbackLocalePromise = loadLocaleFile(this.fallbackLocale);
+            const requestedLocalePromise = requestedLocale === this.fallbackLocale
+                ? fallbackLocalePromise
+                : loadLocaleFile(requestedLocale);
+            const localeOverridesPromise = this.localeOverrides === null
+                ? loadScriptData('js/locales/overrides.js', 'locale_translation_overrides')
+                : Promise.resolve(this.localeOverrides);
+
+            const [
+                fallbackLocaleTranslationsResult,
+                requestedLocaleTranslationsResult,
+                localeOverrides
+            ] = await Promise.all([
+                fallbackLocalePromise,
+                requestedLocalePromise,
+                localeOverridesPromise
+            ]);
+
+            const fallbackLocaleTranslations = fallbackLocaleTranslationsResult || {};
+            let effectiveLocale = requestedLocale;
             let localeTranslations = effectiveLocale === this.fallbackLocale
                 ? cloneTranslations(fallbackLocaleTranslations)
-                : await loadLocaleFile(effectiveLocale);
+                : requestedLocaleTranslationsResult;
 
             if (!localeTranslations) {
                 console.warn(`Failed to load ${this.currentLocale}, falling back to ${this.fallbackLocale}`);
@@ -140,8 +221,12 @@ class I18n {
                 ? this.fallbackTranslations
                 : cloneTranslations(localeTranslations || {});
 
+            if (!this.isCoreLocale(effectiveLocale)) {
+                this.markLocaleDownloaded(effectiveLocale);
+            }
+
             if (this.localeOverrides === null) {
-                this.localeOverrides = await loadScriptData('js/locales/overrides.js', 'locale_translation_overrides') || {};
+                this.localeOverrides = localeOverrides || {};
             }
             this.mergeTranslations(this.fallbackTranslations, this.localeOverrides[this.fallbackLocale]);
             if (effectiveLocale !== this.fallbackLocale) {
@@ -150,16 +235,19 @@ class I18n {
 
             // Load help translations
             try {
-                const fallbackHelpTranslations = await loadScriptData(`js/locales/help/${this.fallbackLocale}.js`, 'help_translations');
+                const [fallbackHelpTranslations, helpTranslations] = await Promise.all([
+                    loadScriptData(`js/locales/help/${this.fallbackLocale}.js`, 'help_translations'),
+                    effectiveLocale !== this.fallbackLocale
+                        ? loadScriptData(`js/locales/help/${effectiveLocale}.js`, 'help_translations')
+                        : Promise.resolve(null)
+                ]);
+
                 if (fallbackHelpTranslations) {
                     this.mergeTranslations(this.fallbackTranslations, fallbackHelpTranslations);
                 }
 
-                if (effectiveLocale !== this.fallbackLocale) {
-                    const helpTranslations = await loadScriptData(`js/locales/help/${effectiveLocale}.js`, 'help_translations');
-                    if (helpTranslations) {
-                        this.mergeTranslations(this.translations, helpTranslations);
-                    }
+                if (helpTranslations) {
+                    this.mergeTranslations(this.translations, helpTranslations);
                 }
             } catch (e) {
                 console.warn('Failed to load help translations', e);
@@ -1288,29 +1376,51 @@ class I18n {
     async changeLocale(newLocale) {
         if (!this.availableLocales[newLocale]) {
             console.error(`Locale ${newLocale} not supported`);
-            return;
+            return false;
         }
-        
+
+        if (newLocale === this.currentLocale) {
+            return true;
+        }
+
+        if (!this.canUseLocaleImmediately(newLocale)) {
+            const shouldDownload = typeof window.confirm === 'function'
+                ? window.confirm(this.getLocaleDownloadPrompt(newLocale))
+                : true;
+            if (!shouldDownload) {
+                return false;
+            }
+        }
+
         const oldLocale = this.currentLocale;
         this.currentLocale = newLocale;
-        this.saveLocale(newLocale);
-        
-        // Reload translations
+
         await this.loadTranslations();
-        
-        // Reapply translations
+
+        if (this.currentLocale !== newLocale) {
+            this.currentLocale = oldLocale;
+            await this.loadTranslations();
+            this.applyTranslations();
+            document.documentElement.lang = oldLocale;
+            return false;
+        }
+
+        this.saveLocale(newLocale);
+        this.markLocaleDownloaded(newLocale);
         this.applyTranslations();
         
         // Update HTML lang attribute
-        document.documentElement.lang = newLocale;
+        document.documentElement.lang = this.currentLocale;
         
         // Dispatch event for other modules to react to language change
         window.dispatchEvent(new CustomEvent('localeChanged', {
             detail: {
-                locale: newLocale,
+                locale: this.currentLocale,
                 oldLocale: oldLocale
             }
         }));
+
+        return true;
     }
 
     /**

@@ -434,7 +434,7 @@ class RandomPickerManager {
         modal.id = 'random-picker-settings-modal';
         modal.className = 'modal';
         modal.innerHTML = `
-            <div class="modal-content random-picker-modal-content">
+            <div class="modal-content random-picker-modal-content settings-panel-modal-content">
                 <div class="modal-header">
                     <h2>${window.i18n.t('randomPicker.settingsTitle')}</h2>
                     <button class="modal-close-btn">

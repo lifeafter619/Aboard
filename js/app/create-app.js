@@ -55,6 +55,24 @@ function initializeDeferredBoardFeatures(app, win) {
     }
   }
 
+  if (!drawingBoard.timeDisplayManager) {
+    const timeDisplayDependencies = window.AboardBoardConstruction?.createTimeDisplayDependencies({
+      timeDisplayManager: drawingBoard.timeDisplayManager,
+      timeDisplayControls: drawingBoard.timeDisplayControls,
+      timeDisplaySettingsModal: drawingBoard.timeDisplaySettingsModal
+    }, drawingBoard.settingsManager || app.boardDependencies?.settingsManager);
+
+    if (timeDisplayDependencies?.timeDisplayManager) {
+      drawingBoard.timeDisplayManager = timeDisplayDependencies.timeDisplayManager;
+      drawingBoard.timeDisplayControls = timeDisplayDependencies.timeDisplayControls || drawingBoard.timeDisplayControls;
+      drawingBoard.timeDisplaySettingsModal = timeDisplayDependencies.timeDisplaySettingsModal || drawingBoard.timeDisplaySettingsModal;
+      app.boardDependencies = {
+        ...app.boardDependencies,
+        ...timeDisplayDependencies
+      };
+    }
+  }
+
   drawingBoard.uploadedImages = drawingBoard.loadUploadedImages?.() || drawingBoard.uploadedImages || [];
 }
 
@@ -188,12 +206,14 @@ async function startPostVisibleOrchestration(app, { win = window, doc = document
   }
 
   app.postVisibleOrchestrationPromise = (async () => {
+    const postVisibleStartupPromise = startPostVisibleStartup(app, { win, doc });
+    await postVisibleStartupPromise;
     const gateResult = await runStartupUpdateGate(app, { win, doc });
     if (!shouldContinuePostVisibleStartup(gateResult)) {
       return app;
     }
 
-    await startPostVisibleStartup(app, { win, doc });
+    await postVisibleStartupPromise;
     await runImmediatePostVisibleSetup(app);
     return app;
   })().catch((error) => {

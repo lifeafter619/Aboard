@@ -19,9 +19,9 @@ window.locale_translation_overrides = (() => {
             settings: {
                 general: {
                     updatePreference: '更新方式',
-                    updatePreferenceHint: '检测到新版本时，默认推荐哪种刷新方式',
-                    updatePreferencePrompt: '默认推荐“空闲时刷新更新”',
-                    updatePreferenceAuto: '默认推荐“立即刷新更新”'
+                    updatePreferenceHint: '检测到新版本时，选择更新方式',
+                    updatePreferencePrompt: '空闲时更新',
+                    updatePreferenceAuto: '立即更新'
                 }
             }
         },
@@ -29,10 +29,10 @@ window.locale_translation_overrides = (() => {
             settings: {
                 exportFailed: 'Failed to export configuration',
                 general: {
-                    updatePreference: 'Update Behavior',
-                    updatePreferenceHint: 'Choose which refresh option is recommended by default when an update is ready',
-                    updatePreferencePrompt: 'Prefer Refresh When Idle',
-                    updatePreferenceAuto: 'Prefer Refresh Now'
+                    updatePreference: 'Update behavior',
+                    updatePreferenceHint: 'Choose how updates should be applied when a new version is ready',
+                    updatePreferencePrompt: 'Update when idle',
+                    updatePreferenceAuto: 'Update now'
                 },
                 diff: {
                     current: 'Current',
@@ -69,9 +69,9 @@ window.locale_translation_overrides = (() => {
                     showFont: '顯示字體',
                     fontPreviewSample: '中文字體預覽 ABC abc 123',
                     updatePreference: '更新方式',
-                    updatePreferenceHint: '偵測到新版本時，預設推薦哪種重新整理方式',
-                    updatePreferencePrompt: '預設推薦「空閒時重新整理更新」',
-                    updatePreferenceAuto: '預設推薦「立即重新整理更新」',
+                    updatePreferenceHint: '偵測到新版本時，選擇更新方式',
+                    updatePreferencePrompt: '空閒時更新',
+                    updatePreferenceAuto: '立即更新',
                     fonts: {
                         notoSansSC: '思源黑體',
                         notoSerifSC: '思源宋體',
@@ -154,9 +154,9 @@ window.locale_translation_overrides = (() => {
                     showFont: 'フォントを表示',
                     fontPreviewSample: '日本語フォントプレビュー ABC abc 123',
                     updatePreference: '更新方法',
-                    updatePreferenceHint: 'アップデートの準備ができたとき、どちらの再読み込み方法を既定でおすすめするかを選びます',
-                    updatePreferencePrompt: '既定で「空き時間に更新」',
-                    updatePreferenceAuto: '既定で「今すぐ更新」',
+                    updatePreferenceHint: 'アップデートの準備ができたとき、更新方法を選びます',
+                    updatePreferencePrompt: '空き時間に更新',
+                    updatePreferenceAuto: '今すぐ更新',
                     touchZoom: 'タッチズーム',
                     touchZoomHint: '二本指のピンチ操作でキャンバスを拡大・縮小できるようにします',
                     fonts: {
@@ -276,9 +276,9 @@ window.locale_translation_overrides = (() => {
                     showFont: '글꼴 표시',
                     fontPreviewSample: '한글 글꼴 미리보기 ABC abc 123',
                     updatePreference: '업데이트 방식',
-                    updatePreferenceHint: '업데이트 준비 시 기본으로 어느 새로고침 방식을 우선 추천할지 선택합니다',
-                    updatePreferencePrompt: '기본은 "한가할 때 새로고침"',
-                    updatePreferenceAuto: '기본은 "지금 새로고침"',
+                    updatePreferenceHint: '업데이트 준비 시 적용할 방식을 선택합니다',
+                    updatePreferencePrompt: '한가할 때 업데이트',
+                    updatePreferenceAuto: '지금 업데이트',
                     touchZoom: '터치 확대/축소',
                     touchZoomHint: '두 손가락 핀치 제스처로 캔버스를 확대/축소할 수 있습니다',
                     fonts: {
@@ -398,9 +398,9 @@ window.locale_translation_overrides = (() => {
                     showFont: 'Afficher la police',
                     fontPreviewSample: 'Apercu de police ABC abc 123',
                     updatePreference: 'Mode de mise a jour',
-                    updatePreferenceHint: 'Choisit quelle option d\'actualisation est recommandee par defaut lorsqu\'une mise a jour est prete',
-                    updatePreferencePrompt: 'Preferer l\'actualisation au repos',
-                    updatePreferenceAuto: 'Preferer l\'actualisation immediate',
+                    updatePreferenceHint: 'Choisit comment appliquer une mise a jour lorsqu\'elle est prete',
+                    updatePreferencePrompt: 'Mettre a jour au repos',
+                    updatePreferenceAuto: 'Mettre a jour maintenant',
                     touchZoom: 'Zoom tactile',
                     touchZoomHint: 'Autoriser le zoom de la toile par pincement a deux doigts',
                     fonts: {
@@ -547,9 +547,9 @@ window.locale_translation_overrides = (() => {
                     showFont: 'Mostrar fuente',
                     fontPreviewSample: 'Vista previa de fuente ABC abc 123',
                     updatePreference: 'Modo de actualizacion',
-                    updatePreferenceHint: 'Elige que opcion de recarga se recomienda por defecto cuando la actualizacion este lista',
-                    updatePreferencePrompt: 'Preferir recargar en inactividad',
-                    updatePreferenceAuto: 'Preferir recargar ahora',
+                    updatePreferenceHint: 'Elige como aplicar la actualizacion cuando este lista',
+                    updatePreferencePrompt: 'Actualizar en inactividad',
+                    updatePreferenceAuto: 'Actualizar ahora',
                     touchZoom: 'Zoom tactil',
                     touchZoomHint: 'Permite acercar o alejar el lienzo con dos dedos',
                     fonts: {
@@ -696,9 +696,9 @@ window.locale_translation_overrides = (() => {
                     showFont: 'Schrift anzeigen',
                     fontPreviewSample: 'Schriftvorschau ABC abc 123',
                     updatePreference: 'Update-Verhalten',
-                    updatePreferenceHint: 'Legt fest, welche Aktualisierungsoption standardmassig empfohlen wird, sobald ein Update bereitsteht',
-                    updatePreferencePrompt: 'Bevorzuge Aktualisierung im Leerlauf',
-                    updatePreferenceAuto: 'Bevorzuge sofortige Aktualisierung',
+                    updatePreferenceHint: 'Legt fest, wie ein Update angewendet wird, sobald es bereitsteht',
+                    updatePreferencePrompt: 'Im Leerlauf aktualisieren',
+                    updatePreferenceAuto: 'Jetzt aktualisieren',
                     touchZoom: 'Touch-Zoom',
                     touchZoomHint: 'Erlaubt das Zoomen der Leinwand mit Zwei-Finger-Gesten',
                     fonts: {

@@ -1,5 +1,7 @@
 import { LEGACY_STARTUP_SCRIPTS } from './legacy-manifest.js';
 
+const pendingClassicScriptLoads = new WeakMap();
+
 function toAbsoluteUrl(doc, src) {
   return new URL(src, doc.baseURI).href;
 }
@@ -9,7 +11,23 @@ function findExistingScript(doc, src) {
   return Array.from(doc.scripts).find((script) => script.src && toAbsoluteUrl(doc, script.getAttribute('src')) === targetUrl);
 }
 
+function getPendingScriptLoadMap(doc) {
+  let pendingLoads = pendingClassicScriptLoads.get(doc);
+  if (!pendingLoads) {
+    pendingLoads = new Map();
+    pendingClassicScriptLoads.set(doc, pendingLoads);
+  }
+  return pendingLoads;
+}
+
 export function loadClassicScript(src, { doc = document } = {}) {
+  const targetUrl = toAbsoluteUrl(doc, src);
+  const pendingLoads = getPendingScriptLoadMap(doc);
+
+  if (pendingLoads.has(targetUrl)) {
+    return pendingLoads.get(targetUrl);
+  }
+
   const existingScript = findExistingScript(doc, src);
 
   if (existingScript?.dataset.loaded === 'true') {
@@ -20,7 +38,7 @@ export function loadClassicScript(src, { doc = document } = {}) {
     existingScript.remove();
   }
 
-  return new Promise((resolve, reject) => {
+  const loadPromise = new Promise((resolve, reject) => {
     const script = doc.createElement('script');
 
     const cleanup = () => {
@@ -48,11 +66,16 @@ export function loadClassicScript(src, { doc = document } = {}) {
     script.defer = true;
     script.dataset.loaded = 'false';
     doc.head.appendChild(script);
+  }).finally(() => {
+    if (pendingLoads.get(targetUrl) === loadPromise) {
+      pendingLoads.delete(targetUrl);
+    }
   });
+
+  pendingLoads.set(targetUrl, loadPromise);
+  return loadPromise;
 }
 
 export async function loadLegacyScripts(scripts = LEGACY_STARTUP_SCRIPTS, options = {}) {
-  for (const src of scripts) {
-    await loadClassicScript(src, options);
-  }
+  await Promise.all(scripts.map((src) => loadClassicScript(src, options)));
 }

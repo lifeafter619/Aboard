@@ -1,21 +1,22 @@
 export const VISIBLE_CORE_SERVICE_SCRIPTS = [
-  'js/modules/i18n.js',
-  'js/modules/pwa-manager.js'
+  'js/modules/i18n.js'
 ];
 
-export const POST_VISIBLE_SERVICE_SCRIPTS = [];
+export const POST_VISIBLE_SERVICE_SCRIPTS = [
+  'js/modules/pwa-manager.js'
+];
 
 export const VISIBLE_CORE_BOARD_DEPENDENCY_SCRIPTS = [
   'js/collapsible.js',
   'js/modules/settings-manager.js',
-  'js/modules/storage-manager.js',
-  'js/time-display.js',
-  'js/modules/time-display-controls.js',
-  'js/modules/time-display-settings.js'
+  'js/modules/storage-manager.js'
 ];
 
 export const POST_VISIBLE_BOARD_DEPENDENCY_SCRIPTS = [
-  'js/modules/help-system.js'
+  'js/modules/help-system.js',
+  'js/time-display.js',
+  'js/modules/time-display-controls.js',
+  'js/modules/time-display-settings.js'
 ];
 
 export const VISIBLE_CORE_STARTUP_SCRIPTS = [
