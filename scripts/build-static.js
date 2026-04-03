@@ -83,11 +83,12 @@ async function minifyContent(relativePath, content) {
     }
 
     if (ext === '.js') {
-        const isModule = /^\s*import\s.+from\s+['"]/m.test(content)
-            || /^\s*export\s+(?:\{|\*|default\b|const\b|class\b|function\b|let\b|var\b)/m.test(content);
-        if (!isModule) {
+        if (normalizedPath.endsWith('.min.js')) {
             return content;
         }
+
+        const isModule = /^\s*import\s.+from\s+['"]/m.test(content)
+            || /^\s*export\s+(?:\{|\*|default\b|const\b|class\b|function\b|let\b|var\b)/m.test(content);
 
         const result = await minifyJs(content, {
             compress: {
@@ -97,7 +98,7 @@ async function minifyContent(relativePath, content) {
                 comments: false
             },
             mangle: true,
-            module: true,
+            module: isModule,
             sourceMap: false,
             toplevel: false
         });

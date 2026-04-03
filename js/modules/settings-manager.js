@@ -15,6 +15,7 @@ class SettingsManager {
         this.controlPosition = localStorage.getItem('controlPosition') || 'top-right';
         this.edgeSnapEnabled = localStorage.getItem('edgeSnapEnabled') !== 'false';
         this.touchZoomEnabled = localStorage.getItem('touchZoomEnabled') !== 'false';
+        this.updatePreference = localStorage.getItem('updatePreference') === 'auto' ? 'auto' : 'prompt';
         this.unlimitedZoom = localStorage.getItem('unlimitedZoom') === 'true';
         this.infiniteCanvas = false; // Always use pagination mode
         this.showZoomControls = localStorage.getItem('showZoomControls') !== 'false';
@@ -790,6 +791,10 @@ class SettingsManager {
         
         document.getElementById('edge-snap-checkbox').checked = this.edgeSnapEnabled;
         document.getElementById('touch-zoom-checkbox').checked = this.touchZoomEnabled;
+        const updatePreferenceSelect = document.getElementById('update-preference-select');
+        if (updatePreferenceSelect) {
+            updatePreferenceSelect.value = this.updatePreference;
+        }
         document.getElementById('unlimited-zoom-checkbox').checked = this.unlimitedZoom;
         document.getElementById('show-zoom-controls-checkbox').checked = this.showZoomControls;
         const showImportExportBtnCheckbox = document.getElementById('show-import-export-btn-checkbox');
@@ -992,6 +997,7 @@ class SettingsManager {
             controlPosition: this.controlPosition,
             edgeSnapEnabled: this.edgeSnapEnabled,
             touchZoomEnabled: this.touchZoomEnabled,
+            updatePreference: this.updatePreference,
             unlimitedZoom: this.unlimitedZoom,
             showZoomControls: this.showZoomControls,
             showImportExportBtn: this.showImportExportBtn,
@@ -1173,6 +1179,7 @@ class SettingsManager {
             'controlPosition': 'settings.general.controlPosition',
             'edgeSnapEnabled': 'settings.general.edgeSnap',
             'touchZoomEnabled': 'settings.general.touchZoom',
+            'updatePreference': 'settings.general.updatePreference',
             'unlimitedZoom': 'settings.canvas.unlimitedZoom',
             'showZoomControls': 'settings.display.showZoomControls',
             'showImportExportBtn': 'settings.display.showImportExportBtn',
@@ -1199,7 +1206,7 @@ class SettingsManager {
     applySettings(newSettings) {
         const keys = [
             'toolbarSize', 'configScale', 'controlPosition', 'edgeSnapEnabled',
-            'touchZoomEnabled', 'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn', 'keepMorePanelOpen',
+            'touchZoomEnabled', 'updatePreference', 'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn', 'keepMorePanelOpen',
             'canvasWidth', 'canvasHeight', 'canvasPreset', 'themeColor', 'globalFont',
             'patternPreferences'
         ];
@@ -1252,6 +1259,7 @@ class SettingsManager {
         }
 
         // Apply changes visually
+        window.pwaManager?.setUpdatePreference?.(this.updatePreference);
         this.loadSettings();
     }
 }

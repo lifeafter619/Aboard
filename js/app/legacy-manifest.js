@@ -1,10 +1,9 @@
 export const VISIBLE_CORE_SERVICE_SCRIPTS = [
-  'js/modules/i18n.js'
-];
-
-export const POST_VISIBLE_SERVICE_SCRIPTS = [
+  'js/modules/i18n.js',
   'js/modules/pwa-manager.js'
 ];
+
+export const POST_VISIBLE_SERVICE_SCRIPTS = [];
 
 export const VISIBLE_CORE_BOARD_DEPENDENCY_SCRIPTS = [
   'js/collapsible.js',

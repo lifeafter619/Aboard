@@ -105,10 +105,23 @@ function scheduleMoreFeaturePreload(board) {
     }
     board.moreFeaturePreloadScheduled = true;
 
+    const runWhenIdle = () => {
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(() => {
+                void preloadMoreFeatureManagers(board);
+            }, { timeout: 1500 });
+            return;
+        }
+
+        window.setTimeout(() => {
+            void preloadMoreFeatureManagers(board);
+        }, 600);
+    };
+
     const afterFirstPaint = () => {
         window.requestAnimationFrame(() => {
             window.requestAnimationFrame(() => {
-                void preloadMoreFeatureManagers(board);
+                runWhenIdle();
             });
         });
     };

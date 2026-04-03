@@ -233,11 +233,14 @@ window.translations = {
         preference: '背景图案偏好',
         preferenceHint: '选择在属性栏中显示的图案',
         upload: '上传',
+        storageFull: '存储空间不足，无法保存更多图片。请清除一些旧图片。',
+        saveError: '保存图片失败，存储空间可能不足。',
         moveCoordinateOrigin: '移动坐标原点',
         moveCoordinateOriginHint: '点击按钮后，可在画布上拖动移动坐标原点',
         coordinateTools: '坐标设置',
         showTicks: '显示刻度',
         showLabels: '显示标签',
+        showOrigin: '显示原点',
         showPointLabels: '显示点标签',
         connectPoints: '点间连线',
         snapToGrid: '吸附网格',
@@ -808,6 +811,10 @@ window.translations = {
         selectAtLeastOnePage: '请至少选择一页',
         paginationRequired: '需要分页',
         noPages: '没有可用页面'
+    },
+
+    gif: {
+        loopCountPrompt: '设置循环次数（0 为无限循环）：'
     },
 
     // Timezone names

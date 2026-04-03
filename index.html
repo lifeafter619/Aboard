@@ -437,23 +437,6 @@
                         </svg>
                         <span class="pattern-option-label upload-text" data-i18n="background.upload">上传</span>
                     </button>
-                    <button id="coordinate-settings-toggle-btn" type="button" class="pattern-option-btn coordinate-settings-toggle-btn" aria-expanded="false" style="display: none;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="3"></circle>
-                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                        </svg>
-                        <span data-i18n="background.coordinateTools">坐标设置</span>
-                    </button>
-                    <button id="coordinate-point-toggle-btn" type="button" class="pattern-option-btn" aria-expanded="false" style="display: none;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="6" cy="18" r="2"></circle>
-                            <circle cx="12" cy="8" r="2"></circle>
-                            <circle cx="18" cy="14" r="2"></circle>
-                            <path d="M7.8 16.8 10.2 9.2"></path>
-                            <path d="M13.8 9.2 16.2 12.8"></path>
-                        </svg>
-                        <span data-i18n="background.drawPointLine">绘制点线</span>
-                    </button>
                     <input type="file" id="bg-image-upload" accept="image/*" style="display: none;">
                 </div>
                 <div class="compact-sliders">
@@ -801,6 +784,14 @@
                                 <span data-i18n="settings.general.touchZoom">触控缩放</span>
                             </label>
                             <p class="settings-hint" data-i18n="settings.general.touchZoomHint">允许使用双指捏合手势缩放画布</p>
+                        </div>
+                        <div class="settings-group">
+                            <label for="update-preference-select" data-i18n="settings.general.updatePreference">更新方式</label>
+                            <p class="settings-hint" data-i18n="settings.general.updatePreferenceHint">检测到新版本时，默认提示后再决定是否更新</p>
+                            <select id="update-preference-select" class="format-select">
+                                <option value="prompt" data-i18n="settings.general.updatePreferencePrompt">提示后更新</option>
+                                <option value="auto" data-i18n="settings.general.updatePreferenceAuto">立即更新</option>
+                            </select>
                         </div>
                         <div class="settings-group">
                             <label class="checkbox-label">

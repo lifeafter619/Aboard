@@ -50,6 +50,7 @@ const CORE_ASSETS = [
   './js/app/create-board-dependencies.js',
   './js/app/create-board-runtime-dependencies.js',
   './js/app/legacy-manifest.js',
+  './js/app/startup-update-policy.js',
   './js/app/legacy-script-loader.js',
   './js/app/resolve-legacy-constructor.js',
   './js/legacy/runtime-bridge.js',

@@ -300,8 +300,6 @@ class DrawingBoard {
         
         // Check for saved canvas data and show recovery dialog
         this.checkForRecovery();
-        this.scheduleMoreFeaturePreload();
-        this.scheduleDeferredUiInitialization();
     }
 
     async loadManagerConstructor(name) {

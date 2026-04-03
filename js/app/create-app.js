@@ -9,6 +9,12 @@ import {
   VISIBLE_CORE_SERVICE_SCRIPTS,
   VISIBLE_CORE_STARTUP_SCRIPTS
 } from './legacy-manifest.js';
+import {
+  STARTUP_UPDATE_ACTIONS,
+  STARTUP_UPDATE_USER_CHOICES,
+  resolveStartupUpdateAction,
+  shouldContinuePostVisibleStartup
+} from './startup-update-policy.js';
 import { createAppServices } from './create-app-services.js';
 import { loadLegacyScripts } from './legacy-script-loader.js';
 import { resolveLegacyConstructor } from './resolve-legacy-constructor.js';
@@ -34,18 +40,6 @@ function scheduleAfterFirstPaint(win, callback) {
   win.setTimeout(callback, 32);
 }
 
-async function warmVisibleManagers(drawingBoard) {
-  await Promise.allSettled([
-    drawingBoard.getExportManager?.(),
-    drawingBoard.getProjectManager?.(),
-    drawingBoard.getTimerManager?.(),
-    drawingBoard.getInsertImageManager?.(),
-    drawingBoard.getInsertTextManager?.(),
-    drawingBoard.getRandomPickerManager?.(),
-    drawingBoard.getScoreboardManager?.()
-  ]);
-}
-
 function initializeDeferredBoardFeatures(app, win) {
   const { drawingBoard } = app;
   if (!drawingBoard) {
@@ -62,6 +56,40 @@ function initializeDeferredBoardFeatures(app, win) {
   }
 
   drawingBoard.uploadedImages = drawingBoard.loadUploadedImages?.() || drawingBoard.uploadedImages || [];
+}
+
+async function runImmediatePostVisibleSetup(app) {
+  if (app.immediatePostVisibleSetupPromise) {
+    return app.immediatePostVisibleSetupPromise;
+  }
+
+  app.immediatePostVisibleSetupPromise = (async () => {
+    const tasks = [
+      ['preload more feature managers', () => app.drawingBoard?.preloadMoreFeatureManagers?.()],
+      ['prepare settings surface', () => app.drawingBoard?.ensureSettingsSurfaceReady?.()],
+      ['prepare shape tool listeners', () => app.drawingBoard?.ensureShapeToolConfigListenersInitialized?.()],
+      ['prepare select tool listeners', () => app.drawingBoard?.ensureSelectToolConfigListenersInitialized?.()],
+      ['prepare background panel', () => app.drawingBoard?.ensureBackgroundPanelPrepared?.()],
+      ['prepare more feature listeners', () => app.drawingBoard?.ensureMoreFeatureToolConfigListenersInitialized?.()]
+    ];
+
+    const results = await Promise.allSettled(
+      tasks.map(([_, task]) => Promise.resolve().then(task))
+    );
+
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.warn(`Aboard ${tasks[index][0]} failed:`, result.reason);
+      }
+    });
+
+    return app;
+  })().catch((error) => {
+    app.immediatePostVisibleSetupPromise = null;
+    throw error;
+  });
+
+  return app.immediatePostVisibleSetupPromise;
 }
 
 async function startPostVisibleStartup(app, { win = window, doc = document } = {}) {
@@ -82,7 +110,6 @@ async function startPostVisibleStartup(app, { win = window, doc = document } = {
     app.context = createAppContext(app.bridge, app.services);
     app.bridge.setPwaManager?.(app.services.pwaManager);
     initializeDeferredBoardFeatures(app, win);
-    app.drawingBoard?.scheduleDeferredUiInitialization?.();
     return app;
   })().catch((error) => {
     app.postVisibleStartupPromise = null;
@@ -90,6 +117,107 @@ async function startPostVisibleStartup(app, { win = window, doc = document } = {
   });
 
   return app.postVisibleStartupPromise;
+}
+
+async function runStartupUpdateGate(app, { win = window } = {}) {
+  const pwaManager = app.services?.pwaManager || win.pwaManager;
+  if (!pwaManager?.collectStartupUpdateState || !pwaManager?.getUpdatePreference) {
+    return {
+      action: STARTUP_UPDATE_ACTIONS.CONTINUE,
+      userChoice: null,
+      updateState: null
+    };
+  }
+
+  try {
+    const updateState = await pwaManager.collectStartupUpdateState();
+    const action = resolveStartupUpdateAction({
+      currentVersion: updateState?.currentVersion,
+      latestVersion: updateState?.latestVersion,
+      updatePreference: pwaManager.getUpdatePreference(),
+      hasWaitingWorker: updateState?.hasWaitingWorker
+    });
+
+    if (action === STARTUP_UPDATE_ACTIONS.ACTIVATE) {
+      const didScheduleUpdate = await pwaManager.applyUpdateNow?.({ reason: 'startup' });
+      if (!didScheduleUpdate) {
+        return {
+          action: STARTUP_UPDATE_ACTIONS.CONTINUE,
+          userChoice: STARTUP_UPDATE_USER_CHOICES.LATER,
+          updateState
+        };
+      }
+
+      return {
+        action,
+        userChoice: STARTUP_UPDATE_USER_CHOICES.UPDATE,
+        updateState
+      };
+    }
+
+    if (action === STARTUP_UPDATE_ACTIONS.PROMPT) {
+      const userChoice = await pwaManager.promptForUpdate?.({
+        reason: 'startup',
+        currentVersion: updateState?.currentVersion,
+        latestVersion: updateState?.latestVersion
+      }) || STARTUP_UPDATE_USER_CHOICES.LATER;
+
+      if (userChoice === STARTUP_UPDATE_USER_CHOICES.UPDATE) {
+        const didScheduleUpdate = await pwaManager.applyUpdateNow?.({ reason: 'startup' });
+        if (!didScheduleUpdate) {
+          pwaManager.deferUpdatePromptForCurrentSession?.();
+          return {
+            action: STARTUP_UPDATE_ACTIONS.CONTINUE,
+            userChoice: STARTUP_UPDATE_USER_CHOICES.LATER,
+            updateState
+          };
+        }
+      } else {
+        pwaManager.deferUpdatePromptForCurrentSession?.();
+      }
+
+      return {
+        action,
+        userChoice,
+        updateState
+      };
+    }
+
+    return {
+      action,
+      userChoice: null,
+      updateState
+    };
+  } catch (error) {
+    console.warn('Aboard startup update gate failed, continuing startup:', error);
+    return {
+      action: STARTUP_UPDATE_ACTIONS.CONTINUE,
+      userChoice: STARTUP_UPDATE_USER_CHOICES.LATER,
+      updateState: null
+    };
+  }
+}
+
+async function startPostVisibleOrchestration(app, { win = window, doc = document } = {}) {
+  if (app.postVisibleOrchestrationPromise) {
+    return app.postVisibleOrchestrationPromise;
+  }
+
+  app.postVisibleOrchestrationPromise = (async () => {
+    const gateResult = await runStartupUpdateGate(app, { win, doc });
+    if (!shouldContinuePostVisibleStartup(gateResult)) {
+      return app;
+    }
+
+    await startPostVisibleStartup(app, { win, doc });
+    await runImmediatePostVisibleSetup(app);
+    return app;
+  })().catch((error) => {
+    app.postVisibleOrchestrationPromise = null;
+    throw error;
+  });
+
+  return app.postVisibleOrchestrationPromise;
 }
 
 export async function createApp({ win = window, doc = document } = {}) {
@@ -140,10 +268,9 @@ export async function createApp({ win = window, doc = document } = {}) {
       drawingBoard
     };
 
-    await warmVisibleManagers(drawingBoard);
     win.__ABOARD_APP__ = app;
     scheduleAfterFirstPaint(win, () => {
-      void startPostVisibleStartup(app, { win, doc }).catch((error) => {
+      void startPostVisibleOrchestration(app, { win, doc }).catch((error) => {
         console.error('Aboard post-visible startup failed:', error);
       });
     });

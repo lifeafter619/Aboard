@@ -1,7 +1,22 @@
 // Timeout for resolving manual update checks (milliseconds).
 const UPDATE_CHECK_TIMEOUT = 1200;
+const UPDATE_APPLY_TIMEOUT = 5000;
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 const APP_VERSION_URLS = ['version.txt', './version.txt', '/api/version'];
+const UPDATE_PREFERENCE_KEY = 'updatePreference';
+const UPDATE_PREFERENCES = Object.freeze({
+    PROMPT: 'prompt',
+    AUTO: 'auto'
+});
+const UPDATE_ACTIONS = Object.freeze({
+    CONTINUE: 'continue',
+    PROMPT: 'prompt',
+    ACTIVATE: 'activate'
+});
+const UPDATE_USER_CHOICES = Object.freeze({
+    LATER: 'later',
+    UPDATE: 'update'
+});
 
 class PWAManager {
     constructor() {
@@ -10,6 +25,16 @@ class PWAManager {
         this.statusText = null;
         this.installBtn = null;
         this.shouldReloadOnControllerChange = false;
+        this.serviceWorkerRegistration = null;
+        this.serviceWorkerRegistrationPromise = null;
+        this.pendingUpdateWorker = null;
+        this.updatePreference = this.normalizeUpdatePreference(localStorage.getItem(UPDATE_PREFERENCE_KEY));
+        this.startupUpdateDeferredForSession = false;
+        this.autoActivateUpdates = false;
+        this.autoActivateResetTimer = null;
+        this.controllerChangeListenerRegistered = false;
+        this.observedRegistrations = new WeakSet();
+        this.observedWorkers = new WeakSet();
 
         // Announcement modal elements
         this.announcementStatusContainer = null;
@@ -19,6 +44,13 @@ class PWAManager {
 
         // Update elements
         this.updateModal = null;
+        this.updateModalTitle = null;
+        this.updateModalMessage = null;
+        this.updateModalUpdateBtn = null;
+        this.updateModalLaterBtn = null;
+        this.updateModalResolver = null;
+        this.updateModalPromise = null;
+        this.updateModalContext = null;
         this.version = null;
         this.latestAvailableVersion = null;
         this.announcementVersionRow = null;
@@ -312,42 +344,467 @@ class PWAManager {
         return 0;
     }
 
-    registerServiceWorker() {
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+    normalizeUpdatePreference(value) {
+        return value === UPDATE_PREFERENCES.AUTO
+            ? UPDATE_PREFERENCES.AUTO
+            : UPDATE_PREFERENCES.PROMPT;
+    }
 
-                        // Check for updates on registration
-                        // If there's a waiting worker, it means an update is ready
-                        if (registration.waiting) {
-                            this.showUpdateModal(registration.waiting);
-                        }
+    getUpdatePreference() {
+        this.updatePreference = this.normalizeUpdatePreference(localStorage.getItem(UPDATE_PREFERENCE_KEY));
+        return this.updatePreference;
+    }
 
-                        // Listen for new updates
-                        registration.onupdatefound = () => {
-                            const newWorker = registration.installing;
-                            newWorker.onstatechange = () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // New version installed and ready to take over
-                                    this.showUpdateModal(newWorker);
-                                }
-                            };
-                        };
-                    })
-                    .catch(err => {
-                        console.log('ServiceWorker registration failed: ', err);
-                    });
+    setUpdatePreference(value) {
+        this.updatePreference = this.normalizeUpdatePreference(value);
+        localStorage.setItem(UPDATE_PREFERENCE_KEY, this.updatePreference);
+        return this.updatePreference;
+    }
 
-                // Handle controller change (reload page when new SW takes control)
-                let refreshing = false;
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                    if (!refreshing && this.shouldReloadOnControllerChange) {
-                        refreshing = true;
-                        window.location.reload();
+    deferUpdatePromptForCurrentSession() {
+        this.startupUpdateDeferredForSession = true;
+    }
+
+    resolveWithTimeout(promise, timeoutMs, fallback = null) {
+        if (!timeoutMs || timeoutMs <= 0) {
+            return promise.catch(() => fallback);
+        }
+
+        return Promise.race([
+            promise.catch(() => fallback),
+            new Promise((resolve) => {
+                window.setTimeout(() => resolve(fallback), timeoutMs);
+            })
+        ]);
+    }
+
+    scheduleAutoActivateReset(timeoutMs = UPDATE_APPLY_TIMEOUT * 2) {
+        if (this.autoActivateResetTimer) {
+            window.clearTimeout(this.autoActivateResetTimer);
+        }
+        this.autoActivateResetTimer = window.setTimeout(() => {
+            this.autoActivateUpdates = false;
+            this.autoActivateResetTimer = null;
+        }, timeoutMs);
+    }
+
+    async getServiceWorkerRegistration() {
+        if (!('serviceWorker' in navigator)) {
+            return null;
+        }
+
+        if (this.serviceWorkerRegistration) {
+            return this.trackServiceWorkerRegistration(this.serviceWorkerRegistration);
+        }
+
+        if (this.serviceWorkerRegistrationPromise) {
+            try {
+                const promisedRegistration = await this.serviceWorkerRegistrationPromise;
+                if (promisedRegistration) {
+                    return this.trackServiceWorkerRegistration(promisedRegistration);
+                }
+            } catch (error) {
+                console.warn('Failed to await service worker registration:', error);
+            }
+        }
+
+        try {
+            const registration = await navigator.serviceWorker.getRegistration();
+            return this.trackServiceWorkerRegistration(registration);
+        } catch (error) {
+            console.warn('Failed to get service worker registration:', error);
+            return null;
+        }
+    }
+
+    async registerServiceWorkerNow() {
+        try {
+            const registration = await navigator.serviceWorker.register('./sw.js');
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            return this.trackServiceWorkerRegistration(registration);
+        } catch (error) {
+            console.log('ServiceWorker registration failed: ', error);
+            return null;
+        }
+    }
+
+    trackServiceWorkerRegistration(registration) {
+        if (!registration) {
+            return null;
+        }
+
+        this.serviceWorkerRegistration = registration;
+        if (registration.waiting) {
+            this.pendingUpdateWorker = registration.waiting;
+        }
+
+        if (!this.observedRegistrations.has(registration)) {
+            this.observedRegistrations.add(registration);
+            registration.addEventListener('updatefound', () => {
+                this.observeInstallingWorker(registration.installing);
+            });
+        }
+
+        if (registration.installing) {
+            this.observeInstallingWorker(registration.installing);
+        }
+
+        return registration;
+    }
+
+    observeInstallingWorker(worker) {
+        if (!worker || this.observedWorkers.has(worker)) {
+            return;
+        }
+
+        this.observedWorkers.add(worker);
+        worker.addEventListener('statechange', () => {
+            if (worker.state === 'installed') {
+                if (navigator.serviceWorker.controller) {
+                    this.pendingUpdateWorker = worker;
+                    if (this.autoActivateUpdates) {
+                        this.activateWaitingWorker(worker);
                     }
-                });
+                }
+                return;
+            }
+
+            if (worker.state === 'redundant' && this.pendingUpdateWorker === worker) {
+                this.pendingUpdateWorker = null;
+            }
+        });
+    }
+
+    async waitForWaitingWorker(timeoutMs = UPDATE_APPLY_TIMEOUT) {
+        const registration = await this.getServiceWorkerRegistration();
+        if (!registration) {
+            return null;
+        }
+
+        if (registration.waiting) {
+            this.pendingUpdateWorker = registration.waiting;
+            return registration.waiting;
+        }
+
+        if (this.pendingUpdateWorker) {
+            return this.pendingUpdateWorker;
+        }
+
+        return new Promise((resolve) => {
+            let settled = false;
+            let pollTimer = null;
+            let timeoutTimer = null;
+
+            const cleanup = () => {
+                settled = true;
+                if (pollTimer) {
+                    window.clearInterval(pollTimer);
+                }
+                if (timeoutTimer) {
+                    window.clearTimeout(timeoutTimer);
+                }
+            };
+
+            const finish = (worker) => {
+                if (settled) {
+                    return;
+                }
+                cleanup();
+                resolve(worker || null);
+            };
+
+            const checkForWaitingWorker = () => {
+                if (registration.waiting) {
+                    this.pendingUpdateWorker = registration.waiting;
+                    finish(registration.waiting);
+                    return true;
+                }
+
+                if (this.pendingUpdateWorker) {
+                    finish(this.pendingUpdateWorker);
+                    return true;
+                }
+
+                return false;
+            };
+
+            if (checkForWaitingWorker()) {
+                return;
+            }
+
+            pollTimer = window.setInterval(() => {
+                checkForWaitingWorker();
+            }, 100);
+            timeoutTimer = window.setTimeout(() => finish(null), timeoutMs);
+        });
+    }
+
+    bindControllerChangeListener() {
+        if (this.controllerChangeListenerRegistered || !('serviceWorker' in navigator)) {
+            return;
+        }
+
+        this.controllerChangeListenerRegistered = true;
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing && this.shouldReloadOnControllerChange) {
+                refreshing = true;
+                if (this.autoActivateResetTimer) {
+                    window.clearTimeout(this.autoActivateResetTimer);
+                    this.autoActivateResetTimer = null;
+                }
+                this.autoActivateUpdates = false;
+                window.location.reload();
+            }
+        });
+    }
+
+    async collectStartupUpdateState({ timeoutMs = UPDATE_CHECK_TIMEOUT } = {}) {
+        const currentVersion = this.getEmbeddedBuildVersion() || this.version || await this.loadVersion();
+        const latestVersion = navigator.onLine
+            ? await this.resolveWithTimeout(
+                this.getLatestAvailableVersion(),
+                timeoutMs,
+                this.latestAvailableVersion || currentVersion || null
+            )
+            : (this.latestAvailableVersion || currentVersion || null);
+        const registration = await this.resolveWithTimeout(
+            this.getServiceWorkerRegistration(),
+            timeoutMs,
+            null
+        );
+        const waitingWorker = registration?.waiting || this.pendingUpdateWorker || null;
+
+        return {
+            currentVersion,
+            latestVersion,
+            registration,
+            waitingWorker,
+            hasWaitingWorker: Boolean(waitingWorker)
+        };
+    }
+
+    determineUpdateAction({ currentVersion, latestVersion, hasWaitingWorker = false } = {}) {
+        const preference = this.getUpdatePreference();
+
+        if (hasWaitingWorker) {
+            return preference === UPDATE_PREFERENCES.AUTO
+                ? UPDATE_ACTIONS.ACTIVATE
+                : UPDATE_ACTIONS.PROMPT;
+        }
+
+        if (!currentVersion || !latestVersion || this.compareVersions(latestVersion, currentVersion) <= 0) {
+            return UPDATE_ACTIONS.CONTINUE;
+        }
+
+        return preference === UPDATE_PREFERENCES.AUTO
+            ? UPDATE_ACTIONS.ACTIVATE
+            : UPDATE_ACTIONS.PROMPT;
+    }
+
+    activateWaitingWorker(worker) {
+        const targetWorker = worker || this.pendingUpdateWorker || this.serviceWorkerRegistration?.waiting || null;
+        if (!targetWorker || typeof targetWorker.postMessage !== 'function') {
+            return false;
+        }
+
+        this.shouldReloadOnControllerChange = true;
+        this.pendingUpdateWorker = targetWorker;
+
+        try {
+            targetWorker.postMessage({ type: 'SKIP_WAITING' });
+            return true;
+        } catch (error) {
+            console.warn('Failed to activate waiting worker:', error);
+            return false;
+        }
+    }
+
+    async applyUpdateNow({ timeoutMs = UPDATE_APPLY_TIMEOUT } = {}) {
+        this.autoActivateUpdates = true;
+        this.scheduleAutoActivateReset(timeoutMs * 2);
+
+        const registration = await this.getServiceWorkerRegistration();
+        if (!registration) {
+            this.shouldReloadOnControllerChange = true;
+            window.location.reload();
+            return true;
+        }
+
+        const existingWaitingWorker = registration.waiting || this.pendingUpdateWorker;
+        if (existingWaitingWorker) {
+            return this.activateWaitingWorker(existingWaitingWorker);
+        }
+
+        const waitingWorkerPromise = this.waitForWaitingWorker(timeoutMs);
+        try {
+            await registration.update();
+        } catch (error) {
+            console.warn('Service worker update request failed:', error);
+        }
+
+        const waitingWorker = await waitingWorkerPromise;
+        if (waitingWorker) {
+            return this.activateWaitingWorker(waitingWorker);
+        }
+
+        return false;
+    }
+
+    ensureUpdateModal() {
+        if (this.updateModal) {
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.id = 'pwa-update-modal';
+        modal.className = 'modal';
+
+        const content = document.createElement('div');
+        content.className = 'modal-content confirm-modal-content';
+
+        const header = document.createElement('div');
+        header.className = 'modal-header';
+        const title = document.createElement('h2');
+        header.appendChild(title);
+
+        const body = document.createElement('div');
+        body.className = 'modal-body';
+        const message = document.createElement('p');
+        message.className = 'confirm-message';
+        message.style.whiteSpace = 'pre-line';
+        body.appendChild(message);
+
+        const footer = document.createElement('div');
+        footer.className = 'confirm-buttons';
+
+        const laterBtn = document.createElement('button');
+        laterBtn.className = 'confirm-btn cancel-btn';
+        laterBtn.addEventListener('click', () => {
+            this.resolveUpdateModalChoice(UPDATE_USER_CHOICES.LATER);
+        });
+
+        const updateBtn = document.createElement('button');
+        updateBtn.className = 'confirm-btn ok-btn';
+        updateBtn.addEventListener('click', () => {
+            this.resolveUpdateModalChoice(UPDATE_USER_CHOICES.UPDATE);
+        });
+
+        footer.appendChild(laterBtn);
+        footer.appendChild(updateBtn);
+        body.appendChild(footer);
+
+        content.appendChild(header);
+        content.appendChild(body);
+        modal.appendChild(content);
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                this.resolveUpdateModalChoice(UPDATE_USER_CHOICES.LATER);
+            }
+        });
+
+        document.body.appendChild(modal);
+        this.updateModal = modal;
+        this.updateModalTitle = title;
+        this.updateModalMessage = message;
+        this.updateModalUpdateBtn = updateBtn;
+        this.updateModalLaterBtn = laterBtn;
+        this.refreshUpdateModalContent();
+    }
+
+    refreshUpdateModalContent() {
+        if (!this.updateModal) {
+            return;
+        }
+
+        if (this.updateModalTitle) {
+            this.updateModalTitle.textContent = this.getTranslation('updateTitle');
+        }
+
+        let message = this.getTranslation('updateMessage');
+        const { currentVersion, latestVersion } = this.updateModalContext || {};
+        if (currentVersion && latestVersion && this.compareVersions(latestVersion, currentVersion) > 0) {
+            const versionMessage = this.getTranslation('versionUpdateFound')
+                .replace('{latest}', latestVersion)
+                .replace('{current}', currentVersion);
+            message = `${message}\n\n${versionMessage}`;
+        }
+
+        if (this.updateModalMessage) {
+            this.updateModalMessage.textContent = message;
+        }
+        if (this.updateModalUpdateBtn) {
+            this.updateModalUpdateBtn.textContent = this.getTranslation('update');
+        }
+        if (this.updateModalLaterBtn) {
+            this.updateModalLaterBtn.textContent = this.getTranslation('updateLater');
+        }
+    }
+
+    promptForUpdate({ reason = 'manual', currentVersion = null, latestVersion = null } = {}) {
+        if (reason === 'startup' && this.startupUpdateDeferredForSession) {
+            return Promise.resolve(UPDATE_USER_CHOICES.LATER);
+        }
+
+        this.ensureUpdateModal();
+        this.updateModalContext = { reason, currentVersion, latestVersion };
+        this.refreshUpdateModalContent();
+        this.updateModal.classList.add('show');
+
+        if (this.updateModalPromise) {
+            return this.updateModalPromise;
+        }
+
+        this.updateModalPromise = new Promise((resolve) => {
+            this.updateModalResolver = (choice) => {
+                this.updateModalPromise = null;
+                resolve(choice);
+            };
+        });
+
+        return this.updateModalPromise;
+    }
+
+    resolveUpdateModalChoice(choice) {
+        const resolvedChoice = choice === UPDATE_USER_CHOICES.UPDATE
+            ? UPDATE_USER_CHOICES.UPDATE
+            : UPDATE_USER_CHOICES.LATER;
+
+        if (resolvedChoice === UPDATE_USER_CHOICES.LATER && this.updateModalContext?.reason === 'startup') {
+            this.deferUpdatePromptForCurrentSession();
+        }
+
+        this.updateModal?.classList.remove('show');
+        this.updateModalContext = null;
+
+        const resolver = this.updateModalResolver;
+        this.updateModalResolver = null;
+        resolver?.(resolvedChoice);
+    }
+
+    showUpdateModal(options = {}) {
+        return this.promptForUpdate(options);
+    }
+
+    registerServiceWorker() {
+        if (!('serviceWorker' in navigator)) {
+            return;
+        }
+
+        this.bindControllerChangeListener();
+
+        if (document.readyState === 'complete') {
+            if (!this.serviceWorkerRegistrationPromise) {
+                this.serviceWorkerRegistrationPromise = this.registerServiceWorkerNow();
+            }
+            return;
+        }
+
+        if (!this.serviceWorkerRegistrationPromise) {
+            this.serviceWorkerRegistrationPromise = new Promise((resolve) => {
+                window.addEventListener('load', () => {
+                    void this.registerServiceWorkerNow().then(resolve);
+                }, { once: true });
             });
         }
     }
@@ -370,66 +827,6 @@ class PWAManager {
         } else {
             console.warn('ToastManager not available for offline notification');
         }
-    }
-
-    showUpdateModal(worker) {
-        if (this.updateModal) {
-            this.updateModal.classList.add('show');
-            return;
-        }
-
-        // Create modal using the project's modal style
-        const modal = document.createElement('div');
-        modal.id = 'pwa-update-modal';
-        modal.className = 'modal show'; // Initially show it
-
-        const content = document.createElement('div');
-        content.className = 'modal-content confirm-modal-content';
-
-        const header = document.createElement('div');
-        header.className = 'modal-header';
-        const title = document.createElement('h2');
-        title.textContent = this.getTranslation('updateTitle');
-        header.appendChild(title);
-
-        const body = document.createElement('div');
-        body.className = 'modal-body';
-        const message = document.createElement('p');
-        message.className = 'confirm-message';
-        message.textContent = this.getTranslation('updateMessage');
-        // Allow newline in message
-        message.style.whiteSpace = 'pre-line';
-        body.appendChild(message);
-
-        const footer = document.createElement('div');
-        footer.className = 'confirm-buttons';
-
-        const laterBtn = document.createElement('button');
-        laterBtn.className = 'confirm-btn cancel-btn';
-        laterBtn.textContent = this.getTranslation('updateLater');
-        laterBtn.onclick = () => {
-            modal.classList.remove('show');
-        };
-
-        const updateBtn = document.createElement('button');
-        updateBtn.className = 'confirm-btn ok-btn';
-        updateBtn.textContent = this.getTranslation('update');
-        updateBtn.onclick = () => {
-            this.shouldReloadOnControllerChange = true;
-            worker.postMessage({ type: 'SKIP_WAITING' });
-            modal.classList.remove('show');
-        };
-
-        footer.appendChild(laterBtn);
-        footer.appendChild(updateBtn);
-        body.appendChild(footer);
-
-        content.appendChild(header);
-        content.appendChild(body);
-        modal.appendChild(content);
-
-        document.body.appendChild(modal);
-        this.updateModal = modal;
     }
 
     setupUI() {
@@ -654,14 +1051,7 @@ class PWAManager {
 
         // Update Modal if open
         if (this.updateModal && this.updateModal.classList.contains('show')) {
-            const title = this.updateModal.querySelector('h2');
-            if (title) title.textContent = this.getTranslation('updateTitle');
-            const message = this.updateModal.querySelector('.confirm-message');
-            if (message) message.textContent = this.getTranslation('updateMessage');
-            const okBtn = this.updateModal.querySelector('.ok-btn');
-            if (okBtn) okBtn.textContent = this.getTranslation('update');
-            const cancelBtn = this.updateModal.querySelector('.cancel-btn');
-            if (cancelBtn) cancelBtn.textContent = this.getTranslation('updateLater');
+            this.refreshUpdateModalContent();
         }
     }
 
@@ -695,13 +1085,6 @@ class PWAManager {
     }
 
     async checkForUpdates(manual = false) {
-        if (!navigator.onLine) {
-            if (manual) {
-                this.showOfflineNotification();
-            }
-            return;
-        }
-
         const checkUpdateBtn = document.getElementById('pwa-check-update-btn');
         if (manual && checkUpdateBtn) {
             checkUpdateBtn.disabled = true;
@@ -714,86 +1097,78 @@ class PWAManager {
                 checkUpdateBtn.textContent = this.getTranslation('checkUpdate');
             }
         };
+        const toastManager = window.drawingBoard?.settingsManager?.toastManager || null;
 
-        const effectiveCurrentVersion = this.getEmbeddedBuildVersion() || this.version || await this.loadVersion();
-        const latestVersion = await this.getLatestAvailableVersion();
-        const hasNewerVersion = !!(effectiveCurrentVersion && latestVersion && this.compareVersions(latestVersion, effectiveCurrentVersion) > 0);
+        try {
+            const startupState = await this.collectStartupUpdateState();
+            let { currentVersion, latestVersion, registration, waitingWorker } = startupState;
 
-        if (manual && hasNewerVersion && window.drawingBoard?.settingsManager?.toastManager) {
-            const message = this.getTranslation('versionUpdateFound')
-                .replace('{latest}', latestVersion)
-                .replace('{current}', effectiveCurrentVersion);
-            window.drawingBoard.settingsManager.toastManager.show(message, 'warning');
-        }
-
-        if (!('serviceWorker' in navigator)) {
-            if (manual && !hasNewerVersion && window.drawingBoard?.settingsManager?.toastManager) {
-                window.drawingBoard.settingsManager.toastManager.show(this.getTranslation('latest'), 'success');
-            }
-            finishCheck();
-            return;
-        }
-
-        navigator.serviceWorker.getRegistration().then(reg => {
-            if (!reg) {
-                if (manual && !hasNewerVersion && window.drawingBoard?.settingsManager?.toastManager) {
-                    window.drawingBoard.settingsManager.toastManager.show(this.getTranslation('latest'), 'success');
+            if (!navigator.onLine && !waitingWorker) {
+                if (manual) {
+                    this.showOfflineNotification();
                 }
-                finishCheck();
                 return;
             }
 
-            if (reg.waiting) {
-                this.showUpdateModal(reg.waiting);
-                finishCheck();
-                return;
+            if (!waitingWorker && registration && navigator.onLine) {
+                const waitingWorkerPromise = this.waitForWaitingWorker(UPDATE_CHECK_TIMEOUT);
+                try {
+                    await registration.update();
+                } catch (error) {
+                    console.warn('Manual service worker refresh failed:', error);
+                }
+                waitingWorker = await waitingWorkerPromise;
             }
 
-            let updateFound = false;
-            const updateDetectionPromise = new Promise((resolve) => {
-                let resolved = false;
-                const resolveOnce = (value) => {
-                    if (!resolved) {
-                        resolved = true;
-                        resolve(value);
-                    }
-                };
-                const handleInstallingWorker = (worker) => {
-                    if (!worker) {
-                        resolveOnce(false);
-                        return;
-                    }
-                    worker.addEventListener('statechange', () => {
-                        if (worker.state === 'installed') {
-                            resolveOnce(!!navigator.serviceWorker.controller);
-                        } else if (worker.state === 'redundant') {
-                            resolveOnce(false);
-                        }
-                    });
-                };
-                reg.addEventListener('updatefound', () => {
-                    updateFound = true;
-                    handleInstallingWorker(reg.installing);
-                }, { once: true });
-                setTimeout(() => {
-                    resolveOnce(updateFound ? true : !!reg.waiting);
-                }, UPDATE_CHECK_TIMEOUT);
+            const action = this.determineUpdateAction({
+                currentVersion,
+                latestVersion,
+                hasWaitingWorker: Boolean(waitingWorker)
             });
 
-            reg.update()
-                .then(async () => {
-                    const hasUpdate = await updateDetectionPromise;
-                    if (manual && !hasUpdate && !reg.waiting && !hasNewerVersion && window.drawingBoard?.settingsManager?.toastManager) {
-                        window.drawingBoard.settingsManager.toastManager.show(this.getTranslation('latest'), 'success');
-                    }
-                    finishCheck();
-                })
-                .catch(() => {
-                    finishCheck();
-                });
-        }).catch(() => {
+            if (action === UPDATE_ACTIONS.CONTINUE) {
+                if (manual && toastManager) {
+                    toastManager.show(this.getTranslation('latest'), 'success');
+                }
+                return;
+            }
+
+            if (!manual && action === UPDATE_ACTIONS.PROMPT) {
+                return;
+            }
+
+            if (action === UPDATE_ACTIONS.ACTIVATE) {
+                const activated = await this.applyUpdateNow();
+                if (!activated && manual && toastManager && currentVersion && latestVersion) {
+                    toastManager.show(
+                        this.getTranslation('versionUpdateFound')
+                            .replace('{latest}', latestVersion)
+                            .replace('{current}', currentVersion),
+                        'warning'
+                    );
+                }
+                return;
+            }
+
+            const userChoice = await this.promptForUpdate({
+                reason: manual ? 'manual' : 'background',
+                currentVersion,
+                latestVersion
+            });
+            if (userChoice === UPDATE_USER_CHOICES.UPDATE) {
+                const activated = await this.applyUpdateNow();
+                if (!activated && manual && toastManager && currentVersion && latestVersion) {
+                    toastManager.show(
+                        this.getTranslation('versionUpdateFound')
+                            .replace('{latest}', latestVersion)
+                            .replace('{current}', currentVersion),
+                        'warning'
+                    );
+                }
+            }
+        } finally {
             finishCheck();
-        });
+        }
     }
 }
 

@@ -115,28 +115,51 @@ class I18n {
                 return loadScriptData(`js/locales/${locale}.js`, 'translations');
             };
 
-            let localeTranslations = await loadLocaleFile(this.currentLocale);
+            const cloneTranslations = (source) => {
+                if (!source || typeof source !== 'object') {
+                    return {};
+                }
+                return JSON.parse(JSON.stringify(source));
+            };
+
+            const fallbackLocaleTranslations = await loadLocaleFile(this.fallbackLocale) || {};
+            let effectiveLocale = this.currentLocale;
+            let localeTranslations = effectiveLocale === this.fallbackLocale
+                ? cloneTranslations(fallbackLocaleTranslations)
+                : await loadLocaleFile(effectiveLocale);
+
             if (!localeTranslations) {
                 console.warn(`Failed to load ${this.currentLocale}, falling back to ${this.fallbackLocale}`);
+                effectiveLocale = this.fallbackLocale;
                 this.currentLocale = this.fallbackLocale;
-                localeTranslations = await loadLocaleFile(this.fallbackLocale);
+                localeTranslations = cloneTranslations(fallbackLocaleTranslations);
             }
 
-            this.translations = localeTranslations || {};
-            this.fallbackTranslations = this.currentLocale === this.fallbackLocale
-                ? this.translations
-                : {};
+            this.fallbackTranslations = cloneTranslations(fallbackLocaleTranslations);
+            this.translations = effectiveLocale === this.fallbackLocale
+                ? this.fallbackTranslations
+                : cloneTranslations(localeTranslations || {});
 
             if (this.localeOverrides === null) {
                 this.localeOverrides = await loadScriptData('js/locales/overrides.js', 'locale_translation_overrides') || {};
             }
-            this.mergeTranslations(this.translations, this.localeOverrides[this.currentLocale]);
+            this.mergeTranslations(this.fallbackTranslations, this.localeOverrides[this.fallbackLocale]);
+            if (effectiveLocale !== this.fallbackLocale) {
+                this.mergeTranslations(this.translations, this.localeOverrides[effectiveLocale]);
+            }
 
             // Load help translations
             try {
-                const helpTranslations = await loadScriptData(`js/locales/help/${this.currentLocale}.js`, 'help_translations');
-                if (helpTranslations) {
-                    this.mergeTranslations(this.translations, helpTranslations);
+                const fallbackHelpTranslations = await loadScriptData(`js/locales/help/${this.fallbackLocale}.js`, 'help_translations');
+                if (fallbackHelpTranslations) {
+                    this.mergeTranslations(this.fallbackTranslations, fallbackHelpTranslations);
+                }
+
+                if (effectiveLocale !== this.fallbackLocale) {
+                    const helpTranslations = await loadScriptData(`js/locales/help/${effectiveLocale}.js`, 'help_translations');
+                    if (helpTranslations) {
+                        this.mergeTranslations(this.translations, helpTranslations);
+                    }
                 }
             } catch (e) {
                 console.warn('Failed to load help translations', e);
@@ -711,27 +734,6 @@ class I18n {
             confirmCancel.textContent = this.t('common.cancel');
         }
         
-        // Welcome modal
-        const welcomeTitle = document.querySelector('#welcome-modal h2');
-        if (welcomeTitle) {
-            welcomeTitle.textContent = this.t('welcome.title');
-        }
-        
-        const welcomeContent = document.querySelector('#welcome-modal .modal-content p');
-        if (welcomeContent) {
-            welcomeContent.textContent = this.t('welcome.content');
-        }
-        
-        const welcomeOk = document.getElementById('welcome-ok-btn');
-        if (welcomeOk) {
-            welcomeOk.textContent = this.t('welcome.confirm');
-        }
-        
-        const welcomeNoShow = document.getElementById('welcome-no-show-btn');
-        if (welcomeNoShow) {
-            welcomeNoShow.textContent = this.t('welcome.noShowAgain');
-        }
-        
         // Announcement modal
         const announcementTitle = document.getElementById('announcement-title');
         if (announcementTitle) {
@@ -875,13 +877,6 @@ class I18n {
             timeFormatSelect.options[1].text = this.t('settings.time.timeFormat24');
         }
         
-        // Also translate time format in More Settings section
-        const timeFormatSelectMore = document.getElementById('time-format-select');
-        if (timeFormatSelectMore) {
-            timeFormatSelectMore.options[0].text = this.t('settings.time.timeFormat12');
-            timeFormatSelectMore.options[1].text = this.t('settings.time.timeFormat24');
-        }
-        
         // Translate date format options for Time Display Settings modal
         const dateFormatSelect = document.getElementById('td-date-format-select');
         if (dateFormatSelect) {
@@ -890,16 +885,6 @@ class I18n {
             dateFormatSelect.options[2].text = this.t('settings.time.dateFormatMDY');
             dateFormatSelect.options[3].text = this.t('settings.time.dateFormatDMY');
             dateFormatSelect.options[4].text = this.t('settings.time.dateFormatChinese');
-        }
-        
-        // Also translate date format in More Settings section
-        const dateFormatSelectMore = document.getElementById('date-format-select');
-        if (dateFormatSelectMore) {
-            dateFormatSelectMore.options[0].text = this.t('settings.time.dateFormatAuto');
-            dateFormatSelectMore.options[1].text = this.t('settings.time.dateFormatYMD');
-            dateFormatSelectMore.options[2].text = this.t('settings.time.dateFormatMDY');
-            dateFormatSelectMore.options[3].text = this.t('settings.time.dateFormatDMY');
-            dateFormatSelectMore.options[4].text = this.t('settings.time.dateFormatChinese');
         }
         
         // Translate timezone options for Time Display Settings modal
@@ -920,26 +905,6 @@ class I18n {
             timezoneSelect.options[12].text = this.t('timezones.sydney');
             timezoneSelect.options[13].text = this.t('timezones.auckland');
             timezoneSelect.options[14].text = this.t('timezones.utc');
-        }
-        
-        // Also translate timezone in More Settings section
-        const timezoneSelectMore = document.getElementById('timezone-select');
-        if (timezoneSelectMore) {
-            timezoneSelectMore.options[0].text = this.t('timezones.china');
-            timezoneSelectMore.options[1].text = this.t('timezones.newyork');
-            timezoneSelectMore.options[2].text = this.t('timezones.losangeles');
-            timezoneSelectMore.options[3].text = this.t('timezones.chicago');
-            timezoneSelectMore.options[4].text = this.t('timezones.london');
-            timezoneSelectMore.options[5].text = this.t('timezones.paris');
-            timezoneSelectMore.options[6].text = this.t('timezones.berlin');
-            timezoneSelectMore.options[7].text = this.t('timezones.tokyo');
-            timezoneSelectMore.options[8].text = this.t('timezones.seoul');
-            timezoneSelectMore.options[9].text = this.t('timezones.hongkong');
-            timezoneSelectMore.options[10].text = this.t('timezones.singapore');
-            timezoneSelectMore.options[11].text = this.t('timezones.dubai');
-            timezoneSelectMore.options[12].text = this.t('timezones.sydney');
-            timezoneSelectMore.options[13].text = this.t('timezones.auckland');
-            timezoneSelectMore.options[14].text = this.t('timezones.utc');
         }
         
         // Translate "Custom Color" labels for all color picker icon buttons

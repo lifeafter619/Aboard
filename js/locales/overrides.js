@@ -15,9 +15,25 @@ window.locale_translation_overrides = (() => {
     };
 
     return {
+        'zh-CN': {
+            settings: {
+                general: {
+                    updatePreference: '更新方式',
+                    updatePreferenceHint: '检测到新版本时，默认提示后再决定是否更新',
+                    updatePreferencePrompt: '提示后更新',
+                    updatePreferenceAuto: '立即更新'
+                }
+            }
+        },
         'en-US': {
             settings: {
                 exportFailed: 'Failed to export configuration',
+                general: {
+                    updatePreference: 'Update Behavior',
+                    updatePreferenceHint: 'When a new version is detected, ask before updating by default',
+                    updatePreferencePrompt: 'Prompt First',
+                    updatePreferenceAuto: 'Update Immediately'
+                },
                 diff: {
                     current: 'Current',
                     new: 'New'
@@ -52,6 +68,10 @@ window.locale_translation_overrides = (() => {
                     fontManagementHint: '字體管理：支援排序、顯示開關、重新命名與預覽',
                     showFont: '顯示字體',
                     fontPreviewSample: '中文字體預覽 ABC abc 123',
+                    updatePreference: '更新方式',
+                    updatePreferenceHint: '偵測到新版本時，預設先提示再決定是否更新',
+                    updatePreferencePrompt: '提示後更新',
+                    updatePreferenceAuto: '立即更新',
                     fonts: {
                         notoSansSC: '思源黑體',
                         notoSerifSC: '思源宋體',
@@ -133,6 +153,10 @@ window.locale_translation_overrides = (() => {
                     fontManagementHint: 'フォント管理：並べ替え、表示切替、名前変更、プレビューに対応',
                     showFont: 'フォントを表示',
                     fontPreviewSample: '日本語フォントプレビュー ABC abc 123',
+                    updatePreference: '更新方法',
+                    updatePreferenceHint: '新しいバージョンが見つかったとき、既定では確認してから更新します',
+                    updatePreferencePrompt: '確認して更新',
+                    updatePreferenceAuto: 'すぐに更新',
                     touchZoom: 'タッチズーム',
                     touchZoomHint: '二本指のピンチ操作でキャンバスを拡大・縮小できるようにします',
                     fonts: {
@@ -251,6 +275,10 @@ window.locale_translation_overrides = (() => {
                     fontManagementHint: '글꼴 관리: 정렬, 표시 전환, 이름 변경 및 미리보기 지원',
                     showFont: '글꼴 표시',
                     fontPreviewSample: '한글 글꼴 미리보기 ABC abc 123',
+                    updatePreference: '업데이트 방식',
+                    updatePreferenceHint: '새 버전이 감지되면 기본적으로 먼저 묻고 업데이트합니다',
+                    updatePreferencePrompt: '확인 후 업데이트',
+                    updatePreferenceAuto: '즉시 업데이트',
                     touchZoom: '터치 확대/축소',
                     touchZoomHint: '두 손가락 핀치 제스처로 캔버스를 확대/축소할 수 있습니다',
                     fonts: {
@@ -369,6 +397,10 @@ window.locale_translation_overrides = (() => {
                     fontManagementHint: 'Gestion des polices : tri, affichage, renommage et apercu pris en charge',
                     showFont: 'Afficher la police',
                     fontPreviewSample: 'Apercu de police ABC abc 123',
+                    updatePreference: 'Mode de mise a jour',
+                    updatePreferenceHint: 'Lorsqu\'une nouvelle version est detectee, demander confirmation avant de mettre a jour par defaut',
+                    updatePreferencePrompt: 'Demander avant mise a jour',
+                    updatePreferenceAuto: 'Mettre a jour immediatement',
                     touchZoom: 'Zoom tactile',
                     touchZoomHint: 'Autoriser le zoom de la toile par pincement a deux doigts',
                     fonts: {
@@ -514,6 +546,10 @@ window.locale_translation_overrides = (() => {
                     fontManagementHint: 'Gestion de fuentes: permite ordenar, mostrar u ocultar, renombrar y previsualizar',
                     showFont: 'Mostrar fuente',
                     fontPreviewSample: 'Vista previa de fuente ABC abc 123',
+                    updatePreference: 'Modo de actualizacion',
+                    updatePreferenceHint: 'Cuando se detecte una nueva version, preguntar antes de actualizar por defecto',
+                    updatePreferencePrompt: 'Preguntar antes de actualizar',
+                    updatePreferenceAuto: 'Actualizar de inmediato',
                     touchZoom: 'Zoom tactil',
                     touchZoomHint: 'Permite acercar o alejar el lienzo con dos dedos',
                     fonts: {
@@ -659,6 +695,10 @@ window.locale_translation_overrides = (() => {
                     fontManagementHint: 'Schriftverwaltung: Sortieren, Ein-/Ausblenden, Umbenennen und Vorschau werden unterstutzt',
                     showFont: 'Schrift anzeigen',
                     fontPreviewSample: 'Schriftvorschau ABC abc 123',
+                    updatePreference: 'Update-Verhalten',
+                    updatePreferenceHint: 'Wenn eine neue Version erkannt wird, standardmassig vor dem Update nachfragen',
+                    updatePreferencePrompt: 'Vorher nachfragen',
+                    updatePreferenceAuto: 'Sofort aktualisieren',
                     touchZoom: 'Touch-Zoom',
                     touchZoomHint: 'Erlaubt das Zoomen der Leinwand mit Zwei-Finger-Gesten',
                     fonts: {
