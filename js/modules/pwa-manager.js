@@ -1,21 +1,26 @@
 // Timeout for resolving manual update checks (milliseconds).
 const UPDATE_CHECK_TIMEOUT = 1200;
 const UPDATE_APPLY_TIMEOUT = 5000;
+const UPDATE_IDLE_APPLY_DELAY = 15000;
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 const APP_VERSION_URLS = ['version.txt', './version.txt', '/api/version'];
 const UPDATE_PREFERENCE_KEY = 'updatePreference';
+const PLANNED_UPDATE_RELOAD_KEY = 'aboardPlannedUpdateReload';
 const UPDATE_PREFERENCES = Object.freeze({
     PROMPT: 'prompt',
     AUTO: 'auto'
 });
+const PLANNED_UPDATE_MODES = Object.freeze({
+    IDLE: 'idle',
+    IMMEDIATE: 'immediate'
+});
 const UPDATE_ACTIONS = Object.freeze({
     CONTINUE: 'continue',
-    PROMPT: 'prompt',
-    ACTIVATE: 'activate'
+    PROMPT: 'prompt'
 });
 const UPDATE_USER_CHOICES = Object.freeze({
-    LATER: 'later',
-    UPDATE: 'update'
+    IDLE: 'idle',
+    IMMEDIATE: 'immediate'
 });
 
 class PWAManager {
@@ -32,6 +37,9 @@ class PWAManager {
         this.startupUpdateDeferredForSession = false;
         this.autoActivateUpdates = false;
         this.autoActivateResetTimer = null;
+        this.pendingIdleUpdateIntent = null;
+        this.idleUpdateCheckTimer = null;
+        this.idleUpdateInFlight = false;
         this.controllerChangeListenerRegistered = false;
         this.observedRegistrations = new WeakSet();
         this.observedWorkers = new WeakSet();
@@ -67,13 +75,13 @@ class PWAManager {
                 'offlineMessage': '当前处于离线模式，更改已保存到本地',
                 'updateAvailable': '有新版本可用',
                 'updateTitle': '发现新版本',
-                'updateMessage': '新版本已下载完毕。是否立即刷新以应用更新？\n(选择“稍后”将在下次启动时应用)',
-                'update': '立即更新',
-                'updateLater': '稍后',
+                'updateMessage': '新版本已准备完成。你可以立即刷新更新，或在空闲时自动刷新并恢复当前白板内容。',
+                'update': '立即刷新更新',
+                'updateLater': '空闲时刷新更新',
                 'checkUpdate': '检查更新',
                 'checking': '正在检查更新...',
                 'latest': '已是最新版本',
-                'versionUpdateFound': '检测到新版本：{latest}（当前：{current}），请刷新更新。'
+                'versionUpdateFound': '检测到新版本：{latest}（当前：{current}）'
             },
             'zh-TW': {
                 'statusTitle': '應用狀態',
@@ -85,13 +93,13 @@ class PWAManager {
                 'offlineMessage': '當前處於離線模式，更改已保存到本地',
                 'updateAvailable': '有新版本可用',
                 'updateTitle': '發現新版本',
-                'updateMessage': '新版本已下載完畢。是否立即刷新以應用更新？\n(選擇“稍後”將在下次啟動時應用)',
-                'update': '立即更新',
-                'updateLater': '稍後',
+                'updateMessage': '新版本已準備完成。你可以立即重新整理更新，或在空閒時自動重新整理並恢復目前白板內容。',
+                'update': '立即重新整理更新',
+                'updateLater': '空閒時重新整理更新',
                 'checkUpdate': '檢查更新',
                 'checking': '正在檢查更新...',
                 'latest': '已是最新版本',
-                'versionUpdateFound': '檢測到新版本：{latest}（當前：{current}），請重新整理更新。'
+                'versionUpdateFound': '檢測到新版本：{latest}（當前：{current}）'
             },
             'en-US': {
                 'statusTitle': 'App Status',
@@ -103,13 +111,13 @@ class PWAManager {
                 'offlineMessage': 'Offline mode. Changes are saved locally.',
                 'updateAvailable': 'New version available',
                 'updateTitle': 'Update Available',
-                'updateMessage': 'New version downloaded. Refresh now to apply?\n(Select "Later" to apply on next launch)',
-                'update': 'Update Now',
-                'updateLater': 'Later',
+                'updateMessage': 'A new version is ready. Refresh now, or let the app refresh automatically when it is idle and restore the current whiteboard session.',
+                'update': 'Refresh Now',
+                'updateLater': 'Refresh When Idle',
                 'checkUpdate': 'Check for Updates',
                 'checking': 'Checking for updates...',
                 'latest': 'You are on the latest version',
-                'versionUpdateFound': 'New version detected: {latest} (current: {current}). Please refresh to update.'
+                'versionUpdateFound': 'New version detected: {latest} (current: {current}).'
             },
             'ja-JP': {
                 'statusTitle': 'アプリの状態',
@@ -121,13 +129,13 @@ class PWAManager {
                 'offlineMessage': 'オフラインモードです。変更はローカルに保存されます。',
                 'updateAvailable': '新しいバージョンがあります',
                 'updateTitle': 'アップデート利用可能',
-                'updateMessage': '新しいバージョンがダウンロードされました。今すぐ更新しますか？\n(「後で」を選択すると次回起動時に適用されます)',
-                'update': '今すぐ更新',
-                'updateLater': '後で',
+                'updateMessage': '新しいバージョンの準備ができました。今すぐ再読み込みするか、アプリがアイドル状態になったときに自動で再読み込みして現在のホワイトボードを復元できます。',
+                'update': '今すぐ再読み込み',
+                'updateLater': '空き時間に再読み込み',
                 'checkUpdate': 'アップデートを確認',
                 'checking': 'アップデートを確認中...',
                 'latest': '最新バージョンです',
-                'versionUpdateFound': '新しいバージョンがあります：{latest}（現在：{current}）。更新のため再読み込みしてください。'
+                'versionUpdateFound': '新しいバージョンがあります：{latest}（現在：{current}）'
             },
             'ko-KR': {
                 'statusTitle': '앱 상태',
@@ -139,13 +147,13 @@ class PWAManager {
                 'offlineMessage': '오프라인 모드입니다. 변경 사항은 로컬에 저장됩니다.',
                 'updateAvailable': '새 버전을 사용할 수 있습니다',
                 'updateTitle': '업데이트 가능',
-                'updateMessage': '새 버전이 다운로드되었습니다. 지금 업데이트하시겠습니까?\n(\'나중에\'를 선택하면 다음 실행 시 적용됩니다)',
-                'update': '지금 업데이트',
-                'updateLater': '나중에',
+                'updateMessage': '새 버전이 준비되었습니다. 지금 새로고침하거나, 앱이 한가할 때 자동으로 새로고침하면서 현재 화이트보드 내용을 복원할 수 있습니다.',
+                'update': '지금 새로고침',
+                'updateLater': '한가할 때 새로고침',
                 'checkUpdate': '업데이트 확인',
                 'checking': '업데이트 확인 중...',
                 'latest': '최신 버전입니다',
-                'versionUpdateFound': '새 버전 감지: {latest} (현재: {current}). 새로고침하여 업데이트하세요.'
+                'versionUpdateFound': '새 버전 감지: {latest} (현재: {current})'
             },
             'fr-FR': {
                 'statusTitle': 'État de l\'application',
@@ -157,13 +165,13 @@ class PWAManager {
                 'offlineMessage': 'Mode hors ligne. Les modifications sont enregistrées localement.',
                 'updateAvailable': 'Nouvelle version disponible',
                 'updateTitle': 'Mise à jour disponible',
-                'updateMessage': 'Nouvelle version téléchargée. Actualiser maintenant pour appliquer ?\n(Sélectionnez "Plus tard" pour appliquer au prochain lancement)',
-                'update': 'Mettre à jour',
-                'updateLater': 'Plus tard',
+                'updateMessage': 'Nouvelle version disponible. Actualisez maintenant, ou laissez l\'application s\'actualiser automatiquement lorsqu\'elle est inactive en restaurant le tableau en cours.',
+                'update': 'Actualiser maintenant',
+                'updateLater': 'Actualiser au repos',
                 'checkUpdate': 'Vérifier les mises à jour',
                 'checking': 'Vérification des mises à jour...',
                 'latest': 'Vous utilisez la dernière version',
-                'versionUpdateFound': 'Nouvelle version détectée : {latest} (actuelle : {current}). Veuillez actualiser pour mettre à jour.'
+                'versionUpdateFound': 'Nouvelle version détectée : {latest} (actuelle : {current}).'
             },
             'de-DE': {
                 'statusTitle': 'App-Status',
@@ -175,13 +183,13 @@ class PWAManager {
                 'offlineMessage': 'Offline-Modus. Änderungen werden lokal gespeichert.',
                 'updateAvailable': 'Neue Version verfügbar',
                 'updateTitle': 'Update verfügbar',
-                'updateMessage': 'Neue Version heruntergeladen. Jetzt aktualisieren?\n(Wählen Sie "Später", um es beim nächsten Start anzuwenden)',
-                'update': 'Jetzt aktualisieren',
-                'updateLater': 'Später',
+                'updateMessage': 'Eine neue Version ist bereit. Jetzt neu laden oder automatisch im Leerlauf neu laden und das aktuelle Whiteboard wiederherstellen.',
+                'update': 'Jetzt neu laden',
+                'updateLater': 'Im Leerlauf neu laden',
                 'checkUpdate': 'Nach Updates suchen',
                 'checking': 'Suche nach Updates...',
                 'latest': 'Sie haben die neueste Version',
-                'versionUpdateFound': 'Neue Version erkannt: {latest} (aktuell: {current}). Bitte zum Aktualisieren neu laden.'
+                'versionUpdateFound': 'Neue Version erkannt: {latest} (aktuell: {current}).'
             },
             'es-ES': {
                 'statusTitle': 'Estado de la aplicación',
@@ -193,13 +201,13 @@ class PWAManager {
                 'offlineMessage': 'Modo sin conexión. Los cambios se guardan localmente.',
                 'updateAvailable': 'Nueva versión disponible',
                 'updateTitle': 'Actualización disponible',
-                'updateMessage': 'Nueva versión descargada. ¿Actualizar ahora?\n(Seleccione "Más tarde" para aplicar en el próximo inicio)',
-                'update': 'Actualizar ahora',
-                'updateLater': 'Más tarde',
+                'updateMessage': 'Hay una nueva versión lista. Recarga ahora o deja que la aplicación se recargue automáticamente cuando esté inactiva y restaure la pizarra actual.',
+                'update': 'Recargar ahora',
+                'updateLater': 'Recargar en inactividad',
                 'checkUpdate': 'Buscar actualizaciones',
                 'checking': 'Buscando actualizaciones...',
                 'latest': 'Tienes la última versión',
-                'versionUpdateFound': 'Nueva versión detectada: {latest} (actual: {current}). Actualiza recargando la página.'
+                'versionUpdateFound': 'Nueva versión detectada: {latest} (actual: {current}).'
             }
         };
         // Fallback for other languages to English
@@ -365,6 +373,164 @@ class PWAManager {
         this.startupUpdateDeferredForSession = true;
     }
 
+    getPreferredUpdateChoice() {
+        return this.getUpdatePreference() === UPDATE_PREFERENCES.AUTO
+            ? UPDATE_USER_CHOICES.IMMEDIATE
+            : UPDATE_USER_CHOICES.IDLE;
+    }
+
+    normalizePlannedUpdateMode(value) {
+        return value === PLANNED_UPDATE_MODES.IMMEDIATE
+            ? PLANNED_UPDATE_MODES.IMMEDIATE
+            : PLANNED_UPDATE_MODES.IDLE;
+    }
+
+    buildPlannedUpdateIntent({ mode, reason = 'update', currentVersion = null, latestVersion = null } = {}) {
+        return {
+            reason: 'update',
+            requestedBy: reason,
+            mode: this.normalizePlannedUpdateMode(mode),
+            currentVersion: currentVersion || this.version || null,
+            latestVersion: latestVersion || this.latestAvailableVersion || null,
+            createdAt: Date.now(),
+            idleDelayMs: UPDATE_IDLE_APPLY_DELAY
+        };
+    }
+
+    writePlannedUpdateIntent(intent) {
+        localStorage.setItem(PLANNED_UPDATE_RELOAD_KEY, JSON.stringify(intent));
+        return intent;
+    }
+
+    clearPlannedUpdateIntent() {
+        localStorage.removeItem(PLANNED_UPDATE_RELOAD_KEY);
+    }
+
+    getDrawingBoard() {
+        return window.drawingBoard || null;
+    }
+
+    async preparePlannedUpdateReload(intent) {
+        const board = this.getDrawingBoard();
+        if (!board?.persistSessionForUpdateReload) {
+            return {
+                canReload: false,
+                intent,
+                persistResult: null
+            };
+        }
+
+        const persistResult = await board.persistSessionForUpdateReload(intent);
+        const canReload = Boolean(persistResult?.hasSyncSnapshot || persistResult?.savedToIndexedDb);
+        if (canReload) {
+            this.writePlannedUpdateIntent(intent);
+        }
+
+        return {
+            canReload,
+            intent,
+            persistResult
+        };
+    }
+
+    cancelIdleUpdate() {
+        if (this.idleUpdateCheckTimer) {
+            window.clearInterval(this.idleUpdateCheckTimer);
+            this.idleUpdateCheckTimer = null;
+        }
+        this.pendingIdleUpdateIntent = null;
+        this.idleUpdateInFlight = false;
+    }
+
+    async applyPreparedUpdateNow(intent, { timeoutMs = UPDATE_APPLY_TIMEOUT } = {}) {
+        const board = this.getDrawingBoard();
+        board?.setSuppressBeforeUnloadPrompt?.(true);
+
+        const activated = await this.applyUpdateNow({ timeoutMs });
+        if (!activated) {
+            board?.setSuppressBeforeUnloadPrompt?.(false);
+            this.clearPlannedUpdateIntent();
+        }
+
+        return activated;
+    }
+
+    async maybeApplyIdleUpdate() {
+        if (!this.pendingIdleUpdateIntent || this.idleUpdateInFlight) {
+            return false;
+        }
+
+        const board = this.getDrawingBoard();
+        const activity = board?.getUpdateActivitySnapshot?.() || { lastActivityAt: Date.now() };
+        const isBusy = Boolean(
+            activity.isDrawing
+            || activity.isPinching
+            || activity.isDraggingPanel
+            || activity.isModalBusy
+            || activity.isSelectionBusy
+            || activity.isTextInputBusy
+            || activity.isMediaTransformBusy
+            || activity.isTeachingToolBusy
+        );
+        const lastActivityAt = Number(activity.lastActivityAt || 0);
+        if (isBusy || !Number.isFinite(lastActivityAt) || (Date.now() - lastActivityAt) < UPDATE_IDLE_APPLY_DELAY) {
+            return false;
+        }
+
+        this.idleUpdateInFlight = true;
+        const intent = this.buildPlannedUpdateIntent(this.pendingIdleUpdateIntent);
+        try {
+            const preparedReload = await this.preparePlannedUpdateReload(intent);
+            if (!preparedReload.canReload) {
+                return false;
+            }
+
+            this.cancelIdleUpdate();
+            return this.applyPreparedUpdateNow(intent);
+        } finally {
+            this.idleUpdateInFlight = false;
+        }
+    }
+
+    scheduleIdleUpdate(intent) {
+        this.pendingIdleUpdateIntent = this.buildPlannedUpdateIntent({
+            ...intent,
+            mode: PLANNED_UPDATE_MODES.IDLE
+        });
+
+        if (!this.idleUpdateCheckTimer) {
+            this.idleUpdateCheckTimer = window.setInterval(() => {
+                void this.maybeApplyIdleUpdate();
+            }, 1000);
+        }
+
+        void this.maybeApplyIdleUpdate();
+        return true;
+    }
+
+    async requestUpdateApplication({ mode, reason = 'manual', currentVersion = null, latestVersion = null } = {}) {
+        const normalizedMode = this.normalizePlannedUpdateMode(mode);
+        const intent = this.buildPlannedUpdateIntent({
+            mode: normalizedMode,
+            reason,
+            currentVersion,
+            latestVersion
+        });
+
+        if (normalizedMode === PLANNED_UPDATE_MODES.IDLE) {
+            this.deferUpdatePromptForCurrentSession();
+            return this.scheduleIdleUpdate(intent);
+        }
+
+        this.cancelIdleUpdate();
+        const preparedReload = await this.preparePlannedUpdateReload(intent);
+        if (!preparedReload.canReload) {
+            return false;
+        }
+
+        return this.applyPreparedUpdateNow(intent);
+    }
+
     resolveWithTimeout(promise, timeoutMs, fallback = null) {
         if (!timeoutMs || timeoutMs <= 0) {
             return promise.catch(() => fallback);
@@ -464,6 +630,8 @@ class PWAManager {
                     this.pendingUpdateWorker = worker;
                     if (this.autoActivateUpdates) {
                         this.activateWaitingWorker(worker);
+                    } else if (!this.pendingIdleUpdateIntent && document.visibilityState === 'visible') {
+                        void this.checkForUpdates(false);
                     }
                 }
                 return;
@@ -585,21 +753,15 @@ class PWAManager {
     }
 
     determineUpdateAction({ currentVersion, latestVersion, hasWaitingWorker = false } = {}) {
-        const preference = this.getUpdatePreference();
-
         if (hasWaitingWorker) {
-            return preference === UPDATE_PREFERENCES.AUTO
-                ? UPDATE_ACTIONS.ACTIVATE
-                : UPDATE_ACTIONS.PROMPT;
+            return UPDATE_ACTIONS.PROMPT;
         }
 
         if (!currentVersion || !latestVersion || this.compareVersions(latestVersion, currentVersion) <= 0) {
             return UPDATE_ACTIONS.CONTINUE;
         }
 
-        return preference === UPDATE_PREFERENCES.AUTO
-            ? UPDATE_ACTIONS.ACTIVATE
-            : UPDATE_ACTIONS.PROMPT;
+        return UPDATE_ACTIONS.PROMPT;
     }
 
     activateWaitingWorker(worker) {
@@ -681,13 +843,13 @@ class PWAManager {
         const laterBtn = document.createElement('button');
         laterBtn.className = 'confirm-btn cancel-btn';
         laterBtn.addEventListener('click', () => {
-            this.resolveUpdateModalChoice(UPDATE_USER_CHOICES.LATER);
+            this.resolveUpdateModalChoice(UPDATE_USER_CHOICES.IDLE);
         });
 
         const updateBtn = document.createElement('button');
         updateBtn.className = 'confirm-btn ok-btn';
         updateBtn.addEventListener('click', () => {
-            this.resolveUpdateModalChoice(UPDATE_USER_CHOICES.UPDATE);
+            this.resolveUpdateModalChoice(UPDATE_USER_CHOICES.IMMEDIATE);
         });
 
         footer.appendChild(laterBtn);
@@ -699,7 +861,7 @@ class PWAManager {
         modal.appendChild(content);
         modal.addEventListener('click', (event) => {
             if (event.target === modal) {
-                this.resolveUpdateModalChoice(UPDATE_USER_CHOICES.LATER);
+                this.resolveUpdateModalChoice(UPDATE_USER_CHOICES.IDLE);
             }
         });
 
@@ -739,11 +901,18 @@ class PWAManager {
         if (this.updateModalLaterBtn) {
             this.updateModalLaterBtn.textContent = this.getTranslation('updateLater');
         }
+        const preferredChoice = this.getPreferredUpdateChoice();
+        if (this.updateModalUpdateBtn && this.updateModalLaterBtn) {
+            this.updateModalUpdateBtn.classList.toggle('ok-btn', preferredChoice === UPDATE_USER_CHOICES.IMMEDIATE);
+            this.updateModalUpdateBtn.classList.toggle('cancel-btn', preferredChoice !== UPDATE_USER_CHOICES.IMMEDIATE);
+            this.updateModalLaterBtn.classList.toggle('ok-btn', preferredChoice === UPDATE_USER_CHOICES.IDLE);
+            this.updateModalLaterBtn.classList.toggle('cancel-btn', preferredChoice !== UPDATE_USER_CHOICES.IDLE);
+        }
     }
 
     promptForUpdate({ reason = 'manual', currentVersion = null, latestVersion = null } = {}) {
         if (reason === 'startup' && this.startupUpdateDeferredForSession) {
-            return Promise.resolve(UPDATE_USER_CHOICES.LATER);
+            return Promise.resolve(UPDATE_USER_CHOICES.IDLE);
         }
 
         this.ensureUpdateModal();
@@ -766,11 +935,11 @@ class PWAManager {
     }
 
     resolveUpdateModalChoice(choice) {
-        const resolvedChoice = choice === UPDATE_USER_CHOICES.UPDATE
-            ? UPDATE_USER_CHOICES.UPDATE
-            : UPDATE_USER_CHOICES.LATER;
+        const resolvedChoice = choice === UPDATE_USER_CHOICES.IMMEDIATE
+            ? UPDATE_USER_CHOICES.IMMEDIATE
+            : UPDATE_USER_CHOICES.IDLE;
 
-        if (resolvedChoice === UPDATE_USER_CHOICES.LATER && this.updateModalContext?.reason === 'startup') {
+        if (resolvedChoice === UPDATE_USER_CHOICES.IDLE && this.updateModalContext?.reason === 'startup') {
             this.deferUpdatePromptForCurrentSession();
         }
 
@@ -1133,38 +1302,26 @@ class PWAManager {
                 return;
             }
 
-            if (!manual && action === UPDATE_ACTIONS.PROMPT) {
-                return;
-            }
-
-            if (action === UPDATE_ACTIONS.ACTIVATE) {
-                const activated = await this.applyUpdateNow();
-                if (!activated && manual && toastManager && currentVersion && latestVersion) {
-                    toastManager.show(
-                        this.getTranslation('versionUpdateFound')
-                            .replace('{latest}', latestVersion)
-                            .replace('{current}', currentVersion),
-                        'warning'
-                    );
-                }
-                return;
-            }
-
             const userChoice = await this.promptForUpdate({
                 reason: manual ? 'manual' : 'background',
                 currentVersion,
                 latestVersion
             });
-            if (userChoice === UPDATE_USER_CHOICES.UPDATE) {
-                const activated = await this.applyUpdateNow();
-                if (!activated && manual && toastManager && currentVersion && latestVersion) {
-                    toastManager.show(
-                        this.getTranslation('versionUpdateFound')
-                            .replace('{latest}', latestVersion)
-                            .replace('{current}', currentVersion),
-                        'warning'
-                    );
-                }
+            const requested = await this.requestUpdateApplication({
+                mode: userChoice === UPDATE_USER_CHOICES.IMMEDIATE
+                    ? PLANNED_UPDATE_MODES.IMMEDIATE
+                    : PLANNED_UPDATE_MODES.IDLE,
+                reason: manual ? 'manual' : 'background',
+                currentVersion,
+                latestVersion
+            });
+            if (!requested && manual && toastManager && currentVersion && latestVersion) {
+                toastManager.show(
+                    this.getTranslation('versionUpdateFound')
+                        .replace('{latest}', latestVersion)
+                        .replace('{current}', currentVersion),
+                    'warning'
+                );
             }
         } finally {
             finishCheck();

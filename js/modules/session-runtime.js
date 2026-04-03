@@ -1,6 +1,8 @@
 // Extracted session lifecycle runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+const PLANNED_UPDATE_RELOAD_KEY = 'aboardPlannedUpdateReload';
+
 function showRecoveryModal() {
         const modal = document.getElementById('recovery-modal');
         if (!modal) return;
@@ -69,7 +71,7 @@ async function restoreSession() {
                 };
             }
 
-            if (!sessionData) return;
+            if (!sessionData) return false;
 
             const { pages, pagesRaw, settings } = sessionData;
 
@@ -220,8 +222,10 @@ async function restoreSession() {
             this.syncSettingsUI(settings);
 
             console.log('Session restored');
+            return true;
         } catch (e) {
             console.warn('Failed to restore session:', e);
+            return false;
         }
     
 }
@@ -267,6 +271,7 @@ async function clearSessionData() {
             localStorage.removeItem('savedCanvasTimestamp');
             localStorage.removeItem('savedCurrentPage');
             localStorage.removeItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot');
+            localStorage.removeItem(PLANNED_UPDATE_RELOAD_KEY);
         } catch (e) {
             console.warn('Failed to clear session:', e);
         }

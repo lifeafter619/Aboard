@@ -1,6 +1,8 @@
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+const PLANNED_UPDATE_RELOAD_KEY = 'aboardPlannedUpdateReload';
+
 function buildSyncSnapshot() {
         try {
             if (this.currentPage > 0 && this.currentPage <= this.pages.length) {
@@ -144,17 +146,34 @@ async function saveSession() {
 
             await this.storageManager.saveSession(data);
             console.log('Session saved to IndexedDB');
+            return true;
         } catch (e) {
             console.warn('Failed to save session:', e);
+            return false;
         }
     
+}
+
+async function persistSessionForUpdateReload(metadata = {}) {
+        const snapshot = saveSessionSnapshotSync.call(this);
+        const hasSyncSnapshot = Boolean(snapshot);
+        const savedToIndexedDb = await saveSession.call(this);
+
+        return {
+            metadata,
+            hasSyncSnapshot,
+            savedToIndexedDb: Boolean(savedToIndexedDb),
+            snapshot
+        };
 }
 
 async function checkForRecovery() {
         try {
             const hasSession = await this.storageManager.hasSession();
             const rawSyncSnapshot = localStorage.getItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot');
+            const rawPlannedUpdateReload = localStorage.getItem(PLANNED_UPDATE_RELOAD_KEY);
             let hasSyncSnapshot = false;
+            let plannedUpdateReload = null;
 
             if (rawSyncSnapshot) {
                 try {
@@ -166,12 +185,37 @@ async function checkForRecovery() {
                 }
             }
 
+            if (rawPlannedUpdateReload) {
+                try {
+                    const parsedPlannedUpdateReload = JSON.parse(rawPlannedUpdateReload);
+                    if (parsedPlannedUpdateReload?.reason === 'update') {
+                        plannedUpdateReload = parsedPlannedUpdateReload;
+                    } else {
+                        localStorage.removeItem(PLANNED_UPDATE_RELOAD_KEY);
+                    }
+                } catch (plannedReloadError) {
+                    console.warn('Ignoring invalid planned update reload payload:', plannedReloadError);
+                    localStorage.removeItem(PLANNED_UPDATE_RELOAD_KEY);
+                }
+            }
+
+            if (plannedUpdateReload && (hasSession || hasSyncSnapshot)) {
+                const restored = await this.restoreSession();
+                if (restored) {
+                    localStorage.removeItem(PLANNED_UPDATE_RELOAD_KEY);
+                    return true;
+                }
+            }
+
             if (hasSession || hasSyncSnapshot) {
                 this.showRecoveryModal();
+                return true;
             }
         } catch (e) {
             console.warn('Error checking for recovery:', e);
         }
+
+        return false;
     
 }
 
@@ -181,6 +225,9 @@ window.AboardSessionPersistenceRuntime = {
     },
     saveSession(board) {
         return saveSession.call(board);
+    },
+    persistSessionForUpdateReload(board, metadata) {
+        return persistSessionForUpdateReload.call(board, metadata);
     },
     checkForRecovery(board) {
         return checkForRecovery.call(board);

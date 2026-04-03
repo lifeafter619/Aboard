@@ -208,6 +208,8 @@ class DrawingBoard {
         this.cacheSizeRetryScheduled = false;
         this.cacheStorageSizeSnapshotKey = 'aboardCacheStorageSizeSnapshot';
         this.syncSessionSnapshotKey = 'aboardSyncSessionSnapshot';
+        this.lastUserActivityAt = Date.now();
+        this.suppressBeforeUnloadPrompt = false;
         
         // Coordinate origin dragging state
         this.isDraggingCoordinateOrigin = false;
@@ -283,6 +285,13 @@ class DrawingBoard {
         this.updateZoomControlsVisibility();
         this.updateImportExportBtnVisibility();
         this.updateFullscreenBtnVisibility();
+
+        const markUserActivity = () => {
+            this.markUserActivity();
+        };
+        ['pointerdown', 'pointermove', 'keydown', 'input', 'wheel', 'touchstart'].forEach((eventName) => {
+            document.addEventListener(eventName, markUserActivity, true);
+        });
         
         // Listen for fullscreen changes
         document.addEventListener('fullscreenchange', () => this.handleFullscreenChange());
@@ -291,6 +300,9 @@ class DrawingBoard {
         window.addEventListener('beforeunload', (e) => {
             this.saveSessionSnapshotSync();
             void this.saveSession();
+            if (this.suppressBeforeUnloadPrompt) {
+                return undefined;
+            }
             // Show warning message when user tries to refresh or close the page
             const message = window.i18n ? window.i18n.t('tools.refresh.warning') : 'Refreshing will clear all canvas content and cannot be recovered. Are you sure you want to refresh?';
             e.preventDefault();
@@ -1030,12 +1042,68 @@ class DrawingBoard {
     }
     
     // Save session data to IndexedDB via StorageManager
+    markUserActivity() {
+        this.lastUserActivityAt = Date.now();
+    }
+
+    setSuppressBeforeUnloadPrompt(value = true) {
+        this.suppressBeforeUnloadPrompt = Boolean(value);
+    }
+
+    getUpdateActivitySnapshot() {
+        const activeElement = document.activeElement;
+        const isEditableElement = Boolean(activeElement) && (
+            activeElement.isContentEditable
+            || ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeElement.tagName)
+        );
+
+        return {
+            lastActivityAt: this.lastUserActivityAt,
+            isDrawing: Boolean(this.drawingEngine?.isDrawing || this.shapeDrawingManager?.isDrawing),
+            isPinching: Boolean(this.isPinching || this.activePointers?.size > 1),
+            isDraggingPanel: Boolean(this.isDraggingPanel || this.isDraggingCoordinateOrigin),
+            isModalBusy: Boolean(this.modalDragState || this.modalResizeState),
+            isSelectionBusy: Boolean(
+                this.selectionManager?.isDragging
+                || this.selectionManager?.isResizing
+                || this.selectionManager?.isRotating
+                || this.strokeControls?.isDragging
+                || this.strokeControls?.isResizing
+                || this.strokeControls?.isRotating
+            ),
+            isTextInputBusy: Boolean(
+                this.insertTextManager?.isInputting
+                || this.insertTextManager?.isDragging
+                || this.insertTextManager?.isResizing
+                || this.insertTextManager?.isRotating
+                || isEditableElement
+            ),
+            isMediaTransformBusy: Boolean(
+                this.imageControls?.isDragging
+                || this.imageControls?.isResizing
+                || this.imageControls?.isRotating
+                || this.insertImageManager?.isDragging
+                || this.insertImageManager?.isResizing
+                || this.insertImageManager?.isRotating
+            ),
+            isTeachingToolBusy: Boolean(
+                this.teachingToolsManager?.isDragging
+                || this.teachingToolsManager?.isResizing
+                || this.teachingToolsManager?.isRotating
+            )
+        };
+    }
+
     saveSessionSnapshotSync() {
         return sessionPersistenceRuntime.saveSessionSnapshotSync?.(this);
     }
     
     async saveSession() {
         return sessionPersistenceRuntime.saveSession?.(this);
+    }
+
+    async persistSessionForUpdateReload(metadata = {}) {
+        return sessionPersistenceRuntime.persistSessionForUpdateReload?.(this, metadata);
     }
     
     // Check for saved session and show recovery dialog

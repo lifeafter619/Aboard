@@ -5,13 +5,12 @@ export const UPDATE_PREFERENCES = Object.freeze({
 
 export const STARTUP_UPDATE_ACTIONS = Object.freeze({
   CONTINUE: 'continue',
-  PROMPT: 'prompt',
-  ACTIVATE: 'activate'
+  PROMPT: 'prompt'
 });
 
 export const STARTUP_UPDATE_USER_CHOICES = Object.freeze({
-  LATER: 'later',
-  UPDATE: 'update'
+  IDLE: 'idle',
+  IMMEDIATE: 'immediate'
 });
 
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
@@ -63,12 +62,10 @@ export function resolveStartupUpdateAction({
   updatePreference,
   hasWaitingWorker = false
 } = {}) {
-  const normalizedPreference = normalizeUpdatePreference(updatePreference);
+  normalizeUpdatePreference(updatePreference);
 
   if (hasWaitingWorker) {
-    return normalizedPreference === UPDATE_PREFERENCES.AUTO
-      ? STARTUP_UPDATE_ACTIONS.ACTIVATE
-      : STARTUP_UPDATE_ACTIONS.PROMPT;
+    return STARTUP_UPDATE_ACTIONS.PROMPT;
   }
 
   if (!currentVersion || !latestVersion) {
@@ -79,9 +76,7 @@ export function resolveStartupUpdateAction({
     return STARTUP_UPDATE_ACTIONS.CONTINUE;
   }
 
-  return normalizedPreference === UPDATE_PREFERENCES.AUTO
-    ? STARTUP_UPDATE_ACTIONS.ACTIVATE
-    : STARTUP_UPDATE_ACTIONS.PROMPT;
+  return STARTUP_UPDATE_ACTIONS.PROMPT;
 }
 
 export function shouldContinuePostVisibleStartup({ action, userChoice } = {}) {
@@ -89,5 +84,5 @@ export function shouldContinuePostVisibleStartup({ action, userChoice } = {}) {
     return true;
   }
 
-  return userChoice === STARTUP_UPDATE_USER_CHOICES.LATER;
+  return userChoice === STARTUP_UPDATE_USER_CHOICES.IDLE;
 }

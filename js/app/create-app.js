@@ -138,42 +138,26 @@ async function runStartupUpdateGate(app, { win = window } = {}) {
       hasWaitingWorker: updateState?.hasWaitingWorker
     });
 
-    if (action === STARTUP_UPDATE_ACTIONS.ACTIVATE) {
-      const didScheduleUpdate = await pwaManager.applyUpdateNow?.({ reason: 'startup' });
-      if (!didScheduleUpdate) {
-        return {
-          action: STARTUP_UPDATE_ACTIONS.CONTINUE,
-          userChoice: STARTUP_UPDATE_USER_CHOICES.LATER,
-          updateState
-        };
-      }
-
-      return {
-        action,
-        userChoice: STARTUP_UPDATE_USER_CHOICES.UPDATE,
-        updateState
-      };
-    }
-
     if (action === STARTUP_UPDATE_ACTIONS.PROMPT) {
       const userChoice = await pwaManager.promptForUpdate?.({
         reason: 'startup',
         currentVersion: updateState?.currentVersion,
         latestVersion: updateState?.latestVersion
-      }) || STARTUP_UPDATE_USER_CHOICES.LATER;
+      }) || STARTUP_UPDATE_USER_CHOICES.IDLE;
 
-      if (userChoice === STARTUP_UPDATE_USER_CHOICES.UPDATE) {
-        const didScheduleUpdate = await pwaManager.applyUpdateNow?.({ reason: 'startup' });
-        if (!didScheduleUpdate) {
-          pwaManager.deferUpdatePromptForCurrentSession?.();
-          return {
-            action: STARTUP_UPDATE_ACTIONS.CONTINUE,
-            userChoice: STARTUP_UPDATE_USER_CHOICES.LATER,
-            updateState
-          };
-        }
-      } else {
+      const didRequestUpdate = await pwaManager.requestUpdateApplication?.({
+        mode: userChoice === STARTUP_UPDATE_USER_CHOICES.IMMEDIATE ? 'immediate' : 'idle',
+        reason: 'startup',
+        currentVersion: updateState?.currentVersion,
+        latestVersion: updateState?.latestVersion
+      });
+      if (!didRequestUpdate && userChoice === STARTUP_UPDATE_USER_CHOICES.IMMEDIATE) {
         pwaManager.deferUpdatePromptForCurrentSession?.();
+        return {
+          action: STARTUP_UPDATE_ACTIONS.CONTINUE,
+          userChoice: STARTUP_UPDATE_USER_CHOICES.IDLE,
+          updateState
+        };
       }
 
       return {
@@ -192,7 +176,7 @@ async function runStartupUpdateGate(app, { win = window } = {}) {
     console.warn('Aboard startup update gate failed, continuing startup:', error);
     return {
       action: STARTUP_UPDATE_ACTIONS.CONTINUE,
-      userChoice: STARTUP_UPDATE_USER_CHOICES.LATER,
+      userChoice: STARTUP_UPDATE_USER_CHOICES.IDLE,
       updateState: null
     };
   }
