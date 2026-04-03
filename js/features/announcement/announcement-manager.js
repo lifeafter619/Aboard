@@ -24,16 +24,16 @@ export class AnnouncementManager {
   }
 
   setupEventListeners() {
-    this.okButton.addEventListener('click', () => {
+    this.okButton?.addEventListener('click', () => {
       this.closeModal();
     });
 
-    this.noShowButton.addEventListener('click', () => {
+    this.noShowButton?.addEventListener('click', () => {
       localStorage.setItem('hideAnnouncement', 'true');
       this.closeModal();
     });
 
-    this.modal.addEventListener('click', (e) => {
+    this.modal?.addEventListener('click', (e) => {
       if (e.target === this.modal) {
         this.closeModal();
       }
@@ -49,7 +49,7 @@ export class AnnouncementManager {
   }
 
   showModal() {
-    if (!window.i18n) return;
+    if (!window.i18n || !this.modal || !this.titleElement || !this.contentElement) return;
 
     if (window.drawingBoard?.syncResizableModalState) {
       window.drawingBoard.syncResizableModalState('announcement-modal');
@@ -77,7 +77,7 @@ export class AnnouncementManager {
   }
 
   closeModal() {
-    this.modal.classList.remove('show');
+    this.modal?.classList?.remove('show');
   }
 
   updateSettingsContent() {

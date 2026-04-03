@@ -1,7 +1,22 @@
 ﻿// Extracted UI listener runtime from main.js
 // Keeps legacy instance semantics by executing with board as this.
 
+function bindIfPresent(element, eventName, handler, options) {
+        element?.addEventListener?.(eventName, handler, options);
+}
+
 function setupToolConfigListeners() {
+        const customColorPicker = document.getElementById('custom-color-picker');
+        const customColorPickerBtn = document.querySelector('label[for="custom-color-picker"]');
+        const penSizeSlider = document.getElementById('pen-size-slider');
+        const penSizeValue = document.getElementById('pen-size-value');
+        const shapeSizeSlider = document.getElementById('shape-size-slider');
+        const shapeSizeValue = document.getElementById('shape-size-value');
+        const arrowSizeSlider = document.getElementById('arrow-size-slider');
+        const arrowSizeValue = document.getElementById('arrow-size-value');
+        const eraserSizeSlider = document.getElementById('eraser-size-slider');
+        const eraserSizeValue = document.getElementById('eraser-size-value');
+
 // Pen type buttons
         document.querySelectorAll('.pen-type-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -30,21 +45,21 @@ function setupToolConfigListeners() {
             });
         });
         
-        const customColorPicker = document.getElementById('custom-color-picker');
-        const customColorPickerBtn = document.querySelector('label[for="custom-color-picker"]');
-        customColorPicker.addEventListener('input', (e) => {
-            this.drawingEngine.setColor(e.target.value);
-            document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
-            // Mark color picker button as active
-            if (customColorPickerBtn) {
-                customColorPickerBtn.classList.add('active');
-            }
-            // Sync shape color picker
-            const shapeColorPicker = document.getElementById('shape-custom-color-picker');
-            if (shapeColorPicker) {
-                shapeColorPicker.value = e.target.value;
-            }
-        });
+        if (customColorPicker) {
+            customColorPicker.addEventListener('input', (e) => {
+                this.drawingEngine.setColor(e.target.value);
+                document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
+                // Mark color picker button as active
+                if (customColorPickerBtn) {
+                    customColorPickerBtn.classList.add('active');
+                }
+                // Sync shape color picker
+                const shapeColorPicker = document.getElementById('shape-custom-color-picker');
+                if (shapeColorPicker) {
+                    shapeColorPicker.value = e.target.value;
+                }
+            });
+        }
         // Deactivate color picker when a preset is selected
         document.querySelectorAll('.color-btn[data-color]').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -60,15 +75,10 @@ function setupToolConfigListeners() {
         });
         
         // Sliders
-        const penSizeSlider = document.getElementById('pen-size-slider');
-        const penSizeValue = document.getElementById('pen-size-value');
-        const shapeSizeSlider = document.getElementById('shape-size-slider');
-        const shapeSizeValue = document.getElementById('shape-size-value');
-        const arrowSizeSlider = document.getElementById('arrow-size-slider');
-        const arrowSizeValue = document.getElementById('arrow-size-value');
         
         // Pen size slider - syncs with shape slider
-        penSizeSlider.addEventListener('input', (e) => {
+        if (penSizeSlider) {
+            penSizeSlider.addEventListener('input', (e) => {
             const size = parseInt(e.target.value);
             this.drawingEngine.setPenSize(size);
             // Ensure penSizeValue element exists and update text content
@@ -78,7 +88,9 @@ function setupToolConfigListeners() {
             // Sync shape slider
             if (shapeSizeSlider) {
                 shapeSizeSlider.value = size;
-                shapeSizeValue.textContent = size;
+                if (shapeSizeValue) {
+                    shapeSizeValue.textContent = size;
+                }
             }
 
             // Enforce arrow size constraint
@@ -86,27 +98,34 @@ function setupToolConfigListeners() {
                 if (parseInt(arrowSizeSlider.value) < size) {
                     arrowSizeSlider.value = size;
                     arrowSizeValue.textContent = size;
-                    this.shapeDrawingManager.setArrowSize(size);
+                    this.shapeDrawingManager?.setArrowSize?.(size);
                 }
             }
-        });
+            });
+        }
         
         // Shape size slider - syncs with pen slider
         if (shapeSizeSlider) {
             shapeSizeSlider.addEventListener('input', (e) => {
                 const size = parseInt(e.target.value);
                 this.drawingEngine.setPenSize(size);
-                shapeSizeValue.textContent = size;
+                if (shapeSizeValue) {
+                    shapeSizeValue.textContent = size;
+                }
                 // Sync pen slider
-                penSizeSlider.value = size;
-                penSizeValue.textContent = size;
+                if (penSizeSlider) {
+                    penSizeSlider.value = size;
+                }
+                if (penSizeValue) {
+                    penSizeValue.textContent = size;
+                }
 
                 // Enforce arrow size constraint
                 if (arrowSizeSlider && arrowSizeValue) {
                     if (parseInt(arrowSizeSlider.value) < size) {
                         arrowSizeSlider.value = size;
                         arrowSizeValue.textContent = size;
-                        this.shapeDrawingManager.setArrowSize(size);
+                        this.shapeDrawingManager?.setArrowSize?.(size);
                     }
                 }
             });
@@ -124,16 +143,18 @@ function setupToolConfigListeners() {
             });
         });
         
-        const eraserSizeSlider = document.getElementById('eraser-size-slider');
-        const eraserSizeValue = document.getElementById('eraser-size-value');
-        eraserSizeSlider.addEventListener('input', (e) => {
-            this.drawingEngine.setEraserSize(parseInt(e.target.value));
-            eraserSizeValue.textContent = e.target.value;
-            if (this.drawingEngine.currentTool === 'eraser') {
-                this.eraserCursor.style.width = e.target.value + 'px';
-                this.eraserCursor.style.height = e.target.value + 'px';
-            }
-        });
+        if (eraserSizeSlider) {
+            eraserSizeSlider.addEventListener('input', (e) => {
+                this.drawingEngine.setEraserSize(parseInt(e.target.value));
+                if (eraserSizeValue) {
+                    eraserSizeValue.textContent = e.target.value;
+                }
+                if (this.drawingEngine.currentTool === 'eraser' && this.eraserCursor) {
+                    this.eraserCursor.style.width = e.target.value + 'px';
+                    this.eraserCursor.style.height = e.target.value + 'px';
+                }
+            });
+        }
         this.syncEraserSizeControls();
         
         // Line style settings buttons (open modal)
@@ -258,36 +279,6 @@ function setupSelectToolConfigListeners() {
 }
 
 function setupMoreFeatureToolConfigListeners() {
-        // More config panel (time display checkboxes)
-        const showDateCheckboxMore = document.getElementById('show-date-checkbox-more');
-        const showTimeCheckboxMore = document.getElementById('show-time-checkbox-more');
-        
-        // Time Display Feature Button
-        const timeDisplayFeatureBtn = document.getElementById('time-display-feature-btn');
-        const timeDisplayControls = document.getElementById('time-display-controls');
-        
-        if (timeDisplayFeatureBtn && timeDisplayControls) {
-            timeDisplayFeatureBtn.addEventListener('click', () => {
-                this.exitShapeMode();
-                // Toggle the time display controls visibility
-                const isVisible = timeDisplayControls.style.display !== 'none';
-                if (isVisible) {
-                    timeDisplayControls.style.display = 'none';
-                    timeDisplayFeatureBtn.classList.remove('active');
-                    // Auto-switch to pen tool after closing time display settings
-                    this.handleMoreFeaturePanelAfterAction();
-                    this.switchToPen();
-                } else {
-                    timeDisplayControls.style.display = 'flex';
-                    timeDisplayFeatureBtn.classList.add('active');
-                    // Refresh collapsible groups after showing new content
-                    if (this.collapsibleManager) {
-                        setTimeout(() => this.collapsibleManager.refreshAll(), 50);
-                    }
-                }
-            });
-        }
-        
         // Timer Feature Button
         const timerFeatureBtn = document.getElementById('timer-feature-btn');
         if (timerFeatureBtn) {
@@ -375,46 +366,6 @@ function setupMoreFeatureToolConfigListeners() {
             });
         }
         
-        // Load initial checkbox states
-        if (showDateCheckboxMore && showTimeCheckboxMore) {
-            showDateCheckboxMore.checked = this.timeDisplayManager.showDate;
-            showTimeCheckboxMore.checked = this.timeDisplayManager.showTime;
-            
-            // Set initial button state based on whether time display is enabled
-            if (timeDisplayFeatureBtn) {
-                if (this.timeDisplayManager.enabled) {
-                    timeDisplayFeatureBtn.classList.add('active');
-                    timeDisplayControls.style.display = 'flex';
-                }
-            }
-            
-            // Update visibility based on initial state
-            if (showDateCheckboxMore.checked || showTimeCheckboxMore.checked) {
-                this.timeDisplayManager.show();
-            } else {
-                this.timeDisplayManager.hide();
-            }
-            
-            showDateCheckboxMore.addEventListener('change', (e) => {
-                this.timeDisplayManager.setShowDate(e.target.checked);
-                // Hide if both unchecked
-                if (!showDateCheckboxMore.checked && !showTimeCheckboxMore.checked) {
-                    this.timeDisplayManager.hide();
-                } else {
-                    this.timeDisplayManager.show();
-                }
-            });
-            
-            showTimeCheckboxMore.addEventListener('change', (e) => {
-                this.timeDisplayManager.setShowTime(e.target.checked);
-                // Hide if both unchecked
-                if (!showDateCheckboxMore.checked && !showTimeCheckboxMore.checked) {
-                    this.timeDisplayManager.hide();
-                } else {
-                    this.timeDisplayManager.show();
-                }
-            });
-        }
 }
 
 function setupBackgroundToolConfigListeners() {
@@ -433,18 +384,20 @@ function setupBackgroundToolConfigListeners() {
         
         const customBgColorPicker = document.getElementById('custom-bg-color-picker');
         const customBgColorPickerBtn = document.querySelector('label[for="custom-bg-color-picker"]');
-        customBgColorPicker.addEventListener('input', (e) => {
-            this.backgroundManager.setBackgroundColor(e.target.value);
-            document.querySelectorAll('.color-btn[data-bg-color]').forEach(b => b.classList.remove('active'));
-            // Mark color picker button as active
-            if (customBgColorPickerBtn) {
-                customBgColorPickerBtn.classList.add('active');
-            }
-            // Save page background in paginated mode
-            if (!this.settingsManager.infiniteCanvas) {
-                this.savePageBackground(this.currentPage);
-            }
-        });
+        if (customBgColorPicker) {
+            customBgColorPicker.addEventListener('input', (e) => {
+                this.backgroundManager.setBackgroundColor(e.target.value);
+                document.querySelectorAll('.color-btn[data-bg-color]').forEach(b => b.classList.remove('active'));
+                // Mark color picker button as active
+                if (customBgColorPickerBtn) {
+                    customBgColorPickerBtn.classList.add('active');
+                }
+                // Save page background in paginated mode
+                if (!this.settingsManager.infiniteCanvas) {
+                    this.savePageBackground(this.currentPage);
+                }
+            });
+        }
         // Deactivate color picker when a preset is selected
         document.querySelectorAll('.color-btn[data-bg-color]').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -460,7 +413,7 @@ function setupBackgroundToolConfigListeners() {
                 // Use currentTarget to ensure we get the data from the button, not its children
                 const pattern = e.currentTarget.dataset.pattern;
                 if (pattern === 'image') {
-                    document.getElementById('bg-image-upload').click();
+                    document.getElementById('bg-image-upload')?.click();
                 } else {
                     this.backgroundManager.setBackgroundPattern(pattern);
                     this.updateBackgroundUI();
@@ -479,7 +432,7 @@ function setupBackgroundToolConfigListeners() {
         });
         
         // Background image upload
-        document.getElementById('bg-image-upload').addEventListener('change', (e) => {
+        bindIfPresent(document.getElementById('bg-image-upload'), 'change', (e) => {
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
@@ -611,10 +564,12 @@ function setupBackgroundToolConfigListeners() {
         // Pattern density slider
         const patternDensitySlider = document.getElementById('pattern-density-slider');
         const patternDensityValue = document.getElementById('pattern-density-value');
-        patternDensitySlider.addEventListener('input', (e) => {
-            this.backgroundManager.setPatternDensity(parseInt(e.target.value) / 100);
-            patternDensityValue.textContent = e.target.value;
-        });
+        if (patternDensitySlider && patternDensityValue) {
+            patternDensitySlider.addEventListener('input', (e) => {
+                this.backgroundManager.setPatternDensity(parseInt(e.target.value) / 100);
+                patternDensityValue.textContent = e.target.value;
+            });
+        }
 
         // Move Coordinate Origin Button
         const moveOriginBtn = document.getElementById('move-origin-btn');
@@ -849,7 +804,7 @@ function setupBackgroundToolConfigListeners() {
 }
 
 function setupSettingsListeners() {
-document.getElementById('settings-close-btn').addEventListener('click', () => this.closeSettings());
+        bindIfPresent(document.getElementById('settings-close-btn'), 'click', () => this.closeSettings());
         
         document.querySelectorAll('.settings-tab-icon').forEach(tab => {
             tab.addEventListener('click', (e) => {
@@ -861,71 +816,79 @@ document.getElementById('settings-close-btn').addEventListener('click', () => th
         const toolbarSizeSlider = document.getElementById('toolbar-size-slider');
         const toolbarSizeValue = document.getElementById('toolbar-size-value');
         const toolbarSizeInput = document.getElementById('toolbar-size-input');
-        toolbarSizeSlider.addEventListener('input', (e) => {
-            this.settingsManager.toolbarSize = parseInt(e.target.value);
-            toolbarSizeValue.textContent = e.target.value;
-            toolbarSizeInput.value = e.target.value;
-            this.settingsManager.updateToolbarSize();
-        });
-        toolbarSizeInput.addEventListener('input', (e) => {
-            const value = Math.max(30, Math.min(100, parseInt(e.target.value) || 40));
-            e.target.value = value;
-            toolbarSizeSlider.value = value;
-            this.settingsManager.toolbarSize = value;
-            toolbarSizeValue.textContent = value;
-            this.settingsManager.updateToolbarSize();
-        });
+        if (toolbarSizeSlider && toolbarSizeValue && toolbarSizeInput) {
+            toolbarSizeSlider.addEventListener('input', (e) => {
+                this.settingsManager.toolbarSize = parseInt(e.target.value);
+                toolbarSizeValue.textContent = e.target.value;
+                toolbarSizeInput.value = e.target.value;
+                this.settingsManager.updateToolbarSize();
+            });
+            toolbarSizeInput.addEventListener('input', (e) => {
+                const value = Math.max(30, Math.min(100, parseInt(e.target.value) || 40));
+                e.target.value = value;
+                toolbarSizeSlider.value = value;
+                this.settingsManager.toolbarSize = value;
+                toolbarSizeValue.textContent = value;
+                this.settingsManager.updateToolbarSize();
+            });
+        }
         
         const configScaleSlider = document.getElementById('config-scale-slider');
         const configScaleValue = document.getElementById('config-scale-value');
         const configScaleInput = document.getElementById('config-scale-input');
-        configScaleSlider.addEventListener('input', (e) => {
-            this.settingsManager.configScale = parseInt(e.target.value) / 100;
-            configScaleValue.textContent = Math.round(this.settingsManager.configScale * 100);
-            configScaleInput.value = e.target.value;
-            this.settingsManager.updateConfigScale();
-        });
-        configScaleInput.addEventListener('input', (e) => {
-            const value = Math.max(50, Math.min(150, parseInt(e.target.value) || 100));
-            e.target.value = value;
-            configScaleSlider.value = value;
-            this.settingsManager.configScale = value / 100;
-            configScaleValue.textContent = value;
-            this.settingsManager.updateConfigScale();
-        });
+        if (configScaleSlider && configScaleValue && configScaleInput) {
+            configScaleSlider.addEventListener('input', (e) => {
+                this.settingsManager.configScale = parseInt(e.target.value) / 100;
+                configScaleValue.textContent = Math.round(this.settingsManager.configScale * 100);
+                configScaleInput.value = e.target.value;
+                this.settingsManager.updateConfigScale();
+            });
+            configScaleInput.addEventListener('input', (e) => {
+                const value = Math.max(50, Math.min(150, parseInt(e.target.value) || 100));
+                e.target.value = value;
+                configScaleSlider.value = value;
+                this.settingsManager.configScale = value / 100;
+                configScaleValue.textContent = value;
+                this.settingsManager.updateConfigScale();
+            });
+        }
         
         // Background opacity and pattern intensity from settings
         const bgOpacitySlider = document.getElementById('bg-opacity-slider');
         const bgOpacityValue = document.getElementById('bg-opacity-value');
         const bgOpacityInput = document.getElementById('bg-opacity-input');
-        bgOpacitySlider.addEventListener('input', (e) => {
-            this.backgroundManager.setOpacity(parseInt(e.target.value) / 100);
-            bgOpacityValue.textContent = e.target.value;
-            bgOpacityInput.value = e.target.value;
-        });
-        bgOpacityInput.addEventListener('input', (e) => {
-            const value = Math.max(0, Math.min(100, parseInt(e.target.value) || 100));
-            e.target.value = value;
-            bgOpacitySlider.value = value;
-            this.backgroundManager.setOpacity(value / 100);
-            bgOpacityValue.textContent = value;
-        });
+        if (bgOpacitySlider && bgOpacityValue && bgOpacityInput) {
+            bgOpacitySlider.addEventListener('input', (e) => {
+                this.backgroundManager.setOpacity(parseInt(e.target.value) / 100);
+                bgOpacityValue.textContent = e.target.value;
+                bgOpacityInput.value = e.target.value;
+            });
+            bgOpacityInput.addEventListener('input', (e) => {
+                const value = Math.max(0, Math.min(100, parseInt(e.target.value) || 100));
+                e.target.value = value;
+                bgOpacitySlider.value = value;
+                this.backgroundManager.setOpacity(value / 100);
+                bgOpacityValue.textContent = value;
+            });
+        }
         
         const patternIntensitySlider = document.getElementById('pattern-intensity-slider');
         const patternIntensityValue = document.getElementById('pattern-intensity-value');
         const patternIntensityInput = document.getElementById('pattern-intensity-input');
-        patternIntensitySlider.addEventListener('input', (e) => {
-            this.backgroundManager.setPatternIntensity(parseInt(e.target.value) / 100);
-            patternIntensityValue.textContent = e.target.value;
-            patternIntensityInput.value = e.target.value;
-        });
-        patternIntensityInput.addEventListener('input', (e) => {
-            const value = Math.max(10, Math.min(200, parseInt(e.target.value) || 50));
-            e.target.value = value;
-            patternIntensitySlider.value = value;
-            this.backgroundManager.setPatternIntensity(value / 100);
-            patternIntensityValue.textContent = value;
-        });
+        if (patternIntensitySlider && patternIntensityValue && patternIntensityInput) {
+            patternIntensitySlider.addEventListener('input', (e) => {
+                this.backgroundManager.setPatternIntensity(parseInt(e.target.value) / 100);
+                patternIntensityValue.textContent = e.target.value;
+                patternIntensityInput.value = e.target.value;
+            });
+            patternIntensityInput.addEventListener('input', (e) => {
+                const value = Math.max(10, Math.min(200, parseInt(e.target.value) || 50));
+                e.target.value = value;
+                patternIntensitySlider.value = value;
+                this.backgroundManager.setPatternIntensity(value / 100);
+                patternIntensityValue.textContent = value;
+            });
+        }
         
         document.querySelectorAll('.position-option-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -933,24 +896,24 @@ document.getElementById('settings-close-btn').addEventListener('click', () => th
             });
         });
         
-        document.getElementById('edge-snap-checkbox').addEventListener('change', (e) => {
+        bindIfPresent(document.getElementById('edge-snap-checkbox'), 'change', (e) => {
             this.settingsManager.edgeSnapEnabled = e.target.checked;
             localStorage.setItem('edgeSnapEnabled', e.target.checked);
         });
         
-        document.getElementById('touch-zoom-checkbox').addEventListener('change', (e) => {
+        bindIfPresent(document.getElementById('touch-zoom-checkbox'), 'change', (e) => {
             this.settingsManager.touchZoomEnabled = e.target.checked;
             localStorage.setItem('touchZoomEnabled', e.target.checked);
         });
 
-        document.getElementById('unlimited-zoom-checkbox').addEventListener('change', (e) => {
+        bindIfPresent(document.getElementById('unlimited-zoom-checkbox'), 'change', (e) => {
             this.settingsManager.unlimitedZoom = e.target.checked;
             localStorage.setItem('unlimitedZoom', e.target.checked);
             this.updateMaxCanvasScale();
         });
 
         // Global font selector
-        document.getElementById('global-font-select').addEventListener('change', (e) => {
+        bindIfPresent(document.getElementById('global-font-select'), 'change', (e) => {
             this.settingsManager.setGlobalFont(e.target.value);
         });
         
@@ -967,7 +930,7 @@ document.getElementById('settings-close-btn').addEventListener('click', () => th
         }
         
         // Populate custom fonts on load
-        this.settingsManager.populateGlobalFontSelect();
+        this.settingsManager.populateGlobalFontSelect?.();
         
         // Canvas mode buttons removed - pagination is always active
         
@@ -983,31 +946,34 @@ document.getElementById('settings-close-btn').addEventListener('click', () => th
         });
         
         // Canvas size inputs
-        document.getElementById('canvas-width-input').addEventListener('change', (e) => {
+        bindIfPresent(document.getElementById('canvas-width-input'), 'change', (e) => {
             const width = parseInt(e.target.value);
-            const height = parseInt(document.getElementById('canvas-height-input').value);
+            const heightInput = document.getElementById('canvas-height-input');
+            const height = parseInt(heightInput?.value);
             this.settingsManager.setCanvasSize(width, height);
             // Set to custom when manually changing size
             document.querySelectorAll('.canvas-preset-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector('.canvas-preset-btn[data-preset="custom"]').classList.add('active');
+            document.querySelector('.canvas-preset-btn[data-preset="custom"]')?.classList.add('active');
             this.applyCanvasSize();
         });
         
-        document.getElementById('canvas-height-input').addEventListener('change', (e) => {
+        bindIfPresent(document.getElementById('canvas-height-input'), 'change', (e) => {
             const height = parseInt(e.target.value);
-            const width = parseInt(document.getElementById('canvas-width-input').value);
+            const widthInput = document.getElementById('canvas-width-input');
+            const width = parseInt(widthInput?.value);
             this.settingsManager.setCanvasSize(width, height);
             // Set to custom when manually changing size
             document.querySelectorAll('.canvas-preset-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector('.canvas-preset-btn[data-preset="custom"]').classList.add('active');
+            document.querySelector('.canvas-preset-btn[data-preset="custom"]')?.classList.add('active');
             this.applyCanvasSize();
         });
         
         // Canvas ratio selector
-        document.getElementById('canvas-ratio-select').addEventListener('change', (e) => {
+        bindIfPresent(document.getElementById('canvas-ratio-select'), 'change', (e) => {
             const ratio = e.target.value;
             if (ratio !== 'custom') {
-                const width = parseInt(document.getElementById('canvas-width-input').value);
+                const widthInput = document.getElementById('canvas-width-input');
+                const width = parseInt(widthInput?.value);
                 let height;
                 
                 switch(ratio) {
@@ -1028,13 +994,16 @@ document.getElementById('settings-close-btn').addEventListener('click', () => th
                         break;
                 }
                 
-                document.getElementById('canvas-height-input').value = height;
+                const canvasHeightInput = document.getElementById('canvas-height-input');
+                if (canvasHeightInput) {
+                    canvasHeightInput.value = height;
+                }
                 this.settingsManager.setCanvasSize(width, height);
             }
         });
         
         // Show/hide zoom controls
-        document.getElementById('show-zoom-controls-checkbox').addEventListener('change', (e) => {
+        bindIfPresent(document.getElementById('show-zoom-controls-checkbox'), 'change', (e) => {
             this.settingsManager.showZoomControls = e.target.checked;
             localStorage.setItem('showZoomControls', e.target.checked);
             this.updateZoomControlsVisibility();
@@ -1051,7 +1020,7 @@ document.getElementById('settings-close-btn').addEventListener('click', () => th
         }
         
         // Show/hide fullscreen button
-        document.getElementById('show-fullscreen-btn-checkbox').addEventListener('change', (e) => {
+        bindIfPresent(document.getElementById('show-fullscreen-btn-checkbox'), 'change', (e) => {
             this.settingsManager.showFullscreenBtn = e.target.checked;
             localStorage.setItem('showFullscreenBtn', e.target.checked);
             this.updateFullscreenBtnVisibility();
@@ -1079,14 +1048,16 @@ document.getElementById('settings-close-btn').addEventListener('click', () => th
         
         const customThemeColorPicker = document.getElementById('custom-theme-color-picker');
         const customThemeColorPickerBtn = document.querySelector('label[for="custom-theme-color-picker"]');
-        customThemeColorPicker.addEventListener('input', (e) => {
-            this.settingsManager.setThemeColor(e.target.value);
-            document.querySelectorAll('.color-btn[data-theme-color]').forEach(b => b.classList.remove('active'));
-            // Mark color picker button as active
-            if (customThemeColorPickerBtn) {
-                customThemeColorPickerBtn.classList.add('active');
-            }
-        });
+        if (customThemeColorPicker) {
+            customThemeColorPicker.addEventListener('input', (e) => {
+                this.settingsManager.setThemeColor(e.target.value);
+                document.querySelectorAll('.color-btn[data-theme-color]').forEach(b => b.classList.remove('active'));
+                // Mark color picker button as active
+                if (customThemeColorPickerBtn) {
+                    customThemeColorPickerBtn.classList.add('active');
+                }
+            });
+        }
         // Deactivate color picker when a preset is selected
         document.querySelectorAll('.color-btn[data-theme-color]').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -1105,12 +1076,12 @@ document.getElementById('settings-close-btn').addEventListener('click', () => th
         });
         
         // Export Config
-        document.getElementById('export-config-btn').addEventListener('click', () => {
+        bindIfPresent(document.getElementById('export-config-btn'), 'click', () => {
             this.settingsManager.exportSettings();
         });
 
         // Import Config
-        document.getElementById('import-config-btn').addEventListener('click', () => {
+        bindIfPresent(document.getElementById('import-config-btn'), 'click', () => {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.json';
@@ -1197,261 +1168,37 @@ document.getElementById('settings-close-btn').addEventListener('click', () => th
         }
 
         // Diff Modal Actions
-        document.getElementById('config-diff-cancel-btn').addEventListener('click', () => {
-            document.getElementById('config-diff-modal').classList.remove('show');
+        const configDiffModal = document.getElementById('config-diff-modal');
+        bindIfPresent(document.getElementById('config-diff-cancel-btn'), 'click', () => {
+            configDiffModal?.classList.remove('show');
         });
 
-        document.getElementById('config-diff-close-btn')?.addEventListener('click', () => {
-            document.getElementById('config-diff-modal').classList.remove('show');
-        });
-
-        document.getElementById('config-diff-modal').addEventListener('click', (e) => {
+        bindIfPresent(configDiffModal, 'click', (e) => {
             if (e.target.id === 'config-diff-modal') {
-                document.getElementById('config-diff-modal').classList.remove('show');
+                configDiffModal.classList.remove('show');
             }
         });
 
-        document.getElementById('settings-modal').addEventListener('click', (e) => {
+        bindIfPresent(document.getElementById('settings-modal'), 'click', (e) => {
             if (e.target.id === 'settings-modal') {
                 this.closeSettings();
             }
         });
         
-        // Time display settings (in Settings > More - now removed, these elements are in time-display-settings modal)
-        // The elements below are no longer in index.html's Settings > More section
-        // They are now only available in the time-display-settings-modal
-        const showTimeDisplayCheckbox = document.getElementById('show-time-display-checkbox');
-        if (showTimeDisplayCheckbox) {
-            showTimeDisplayCheckbox.addEventListener('change', (e) => {
-                const timeDisplaySettings = document.getElementById('time-display-settings');
-                const timezoneSettings = document.getElementById('timezone-settings');
-                const timeFormatSettings = document.getElementById('time-format-settings');
-                const dateFormatSettings = document.getElementById('date-format-settings');
-                const timeColorSettings = document.getElementById('time-color-settings');
-                const timeFontSizeSettings = document.getElementById('time-font-size-settings');
-                const timeOpacitySettings = document.getElementById('time-opacity-settings');
-                const timeFullscreenSettings = document.getElementById('time-fullscreen-settings');
-                const timeFullscreenFontSizeSettings = document.getElementById('time-fullscreen-font-size-settings');
-                
-                if (e.target.checked) {
-                    this.timeDisplayManager.show();
-                    if (timeDisplaySettings) timeDisplaySettings.style.display = 'flex';
-                    if (timezoneSettings) timezoneSettings.style.display = 'flex';
-                    if (timeFormatSettings) timeFormatSettings.style.display = 'flex';
-                    if (dateFormatSettings) dateFormatSettings.style.display = 'flex';
-                    if (timeColorSettings) timeColorSettings.style.display = 'flex';
-                    if (timeFontSizeSettings) timeFontSizeSettings.style.display = 'flex';
-                    if (timeOpacitySettings) timeOpacitySettings.style.display = 'flex';
-                    if (timeFullscreenSettings) timeFullscreenSettings.style.display = 'flex';
-                    if (timeFullscreenFontSizeSettings) timeFullscreenFontSizeSettings.style.display = 'flex';
-                } else {
-                    this.timeDisplayManager.hide();
-                    if (timeDisplaySettings) timeDisplaySettings.style.display = 'none';
-                    if (timezoneSettings) timezoneSettings.style.display = 'none';
-                    if (timeFormatSettings) timeFormatSettings.style.display = 'none';
-                    if (dateFormatSettings) dateFormatSettings.style.display = 'none';
-                    if (timeColorSettings) timeColorSettings.style.display = 'none';
-                    if (timeFontSizeSettings) timeFontSizeSettings.style.display = 'none';
-                    if (timeOpacitySettings) timeOpacitySettings.style.display = 'none';
-                    if (timeFullscreenSettings) timeFullscreenSettings.style.display = 'none';
-                    if (timeFullscreenFontSizeSettings) timeFullscreenFontSizeSettings.style.display = 'none';
-                }
-            });
-        }
-        
-        // Display type buttons (both, date-only, time-only)
-        document.querySelectorAll('.display-option-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const displayType = e.target.dataset.displayType;
-                document.querySelectorAll('.display-option-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                
-                switch(displayType) {
-                    case 'both':
-                        this.timeDisplayManager.setShowDate(true);
-                        this.timeDisplayManager.setShowTime(true);
-                        break;
-                    case 'date-only':
-                        this.timeDisplayManager.setShowDate(true);
-                        this.timeDisplayManager.setShowTime(false);
-                        break;
-                    case 'time-only':
-                        this.timeDisplayManager.setShowDate(false);
-                        this.timeDisplayManager.setShowTime(true);
-                        break;
-                }
-            });
-        });
-        
-        // Timezone selector (may be in time-display-settings modal)
-        const timezoneSelect = document.getElementById('timezone-select');
-        if (timezoneSelect) {
-            timezoneSelect.addEventListener('change', (e) => {
-                this.timeDisplayManager.setTimezone(e.target.value);
-            });
-        }
-        
-        const timeFormatSelect = document.getElementById('time-format-select');
-        if (timeFormatSelect) {
-            timeFormatSelect.addEventListener('change', (e) => {
-                this.timeDisplayManager.setTimeFormat(e.target.value);
-            });
-        }
-        
-        const dateFormatSelect = document.getElementById('date-format-select');
-        if (dateFormatSelect) {
-            dateFormatSelect.addEventListener('change', (e) => {
-                this.timeDisplayManager.setDateFormat(e.target.value);
-            });
-        }
-        
-        // Time color buttons
-        document.querySelectorAll('.color-btn[data-time-color]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.timeDisplayManager.setColor(e.target.dataset.timeColor);
-                document.querySelectorAll('.color-btn[data-time-color]').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                // Deactivate color picker button
-                const customTimeColorPickerBtn = document.querySelector('label[for="custom-time-color-picker"]');
-                if (customTimeColorPickerBtn) {
-                    customTimeColorPickerBtn.classList.remove('active');
-                }
-            });
-        });
-        
-        const customTimeColorPicker = document.getElementById('custom-time-color-picker');
-        const customTimeColorPickerBtn = document.querySelector('label[for="custom-time-color-picker"]');
-        if (customTimeColorPicker) {
-            customTimeColorPicker.addEventListener('input', (e) => {
-                this.timeDisplayManager.setColor(e.target.value);
-                document.querySelectorAll('.color-btn[data-time-color]').forEach(b => b.classList.remove('active'));
-                // Mark color picker button as active
-                if (customTimeColorPickerBtn) {
-                    customTimeColorPickerBtn.classList.add('active');
-                }
-            });
-        }
-        
-        // Time background color buttons
-        document.querySelectorAll('.color-btn[data-time-bg-color]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.timeDisplayManager.setBgColor(e.target.dataset.timeBgColor);
-                document.querySelectorAll('.color-btn[data-time-bg-color]').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                // Deactivate color picker button
-                const customTimeBgColorPickerBtn = document.querySelector('label[for="custom-time-bg-color-picker"]');
-                if (customTimeBgColorPickerBtn) {
-                    customTimeBgColorPickerBtn.classList.remove('active');
-                }
-            });
-        });
-        
-        const customTimeBgColorPicker = document.getElementById('custom-time-bg-color-picker');
-        const customTimeBgColorPickerBtn = document.querySelector('label[for="custom-time-bg-color-picker"]');
-        if (customTimeBgColorPicker) {
-            customTimeBgColorPicker.addEventListener('input', (e) => {
-                this.timeDisplayManager.setBgColor(e.target.value);
-                document.querySelectorAll('.color-btn[data-time-bg-color]').forEach(b => b.classList.remove('active'));
-                // Mark color picker button as active
-                if (customTimeBgColorPickerBtn) {
-                    customTimeBgColorPickerBtn.classList.add('active');
-                }
-            });
-        }
-        
-        // Time fullscreen mode buttons (in General Settings)
-        document.querySelectorAll('.fullscreen-mode-btn[data-mode]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const mode = e.target.dataset.mode;
-                // Only affect buttons with data-mode (General Settings)
-                document.querySelectorAll('.fullscreen-mode-btn[data-mode]').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                this.timeDisplayManager.setFullscreenMode(mode);
-            });
-        });
-        
-        // Fullscreen font size slider and input
-        const timeFullscreenFontSizeSlider = document.getElementById('time-fullscreen-font-size-slider');
-        const timeFullscreenFontSizeValue = document.getElementById('time-fullscreen-font-size-value');
-        const timeFullscreenFontSizeInput = document.getElementById('time-fullscreen-font-size-input');
-        
-        if (timeFullscreenFontSizeSlider && timeFullscreenFontSizeValue && timeFullscreenFontSizeInput) {
-            timeFullscreenFontSizeSlider.addEventListener('input', (e) => {
-                const size = parseInt(e.target.value);
-                timeFullscreenFontSizeValue.textContent = size;
-                timeFullscreenFontSizeInput.value = size;
-                this.timeDisplayManager.setFullscreenFontSize(size);
-            });
-            
-            timeFullscreenFontSizeInput.addEventListener('change', (e) => {
-                const size = parseInt(e.target.value);
-                if (size >= 8 && size <= 25) {
-                    timeFullscreenFontSizeValue.textContent = size;
-                    timeFullscreenFontSizeSlider.value = size;
-                    this.timeDisplayManager.setFullscreenFontSize(size);
-                }
-            });
-        }
-        
-        // Font size slider and input (may be in time-display-settings modal)
-        const timeFontSizeSlider = document.getElementById('time-font-size-slider');
-        const timeFontSizeValue = document.getElementById('time-font-size-value');
-        const timeFontSizeInput = document.getElementById('time-font-size-input');
-        
-        if (timeFontSizeSlider && timeFontSizeValue && timeFontSizeInput) {
-            timeFontSizeSlider.addEventListener('input', (e) => {
-                const size = parseInt(e.target.value);
-                timeFontSizeValue.textContent = size;
-                timeFontSizeInput.value = size;
-                this.timeDisplayManager.setFontSize(size);
-            });
-            
-            timeFontSizeInput.addEventListener('change', (e) => {
-                const size = parseInt(e.target.value);
-                if (size >= 12 && size <= 48) {
-                    timeFontSizeValue.textContent = size;
-                    timeFontSizeSlider.value = size;
-                    this.timeDisplayManager.setFontSize(size);
-                }
-            });
-        }
-        
-        // Opacity slider and input (may be in time-display-settings modal)
-        const timeOpacitySlider = document.getElementById('time-opacity-slider');
-        const timeOpacityValue = document.getElementById('time-opacity-value');
-        const timeOpacityInput = document.getElementById('time-opacity-input');
-        
-        if (timeOpacitySlider && timeOpacityValue && timeOpacityInput) {
-            timeOpacitySlider.addEventListener('input', (e) => {
-                const opacity = parseInt(e.target.value);
-                timeOpacityValue.textContent = opacity;
-                timeOpacityInput.value = opacity;
-                this.timeDisplayManager.setOpacity(opacity);
-            });
-            
-            timeOpacityInput.addEventListener('change', (e) => {
-                const opacity = parseInt(e.target.value);
-                if (opacity >= 10 && opacity <= 100) {
-                    timeOpacityValue.textContent = opacity;
-                    timeOpacitySlider.value = opacity;
-                    this.timeDisplayManager.setOpacity(opacity);
-                }
-            });
-        }
-        
         // Confirm modal
-        document.getElementById('confirm-cancel-btn').addEventListener('click', () => {
-            document.getElementById('confirm-modal').classList.remove('show');
+        const confirmModal = document.getElementById('confirm-modal');
+        bindIfPresent(document.getElementById('confirm-cancel-btn'), 'click', () => {
+            confirmModal?.classList.remove('show');
         });
         
-        document.getElementById('confirm-ok-btn').addEventListener('click', () => {
-            document.getElementById('confirm-modal').classList.remove('show');
+        bindIfPresent(document.getElementById('confirm-ok-btn'), 'click', () => {
+            confirmModal?.classList.remove('show');
             this.clearCanvas(true);
         });
         
-        document.getElementById('confirm-modal').addEventListener('click', (e) => {
+        bindIfPresent(confirmModal, 'click', (e) => {
             if (e.target.id === 'confirm-modal') {
-                document.getElementById('confirm-modal').classList.remove('show');
+                confirmModal.classList.remove('show');
             }
         });
 

@@ -16,8 +16,12 @@ export function loadClassicScript(src, { doc = document } = {}) {
     return Promise.resolve(existingScript);
   }
 
+  if (existingScript?.dataset.loaded === 'false') {
+    existingScript.remove();
+  }
+
   return new Promise((resolve, reject) => {
-    const script = existingScript || doc.createElement('script');
+    const script = doc.createElement('script');
 
     const cleanup = () => {
       script.removeEventListener('load', handleLoad);
@@ -32,22 +36,18 @@ export function loadClassicScript(src, { doc = document } = {}) {
 
     const handleError = () => {
       cleanup();
-      if (!existingScript) {
-        script.remove();
-      }
+      script.remove();
       reject(new Error(`Failed to load legacy script: ${src}`));
     };
 
     script.addEventListener('load', handleLoad, { once: true });
     script.addEventListener('error', handleError, { once: true });
 
-    if (!existingScript) {
-      script.src = src;
-      script.async = false;
-      script.defer = true;
-      script.dataset.loaded = 'false';
-      doc.head.appendChild(script);
-    }
+    script.src = src;
+    script.async = false;
+    script.defer = true;
+    script.dataset.loaded = 'false';
+    doc.head.appendChild(script);
   });
 }
 

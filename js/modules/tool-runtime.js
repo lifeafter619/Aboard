@@ -1,6 +1,18 @@
 // Extracted tool runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+function getElement(id) {
+    return document.getElementById(id);
+}
+
+function addClassIfPresent(element, className) {
+    element?.classList?.add(className);
+}
+
+function removeClassIfPresent(element, className) {
+    element?.classList?.remove(className);
+}
+
 function switchToPen() {
     this.setTool('pen', false);
 }
@@ -13,8 +25,8 @@ function exitShapeMode() {
 }
 
 function setTool(tool, showConfig = true) {
-    const configArea = document.getElementById('config-area');
-    const featureArea = document.getElementById('feature-area');
+    const configArea = getElement('config-area');
+    const featureArea = getElement('feature-area');
     const previousTool = this.drawingEngine.currentTool;
 
     if (this.isCoordinateOriginDragMode && tool !== 'background') {
@@ -29,7 +41,7 @@ function setTool(tool, showConfig = true) {
     }
     
     const isSameTool = previousTool === tool;
-    const isConfigVisible = configArea.classList.contains('show');
+    const isConfigVisible = configArea?.classList?.contains('show') || false;
     
     if (previousTool === 'select' && tool !== 'select') {
         this.selectionManager.deactivate();
@@ -62,39 +74,43 @@ function setTool(tool, showConfig = true) {
     
     if (showConfig && toolsWithConfig.includes(tool)) {
         if (isSameTool && isConfigVisible) {
-            configArea.classList.remove('show');
+            removeClassIfPresent(configArea, 'show');
             if (tool === 'background') {
                 this.toggleCoordinateSettingsPanel(false);
                 this.toggleCoordinatePointPanel(false);
             }
         } else {
-            configArea.classList.add('show');
-            this.positionConfigArea();
-            this.bringElementToFront(configArea);
+            addClassIfPresent(configArea, 'show');
+            if (configArea) {
+                this.positionConfigArea();
+                this.bringElementToFront(configArea);
+            }
             if (tool !== 'shape') {
-                featureArea.classList.remove('show');
+                removeClassIfPresent(featureArea, 'show');
             }
         }
     } else if (tool === 'more') {
         this.ensureMoreFeatureToolConfigListenersInitialized();
-        const isFeatureAreaVisible = featureArea.classList.contains('show');
+        const isFeatureAreaVisible = featureArea?.classList?.contains('show') || false;
         if (isFeatureAreaVisible) {
-            featureArea.classList.remove('show');
-            configArea.classList.remove('show');
+            removeClassIfPresent(featureArea, 'show');
+            removeClassIfPresent(configArea, 'show');
         } else {
-            featureArea.classList.add('show');
-            configArea.classList.remove('show');
-            this.positionFeatureArea();
-            this.bringElementToFront(featureArea);
+            addClassIfPresent(featureArea, 'show');
+            removeClassIfPresent(configArea, 'show');
+            if (featureArea) {
+                this.positionFeatureArea();
+                this.bringElementToFront(featureArea);
+            }
         }
     } else {
-        configArea.classList.remove('show');
-        featureArea.classList.remove('show');
+        removeClassIfPresent(configArea, 'show');
+        removeClassIfPresent(featureArea, 'show');
     }
 }
 
 function updateUI() {
-    const configArea = document.getElementById('config-area');
+    const configArea = getElement('config-area');
 
     document.querySelectorAll('.tool-btn').forEach(btn => {
         btn.classList.remove('active');
@@ -105,28 +121,28 @@ function updateUI() {
     });
     
     const tool = this.drawingEngine.currentTool;
-    const shapeFeatureBtn = document.getElementById('more-shape-btn');
+    const shapeFeatureBtn = getElement('more-shape-btn');
     if (shapeFeatureBtn) {
         shapeFeatureBtn.classList.toggle('active', tool === 'shape');
     }
     if (tool === 'pen') {
-        document.getElementById('pen-btn').classList.add('active');
-        document.getElementById('pen-config').classList.add('active');
+        addClassIfPresent(getElement('pen-btn'), 'active');
+        addClassIfPresent(getElement('pen-config'), 'active');
         this.canvas.style.cursor = 'crosshair';
     } else if (tool === 'shape') {
-        document.getElementById('more-btn').classList.add('active');
-        document.getElementById('shape-config').classList.add('active');
+        addClassIfPresent(getElement('more-btn'), 'active');
+        addClassIfPresent(getElement('shape-config'), 'active');
         this.canvas.style.cursor = 'crosshair';
     } else if (tool === 'pan') {
-        document.getElementById('pan-btn').classList.add('active');
+        addClassIfPresent(getElement('pan-btn'), 'active');
         this.canvas.style.cursor = 'grab';
     } else if (tool === 'select') {
-        document.getElementById('select-btn').classList.add('active');
-        document.getElementById('select-config').classList.add('active');
+        addClassIfPresent(getElement('select-btn'), 'active');
+        addClassIfPresent(getElement('select-config'), 'active');
         this.canvas.style.cursor = 'crosshair';
     } else if (tool === 'eraser') {
-        document.getElementById('eraser-btn').classList.add('active');
-        document.getElementById('eraser-config').classList.add('active');
+        addClassIfPresent(getElement('eraser-btn'), 'active');
+        addClassIfPresent(getElement('eraser-config'), 'active');
         this.canvas.style.cursor = 'pointer';
         const currentShape = this.drawingEngine.eraserShape === 'rectangle' ? 'rectangle' : 'circle';
         document.querySelectorAll('.eraser-shape-btn').forEach((btn) => {
@@ -134,13 +150,13 @@ function updateUI() {
         });
         this.syncEraserSizeControls();
     } else if (tool === 'background') {
-        document.getElementById('background-btn').classList.add('active');
-        document.getElementById('background-config').classList.add('active');
+        addClassIfPresent(getElement('background-btn'), 'active');
+        addClassIfPresent(getElement('background-config'), 'active');
         this.canvas.style.cursor = 'default';
     } else if (tool === 'more') {
-        document.getElementById('more-btn').classList.add('active');
-        const featureArea = document.getElementById('feature-area');
-        if (featureArea.classList.contains('show')) {
+        addClassIfPresent(getElement('more-btn'), 'active');
+        const featureArea = getElement('feature-area');
+        if (featureArea?.classList?.contains('show')) {
             this.positionFeatureArea();
         }
         
@@ -151,11 +167,18 @@ function updateUI() {
         configArea.classList.remove('show');
     }
     
-    document.getElementById('undo-btn').disabled = !this.historyManager.canUndo();
-    document.getElementById('redo-btn').disabled = !this.historyManager.canRedo();
+    const undoBtn = getElement('undo-btn');
+    if (undoBtn) {
+        undoBtn.disabled = !this.historyManager.canUndo();
+    }
+
+    const redoBtn = getElement('redo-btn');
+    if (redoBtn) {
+        redoBtn.disabled = !this.historyManager.canRedo();
+    }
     
-    const paginationControls = document.getElementById('pagination-controls');
-    paginationControls.classList.add('show');
+    const paginationControls = getElement('pagination-controls');
+    addClassIfPresent(paginationControls, 'show');
 }
 
 window.AboardToolRuntime = {

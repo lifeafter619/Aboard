@@ -12,16 +12,9 @@ class TimeDisplaySettingsModal {
     setupEventListeners() {
         // Open buttons
         const areaSettingsBtn = document.getElementById('time-display-area-settings-btn');
-        const widgetSettingsBtn = document.getElementById('time-display-settings-btn');
         
         if (areaSettingsBtn) {
             areaSettingsBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.show();
-            });
-        }
-        if (widgetSettingsBtn) {
-            widgetSettingsBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.show();
             });

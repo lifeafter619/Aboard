@@ -1,6 +1,10 @@
 // Extracted event setup runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+function bindIfPresent(element, eventName, handler, options) {
+        element?.addEventListener?.(eventName, handler, options);
+}
+
 function setupEventListeners() {
         // Canvas drawing events - use Pointer Events for unified Mouse/Touch/Pen support
         // Track all pointers for multi-touch gesture detection (pinch zoom)
@@ -445,27 +449,27 @@ function setupEventListeners() {
         }, { passive: false });
         
         // Toolbar buttons
-        document.getElementById('pen-btn').addEventListener('click', () => this.setTool('pen'));
-        document.getElementById('pan-btn').addEventListener('click', () => this.setTool('pan'));
-        document.getElementById('select-btn').addEventListener('click', () => this.setTool('select'));
-        document.getElementById('eraser-btn').addEventListener('click', () => this.setTool('eraser'));
-        document.getElementById('background-btn').addEventListener('click', () => this.setTool('background'));
-        document.getElementById('clear-btn').addEventListener('click', () => this.confirmClear());
-        document.getElementById('settings-btn').addEventListener('click', () => this.openSettings());
-        document.getElementById('more-btn').addEventListener('click', () => this.setTool('more'));
+        bindIfPresent(document.getElementById('pen-btn'), 'click', () => this.setTool('pen'));
+        bindIfPresent(document.getElementById('pan-btn'), 'click', () => this.setTool('pan'));
+        bindIfPresent(document.getElementById('select-btn'), 'click', () => this.setTool('select'));
+        bindIfPresent(document.getElementById('eraser-btn'), 'click', () => this.setTool('eraser'));
+        bindIfPresent(document.getElementById('background-btn'), 'click', () => this.setTool('background'));
+        bindIfPresent(document.getElementById('clear-btn'), 'click', () => this.confirmClear());
+        bindIfPresent(document.getElementById('settings-btn'), 'click', () => this.openSettings());
+        bindIfPresent(document.getElementById('more-btn'), 'click', () => this.setTool('more'));
         
         // Shape and Teaching Tools buttons in More menu
-        document.getElementById('more-shape-btn').addEventListener('click', () => this.setTool('shape'));
-        document.getElementById('more-teaching-tools-btn').addEventListener('click', () => {
+        bindIfPresent(document.getElementById('more-shape-btn'), 'click', () => this.setTool('shape'));
+        bindIfPresent(document.getElementById('more-teaching-tools-btn'), 'click', () => {
             this.exitShapeMode();
-            this.teachingToolsManager.showModal();
+            this.teachingToolsManager?.showModal?.();
         });
         
-        document.getElementById('config-close-btn').addEventListener('click', () => this.closeConfigPanel());
-        document.getElementById('feature-close-btn').addEventListener('click', () => this.closeFeaturePanel());
+        bindIfPresent(document.getElementById('config-close-btn'), 'click', () => this.closeConfigPanel());
+        bindIfPresent(document.getElementById('feature-close-btn'), 'click', () => this.closeFeaturePanel());
         
         // History buttons
-        document.getElementById('undo-btn').addEventListener('click', () => {
+        bindIfPresent(document.getElementById('undo-btn'), 'click', () => {
             if (this.historyManager.undo()) {
                 // Clear stroke selection as strokes are no longer valid
                 this.drawingEngine.clearStrokes();
@@ -479,7 +483,7 @@ function setupEventListeners() {
             }
         });
         
-        document.getElementById('redo-btn').addEventListener('click', () => {
+        bindIfPresent(document.getElementById('redo-btn'), 'click', () => {
             if (this.historyManager.redo()) {
                 // Clear stroke selection as strokes are no longer valid
                 this.drawingEngine.clearStrokes();
@@ -494,20 +498,21 @@ function setupEventListeners() {
         });
         
         // Zoom controls
-        document.getElementById('zoom-in-btn').addEventListener('click', () => this.zoomIn());
-        document.getElementById('zoom-out-btn').addEventListener('click', () => this.zoomOut());
-        document.getElementById('zoom-input').addEventListener('change', (e) => this.setZoom(e.target.value));
-        document.getElementById('zoom-input').addEventListener('keydown', (e) => {
+        const zoomInput = document.getElementById('zoom-input');
+        bindIfPresent(document.getElementById('zoom-in-btn'), 'click', () => this.zoomIn());
+        bindIfPresent(document.getElementById('zoom-out-btn'), 'click', () => this.zoomOut());
+        bindIfPresent(zoomInput, 'change', (e) => this.setZoom(e.target.value));
+        bindIfPresent(zoomInput, 'keydown', (e) => {
             if (e.key === 'Enter') {
                 this.setZoom(e.target.value);
             }
         });
         
         // Fullscreen button
-        document.getElementById('fullscreen-btn').addEventListener('click', () => this.toggleFullscreen());
+        bindIfPresent(document.getElementById('fullscreen-btn'), 'click', () => this.toggleFullscreen());
         
         // Export button (moved to top controls, always visible)
-        document.getElementById('export-btn-top').addEventListener('click', async () => {
+        bindIfPresent(document.getElementById('export-btn-top'), 'click', async () => {
             try {
                 const exportManager = await this.getExportManager();
                 exportManager.showModal();
@@ -517,7 +522,7 @@ function setupEventListeners() {
         });
 
         // Import Project Button
-        document.getElementById('import-project-btn').addEventListener('click', async () => {
+        bindIfPresent(document.getElementById('import-project-btn'), 'click', async () => {
             // Create a hidden file input
             const input = document.createElement('input');
             input.type = 'file';
@@ -536,10 +541,11 @@ function setupEventListeners() {
         });
 
         // Pagination controls - merged next and add button
-        document.getElementById('prev-page-btn').addEventListener('click', () => this.prevPage());
-        document.getElementById('next-or-add-page-btn').addEventListener('click', () => this.nextOrAddPage());
-        document.getElementById('page-input').addEventListener('change', (e) => this.goToPage(parseInt(e.target.value)));
-        document.getElementById('page-input').addEventListener('keydown', (e) => {
+        const pageInput = document.getElementById('page-input');
+        bindIfPresent(document.getElementById('prev-page-btn'), 'click', () => this.prevPage());
+        bindIfPresent(document.getElementById('next-or-add-page-btn'), 'click', () => this.nextOrAddPage());
+        bindIfPresent(pageInput, 'change', (e) => this.goToPage(parseInt(e.target.value)));
+        bindIfPresent(pageInput, 'keydown', (e) => {
             if (e.key === 'Enter') {
                 this.goToPage(parseInt(e.target.value));
             }

@@ -2,6 +2,17 @@
 // These listeners power controls the user sees and can use immediately on first load.
 
 function setupToolConfigListeners() {
+        const customColorPicker = document.getElementById('custom-color-picker');
+        const customColorPickerBtn = document.querySelector('label[for="custom-color-picker"]');
+        const penSizeSlider = document.getElementById('pen-size-slider');
+        const penSizeValue = document.getElementById('pen-size-value');
+        const shapeSizeSlider = document.getElementById('shape-size-slider');
+        const shapeSizeValue = document.getElementById('shape-size-value');
+        const arrowSizeSlider = document.getElementById('arrow-size-slider');
+        const arrowSizeValue = document.getElementById('arrow-size-value');
+        const eraserSizeSlider = document.getElementById('eraser-size-slider');
+        const eraserSizeValue = document.getElementById('eraser-size-value');
+
         document.querySelectorAll('.pen-type-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const targetButton = e.currentTarget;
@@ -27,19 +38,19 @@ function setupToolConfigListeners() {
             });
         });
         
-        const customColorPicker = document.getElementById('custom-color-picker');
-        const customColorPickerBtn = document.querySelector('label[for="custom-color-picker"]');
-        customColorPicker.addEventListener('input', (e) => {
-            this.drawingEngine.setColor(e.target.value);
-            document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
-            if (customColorPickerBtn) {
-                customColorPickerBtn.classList.add('active');
-            }
-            const shapeColorPicker = document.getElementById('shape-custom-color-picker');
-            if (shapeColorPicker) {
-                shapeColorPicker.value = e.target.value;
-            }
-        });
+        if (customColorPicker) {
+            customColorPicker.addEventListener('input', (e) => {
+                this.drawingEngine.setColor(e.target.value);
+                document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
+                if (customColorPickerBtn) {
+                    customColorPickerBtn.classList.add('active');
+                }
+                const shapeColorPicker = document.getElementById('shape-custom-color-picker');
+                if (shapeColorPicker) {
+                    shapeColorPicker.value = e.target.value;
+                }
+            });
+        }
 
         document.querySelectorAll('.color-btn[data-color]').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -53,14 +64,8 @@ function setupToolConfigListeners() {
             });
         });
         
-        const penSizeSlider = document.getElementById('pen-size-slider');
-        const penSizeValue = document.getElementById('pen-size-value');
-        const shapeSizeSlider = document.getElementById('shape-size-slider');
-        const shapeSizeValue = document.getElementById('shape-size-value');
-        const arrowSizeSlider = document.getElementById('arrow-size-slider');
-        const arrowSizeValue = document.getElementById('arrow-size-value');
-        
-        penSizeSlider.addEventListener('input', (e) => {
+        if (penSizeSlider) {
+            penSizeSlider.addEventListener('input', (e) => {
             const size = parseInt(e.target.value);
             this.drawingEngine.setPenSize(size);
             if (penSizeValue) {
@@ -68,7 +73,9 @@ function setupToolConfigListeners() {
             }
             if (shapeSizeSlider) {
                 shapeSizeSlider.value = size;
-                shapeSizeValue.textContent = size;
+                if (shapeSizeValue) {
+                    shapeSizeValue.textContent = size;
+                }
             }
 
             if (arrowSizeSlider && arrowSizeValue) {
@@ -78,15 +85,22 @@ function setupToolConfigListeners() {
                     this.shapeDrawingManager?.setArrowSize?.(size);
                 }
             }
-        });
+            });
+        }
         
         if (shapeSizeSlider) {
             shapeSizeSlider.addEventListener('input', (e) => {
                 const size = parseInt(e.target.value);
                 this.drawingEngine.setPenSize(size);
-                shapeSizeValue.textContent = size;
-                penSizeSlider.value = size;
-                penSizeValue.textContent = size;
+                if (shapeSizeValue) {
+                    shapeSizeValue.textContent = size;
+                }
+                if (penSizeSlider) {
+                    penSizeSlider.value = size;
+                }
+                if (penSizeValue) {
+                    penSizeValue.textContent = size;
+                }
 
                 if (arrowSizeSlider && arrowSizeValue) {
                     if (parseInt(arrowSizeSlider.value) < size) {
@@ -108,16 +122,18 @@ function setupToolConfigListeners() {
             });
         });
         
-        const eraserSizeSlider = document.getElementById('eraser-size-slider');
-        const eraserSizeValue = document.getElementById('eraser-size-value');
-        eraserSizeSlider.addEventListener('input', (e) => {
-            this.drawingEngine.setEraserSize(parseInt(e.target.value));
-            eraserSizeValue.textContent = e.target.value;
-            if (this.drawingEngine.currentTool === 'eraser') {
-                this.eraserCursor.style.width = `${e.target.value}px`;
-                this.eraserCursor.style.height = `${e.target.value}px`;
-            }
-        });
+        if (eraserSizeSlider) {
+            eraserSizeSlider.addEventListener('input', (e) => {
+                this.drawingEngine.setEraserSize(parseInt(e.target.value));
+                if (eraserSizeValue) {
+                    eraserSizeValue.textContent = e.target.value;
+                }
+                if (this.drawingEngine.currentTool === 'eraser' && this.eraserCursor) {
+                    this.eraserCursor.style.width = `${e.target.value}px`;
+                    this.eraserCursor.style.height = `${e.target.value}px`;
+                }
+            });
+        }
         this.syncEraserSizeControls();
         
         const penLineStyleSettingsBtn = document.getElementById('pen-line-style-settings-btn');

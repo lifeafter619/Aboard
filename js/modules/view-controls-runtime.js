@@ -1,6 +1,10 @@
 // Extracted view controls runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+function getElement(id) {
+    return document.getElementById(id);
+}
+
 function handleDoubleTap(touch) {
     const currentScale = this.drawingEngine.canvasScale;
     const newScale = Math.abs(currentScale - 1.0) > 0.1 ? 1.0 : 2.0;
@@ -109,7 +113,11 @@ function revealToolbar() {
 }
 
 function updateConfigAreaScale() {
-    const configArea = document.getElementById('config-area');
+    const configArea = getElement('config-area');
+    if (!configArea) {
+        return;
+    }
+
     const scale = this.drawingEngine.canvasScale;
     const hasBeenDragged = configArea.style.left && configArea.style.left !== 'auto' && configArea.style.left !== '50%';
 
@@ -139,7 +147,10 @@ function updateMaxCanvasScale() {
 
 function updateZoomUI() {
     const percent = Math.round(this.drawingEngine.canvasScale * 100);
-    document.getElementById('zoom-input').value = `${percent}%`;
+    const zoomInput = getElement('zoom-input');
+    if (zoomInput) {
+        zoomInput.value = `${percent}%`;
+    }
 }
 
 function updateZoomControlsVisibility() {
@@ -169,7 +180,12 @@ function updateImportExportBtnVisibility() {
 }
 
 function updateFullscreenBtnVisibility() {
-    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const fullscreenBtn = getElement('fullscreen-btn');
+    if (!fullscreenBtn) {
+        this.updateHistoryControlsContainerVisibility();
+        return;
+    }
+
     if (this.settingsManager.showFullscreenBtn) {
         fullscreenBtn.style.display = 'flex';
     } else {

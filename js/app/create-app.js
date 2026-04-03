@@ -84,7 +84,10 @@ async function startPostVisibleStartup(app, { win = window, doc = document } = {
     initializeDeferredBoardFeatures(app, win);
     app.drawingBoard?.scheduleDeferredUiInitialization?.();
     return app;
-  })();
+  })().catch((error) => {
+    app.postVisibleStartupPromise = null;
+    throw error;
+  });
 
   return app.postVisibleStartupPromise;
 }
@@ -140,10 +143,15 @@ export async function createApp({ win = window, doc = document } = {}) {
     await warmVisibleManagers(drawingBoard);
     win.__ABOARD_APP__ = app;
     scheduleAfterFirstPaint(win, () => {
-      void startPostVisibleStartup(app, { win, doc });
+      void startPostVisibleStartup(app, { win, doc }).catch((error) => {
+        console.error('Aboard post-visible startup failed:', error);
+      });
     });
     return app;
-  })();
+  })().catch((error) => {
+    appStartupPromise = null;
+    throw error;
+  });
 
   return appStartupPromise;
 }

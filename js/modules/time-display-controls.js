@@ -54,6 +54,10 @@ class TimeDisplayControls {
     }
     
     toggleTimeDisplayArea() {
+        if (!this.timeDisplayArea) {
+            return;
+        }
+
         if (this.timeDisplayArea.classList.contains('show')) {
             this.hideTimeDisplayArea();
         } else {
@@ -62,6 +66,10 @@ class TimeDisplayControls {
     }
     
     showTimeDisplayArea() {
+        if (!this.timeDisplayArea) {
+            return;
+        }
+
         this.timeDisplayArea.classList.add('show');
         window.drawingBoard?.bringElementToFront(this.timeDisplayArea);
 
@@ -87,6 +95,10 @@ class TimeDisplayControls {
     }
     
     hideTimeDisplayArea() {
+        if (!this.timeDisplayArea) {
+            return;
+        }
+
         this.timeDisplayArea.classList.remove('show');
     }
 }

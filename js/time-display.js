@@ -55,6 +55,10 @@ class TimeDisplayManager {
     }
     
     updatePosition() {
+        if (!this.timeDisplayElement) {
+            return;
+        }
+
         // Get the control position from settings manager
         const position = this.settingsManager ? this.settingsManager.controlPosition : 'top-right';
         
@@ -79,6 +83,10 @@ class TimeDisplayManager {
     show() {
         this.enabled = true;
         localStorage.setItem('timeDisplayEnabled', 'true');
+        if (!this.timeDisplayElement) {
+            return;
+        }
+
         this.timeDisplayElement.classList.add('show');
         this.startUpdating();
     }
@@ -86,6 +94,10 @@ class TimeDisplayManager {
     hide() {
         this.enabled = false;
         localStorage.setItem('timeDisplayEnabled', 'false');
+        if (!this.timeDisplayElement) {
+            return;
+        }
+
         this.timeDisplayElement.classList.remove('show');
         this.stopUpdating();
     }
@@ -108,6 +120,10 @@ class TimeDisplayManager {
     }
     
     updateDisplay() {
+        if (!this.timeDisplayElement) {
+            return;
+        }
+
         const now = this.getCurrentTime();
         const timeString = this.formatTime(now);
         const dateString = this.formatDate(now);
@@ -388,6 +404,10 @@ class TimeDisplayManager {
     }
     
     applySettings() {
+        if (!this.timeDisplayElement) {
+            return;
+        }
+
         this.timeDisplayElement.style.color = this.color;
         this.timeDisplayElement.style.opacity = this.opacity / 100;
         
@@ -429,30 +449,32 @@ class TimeDisplayManager {
     
     setupFullscreenListeners() {
         // Click listener with support for single/double click modes
-        this.timeDisplayElement.addEventListener('click', (e) => {
-            if (this.fullscreenMode === 'disabled' || !this.enabled) return;
-            
-            if (this.fullscreenMode === 'single') {
-                // Single-click mode - Enter immediately
-                this.enterFullscreen();
-            } else if (this.fullscreenMode === 'double') {
-                // Double-click mode - Use timeout logic
-                this.clickCount++;
+        if (this.timeDisplayElement) {
+            this.timeDisplayElement.addEventListener('click', (e) => {
+                if (this.fullscreenMode === 'disabled' || !this.enabled) return;
                 
-                if (this.clickCount === 1) {
-                    // First click, set timeout
-                    this.clickTimeout = setTimeout(() => {
-                        // Timeout expired, was just a single click
-                        this.clickCount = 0;
-                    }, this.doubleClickDelay);
-                } else {
-                    // Second click within timeout
-                    clearTimeout(this.clickTimeout);
-                    this.clickCount = 0;
+                if (this.fullscreenMode === 'single') {
+                    // Single-click mode - Enter immediately
                     this.enterFullscreen();
+                } else if (this.fullscreenMode === 'double') {
+                    // Double-click mode - Use timeout logic
+                    this.clickCount++;
+                    
+                    if (this.clickCount === 1) {
+                        // First click, set timeout
+                        this.clickTimeout = setTimeout(() => {
+                            // Timeout expired, was just a single click
+                            this.clickCount = 0;
+                        }, this.doubleClickDelay);
+                    } else {
+                        // Second click within timeout
+                        clearTimeout(this.clickTimeout);
+                        this.clickCount = 0;
+                        this.enterFullscreen();
+                    }
                 }
-            }
-        });
+            });
+        }
         
         // Close button
         const closeBtn = document.getElementById('time-fullscreen-close-btn');
@@ -508,12 +530,21 @@ class TimeDisplayManager {
     }
     
     enterFullscreen() {
+        if (!this.timeFullscreenModal) {
+            return;
+        }
+
         this.isFullscreen = true;
         this.timeFullscreenModal.classList.add('show');
         this.startFullscreenUpdating();
     }
     
     exitFullscreen() {
+        if (!this.timeFullscreenModal) {
+            this.isFullscreen = false;
+            return;
+        }
+
         this.isFullscreen = false;
         this.timeFullscreenModal.classList.remove('show');
         this.stopFullscreenUpdating();
@@ -537,6 +568,10 @@ class TimeDisplayManager {
     }
     
     updateFullscreenDisplay() {
+        if (!this.timeFullscreenModal || !this.timeFullscreenContent) {
+            return;
+        }
+
         const now = this.getCurrentTime();
         const timeString = this.formatTime(now);
         const dateString = this.formatDate(now);

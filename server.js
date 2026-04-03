@@ -36,14 +36,53 @@ function sendJson(res, statusCode, payload) {
     res.end(JSON.stringify(payload));
 }
 
+function isPathInsideRoot(filePath) {
+    const relativePath = path.relative(ROOT_DIR, filePath);
+    return relativePath && !relativePath.startsWith('..') && !path.isAbsolute(relativePath);
+}
+
+function isPublicAssetPath(reqPath) {
+    if (!reqPath || reqPath === '/') {
+        return true;
+    }
+
+    const normalizedPath = reqPath.replace(/\\/g, '/');
+    const allowedExactPaths = new Set([
+        '/index.html',
+        '/manifest.json',
+        '/sw.js',
+        '/version.txt',
+        '/announcements.json'
+    ]);
+    if (allowedExactPaths.has(normalizedPath)) {
+        return true;
+    }
+
+    const allowedPrefixes = [
+        '/css/',
+        '/dist/',
+        '/img/',
+        '/js/',
+        '/public/',
+        '/sounds/'
+    ];
+
+    return allowedPrefixes.some((prefix) => normalizedPath.startsWith(prefix));
+}
+
 function serveStatic(reqPath, res) {
     let safePath = reqPath;
     if (safePath === '/') {
         safePath = '/index.html';
     }
 
+    if (!isPublicAssetPath(safePath)) {
+        sendJson(res, 403, { error: 'Forbidden' });
+        return;
+    }
+
     const filePath = path.normalize(path.join(ROOT_DIR, safePath));
-    if (!filePath.startsWith(ROOT_DIR)) {
+    if (!isPathInsideRoot(filePath) && filePath !== path.join(ROOT_DIR, 'index.html')) {
         sendJson(res, 403, { error: 'Forbidden' });
         return;
     }
