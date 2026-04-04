@@ -74,6 +74,7 @@ async function restoreSession() {
             if (!sessionData) return false;
 
             const { pages, pagesRaw, settings } = sessionData;
+            let serializedPageScenes = {};
 
             // Restore settings
             if (settings) {
@@ -113,58 +114,27 @@ async function restoreSession() {
                 // Restore current page index
                 if (settings.currentPage) this.currentPage = settings.currentPage;
 
-                // Restore text objects for selection support
-                if (settings.textObjects && settings.textObjects.length > 0) {
-                    const insertTextManager = await this.getInsertTextManager();
-                    insertTextManager.setTextObjects(settings.textObjects);
+                serializedPageScenes = settings.pageScenes && typeof settings.pageScenes === 'object'
+                    ? { ...settings.pageScenes }
+                    : {};
+                if (Object.keys(serializedPageScenes).length === 0) {
+                    const legacyCurrentPageScene = {
+                        pageNumber: this.currentPage || 1,
+                        objectGroups: settings.objectGroups || [],
+                        textObjects: settings.textObjects || [],
+                        strokes: settings.strokes || [],
+                        stampedImages: settings.stampedImages || []
+                    };
+                    const currentPageKey = String(this.currentPage || 1);
+                    if (
+                        legacyCurrentPageScene.objectGroups.length ||
+                        legacyCurrentPageScene.textObjects.length ||
+                        legacyCurrentPageScene.strokes.length ||
+                        legacyCurrentPageScene.stampedImages.length
+                    ) {
+                        serializedPageScenes[currentPageKey] = legacyCurrentPageScene;
+                    }
                 }
-
-                // Restore strokes for selection support
-                if (settings.strokes && settings.strokes.length > 0) {
-                    this.drawingEngine.strokes = settings.strokes.map(stroke => ({
-                        ...stroke,
-                        lineStyle: stroke.lineStyle || 'solid',
-                        dashDensity: stroke.dashDensity || 10,
-                        groupId: stroke.groupId || null
-                    }));
-                } else {
-                    this.drawingEngine.strokes = [];
-                }
-
-                // Restore stamped images for selection support
-                if (settings.stampedImages && settings.stampedImages.length > 0) {
-                    const loadImage = (src) => new Promise((resolve) => {
-                        const img = new Image();
-                        img.onload = () => resolve(img);
-                        img.onerror = () => resolve(null);
-                        img.src = src;
-                    });
-
-                    const stampedImages = await Promise.all(settings.stampedImages.map(async (imgData) => {
-                        const imageSrc = imgData.imageSrc || imgData.src;
-                        const imageElement = imageSrc ? await loadImage(imageSrc) : null;
-                        return {
-                            ...imgData,
-                            imageSrc: imageSrc || null,
-                            imageElement
-                        };
-                    }));
-
-                    this.drawingEngine.stampedImages = stampedImages;
-                } else {
-                    this.drawingEngine.stampedImages = [];
-                }
-
-                this.drawingEngine.objectGroups = settings.objectGroups || [];
-
-                // Link selection manager to text manager for selection to work
-                if (this.insertTextManager) {
-                    this.selectionManager.setTextManager(this.insertTextManager);
-                }
-
-                this.drawingEngine.syncLayerCounter(this.insertTextManager?.textObjects || []);
-                this.drawingEngine.cleanupGroups(this.insertTextManager?.textObjects || []);
-                this.drawingEngine.updateOffCanvasImageMirrors(this.insertTextManager?.textObjects || []);
             }
 
             // Restore pages
@@ -206,9 +176,18 @@ async function restoreSession() {
                 }
             }
 
+            if (syncSnapshot?.currentPageScene && (shouldMergeSyncSnapshot || Object.keys(serializedPageScenes).length === 0)) {
+                serializedPageScenes[String(syncSnapshot.currentPage || this.currentPage || 1)] = syncSnapshot.currentPageScene;
+            }
+
             if (!Array.isArray(this.pages) || this.pages.length === 0) {
                 this.pages = [this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height)];
                 this.currentPage = 1;
+            }
+
+            await this.applySerializedPageScenes(serializedPageScenes);
+            if (this.insertTextManager) {
+                this.selectionManager.setTextManager(this.insertTextManager);
             }
 
             // Apply restored state

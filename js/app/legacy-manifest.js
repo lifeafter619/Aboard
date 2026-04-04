@@ -36,6 +36,7 @@ export const VISIBLE_CORE_STARTUP_SCRIPTS = [
   'js/modules/modal-runtime.js',
   'js/modules/lazy-manager-runtime.js',
   'js/modules/display-runtime.js',
+  'js/modules/page-scene-runtime.js',
   'js/modules/pagination-runtime.js',
   'js/modules/interaction-runtime.js',
   'js/modules/zoom-runtime.js',

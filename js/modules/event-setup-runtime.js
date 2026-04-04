@@ -526,12 +526,14 @@ function setupEventListeners() {
             // Create a hidden file input
             const input = document.createElement('input');
             input.type = 'file';
-            input.accept = '.aboard,.json';
+            input.accept = this.settingsManager?.legacyProjectImportEnabled
+                ? '.zip,.aboard,.json'
+                : '.zip';
             input.onchange = async (e) => {
                 if (e.target.files.length > 0) {
                     try {
                         const projectManager = await this.getProjectManager();
-                        projectManager.importProject(e.target.files[0]);
+                        await projectManager.importProject(e.target.files[0]);
                     } catch (error) {
                         this.showLazyLoadError('项目导入', error);
                     }

@@ -29,7 +29,7 @@ class ExportManager {
                         <!-- Tabs -->
                         <div class="export-tab-nav">
                             <button class="export-tab-btn active" data-tab="image">导出图片</button>
-                            <button class="export-tab-btn" data-tab="project">导出项目 (.aboard)</button>
+                            <button class="export-tab-btn" data-tab="project">导出项目 (.zip)</button>
                         </div>
 
                         <!-- Image Export Tab -->
@@ -78,7 +78,7 @@ class ExportManager {
                                 </div>
                                 <div class="export-group">
                                     <p class="export-hint">
-                                        导出为 .aboard 项目文件，包含所有笔迹、背景和图片。此文件可在任意设备上导入并继续编辑。
+                                        导出为标准 .zip 项目包，包含页面场景、背景和资源库。导入后可继续逐页对象级编辑；旧版 .aboard 仅在设置中开启兼容后按需导入。
                                     </p>
                                 </div>
                             </div>
@@ -314,11 +314,30 @@ class ExportManager {
         const seconds = String(now.getSeconds()).padStart(2, '0');
         const timestamp = `${year}-${month}-${day}T${hours}-${minutes}-${seconds}`;
         document.getElementById('export-filename').value = `aboard-${timestamp}`;
-        
-        // Reset to current page scope
+
+        // Reset tab state
+        document.querySelectorAll('.export-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.export-tab-btn[data-tab="image"]')?.classList.add('active');
+        document.querySelectorAll('.export-tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById('export-tab-image')?.classList.add('active');
+
+        // Reset image export state
         document.querySelectorAll('.export-scope-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector('.export-scope-btn[data-scope="current"]').classList.add('active');
-        this.updateUIForScope('current');
+        document.querySelector('.export-scope-btn[data-scope="current"]')?.classList.add('active');
+        document.querySelectorAll('.export-format-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.export-format-btn[data-format="png"]')?.classList.add('active');
+        const qualityGroup = document.getElementById('jpeg-quality-group');
+        const qualitySlider = document.getElementById('export-quality-slider');
+        const qualityValue = document.getElementById('export-quality-value');
+        if (qualitySlider) qualitySlider.value = '90';
+        if (qualityValue) qualityValue.textContent = '90';
+        if (qualityGroup) qualityGroup.style.display = 'none';
+        this.updateUIForScope('current', 'image');
+
+        // Reset project export state
+        document.querySelectorAll('.export-project-scope-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.export-project-scope-btn[data-scope="current"]')?.classList.add('active');
+        this.updateUIForScope('current', 'project');
         
         this.exportModal.classList.add('show');
     }
@@ -499,7 +518,7 @@ class ExportManager {
             return;
         }
         
-        const selectedButtons = document.querySelectorAll('.page-selection-btn.selected');
+        const selectedButtons = document.querySelectorAll('.page-selection-group .page-selection-buttons .page-selection-btn.selected');
         if (selectedButtons.length === 0) {
             window.appDialog?.showAlert(window.i18n.t('export.selectAtLeastOnePage') || '请至少选择一个页面进行导出', 'warning');
             return;

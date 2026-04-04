@@ -40,6 +40,17 @@ function scheduleAfterFirstPaint(win, callback) {
   win.setTimeout(callback, 32);
 }
 
+function scheduleDeferredLocaleSuggestion(app, win) {
+  if (app.deferredLocaleSuggestionScheduled) {
+    return;
+  }
+
+  app.deferredLocaleSuggestionScheduled = true;
+  win.setTimeout(() => {
+    void app.services?.i18n?.maybePromptForPreferredLocale?.();
+  }, 0);
+}
+
 function initializeDeferredBoardFeatures(app, win) {
   const { drawingBoard } = app;
   if (!drawingBoard) {
@@ -215,6 +226,7 @@ async function startPostVisibleOrchestration(app, { win = window, doc = document
 
     await postVisibleStartupPromise;
     await runImmediatePostVisibleSetup(app);
+    scheduleDeferredLocaleSuggestion(app, win);
     return app;
   })().catch((error) => {
     app.postVisibleOrchestrationPromise = null;

@@ -9,6 +9,7 @@ function buildSyncSnapshot() {
                 this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
             }
             this.savePageBackground(this.currentPage);
+            this.saveCurrentPageScene?.(this.currentPage);
 
             return {
                 timestamp: Date.now(),
@@ -16,6 +17,7 @@ function buildSyncSnapshot() {
                 canvasWidth: this.canvas.width,
                 canvasHeight: this.canvas.height,
                 pageDataUrl: this.canvas.toDataURL('image/png'),
+                currentPageScene: this.getPageScene?.(this.currentPage, { serializable: true }) || null,
                 settings: {
                     currentTool: this.drawingEngine.currentTool,
                     penSize: this.drawingEngine.penSize,
@@ -65,6 +67,7 @@ async function saveSession() {
         if (this.isClearingLocalData) return;
         try {
             saveSessionSnapshotSync.call(this);
+            this.saveCurrentPageScene?.(this.currentPage);
 
             // Convert all pages to Blobs
             const pagesBlobs = await Promise.all(this.pages.map(page => StorageManager.imageDataToBlob(page)));
@@ -94,47 +97,7 @@ async function saveSession() {
                 backgroundImageData: this.backgroundManager.backgroundImageData,
                 backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder || 1,
                 uploadedImages: this.uploadedImages,
-                objectGroups: this.drawingEngine.objectGroups || [],
-                // Text objects for selection support after restore
-                textObjects: this.insertTextManager ? this.insertTextManager.getTextObjects() : [],
-                // Strokes for selection support after restore
-                strokes: this.drawingEngine.strokes.map(s => ({
-                    points: s.points.map(p => ({ x: p.x, y: p.y })),
-                    color: s.color,
-                    size: s.size,
-                    penType: s.penType,
-                    tool: s.tool,
-                    lineStyle: s.lineStyle || 'solid',
-                    dashDensity: s.dashDensity || 10,
-                    renderMode: s.renderMode || null,
-                    shapeType: s.shapeType || null,
-                    shapeStart: s.shapeStart ? { ...s.shapeStart } : null,
-                    shapeEnd: s.shapeEnd ? { ...s.shapeEnd } : null,
-                    shapeLineStyle: s.shapeLineStyle || null,
-                    shapeDashDensity: s.shapeDashDensity || null,
-                    shapeWaveDensity: s.shapeWaveDensity || null,
-                    shapeMultiLineCount: s.shapeMultiLineCount || null,
-                    shapeMultiLineSpacing: s.shapeMultiLineSpacing || null,
-                    arrowSize: s.arrowSize || null,
-                    eraserShape: s.eraserShape || null,
-                    rotation: s.rotation || 0,
-                    layerOrder: s.layerOrder || 0,
-                    objectId: s.objectId || this.drawingEngine.getNextObjectId(),
-                    groupId: s.groupId || null
-                })),
-                stampedImages: this.drawingEngine.stampedImages.map(img => ({
-                    imageSrc: img.imageSrc || (img.imageElement ? img.imageElement.src : null),
-                    x: img.x,
-                    y: img.y,
-                    width: img.width,
-                    height: img.height,
-                    rotation: img.rotation || 0,
-                    flipHorizontal: img.flipHorizontal || false,
-                    flipVertical: img.flipVertical || false,
-                    layerOrder: img.layerOrder || 0,
-                    objectId: img.objectId || this.drawingEngine.getNextObjectId(),
-                    groupId: img.groupId || null
-                }))
+                pageScenes: this.getSerializedPageScenes?.() || {}
             };
 
             const data = {

@@ -29,6 +29,7 @@ const backgroundUiRuntime = createWindowRuntimeProxy('AboardBackgroundUiRuntime'
 const cacheRuntime = createWindowRuntimeProxy('AboardCacheRuntime');
 const customizationRuntime = createWindowRuntimeProxy('AboardCustomizationRuntime');
 const displayRuntime = createWindowRuntimeProxy('AboardDisplayRuntime');
+const pageSceneRuntime = createWindowRuntimeProxy('AboardPageSceneRuntime');
 const paginationRuntime = createWindowRuntimeProxy('AboardPaginationRuntime');
 const interactionRuntime = createWindowRuntimeProxy('AboardInteractionRuntime');
 const uploadedImagesRuntime = createWindowRuntimeProxy('AboardUploadedImagesRuntime');
@@ -156,6 +157,7 @@ class DrawingBoard {
         // Pagination
         this.currentPage = 1;
         this.pages = [];
+        this.pageScenes = {};
         this.pageBackgrounds = {}; // Store background settings per page
         
         // Load saved page backgrounds
@@ -923,6 +925,36 @@ class DrawingBoard {
         return displayRuntime.hideHistoryControls?.(this);
     }
     
+    ensurePageScenesStore() {
+        return pageSceneRuntime.ensurePageScenesStore?.(this);
+    }
+    capturePageScene(pageNumber = this.currentPage, options = {}) {
+        return pageSceneRuntime.capturePageScene?.(this, pageNumber, options);
+    }
+    saveCurrentPageScene(pageNumber = this.currentPage, options = {}) {
+        return pageSceneRuntime.saveCurrentPageScene?.(this, pageNumber, options);
+    }
+    getPageScene(pageNumber = this.currentPage, options = {}) {
+        return pageSceneRuntime.getPageScene?.(this, pageNumber, options);
+    }
+    getSerializedPageScenes(pageNumbers = null, options = {}) {
+        return pageSceneRuntime.getSerializedPageScenes?.(this, pageNumbers, options);
+    }
+    clearPageSceneRuntimeState() {
+        return pageSceneRuntime.clearPageSceneRuntimeState?.(this);
+    }
+    restorePageScene(pageNumber = this.currentPage, options = {}) {
+        return pageSceneRuntime.restorePageScene?.(this, pageNumber, options);
+    }
+    async hydrateSerializedScene(scene) {
+        return pageSceneRuntime.hydrateSerializedScene?.(this, scene);
+    }
+    async applySerializedPageScenes(serializedScenes = {}) {
+        return pageSceneRuntime.applySerializedPageScenes?.(this, serializedScenes);
+    }
+    clearAllPageScenes(options = {}) {
+        return pageSceneRuntime.clearAllPageScenes?.(this, options);
+    }
     // Pagination methods
     addPage() {
         return paginationRuntime.addPage?.(this);

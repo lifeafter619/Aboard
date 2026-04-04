@@ -114,11 +114,11 @@ function showConfigDiffModal(diff, newSettings) {
         const newOkBtn = okBtn.cloneNode(true);
         okBtn.parentNode.replaceChild(newOkBtn, okBtn);
 
-        newOkBtn.addEventListener('click', () => {
+        newOkBtn.addEventListener('click', async () => {
             if (diff.length > 0) {
                 // Clone and parse stringified JSONs in newSettings to allow deep setting
                 const pendingSettings = JSON.parse(JSON.stringify(newSettings));
-                ['toolbarOrder', 'toolbarVisibility'].forEach(key => {
+                ['toolbarOrder', 'toolbarVisibility', 'controlButtonOrder'].forEach(key => {
                     if (typeof pendingSettings[key] === 'string') {
                         try {
                             pendingSettings[key] = JSON.parse(pendingSettings[key]);
@@ -152,20 +152,32 @@ function showConfigDiffModal(diff, newSettings) {
                 });
 
                 // Stringify back special keys
-                ['toolbarOrder', 'toolbarVisibility'].forEach(key => {
+                ['toolbarOrder', 'toolbarVisibility', 'controlButtonOrder'].forEach(key => {
                     if (typeof pendingSettings[key] === 'object') {
                         pendingSettings[key] = JSON.stringify(pendingSettings[key]);
                     }
                 });
 
-                this.settingsManager.applySettings(pendingSettings);
+                await this.settingsManager.applySettings(pendingSettings);
                 // Also update UI that depends on settings immediately
                 this.recalculateAndRecenterCanvas();
                 this.applyZoom(true);
                 this.updateZoomControlsVisibility();
                 this.updateImportExportBtnVisibility();
                 this.updateFullscreenBtnVisibility();
+                this.applyControlButtonVisibility?.(pendingSettings.controlSettings);
                 this.updatePatternGrid();
+                this.applyToolbarOrder?.();
+                this.applyToolbarVisibility?.();
+                if (pendingSettings.controlButtonOrder) {
+                    try {
+                        const controlButtonOrder = JSON.parse(pendingSettings.controlButtonOrder);
+                        this.reorderControlButtons?.(controlButtonOrder);
+                        this.reorderControlButtonList?.(controlButtonOrder);
+                    } catch (error) {
+                        console.warn('Failed to apply imported control button order:', error);
+                    }
+                }
                 this.repositionModalsOnResize();
 
                 const successMsg = window.i18n ? window.i18n.t('settings.importSuccess') : '配置已导入';

@@ -1,11 +1,19 @@
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+function saveCurrentPageSnapshot() {
+        if (this.currentPage > 0 && this.currentPage <= this.pages.length) {
+            this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        }
+        this.savePageBackground?.(this.currentPage);
+        this.saveCurrentPageScene?.(this.currentPage);
+}
+
 function addPage() {
         // Always in pagination mode, no need to check
         
         // Save current page
-        this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        saveCurrentPageSnapshot.call(this);
         
         // Create new blank page
         this.pages.push(null);
@@ -14,6 +22,7 @@ function addPage() {
         // Clear canvas for new page
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        this.restorePageScene?.(this.currentPage);
         this.historyManager.saveState();
         this.updatePaginationUI();
     
@@ -23,8 +32,7 @@ function prevPage() {
         if (this.currentPage <= 1) return;
         
         // Save current page and background
-        this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        this.savePageBackground(this.currentPage);
+        saveCurrentPageSnapshot.call(this);
         
         // Go to previous page
         this.currentPage--;
@@ -35,14 +43,14 @@ function prevPage() {
 
 function nextPage() {
         // Save current page and background
-        this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        this.savePageBackground(this.currentPage);
+        saveCurrentPageSnapshot.call(this);
         
         // Go to next page (create new if needed)
         this.currentPage++;
         if (this.currentPage > this.pages.length) {
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             this.pages.push(this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height));
+            this.restorePageScene?.(this.currentPage);
             this.historyManager.saveState();
         } else {
             this.loadPage(this.currentPage);
@@ -53,8 +61,7 @@ function nextPage() {
 
 function nextOrAddPage() {
         // Save current page and background
-        this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        this.savePageBackground(this.currentPage);
+        saveCurrentPageSnapshot.call(this);
         
         // Check if we're on the last page
         if (this.currentPage >= this.pages.length) {
@@ -63,6 +70,7 @@ function nextOrAddPage() {
             this.currentPage = this.pages.length;
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+            this.restorePageScene?.(this.currentPage);
             this.historyManager.saveState();
         } else {
             // Go to next page
@@ -80,8 +88,7 @@ function goToPage(pageNumber) {
         }
         
         // Save current page and background
-        this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        this.savePageBackground(this.currentPage);
+        saveCurrentPageSnapshot.call(this);
         
         // Create new pages if needed
         while (pageNumber > this.pages.length) {
@@ -104,6 +111,7 @@ function loadPage(pageNumber) {
                 this.pages[pageNumber - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
             }
         }
+        this.restorePageScene?.(pageNumber);
         this.historyManager.saveState();
         
         // Restore page-specific background if exists

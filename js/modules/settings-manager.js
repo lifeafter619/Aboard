@@ -16,6 +16,7 @@ class SettingsManager {
         this.edgeSnapEnabled = localStorage.getItem('edgeSnapEnabled') !== 'false';
         this.touchZoomEnabled = localStorage.getItem('touchZoomEnabled') !== 'false';
         this.updatePreference = this.normalizeUpdatePreference(localStorage.getItem('updatePreference'));
+        this.legacyProjectImportEnabled = localStorage.getItem('legacyProjectImportEnabled') === 'true';
         this.unlimitedZoom = localStorage.getItem('unlimitedZoom') === 'true';
         this.infiniteCanvas = false; // Always use pagination mode
         this.showZoomControls = localStorage.getItem('showZoomControls') !== 'false';
@@ -795,6 +796,12 @@ class SettingsManager {
         window.pwaManager?.setUpdatePreference?.(this.updatePreference);
         return this.updatePreference;
     }
+
+    setLegacyProjectImportEnabled(enabled) {
+        this.legacyProjectImportEnabled = enabled === true;
+        localStorage.setItem('legacyProjectImportEnabled', this.legacyProjectImportEnabled ? 'true' : 'false');
+        return this.legacyProjectImportEnabled;
+    }
     
     loadSettings() {
         document.getElementById('toolbar-size-slider').value = this.toolbarSize;
@@ -812,6 +819,10 @@ class SettingsManager {
         document.getElementById('edge-snap-checkbox').checked = this.edgeSnapEnabled;
         document.getElementById('touch-zoom-checkbox').checked = this.touchZoomEnabled;
         this.setUpdatePreference(this.updatePreference);
+        const legacyProjectImportCheckbox = document.getElementById('legacy-project-import-checkbox');
+        if (legacyProjectImportCheckbox) {
+            legacyProjectImportCheckbox.checked = this.legacyProjectImportEnabled;
+        }
         document.getElementById('unlimited-zoom-checkbox').checked = this.unlimitedZoom;
         document.getElementById('show-zoom-controls-checkbox').checked = this.showZoomControls;
         const showImportExportBtnCheckbox = document.getElementById('show-import-export-btn-checkbox');
@@ -997,16 +1008,78 @@ class SettingsManager {
         if (languageSelect && window.i18n) {
             // Set current language
             languageSelect.value = window.i18n.getCurrentLocale();
-            
-            // Handle language change without page reload
-            languageSelect.addEventListener('change', async (e) => {
-                const newLocale = e.target.value;
-                const didChangeLocale = await window.i18n.changeLocale(newLocale);
-                if (didChangeLocale === false) {
-                    e.target.value = window.i18n.getCurrentLocale();
-                }
-                // No reload - translations are applied dynamically
-            });
+
+            if (languageSelect.dataset.languageBound !== 'true') {
+                // Handle language change without page reload
+                languageSelect.addEventListener('change', async (e) => {
+                    const newLocale = e.target.value;
+                    const didChangeLocale = await window.i18n.changeLocale(newLocale);
+                    if (didChangeLocale === false) {
+                        e.target.value = window.i18n.getCurrentLocale();
+                    }
+                    // No reload - translations are applied dynamically
+                });
+                languageSelect.dataset.languageBound = 'true';
+            }
+
+            if (languageSelect.dataset.languageSyncBound !== 'true') {
+                window.addEventListener('localeChanged', () => {
+                    languageSelect.value = window.i18n?.getCurrentLocale?.() || languageSelect.value;
+                });
+                languageSelect.dataset.languageSyncBound = 'true';
+            }
+        }
+    }
+
+    getLocaleSettingsState() {
+        const downloadedLocalesRaw = localStorage.getItem('aboardDownloadedLocales');
+        let downloadedLocales = [];
+        if (window.i18n?.getDownloadedLocales) {
+            downloadedLocales = window.i18n.getDownloadedLocales();
+        } else if (downloadedLocalesRaw) {
+            try {
+                const parsed = JSON.parse(downloadedLocalesRaw);
+                downloadedLocales = Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                console.warn('Failed to parse exported downloaded locales:', error);
+            }
+        }
+
+        return {
+            locale: localStorage.getItem('locale') || window.i18n?.getCurrentLocale?.() || 'zh-CN',
+            preferenceMode: window.i18n?.getLocalePreferenceMode?.() || localStorage.getItem('aboardLocalePreferenceMode') || 'auto',
+            downloadedLocales,
+            dismissedPreferredLocaleSuggestion: localStorage.getItem('aboardDeferredLocaleSuggestionDismissed')
+        };
+    }
+
+    async applyLocaleSettings(localeSettings) {
+        if (!localeSettings || typeof localeSettings !== 'object') {
+            return;
+        }
+
+        if (Array.isArray(localeSettings.downloadedLocales)) {
+            localStorage.setItem('aboardDownloadedLocales', JSON.stringify(localeSettings.downloadedLocales));
+        }
+
+        if (typeof localeSettings.dismissedPreferredLocaleSuggestion === 'string' && localeSettings.dismissedPreferredLocaleSuggestion) {
+            localStorage.setItem('aboardDeferredLocaleSuggestionDismissed', localeSettings.dismissedPreferredLocaleSuggestion);
+        } else if (localeSettings.dismissedPreferredLocaleSuggestion === null) {
+            localStorage.removeItem('aboardDeferredLocaleSuggestionDismissed');
+        }
+
+        const localePreferenceMode = localeSettings.preferenceMode === 'manual' ? 'manual' : 'auto';
+        localStorage.setItem('aboardLocalePreferenceMode', localePreferenceMode);
+
+        if (typeof localeSettings.locale === 'string' && localeSettings.locale) {
+            if (window.i18n?.changeLocale) {
+                await window.i18n.changeLocale(localeSettings.locale, {
+                    skipDownloadPrompt: true,
+                    preferenceMode: localePreferenceMode
+                });
+            } else {
+                localStorage.setItem('locale', localeSettings.locale);
+            }
         }
     }
 
@@ -1018,10 +1091,12 @@ class SettingsManager {
             edgeSnapEnabled: this.edgeSnapEnabled,
             touchZoomEnabled: this.touchZoomEnabled,
             updatePreference: this.updatePreference,
+            legacyProjectImportEnabled: this.legacyProjectImportEnabled,
             unlimitedZoom: this.unlimitedZoom,
             showZoomControls: this.showZoomControls,
             showImportExportBtn: this.showImportExportBtn,
             showFullscreenBtn: this.showFullscreenBtn,
+            showToolbarText: this.showToolbarText,
             keepMorePanelOpen: this.keepMorePanelOpen,
             patternPreferences: this.patternPreferences,
             canvasWidth: this.canvasWidth,
@@ -1034,9 +1109,11 @@ class SettingsManager {
             fontPreviewSettings: JSON.parse(JSON.stringify(this.fontPreviewSettings || {})),
             modalSizePreferences: JSON.parse(JSON.stringify(this.modalSizePreferences || {})),
             modalCenterPreferences: JSON.parse(JSON.stringify(this.modalCenterPreferences || {})),
+            localeSettings: this.getLocaleSettingsState(),
             // Also include toolbar customization
             toolbarOrder: localStorage.getItem('toolbarOrder'),
             toolbarVisibility: localStorage.getItem('toolbarVisibility'),
+            controlButtonOrder: localStorage.getItem('controlButtonOrder'),
             // Control button visibility
             controlSettings: {
                 zoom: localStorage.getItem('controlShowZoom') !== 'false',
@@ -1152,6 +1229,22 @@ class SettingsManager {
             return `${i18n.t('settings.general.controlButtonSettings')} - ${i18n.t(`settings.general.controlButtons.${control}`)}`;
         }
 
+        if (key.startsWith('localeSettings.locale')) {
+            return i18n.t('settings.general.language');
+        }
+
+        if (key.startsWith('localeSettings.preferenceMode')) {
+            return i18n.t('settings.general.language');
+        }
+
+        if (key.startsWith('localeSettings.downloadedLocales')) {
+            return i18n.t('settings.general.downloadedLanguagePacks');
+        }
+
+        if (key.startsWith('localeSettings.dismissedPreferredLocaleSuggestion')) {
+            return i18n.t('settings.general.dismissedLanguageSuggestion');
+        }
+
         if (key.startsWith('toolbarVisibility.')) {
             const tool = key.split('.')[1];
             // tool might be 'pen', 'eraser' etc.
@@ -1161,6 +1254,10 @@ class SettingsManager {
 
         if (key.startsWith('toolbarOrder')) {
             return i18n.t('settings.general.toolbarCustomization');
+        }
+
+        if (key.startsWith('controlButtonOrder')) {
+            return i18n.t('settings.general.controlButtonSettings');
         }
 
         if (key.startsWith('modalSizePreferences.')) {
@@ -1200,10 +1297,12 @@ class SettingsManager {
             'edgeSnapEnabled': 'settings.general.edgeSnap',
             'touchZoomEnabled': 'settings.general.touchZoom',
             'updatePreference': 'settings.general.updatePreference',
+            'legacyProjectImportEnabled': 'settings.more.legacyProjectImportEnabled',
             'unlimitedZoom': 'settings.canvas.unlimitedZoom',
             'showZoomControls': 'settings.display.showZoomControls',
             'showImportExportBtn': 'settings.display.showImportExportBtn',
             'showFullscreenBtn': 'settings.display.showFullscreenBtn',
+            'showToolbarText': 'settings.display.showToolbarText',
             'keepMorePanelOpen': 'settings.general.morePanelBehaviorLabel',
             'canvasWidth': 'settings.canvas.customSize.width',
             'canvasHeight': 'settings.canvas.customSize.height',
@@ -1226,8 +1325,8 @@ class SettingsManager {
     applySettings(newSettings) {
         const keys = [
             'toolbarSize', 'configScale', 'controlPosition', 'edgeSnapEnabled',
-            'touchZoomEnabled', 'updatePreference', 'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn', 'keepMorePanelOpen',
-            'canvasWidth', 'canvasHeight', 'canvasPreset', 'themeColor', 'globalFont',
+            'touchZoomEnabled', 'updatePreference', 'legacyProjectImportEnabled', 'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn', 'keepMorePanelOpen',
+            'showToolbarText', 'canvasWidth', 'canvasHeight', 'canvasPreset', 'themeColor', 'globalFont',
             'patternPreferences'
         ];
 
@@ -1247,6 +1346,7 @@ class SettingsManager {
         // Handle special storage items
         if (newSettings.toolbarOrder) localStorage.setItem('toolbarOrder', newSettings.toolbarOrder);
         if (newSettings.toolbarVisibility) localStorage.setItem('toolbarVisibility', newSettings.toolbarVisibility);
+        if (newSettings.controlButtonOrder) localStorage.setItem('controlButtonOrder', newSettings.controlButtonOrder);
         if (Array.isArray(newSettings.customFonts)) {
             this.customFonts = newSettings.customFonts;
             this.saveCustomFonts();
@@ -1276,6 +1376,12 @@ class SettingsManager {
             localStorage.setItem('controlShowFullscreen', newSettings.controlSettings.fullscreen);
             localStorage.setItem('controlShowImport', newSettings.controlSettings.import);
             localStorage.setItem('controlShowExport', newSettings.controlSettings.export);
+        }
+
+        if (newSettings.localeSettings) {
+            return this.applyLocaleSettings(newSettings.localeSettings).finally(() => {
+                this.loadSettings();
+            });
         }
 
         // Apply changes visually

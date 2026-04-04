@@ -20,7 +20,9 @@ class I18n {
         this.fallbackLocale = 'zh-CN';
         this.localeOverrides = null;
         this.coreLocales = ['zh-CN', 'en-US'];
+        this.localePreferenceModeStorageKey = 'aboardLocalePreferenceMode';
         this.downloadedLocalesStorageKey = 'aboardDownloadedLocales';
+        this.localeSuggestionDismissStorageKey = 'aboardDeferredLocaleSuggestionDismissed';
         
         // Available languages
         this.availableLocales = {
@@ -64,6 +66,20 @@ class I18n {
      */
     saveLocale(locale) {
         localStorage.setItem('locale', locale);
+    }
+
+    getSavedLocalePreferenceMode() {
+        const savedMode = localStorage.getItem(this.localePreferenceModeStorageKey);
+        return savedMode === 'manual' ? 'manual' : 'auto';
+    }
+
+    saveLocalePreferenceMode(mode) {
+        localStorage.setItem(this.localePreferenceModeStorageKey, mode === 'manual' ? 'manual' : 'auto');
+    }
+
+    hasLegacySavedLocaleWithoutPreferenceMode() {
+        return localStorage.getItem('locale') !== null
+            && localStorage.getItem(this.localePreferenceModeStorageKey) === null;
     }
 
     isCoreLocale(locale) {
@@ -121,11 +137,34 @@ class I18n {
 
     resolveInitialLocale() {
         const savedLocale = this.getSavedLocale();
-        if (this.canUseLocaleImmediately(savedLocale)) {
+        const detectedLocale = this.detectBrowserLocale();
+
+        if (this.hasLegacySavedLocaleWithoutPreferenceMode()) {
+            if (this.canUseLocaleImmediately(savedLocale) && !this.isCoreLocale(savedLocale)) {
+                this.saveLocalePreferenceMode('manual');
+                return savedLocale;
+            }
+
+            this.saveLocalePreferenceMode('auto');
+            if (this.isCoreLocale(savedLocale)) {
+                localStorage.removeItem('locale');
+            }
+            return detectedLocale;
+        }
+
+        const localePreferenceMode = this.getSavedLocalePreferenceMode();
+        if (localePreferenceMode === 'manual' && this.canUseLocaleImmediately(savedLocale)) {
             return savedLocale;
         }
 
-        return this.detectBrowserLocale();
+        if (localePreferenceMode === 'auto'
+            && this.canUseLocaleImmediately(savedLocale)
+            && !this.isCoreLocale(savedLocale)
+            && this.resolveBrowserPreferredLocale() === savedLocale) {
+            return savedLocale;
+        }
+
+        return detectedLocale;
     }
 
     getLocaleDownloadPrompt(locale) {
@@ -138,21 +177,179 @@ class I18n {
         return `切换到 ${localeName} 需要先下载语言包，现在下载吗？`;
     }
 
+    getPreferredLocaleSuggestionPrompt(locale) {
+        const localeName = this.availableLocales[locale] || locale;
+        const promptLocale = this.currentLocale === 'en-US' ? 'en-US' : 'zh-CN';
+        if (promptLocale === 'en-US') {
+            return `We detected that your preferred browser language is ${localeName}. Download and switch to it now?`;
+        }
+
+        return `检测到你的浏览器语言更接近 ${localeName}，现在下载并切换吗？`;
+    }
+
+    getBrowserLanguages() {
+        const browserLanguages = navigator.languages || [navigator.language || navigator.userLanguage];
+        return Array.isArray(browserLanguages)
+            ? browserLanguages.filter(Boolean)
+            : [browserLanguages].filter(Boolean);
+    }
+
+    getBrowserLocaleSignals() {
+        const signals = [...this.getBrowserLanguages()];
+
+        try {
+            const intlLocale = Intl?.DateTimeFormat?.().resolvedOptions?.().locale;
+            if (intlLocale) {
+                signals.push(intlLocale);
+            }
+        } catch (error) {
+            console.warn('Failed to inspect Intl locale during language detection:', error);
+        }
+
+        if (navigator?.language) {
+            signals.push(navigator.language);
+        }
+        if (navigator?.userLanguage) {
+            signals.push(navigator.userLanguage);
+        }
+
+        return Array.from(new Set(signals.filter(Boolean)));
+    }
+
+    normalizeBrowserLocale(locale) {
+        if (!locale) {
+            return null;
+        }
+
+        if (this.availableLocales[locale]) {
+            return locale;
+        }
+
+        const normalizedLocale = String(locale).toLowerCase();
+        const langFamily = normalizedLocale.split('-')[0];
+        switch (langFamily) {
+            case 'zh':
+                return normalizedLocale.includes('tw') || normalizedLocale.includes('hk') || normalizedLocale.includes('hant')
+                    ? 'zh-TW'
+                    : 'zh-CN';
+            case 'en':
+                return 'en-US';
+            case 'ja':
+                return 'ja-JP';
+            case 'ko':
+                return 'ko-KR';
+            case 'fr':
+                return 'fr-FR';
+            case 'de':
+                return 'de-DE';
+            case 'es':
+                return 'es-ES';
+            default:
+                return null;
+        }
+    }
+
+    resolveBrowserPreferredLocale() {
+        const languages = this.getBrowserLocaleSignals();
+        for (const lang of languages) {
+            const normalizedLocale = this.normalizeBrowserLocale(lang);
+            if (normalizedLocale && this.availableLocales[normalizedLocale]) {
+                return normalizedLocale;
+            }
+        }
+
+        return this.fallbackLocale;
+    }
+
+    getDismissedPreferredLocaleSuggestion() {
+        const dismissedLocale = localStorage.getItem(this.localeSuggestionDismissStorageKey);
+        return this.availableLocales[dismissedLocale] ? dismissedLocale : null;
+    }
+
+    setDismissedPreferredLocaleSuggestion(locale) {
+        if (!locale || !this.availableLocales[locale]) {
+            localStorage.removeItem(this.localeSuggestionDismissStorageKey);
+            return;
+        }
+
+        localStorage.setItem(this.localeSuggestionDismissStorageKey, locale);
+    }
+
+    getDeferredPreferredLocaleCandidate() {
+        if (this.getSavedLocale()) {
+            return null;
+        }
+
+        const preferredLocale = this.resolveBrowserPreferredLocale();
+        if (!preferredLocale || this.isCoreLocale(preferredLocale)) {
+            return null;
+        }
+
+        if (preferredLocale === this.currentLocale || this.canUseLocaleImmediately(preferredLocale)) {
+            return null;
+        }
+
+        if (this.getDismissedPreferredLocaleSuggestion() === preferredLocale) {
+            return null;
+        }
+
+        return preferredLocale;
+    }
+
+    async maybePromptForPreferredLocale() {
+        const preferredLocale = this.getDeferredPreferredLocaleCandidate();
+        if (!preferredLocale) {
+            return false;
+        }
+
+        const shouldSwitch = typeof window.confirm === 'function'
+            ? window.confirm(this.getPreferredLocaleSuggestionPrompt(preferredLocale))
+            : true;
+
+        if (!shouldSwitch) {
+            this.setDismissedPreferredLocaleSuggestion(preferredLocale);
+            return false;
+        }
+
+        this.setDismissedPreferredLocaleSuggestion(null);
+        return this.changeLocale(preferredLocale, {
+            skipDownloadPrompt: true,
+            preferenceMode: 'auto'
+        });
+    }
+
     /**
      * Detect browser language
      */
     detectBrowserLocale() {
-        const languages = navigator.languages || [navigator.language || navigator.userLanguage];
-        
-        for (const lang of languages) {
-            if (!lang) continue;
-            const langFamily = lang.split('-')[0];
-            if (langFamily === 'en') {
-                return 'en-US';
-            }
+        const normalizedSignals = this.getBrowserLocaleSignals()
+            .map((locale) => this.normalizeBrowserLocale(locale))
+            .filter(Boolean);
+        const primaryBrowserLocale = normalizedSignals[0] || null;
+
+        let resolvedTimeZone = '';
+        try {
+            resolvedTimeZone = Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone || '';
+        } catch (error) {
+            console.warn('Failed to inspect timezone during language detection:', error);
         }
-        
-        return this.fallbackLocale;
+
+        const timezoneSuggestsChinese = /^Asia\/(Shanghai|Chongqing|Harbin|Urumqi|Taipei|Hong_Kong|Macau)$/i.test(resolvedTimeZone);
+        const hasChineseSignal = normalizedSignals.some((locale) => locale?.startsWith('zh')) || timezoneSuggestsChinese;
+
+        if (primaryBrowserLocale?.startsWith('zh')) {
+            return this.fallbackLocale;
+        }
+
+        if (primaryBrowserLocale === 'en-US' && !hasChineseSignal) {
+            return 'en-US';
+        }
+
+        if (hasChineseSignal) {
+            return this.fallbackLocale;
+        }
+
+        return primaryBrowserLocale === 'en-US' ? 'en-US' : this.fallbackLocale;
     }
 
     /**
@@ -1373,7 +1570,7 @@ class I18n {
     /**
      * Change language
      */
-    async changeLocale(newLocale) {
+    async changeLocale(newLocale, options = {}) {
         if (!this.availableLocales[newLocale]) {
             console.error(`Locale ${newLocale} not supported`);
             return false;
@@ -1383,7 +1580,7 @@ class I18n {
             return true;
         }
 
-        if (!this.canUseLocaleImmediately(newLocale)) {
+        if (!options.skipDownloadPrompt && !this.canUseLocaleImmediately(newLocale)) {
             const shouldDownload = typeof window.confirm === 'function'
                 ? window.confirm(this.getLocaleDownloadPrompt(newLocale))
                 : true;
@@ -1406,7 +1603,9 @@ class I18n {
         }
 
         this.saveLocale(newLocale);
+        this.saveLocalePreferenceMode(options.preferenceMode === 'auto' ? 'auto' : 'manual');
         this.markLocaleDownloaded(newLocale);
+        this.setDismissedPreferredLocaleSuggestion(null);
         this.applyTranslations();
         
         // Update HTML lang attribute
@@ -1428,6 +1627,10 @@ class I18n {
      */
     getCurrentLocale() {
         return this.currentLocale;
+    }
+
+    getLocalePreferenceMode() {
+        return this.getSavedLocalePreferenceMode();
     }
 
     /**

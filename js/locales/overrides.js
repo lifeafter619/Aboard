@@ -18,10 +18,23 @@ window.locale_translation_overrides = (() => {
         'zh-CN': {
             settings: {
                 general: {
+                    languageHint: '默认自动检测系统语言，也可以随时手动切换',
+                    downloadedLanguagePacks: '已下载语言包',
+                    dismissedLanguageSuggestion: '语言提示忽略状态',
                     updatePreference: '更新方式',
                     updatePreferenceHint: '检测到新版本时，选择更新方式',
                     updatePreferencePrompt: '空闲时更新',
                     updatePreferenceAuto: '立即更新'
+                },
+                more: {
+                    configManagementLabel: '配置管理',
+                    configManagementHint: '导出或导入当前的应用程序设置',
+                    exportConfig: '导出配置',
+                    importConfig: '导入配置',
+                    compatibilityLabel: '兼容导入',
+                    compatibilityHint: '仅在需要时启用旧版 .aboard / .json 导入兼容',
+                    legacyProjectImportEnabled: '启用旧版项目导入兼容',
+                    legacyProjectImportEnabledHint: '开启后，项目导入将额外支持 .aboard / .json，并按需加载兼容模块。'
                 }
             }
         },
@@ -29,10 +42,23 @@ window.locale_translation_overrides = (() => {
             settings: {
                 exportFailed: 'Failed to export configuration',
                 general: {
+                    languageHint: 'Auto-detect your language by default, and let you switch manually anytime',
+                    downloadedLanguagePacks: 'Downloaded language packs',
+                    dismissedLanguageSuggestion: 'Dismissed language suggestion state',
                     updatePreference: 'Update behavior',
                     updatePreferenceHint: 'Choose how updates should be applied when a new version is ready',
                     updatePreferencePrompt: 'Update when idle',
                     updatePreferenceAuto: 'Update now'
+                },
+                more: {
+                    configManagementLabel: 'Configuration',
+                    configManagementHint: 'Export or import the current application settings',
+                    exportConfig: 'Export Settings',
+                    importConfig: 'Import Settings',
+                    compatibilityLabel: 'Compatibility Import',
+                    compatibilityHint: 'Enable legacy .aboard / .json import support only when needed',
+                    legacyProjectImportEnabled: 'Enable legacy project import compatibility',
+                    legacyProjectImportEnabledHint: 'When enabled, project import also accepts .aboard / .json files and loads the compatibility module on demand.'
                 },
                 diff: {
                     current: 'Current',

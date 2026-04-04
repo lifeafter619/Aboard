@@ -913,6 +913,10 @@ function setupSettingsListeners() {
             });
         });
 
+        bindIfPresent(document.getElementById('legacy-project-import-checkbox'), 'change', (e) => {
+            this.settingsManager.setLegacyProjectImportEnabled(e.target.checked);
+        });
+
         bindIfPresent(document.getElementById('unlimited-zoom-checkbox'), 'change', (e) => {
             this.settingsManager.unlimitedZoom = e.target.checked;
             localStorage.setItem('unlimitedZoom', e.target.checked);
