@@ -1420,28 +1420,6 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     font-weight: 500;
 }
 
-.update-preference-options {
-    align-self: flex-start;
-    width: fit-content;
-    max-width: 280px;
-    gap: 4px;
-    padding: 4px;
-    border: 1px solid #d7dde7;
-    border-radius: 12px;
-    background: #f5f7fb;
-}
-
-.update-preference-option-btn {
-    flex: 0 0 auto;
-    min-width: 112px;
-    padding: 7px 10px;
-    border-width: 0;
-    font-size: 12px;
-    font-weight: 600;
-    color: #5e6674;
-    background: transparent;
-}
-
 .position-option-btn:hover,
 .display-option-btn:hover,
 .update-preference-option-btn:hover,
@@ -1457,18 +1435,6 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     background-color: var(--theme-color);
     color: #ffffff;
     border-color: var(--theme-color);
-}
-
-.update-preference-option-btn:hover {
-    background-color: rgba(255, 255, 255, 0.92);
-    border-color: transparent;
-}
-
-.update-preference-option-btn.active {
-    background-color: #ffffff;
-    color: var(--theme-color);
-    border-color: transparent;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
 }
 
 .settings-action-btn {
