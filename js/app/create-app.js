@@ -167,6 +167,32 @@ async function runStartupUpdateGate(app, { win = window } = {}) {
       hasWaitingWorker: updateState?.hasWaitingWorker
     });
 
+    if (action === STARTUP_UPDATE_ACTIONS.APPLY_PREFERENCE) {
+      const userChoice = pwaManager.getPreferredUpdateChoice?.() === STARTUP_UPDATE_USER_CHOICES.IMMEDIATE
+        ? STARTUP_UPDATE_USER_CHOICES.IMMEDIATE
+        : STARTUP_UPDATE_USER_CHOICES.IDLE;
+      const didRequestUpdate = await pwaManager.requestUpdateApplication?.({
+        mode: userChoice === STARTUP_UPDATE_USER_CHOICES.IMMEDIATE ? 'immediate' : 'idle',
+        reason: 'startup',
+        currentVersion: updateState?.currentVersion,
+        latestVersion: updateState?.latestVersion
+      });
+      if (!didRequestUpdate && userChoice === STARTUP_UPDATE_USER_CHOICES.IMMEDIATE) {
+        pwaManager.deferUpdatePromptForCurrentSession?.();
+        return {
+          action: STARTUP_UPDATE_ACTIONS.CONTINUE,
+          userChoice: STARTUP_UPDATE_USER_CHOICES.IDLE,
+          updateState
+        };
+      }
+
+      return {
+        action,
+        userChoice,
+        updateState
+      };
+    }
+
     if (action === STARTUP_UPDATE_ACTIONS.PROMPT) {
       const userChoice = await pwaManager.promptForUpdate?.({
         reason: 'startup',

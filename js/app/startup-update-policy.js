@@ -5,6 +5,7 @@ export const UPDATE_PREFERENCES = Object.freeze({
 
 export const STARTUP_UPDATE_ACTIONS = Object.freeze({
   CONTINUE: 'continue',
+  APPLY_PREFERENCE: 'apply-preference',
   PROMPT: 'prompt'
 });
 
@@ -62,10 +63,8 @@ export function resolveStartupUpdateAction({
   updatePreference,
   hasWaitingWorker = false
 } = {}) {
-  normalizeUpdatePreference(updatePreference);
-
   if (hasWaitingWorker) {
-    return STARTUP_UPDATE_ACTIONS.PROMPT;
+    return STARTUP_UPDATE_ACTIONS.APPLY_PREFERENCE;
   }
 
   if (!currentVersion || !latestVersion) {
@@ -76,7 +75,7 @@ export function resolveStartupUpdateAction({
     return STARTUP_UPDATE_ACTIONS.CONTINUE;
   }
 
-  return STARTUP_UPDATE_ACTIONS.PROMPT;
+  return STARTUP_UPDATE_ACTIONS.APPLY_PREFERENCE;
 }
 
 export function shouldContinuePostVisibleStartup({ action, userChoice } = {}) {

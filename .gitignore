@@ -2,6 +2,7 @@ node_modules/
 dist/
 .npm-cache/
 .playwright-cli/
+docs/
 
 # Development artifacts
 *.log

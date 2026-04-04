@@ -100,9 +100,15 @@ class InsertTextManager {
 
     // Add a font to the document
     addFontToDocument(name, data) {
+        const fontSet = typeof document !== 'undefined' ? document.fonts : null;
+        if (typeof FontFace !== 'function' || !fontSet || typeof fontSet.add !== 'function') {
+            console.warn(`FontFace API is unavailable, skipping custom font ${name}`);
+            return Promise.resolve(null);
+        }
+
         const fontFace = new FontFace(name, `url(${data})`);
         return fontFace.load().then(loadedFace => {
-            document.fonts.add(loadedFace);
+            fontSet.add(loadedFace);
             return loadedFace;
         }).catch(err => {
             console.warn(`Failed to load custom font ${name}:`, err);

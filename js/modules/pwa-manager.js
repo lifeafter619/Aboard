@@ -1302,12 +1302,20 @@ class PWAManager {
                 return;
             }
 
-            const userChoice = await this.promptForUpdate({
-                reason: manual ? 'manual' : 'background',
-                currentVersion,
-                latestVersion
-            });
-            const requested = await this.requestUpdateApplication({
+            let userChoice;
+            if (manual) {
+                userChoice = await this.promptForUpdate({
+                    reason: 'manual',
+                    currentVersion,
+                    latestVersion
+                });
+            } else {
+                userChoice = this.getPreferredUpdateChoice() === UPDATE_USER_CHOICES.IMMEDIATE
+                    ? UPDATE_USER_CHOICES.IMMEDIATE
+                    : UPDATE_USER_CHOICES.IDLE;
+            }
+
+            let requested = await this.requestUpdateApplication({
                 mode: userChoice === UPDATE_USER_CHOICES.IMMEDIATE
                     ? PLANNED_UPDATE_MODES.IMMEDIATE
                     : PLANNED_UPDATE_MODES.IDLE,
@@ -1315,6 +1323,23 @@ class PWAManager {
                 currentVersion,
                 latestVersion
             });
+
+            if (!requested && !manual) {
+                userChoice = await this.promptForUpdate({
+                    reason: 'background',
+                    currentVersion,
+                    latestVersion
+                });
+                requested = await this.requestUpdateApplication({
+                    mode: userChoice === UPDATE_USER_CHOICES.IMMEDIATE
+                        ? PLANNED_UPDATE_MODES.IMMEDIATE
+                        : PLANNED_UPDATE_MODES.IDLE,
+                    reason: 'background',
+                    currentVersion,
+                    latestVersion
+                });
+            }
+
             if (!requested && manual && toastManager && currentVersion && latestVersion) {
                 toastManager.show(
                     this.getTranslation('versionUpdateFound')

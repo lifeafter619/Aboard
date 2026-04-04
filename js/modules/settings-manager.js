@@ -232,9 +232,15 @@ class SettingsManager {
     
     // Add a font to the document
     addFontToDocument(name, data) {
+        const fontSet = typeof document !== 'undefined' ? document.fonts : null;
+        if (typeof FontFace !== 'function' || !fontSet || typeof fontSet.add !== 'function') {
+            console.warn(`FontFace API is unavailable, skipping custom font ${name}`);
+            return Promise.resolve(null);
+        }
+
         const fontFace = new FontFace(name, `url(${data})`);
         return fontFace.load().then(loadedFace => {
-            document.fonts.add(loadedFace);
+            fontSet.add(loadedFace);
             return loadedFace;
         }).catch(err => {
             console.warn(`Failed to load custom font ${name}:`, err);
@@ -595,7 +601,10 @@ class SettingsManager {
         // Secondary axis uses smaller padding to keep toolbar compact
         const TOOLBAR_PADDING_SECONDARY_RATIO = 0.6; // Secondary padding = 60% of primary
         
-        const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+        const hasTouchPoints = typeof navigator !== 'undefined' && Number(navigator.maxTouchPoints) > 0;
+        const isTouchDevice = typeof window.matchMedia === 'function'
+            ? window.matchMedia('(pointer: coarse)').matches
+            : hasTouchPoints;
         const shortestSide = Math.min(window.innerWidth, window.innerHeight);
         const touchMaxButtonSize = shortestSide <= TOUCH_SMALL_SCREEN_THRESHOLD
             ? (window.innerHeight > window.innerWidth ? PORTRAIT_TOUCH_MAX_BUTTON_SIZE : LANDSCAPE_TOUCH_MAX_BUTTON_SIZE)
