@@ -425,17 +425,12 @@ body.vector-preview-active #off-canvas-image-layer {
 
 #background-config .pattern-grid-compact .pattern-option-btn {
     min-width: 0;
-    min-height: 30px;
-    padding: 5px 7px;
-    font-size: 12px;
-    font-weight: 500;
+    min-height: 34px;
+    padding: 7px 8px;
+    font-size: 11px;
     line-height: 1.15;
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 5px;
+    gap: 6px;
     white-space: nowrap;
-    text-align: left;
     overflow: hidden;
 }
 
@@ -447,22 +442,23 @@ body.vector-preview-active #off-canvas-image-layer {
 }
 
 #background-config .pattern-grid-compact .pattern-option-btn svg {
-    width: 13px;
-    height: 13px;
+    width: 15px;
+    height: 15px;
     flex-shrink: 0;
 }
 
 #pattern-grid .pattern-option-btn[data-pattern] {
     flex-direction: row;
-    gap: 5px;
+    gap: 6px;
 }
 
 #pattern-grid .pattern-option-icon {
-    width: 13px;
-    height: 13px;
+    width: 15px;
+    height: 15px;
     flex-shrink: 0;
     stroke-linecap: round;
     stroke-linejoin: round;
+    opacity: 0.92;
 }
 
 #pattern-grid .pattern-option-btn[data-pattern] .pattern-option-label {
@@ -470,6 +466,10 @@ body.vector-preview-active #off-canvas-image-layer {
     width: auto;
     min-width: 0;
     flex: 1 1 auto;
+}
+
+#pattern-grid .pattern-option-btn.active .pattern-option-icon {
+    opacity: 1;
 }
 
 #background-config .upload-text {
@@ -1593,7 +1593,7 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     border-color: var(--theme-color);
 }
 
-.pen-type-btn {
+.icon-label-option-btn {
     flex: 1;
     padding: 7px 8px;
     border: 2px solid #ddd;
@@ -1605,29 +1605,44 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     font-size: 11px;
     font-weight: 500;
     white-space: nowrap;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 4px;
+    justify-content: flex-start;
+    gap: 6px;
+    min-width: 0;
+    text-align: left;
     touch-action: manipulation;
 }
 
-.pen-type-btn svg {
+.icon-label-option-btn svg {
     flex-shrink: 0;
     width: 16px;
     height: 16px;
 }
 
-.pen-type-btn:hover {
+.icon-label-option-btn span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.icon-label-option-btn:hover {
     background-color: #f0f0f0;
     border-color: #ccc;
 }
 
-.pen-type-btn.active {
+.icon-label-option-btn.active {
     background-color: rgba(0, 122, 255, 0.08);
     color: var(--theme-color);
     border-color: var(--theme-color);
     box-shadow: 0 4px 10px rgba(0, 122, 255, 0.14);
+}
+
+.pen-type-btn {
+    justify-content: center;
+    gap: 4px;
+    text-align: center;
 }
 
 .font-management-list {
@@ -4567,6 +4582,7 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     }
     
     .pen-type-btn,
+    .icon-label-option-btn,
     .shape-type-btn,
     .select-mode-btn {
         padding: 5px 4px;
@@ -4608,6 +4624,7 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     button, 
     .color-btn,
     .pen-type-btn,
+    .icon-label-option-btn,
     .shape-type-btn,
     .select-mode-btn,
     .feature-btn,
@@ -4806,6 +4823,7 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     
     /* Larger config panel options */
     .pen-type-btn,
+    .icon-label-option-btn,
     .shape-type-btn,
     .select-mode-btn,
     .eraser-type-btn {
