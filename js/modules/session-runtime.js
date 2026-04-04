@@ -1,7 +1,7 @@
 // Extracted session lifecycle runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
-const PLANNED_UPDATE_RELOAD_KEY = 'aboardPlannedUpdateReload';
+const SESSION_RUNTIME_PLANNED_UPDATE_RELOAD_KEY = 'aboardPlannedUpdateReload';
 
 function showRecoveryModal() {
         const modal = document.getElementById('recovery-modal');
@@ -250,7 +250,7 @@ async function clearSessionData() {
             localStorage.removeItem('savedCanvasTimestamp');
             localStorage.removeItem('savedCurrentPage');
             localStorage.removeItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot');
-            localStorage.removeItem(PLANNED_UPDATE_RELOAD_KEY);
+            localStorage.removeItem(SESSION_RUNTIME_PLANNED_UPDATE_RELOAD_KEY);
         } catch (e) {
             console.warn('Failed to clear session:', e);
         }

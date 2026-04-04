@@ -5,7 +5,7 @@ const UPDATE_IDLE_APPLY_DELAY = 15000;
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 const APP_VERSION_URLS = ['version.txt', './version.txt', '/api/version'];
 const UPDATE_PREFERENCE_KEY = 'updatePreference';
-const PLANNED_UPDATE_RELOAD_KEY = 'aboardPlannedUpdateReload';
+const PWA_PLANNED_UPDATE_RELOAD_KEY = 'aboardPlannedUpdateReload';
 const UPDATE_PREFERENCES = Object.freeze({
     PROMPT: 'prompt',
     AUTO: 'auto'
@@ -398,12 +398,12 @@ class PWAManager {
     }
 
     writePlannedUpdateIntent(intent) {
-        localStorage.setItem(PLANNED_UPDATE_RELOAD_KEY, JSON.stringify(intent));
+        localStorage.setItem(PWA_PLANNED_UPDATE_RELOAD_KEY, JSON.stringify(intent));
         return intent;
     }
 
     clearPlannedUpdateIntent() {
-        localStorage.removeItem(PLANNED_UPDATE_RELOAD_KEY);
+        localStorage.removeItem(PWA_PLANNED_UPDATE_RELOAD_KEY);
     }
 
     getDrawingBoard() {

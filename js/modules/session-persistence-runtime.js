@@ -1,7 +1,7 @@
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
-const PLANNED_UPDATE_RELOAD_KEY = 'aboardPlannedUpdateReload';
+const SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY = 'aboardPlannedUpdateReload';
 
 function buildSyncSnapshot() {
         try {
@@ -134,7 +134,7 @@ async function checkForRecovery() {
         try {
             const hasSession = await this.storageManager.hasSession();
             const rawSyncSnapshot = localStorage.getItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot');
-            const rawPlannedUpdateReload = localStorage.getItem(PLANNED_UPDATE_RELOAD_KEY);
+            const rawPlannedUpdateReload = localStorage.getItem(SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY);
             let hasSyncSnapshot = false;
             let plannedUpdateReload = null;
 
@@ -154,18 +154,18 @@ async function checkForRecovery() {
                     if (parsedPlannedUpdateReload?.reason === 'update') {
                         plannedUpdateReload = parsedPlannedUpdateReload;
                     } else {
-                        localStorage.removeItem(PLANNED_UPDATE_RELOAD_KEY);
+                        localStorage.removeItem(SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY);
                     }
                 } catch (plannedReloadError) {
                     console.warn('Ignoring invalid planned update reload payload:', plannedReloadError);
-                    localStorage.removeItem(PLANNED_UPDATE_RELOAD_KEY);
+                    localStorage.removeItem(SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY);
                 }
             }
 
             if (plannedUpdateReload && (hasSession || hasSyncSnapshot)) {
                 const restored = await this.restoreSession();
                 if (restored) {
-                    localStorage.removeItem(PLANNED_UPDATE_RELOAD_KEY);
+                    localStorage.removeItem(SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY);
                     return true;
                 }
             }
