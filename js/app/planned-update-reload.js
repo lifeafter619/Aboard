@@ -74,6 +74,10 @@ export function shouldApplyIdleUpdate({
     return false;
   }
 
-  const lastActivityAt = Number(activity.lastActivityAt || 0);
-  return Number.isFinite(lastActivityAt) && (now - lastActivityAt) >= idleMs;
+  const lastActivityAt = Number(activity.lastActivityAt);
+  if (!Number.isFinite(lastActivityAt)) {
+    return false;
+  }
+
+  return (now - lastActivityAt) >= idleMs;
 }

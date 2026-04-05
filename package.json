@@ -5,6 +5,7 @@
   "scripts": {
     "build": "node scripts/build-static.js",
     "start": "node server.js",
+    "test": "node --test --test-isolation=none",
     "sync:version-badge": "node scripts/update-version-badge.js"
   },
   "devDependencies": {

@@ -63,8 +63,12 @@ export function resolveStartupUpdateAction({
   updatePreference,
   hasWaitingWorker = false
 } = {}) {
+  const normalizedPreference = normalizeUpdatePreference(updatePreference);
+
   if (hasWaitingWorker) {
-    return STARTUP_UPDATE_ACTIONS.APPLY_PREFERENCE;
+    return normalizedPreference === UPDATE_PREFERENCES.AUTO
+      ? STARTUP_UPDATE_ACTIONS.APPLY_PREFERENCE
+      : STARTUP_UPDATE_ACTIONS.PROMPT;
   }
 
   if (!currentVersion || !latestVersion) {
@@ -75,7 +79,9 @@ export function resolveStartupUpdateAction({
     return STARTUP_UPDATE_ACTIONS.CONTINUE;
   }
 
-  return STARTUP_UPDATE_ACTIONS.APPLY_PREFERENCE;
+  return normalizedPreference === UPDATE_PREFERENCES.AUTO
+    ? STARTUP_UPDATE_ACTIONS.APPLY_PREFERENCE
+    : STARTUP_UPDATE_ACTIONS.PROMPT;
 }
 
 export function shouldContinuePostVisibleStartup({ action, userChoice } = {}) {
