@@ -14,7 +14,26 @@ window.locale_translation_overrides = (() => {
         stXingkai: 'STXingkai'
     };
 
-    return {
+    const deepMerge = (target, source) => {
+        if (!source || typeof source !== 'object') {
+            return target;
+        }
+
+        Object.entries(source).forEach(([key, value]) => {
+            if (value && typeof value === 'object' && !Array.isArray(value)) {
+                target[key] = deepMerge(
+                    target[key] && typeof target[key] === 'object' ? target[key] : {},
+                    value
+                );
+            } else {
+                target[key] = value;
+            }
+        });
+
+        return target;
+    };
+
+    const localeOverrides = {
         'zh-CN': {
             settings: {
                 general: {
@@ -821,6 +840,8 @@ window.locale_translation_overrides = (() => {
             }
         }
     };
+
+    return localeOverrides;
 })();
 
 

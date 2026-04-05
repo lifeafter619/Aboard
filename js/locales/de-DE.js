@@ -17,6 +17,7 @@ window.translations = {
         yes: 'Ja',
         no: 'Nein',
         ok: 'OK',
+        help: 'Hilfe',
         apply: 'Anwenden',
         reset: 'Zurücksetzen',
         restoreSize: 'Größe zurücksetzen',
@@ -225,6 +226,8 @@ window.translations = {
         contrast: 'Kontrast',
         contrastHint: 'Die Dunkelheit der Hintergrundmusterlinien anpassen',
         preference: 'Hintergrundmuster-Präferenz',
+        storageFull: 'Der Speicherplatz reicht nicht aus, um weitere Bilder zu speichern. Bitte entfernen Sie einige ältere Bilder.',
+        saveError: 'Das Bild konnte nicht gespeichert werden. Möglicherweise ist der Speicherplatz knapp.',
         moveCoordinateOrigin: 'Ursprung verschieben',
         moveCoordinateOriginHint: 'Klicken und auf der Leinwand ziehen, um den Koordinatenursprung zu verschieben',
         coordinateTools: 'Koordinateneinstellungen',
@@ -358,9 +361,15 @@ window.translations = {
         general: {
             title: 'Allgemeine Einstellungen',
             language: 'Sprache',
-            languageHint: 'Sprache der Benutzeroberfläche wählen',
+            languageHint: 'Erkennt standardmäßig automatisch die Systemsprache und erlaubt jederzeit einen manuellen Wechsel',
             globalFont: 'Globale Schriftart',
             globalFontHint: 'Wählen Sie die Schriftart für die Anwendung',
+            downloadedLanguagePacks: 'Heruntergeladene Sprachpakete',
+            dismissedLanguageSuggestion: 'Status der ausgeblendeten Sprachhinweise',
+            updatePreference: 'Update-Verhalten',
+            updatePreferenceHint: 'Legt fest, wie ein Update angewendet wird, sobald es bereitsteht',
+            updatePreferencePrompt: 'Im Leerlauf aktualisieren',
+            updatePreferenceAuto: 'Jetzt aktualisieren',
             fonts: {
                 system: 'Systemstandard',
                 serif: 'Serif',
@@ -517,6 +526,14 @@ window.translations = {
             title: 'Weitere Einstellungen',
             cacheCleanupLabel: 'Cache-Bereinigung',
             cacheCleanupHint: 'Cache-Verbrauch anzeigen und nach Kategorien löschen (mit Bestätigung vor dem Löschen)',
+            configManagementLabel: 'Konfiguration',
+            configManagementHint: 'Aktuelle Anwendungseinstellungen exportieren oder importieren',
+            exportConfig: 'Einstellungen exportieren',
+            importConfig: 'Einstellungen importieren',
+            compatibilityLabel: 'Kompatibilitätsimport',
+            compatibilityHint: 'Aktivieren Sie die alte .aboard / .json-Importkompatibilität nur bei Bedarf',
+            legacyProjectImportEnabled: 'Kompatibilität für alte Projektimporte aktivieren',
+            legacyProjectImportEnabledHint: 'Wenn aktiviert, akzeptiert der Projektimport auch .aboard / .json-Dateien und lädt das Kompatibilitätsmodul bei Bedarf.',
             clearSettingsCache: 'Einstellungs-Cache löschen',
             clearCanvasCache: 'Canvas-Cache löschen',
             clearOtherCache: 'Sonstigen Cache löschen',
@@ -806,5 +823,13 @@ Viel Spaß bei Ihrer kreativen Arbeit!`,
         thursday: 'Donnerstag',
         friday: 'Freitag',
         saturday: 'Samstag'
+    },
+
+    export: {
+        failed: 'Export fehlgeschlagen. Bitte versuchen Sie es erneut.'
+    },
+
+    gif: {
+        loopCountPrompt: 'Anzahl der Wiederholungen festlegen (0 für unendlich):'
     }
 };

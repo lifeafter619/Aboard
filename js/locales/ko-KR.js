@@ -17,6 +17,7 @@ window.translations = {
         yes: '예',
         no: '아니오',
         ok: '확인',
+        help: '도움말',
         apply: '적용',
         reset: '재설정',
         restoreSize: '크기 복원',
@@ -227,6 +228,8 @@ window.translations = {
         contrastHint: '배경 패턴 선의 명암을 조정합니다',
         preference: '배경 패턴 기본 설정',
         upload: '업로드',
+        storageFull: '저장 공간이 부족하여 더 많은 이미지를 저장할 수 없습니다. 오래된 이미지를 일부 정리해 주세요.',
+        saveError: '이미지를 저장하지 못했습니다. 저장 공간이 부족할 수 있습니다.',
         moveCoordinateOrigin: '원점 이동',
         moveCoordinateOriginHint: '버튼을 클릭한 후 캔버스에서 드래그하여 좌표 원점 이동',
         coordinateTools: '좌표 설정',
@@ -360,9 +363,15 @@ window.translations = {
         general: {
             title: '일반 설정',
             language: '언어',
-            languageHint: '인터페이스 언어 선택',
+            languageHint: '기본적으로 시스템 언어를 자동 감지하며, 언제든지 수동으로 전환할 수 있습니다',
             globalFont: '전역 글꼴',
             globalFontHint: '애플리케이션에서 사용할 글꼴 선택',
+            downloadedLanguagePacks: '다운로드한 언어 팩',
+            dismissedLanguageSuggestion: '언어 제안 숨김 상태',
+            updatePreference: '업데이트 방식',
+            updatePreferenceHint: '업데이트 준비 시 적용할 방식을 선택합니다',
+            updatePreferencePrompt: '한가할 때 업데이트',
+            updatePreferenceAuto: '지금 업데이트',
             fonts: {
                 system: '시스템 기본값',
                 serif: 'Serif',
@@ -518,6 +527,14 @@ window.translations = {
             title: '추가 설정',
             cacheCleanupLabel: '캐시 정리',
             cacheCleanupHint: '캐시 사용량을 확인하고 항목별로 정리할 수 있습니다(정리 전 확인)',
+            configManagementLabel: '설정 관리',
+            configManagementHint: '현재 애플리케이션 설정을 내보내거나 가져옵니다',
+            exportConfig: '설정 내보내기',
+            importConfig: '설정 가져오기',
+            compatibilityLabel: '호환 가져오기',
+            compatibilityHint: '필요할 때만 예전 .aboard / .json 가져오기 호환을 활성화합니다',
+            legacyProjectImportEnabled: '구버전 프로젝트 가져오기 호환 사용',
+            legacyProjectImportEnabledHint: '활성화하면 프로젝트 가져오기가 .aboard / .json 파일도 허용하고 필요 시 호환 모듈을 불러옵니다.',
             clearSettingsCache: '설정 캐시 삭제',
             clearCanvasCache: '캔버스 캐시 삭제',
             clearOtherCache: '기타 캐시 삭제',
@@ -788,5 +805,13 @@ window.translations = {
         thursday: '목요일',
         friday: '금요일',
         saturday: '토요일'
+    },
+
+    export: {
+        failed: '내보내기에 실패했습니다. 다시 시도해 주세요.'
+    },
+
+    gif: {
+        loopCountPrompt: '반복 횟수를 설정하세요(0은 무한 반복):'
     }
 };

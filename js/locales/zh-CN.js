@@ -22,6 +22,7 @@ window.translations = {
         start: '开始',
         stop: '停止',
         preview: '预览',
+        help: '帮助',
         settings: '设置',
         dragToMove: '拖动以移动',
         restoreSize: '\u6062\u590d\u5927\u5c0f',
@@ -172,6 +173,7 @@ window.translations = {
 
     selection: {
         edit: '编辑',
+        color: '颜色',
         copy: '复制',
         delete: '删除',
         done: '完成',
@@ -293,6 +295,7 @@ window.translations = {
     // Selection Controls
     selection: {
         copy: '复制',
+        color: '颜色',
         delete: '删除',
         done: '完成',
         edit: '编辑',
@@ -387,6 +390,12 @@ window.translations = {
             fontManagementHint: '字体管理：支持排序、显示开关、重命名与预览',
             showFont: '显示字体',
             fontPreviewSample: '中文字体预览 ABC abc 123',
+            downloadedLanguagePacks: '已下载语言包',
+            dismissedLanguageSuggestion: '语言提示忽略状态',
+            updatePreference: '更新方式',
+            updatePreferenceHint: '检测到新版本时，选择更新方式',
+            updatePreferencePrompt: '空闲时更新',
+            updatePreferenceAuto: '立即更新',
             fonts: {
                 system: '系统默认',
                 serif: '宋体（衬线体）',
@@ -564,6 +573,14 @@ window.translations = {
             title: '更多设置',
             cacheCleanupLabel: '缓存清理',
             cacheCleanupHint: '可查看缓存占用并按类别清理（清理前会二次确认）',
+            configManagementLabel: '配置管理',
+            configManagementHint: '导出或导入当前的应用程序设置',
+            exportConfig: '导出配置',
+            importConfig: '导入配置',
+            compatibilityLabel: '兼容导入',
+            compatibilityHint: '仅在需要时启用旧版 .aboard / .json 导入兼容',
+            legacyProjectImportEnabled: '启用旧版项目导入兼容',
+            legacyProjectImportEnabledHint: '开启后，项目导入将额外支持 .aboard / .json，并按需加载兼容模块。',
             clearSettingsCache: '清除设置项缓存',
             clearCanvasCache: '清除画布缓存',
             clearOtherCache: '清除其他缓存',
@@ -810,7 +827,8 @@ window.translations = {
     export: {
         selectAtLeastOnePage: '请至少选择一页',
         paginationRequired: '需要分页',
-        noPages: '没有可用页面'
+        noPages: '没有可用页面',
+        failed: '导出失败，请重试'
     },
 
     gif: {

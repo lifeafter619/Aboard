@@ -17,6 +17,7 @@ window.translations = {
         yes: 'Oui',
         no: 'Non',
         ok: 'OK',
+        help: 'Aide',
         apply: 'Appliquer',
         reset: 'Réinitialiser',
         restoreSize: 'Rétablir la taille',
@@ -223,6 +224,8 @@ window.translations = {
         contrast: 'Contraste',
         contrastHint: 'Ajuster l\'obscurité des lignes du motif d\'arrière-plan',
         preference: 'Préférence de motif d\'arrière-plan',
+        storageFull: 'L’espace de stockage est insuffisant pour enregistrer davantage d’images. Supprimez quelques anciennes images.',
+        saveError: 'Impossible d’enregistrer l’image. L’espace de stockage est peut-être insuffisant.',
         moveCoordinateOrigin: 'Déplacer l\'origine',
         moveCoordinateOriginHint: 'Cliquez puis faites glisser sur le canevas pour déplacer l\'origine des coordonnées',
         coordinateTools: 'Réglages de coordonnées',
@@ -356,9 +359,15 @@ window.translations = {
         general: {
             title: 'Paramètres généraux',
             language: 'Langue',
-            languageHint: 'Choisir la langue de l\'interface',
+            languageHint: 'Détecte automatiquement la langue du système par défaut et permet un changement manuel à tout moment',
             globalFont: 'Police globale',
             globalFontHint: 'Choisir la police utilisée dans l\'application',
+            downloadedLanguagePacks: 'Packs de langue téléchargés',
+            dismissedLanguageSuggestion: 'État de masquage de la suggestion de langue',
+            updatePreference: 'Mode de mise à jour',
+            updatePreferenceHint: 'Choisissez comment appliquer une mise à jour lorsqu’elle est prête',
+            updatePreferencePrompt: 'Mettre à jour au repos',
+            updatePreferenceAuto: 'Mettre à jour maintenant',
             fonts: {
                 system: 'Système par défaut',
                 serif: 'Serif',
@@ -514,6 +523,14 @@ window.translations = {
             title: 'Plus de paramètres',
             cacheCleanupLabel: 'Nettoyage du cache',
             cacheCleanupHint: 'Voir l\'utilisation du cache et nettoyer par catégorie (avec confirmation avant suppression)',
+            configManagementLabel: 'Configuration',
+            configManagementHint: 'Exporter ou importer les paramètres actuels de l’application',
+            exportConfig: 'Exporter les paramètres',
+            importConfig: 'Importer les paramètres',
+            compatibilityLabel: 'Importation de compatibilité',
+            compatibilityHint: 'Activez la compatibilité d’import .aboard / .json uniquement si nécessaire',
+            legacyProjectImportEnabled: 'Activer la compatibilité d’import des anciens projets',
+            legacyProjectImportEnabledHint: 'Lorsque cette option est activée, l’import de projet accepte aussi les fichiers .aboard / .json et charge le module de compatibilité à la demande.',
             clearSettingsCache: 'Effacer le cache des paramètres',
             clearCanvasCache: 'Effacer le cache du canvas',
             clearOtherCache: 'Effacer les autres caches',
@@ -785,5 +802,13 @@ Profitez de votre travail créatif !`,
         thursday: 'Jeudi',
         friday: 'Vendredi',
         saturday: 'Samedi'
+    },
+
+    export: {
+        failed: 'L’exportation a échoué. Veuillez réessayer.'
+    },
+
+    gif: {
+        loopCountPrompt: 'Définissez le nombre de boucles (0 pour infini) :'
     }
 };

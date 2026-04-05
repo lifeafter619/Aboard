@@ -22,6 +22,7 @@ window.translations = {
         start: 'Start',
         stop: 'Stop',
         preview: 'Preview',
+        help: 'Help',
         settings: 'Settings',
         dragToMove: 'Drag to move',
         restoreSize: 'Restore Size',
@@ -234,6 +235,8 @@ window.translations = {
         preference: 'Pattern Preference',
         preferenceHint: 'Choose patterns shown in properties bar',
         upload: 'Upload',
+        storageFull: 'Storage is full. Please remove some old images before saving more.',
+        saveError: 'Failed to save image. Storage may be full.',
         moveCoordinateOrigin: 'Move Origin',
         moveCoordinateOriginHint: 'Click and drag on canvas to move coordinate origin',
         coordinateTools: 'Coordinate Settings',
@@ -387,6 +390,12 @@ window.translations = {
             fontManagementHint: 'Font management: reorder, show/hide, rename and preview',
             showFont: 'Show font',
             fontPreviewSample: 'Font Preview ABC abc 123',
+            downloadedLanguagePacks: 'Downloaded language packs',
+            dismissedLanguageSuggestion: 'Dismissed language suggestion state',
+            updatePreference: 'Update behavior',
+            updatePreferenceHint: 'Choose how updates should be applied when a new version is ready',
+            updatePreferencePrompt: 'Update when idle',
+            updatePreferenceAuto: 'Update now',
             fonts: {
                 system: 'System Default',
                 serif: 'Serif',
@@ -566,6 +575,14 @@ window.translations = {
             title: 'More Settings',
             cacheCleanupLabel: 'Cache Cleanup',
             cacheCleanupHint: 'View cache usage and clear by category (with confirmation before clearing)',
+            configManagementLabel: 'Configuration',
+            configManagementHint: 'Export or import the current application settings',
+            exportConfig: 'Export Settings',
+            importConfig: 'Import Settings',
+            compatibilityLabel: 'Compatibility Import',
+            compatibilityHint: 'Enable legacy .aboard / .json import support only when needed',
+            legacyProjectImportEnabled: 'Enable legacy project import compatibility',
+            legacyProjectImportEnabledHint: 'When enabled, project import also accepts .aboard / .json files and loads the compatibility module on demand.',
             clearSettingsCache: 'Clear Settings Cache',
             clearCanvasCache: 'Clear Canvas Cache',
             clearOtherCache: 'Clear Other Cache',
@@ -812,7 +829,12 @@ window.translations = {
     export: {
         selectAtLeastOnePage: 'Please select at least one page to export',
         paginationRequired: 'Currently in Infinite Canvas mode. Please enable Pagination Mode in Settings to use this feature.',
-        noPages: 'No pages to export.'
+        noPages: 'No pages to export.',
+        failed: 'Export failed. Please try again.'
+    },
+
+    gif: {
+        loopCountPrompt: 'Set loop count (0 for infinite):'
     },
 
     // Timezone names

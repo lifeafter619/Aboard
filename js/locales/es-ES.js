@@ -17,6 +17,7 @@ window.translations = {
         yes: 'Sí',
         no: 'No',
         ok: 'OK',
+        help: 'Ayuda',
         apply: 'Aplicar',
         reset: 'Restablecer',
         restoreSize: 'Restablecer tamaño',
@@ -223,6 +224,8 @@ window.translations = {
         contrast: 'Contraste',
         contrastHint: 'Ajustar la oscuridad de las líneas del patrón de fondo',
         preference: 'Preferencia de patrón de fondo',
+        storageFull: 'No queda espacio de almacenamiento para guardar más imágenes. Elimina algunas imágenes antiguas.',
+        saveError: 'No se pudo guardar la imagen. Puede que no haya suficiente espacio de almacenamiento.',
         moveCoordinateOrigin: 'Mover origen',
         moveCoordinateOriginHint: 'Haga clic y arrastre en el lienzo para mover el origen de coordenadas',
         coordinateTools: 'Configuración de coordenadas',
@@ -356,9 +359,15 @@ window.translations = {
         general: {
             title: 'Configuración general',
             language: 'Idioma',
-            languageHint: 'Elegir idioma de la interfaz',
+            languageHint: 'Detecta automáticamente el idioma del sistema por defecto y permite cambiarlo manualmente en cualquier momento',
             globalFont: 'Fuente global',
             globalFontHint: 'Elegir la fuente utilizada en la aplicación',
+            downloadedLanguagePacks: 'Paquetes de idioma descargados',
+            dismissedLanguageSuggestion: 'Estado de descarte de la sugerencia de idioma',
+            updatePreference: 'Modo de actualización',
+            updatePreferenceHint: 'Elige cómo aplicar la actualización cuando esté lista',
+            updatePreferencePrompt: 'Actualizar en inactividad',
+            updatePreferenceAuto: 'Actualizar ahora',
             fonts: {
                 system: 'Predeterminado del sistema',
                 serif: 'Serif',
@@ -514,6 +523,14 @@ window.translations = {
             title: 'Más configuraciones',
             cacheCleanupLabel: 'Limpieza de caché',
             cacheCleanupHint: 'Ver uso de caché y limpiar por categoría (con confirmación antes de borrar)',
+            configManagementLabel: 'Configuración',
+            configManagementHint: 'Exporta o importa la configuración actual de la aplicación',
+            exportConfig: 'Exportar configuración',
+            importConfig: 'Importar configuración',
+            compatibilityLabel: 'Importación de compatibilidad',
+            compatibilityHint: 'Activa la compatibilidad con importaciones .aboard / .json antiguas solo cuando sea necesario',
+            legacyProjectImportEnabled: 'Activar compatibilidad con importación de proyectos antiguos',
+            legacyProjectImportEnabledHint: 'Cuando está activado, la importación de proyectos también acepta archivos .aboard / .json y carga el módulo de compatibilidad cuando hace falta.',
             clearSettingsCache: 'Limpiar caché de configuración',
             clearCanvasCache: 'Limpiar caché del lienzo',
             clearOtherCache: 'Limpiar otra caché',
@@ -785,5 +802,13 @@ Consejos de uso:
         thursday: 'Jueves',
         friday: 'Viernes',
         saturday: 'Sábado'
+    },
+
+    export: {
+        failed: 'La exportación ha fallado. Inténtalo de nuevo.'
+    },
+
+    gif: {
+        loopCountPrompt: 'Define el número de repeticiones (0 para infinito):'
     }
 };

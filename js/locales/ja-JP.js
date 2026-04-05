@@ -17,6 +17,7 @@ window.translations = {
         yes: 'はい',
         no: 'いいえ',
         ok: 'OK',
+        help: 'ヘルプ',
         apply: '適用',
         reset: 'リセット',
         restoreSize: 'サイズを元に戻す',
@@ -227,6 +228,8 @@ window.translations = {
         contrastHint: '背景パターン線の明暗を調整します',
         preference: '背景パターンの設定',
         upload: 'アップロード',
+        storageFull: '保存領域が不足しているため、これ以上画像を保存できません。古い画像をいくつか削除してください。',
+        saveError: '画像の保存に失敗しました。保存領域が不足している可能性があります。',
         moveCoordinateOrigin: '原点を移動',
         moveCoordinateOriginHint: 'ボタンをクリックしてキャンバス上でドラッグして座標原点を移動',
         coordinateTools: '座標設定',
@@ -360,9 +363,15 @@ window.translations = {
         general: {
             title: '一般設定',
             language: '言語',
-            languageHint: 'インターフェース言語を選択',
+            languageHint: '既定ではシステム言語を自動判定し、必要に応じていつでも手動で切り替えられます',
             globalFont: 'グローバルフォント',
             globalFontHint: 'アプリケーションで使用するフォントを選択',
+            downloadedLanguagePacks: 'ダウンロード済み言語パック',
+            dismissedLanguageSuggestion: '言語提案の非表示状態',
+            updatePreference: '更新方法',
+            updatePreferenceHint: 'アップデートの準備ができたとき、更新方法を選びます',
+            updatePreferencePrompt: '空き時間に更新',
+            updatePreferenceAuto: '今すぐ更新',
             fonts: {
                 system: 'システムデフォルト',
                 serif: 'Serif',
@@ -518,6 +527,14 @@ window.translations = {
             title: 'その他の設定',
             cacheCleanupLabel: 'キャッシュクリア',
             cacheCleanupHint: 'キャッシュ使用量を確認し、カテゴリ別に削除できます（削除前に確認あり）',
+            configManagementLabel: '設定管理',
+            configManagementHint: '現在のアプリ設定をエクスポートまたはインポートします',
+            exportConfig: '設定をエクスポート',
+            importConfig: '設定をインポート',
+            compatibilityLabel: '互換インポート',
+            compatibilityHint: '必要なときだけ旧版 .aboard / .json のインポート互換を有効にします',
+            legacyProjectImportEnabled: '旧版プロジェクトのインポート互換を有効にする',
+            legacyProjectImportEnabledHint: '有効にすると、プロジェクトのインポートで .aboard / .json も受け付け、必要時に互換モジュールを読み込みます。',
             clearSettingsCache: '設定キャッシュを削除',
             clearCanvasCache: 'キャンバスキャッシュを削除',
             clearOtherCache: 'その他のキャッシュを削除',
@@ -788,5 +805,13 @@ window.translations = {
         thursday: '木曜日',
         friday: '金曜日',
         saturday: '土曜日'
+    },
+
+    export: {
+        failed: 'エクスポートに失敗しました。もう一度お試しください。'
+    },
+
+    gif: {
+        loopCountPrompt: 'ループ回数を設定してください（0で無限）：'
     }
 };

@@ -21,6 +21,7 @@ window.translations = {
         reset: '重置',
         start: '開始',
         stop: '停止',
+        help: '幫助',
         restoreSize: '恢復大小',
         keepCentered: '保持置中'
     },
@@ -231,6 +232,8 @@ window.translations = {
         preference: '背景圖案偏好',
         preferenceHint: '選擇在屬性欄中顯示的圖案',
         upload: '上傳',
+        storageFull: '儲存空間不足，無法保存更多圖片。請先清理一些舊圖片。',
+        saveError: '保存圖片失敗，儲存空間可能不足。',
         moveCoordinateOrigin: '移動座標原點',
         moveCoordinateOriginHint: '點擊按鈕後，可在畫布上拖動移動座標原點',
         coordinateTools: '座標設定',
@@ -377,9 +380,15 @@ window.translations = {
         general: {
             title: '通用設定',
             language: '語言',
-            languageHint: '選擇介面語言',
+            languageHint: '預設自動偵測系統語言，也可以隨時手動切換',
             globalFont: '全局字體',
             globalFontHint: '選擇套用程序使用的字體',
+            downloadedLanguagePacks: '已下載語言包',
+            dismissedLanguageSuggestion: '語言提示忽略狀態',
+            updatePreference: '更新方式',
+            updatePreferenceHint: '偵測到新版本時，選擇更新方式',
+            updatePreferencePrompt: '空閒時更新',
+            updatePreferenceAuto: '立即更新',
             fonts: {
                 system: '系統預設',
                 serif: '宋體（襯線體）',
@@ -545,6 +554,14 @@ window.translations = {
             title: '更多設定',
             cacheCleanupLabel: '快取清理',
             cacheCleanupHint: '可查看快取占用並按類別清理（清理前會二次確認）',
+            configManagementLabel: '設定管理',
+            configManagementHint: '匯出或匯入目前的應用程式設定',
+            exportConfig: '匯出設定',
+            importConfig: '匯入設定',
+            compatibilityLabel: '相容匯入',
+            compatibilityHint: '僅在需要時啟用舊版 .aboard / .json 匯入相容',
+            legacyProjectImportEnabled: '啟用舊版專案匯入相容',
+            legacyProjectImportEnabledHint: '啟用後，專案匯入將額外支援 .aboard / .json，並按需載入相容模組。',
             clearSettingsCache: '清除設定項快取',
             clearCanvasCache: '清除畫布快取',
             clearOtherCache: '清除其他快取',
@@ -823,6 +840,14 @@ window.translations = {
         message: '確定要清空當前畫布嗎？此操作無法撤銷，其他畫布不受影響。',
         confirm: '確定',
         cancel: '取消'
+    },
+
+    export: {
+        failed: '匯出失敗，請再試一次'
+    },
+
+    gif: {
+        loopCountPrompt: '設定循環次數（0 代表無限）：'
     },
 
     // Color names
