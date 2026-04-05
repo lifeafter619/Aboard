@@ -217,7 +217,7 @@ function syncSettingsUI(settings) {
         const penSizeValue = document.getElementById('pen-size-value');
         if (penSizeSlider && settings.penSize) {
             penSizeSlider.value = settings.penSize;
-            penSizeValue.textContent = settings.penSize;
+            if (penSizeValue) penSizeValue.textContent = settings.penSize;
         }
 
         // Sync Eraser Size Slider

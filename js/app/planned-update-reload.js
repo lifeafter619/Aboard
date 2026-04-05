@@ -30,7 +30,7 @@ export function createPlannedUpdateIntent({
   reason = 'update'
 } = {}) {
   return {
-    reason: reason === 'update' ? 'update' : 'update',
+    reason: reason || 'update',
     mode: normalizePlannedUpdateMode(mode),
     latestVersion: latestVersion || null,
     currentVersion: currentVersion || null,

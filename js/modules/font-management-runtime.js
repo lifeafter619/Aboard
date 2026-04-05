@@ -436,6 +436,24 @@ function renderFontManagementList() {
     
 }
 
+function initFontManagement() {
+        const resetDefaultsBtn = document.getElementById('font-reset-defaults-btn');
+        resetDefaultsBtn?.addEventListener('click', () => {
+            const confirmed = window.confirm('恢复默认状态会删除已上传字体，并重置字体顺序、名称和预览设置。是否继续？');
+            if (!confirmed) return;
+            this.settingsManager.resetFontManagementToDefaults();
+            this.openFontPreviewPanels.clear();
+            this.editingFontAliasFont = null;
+            this.activeFontPreviewFont = null;
+            this.insertTextManager?.populateFonts?.();
+            this.renderFontManagementList();
+            this.closeFontPreviewModal();
+        });
+
+        this.initFontPreviewModal();
+        this.renderFontManagementList();
+}
+
 function saveFontOrderFromList() {
         const list = document.getElementById('font-management-list');
         if (!list) return;
@@ -481,5 +499,8 @@ window.AboardFontManagementRuntime = {
     },
     saveFontOrderFromList(board) {
         return saveFontOrderFromList.call(board);
+    },
+    initFontManagement(board) {
+        return initFontManagement.call(board);
     },
 };

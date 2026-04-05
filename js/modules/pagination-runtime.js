@@ -136,9 +136,6 @@ function savePageBackground(pageNumber) {
             coordinateOverlayState: this.backgroundManager.getCoordinateOverlayState(),
             backgroundImageData: this.backgroundManager.backgroundImageData,
             imageSize: this.backgroundManager.imageSize,
-            // Enhanced background state
-            coordinateOriginX: this.backgroundManager.coordinateOriginX,
-            coordinateOriginY: this.backgroundManager.coordinateOriginY,
             imageTransform: this.backgroundManager.imageTransform,
             gifLoopCount: this.backgroundManager.gifLoopCount,
             backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder || 1

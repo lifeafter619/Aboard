@@ -22,11 +22,6 @@ export class RichTextParser {
       return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--theme-color, #007AFF); text-decoration: none;">${url}</a>`;
     });
 
-    result = result.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-    result = result.replace(/__(.*?)__/g, '<u>$1</u>');
-    result = result.replace(/\[color=([^\]]+)\](.*?)\[\/color\]/g, '<span style="color:$1">$2</span>');
-    result = result.replace(/\[size=([^\]]+)\](.*?)\[\/size\]/g, '<span style="font-size:$1">$2</span>');
-
     if (result.includes('\n')) {
       result = result.split('\n').map((line) => {
         if (!line.trim()) return '<br>';

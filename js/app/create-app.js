@@ -243,14 +243,12 @@ async function startPostVisibleOrchestration(app, { win = window, doc = document
   }
 
   app.postVisibleOrchestrationPromise = (async () => {
-    const postVisibleStartupPromise = startPostVisibleStartup(app, { win, doc });
-    await postVisibleStartupPromise;
-    const gateResult = await runStartupUpdateGate(app, { win, doc });
+    await startPostVisibleStartup(app, { win, doc });
+    const gateResult = await runStartupUpdateGate(app, { win });
     if (!shouldContinuePostVisibleStartup(gateResult)) {
       return app;
     }
 
-    await postVisibleStartupPromise;
     await runImmediatePostVisibleSetup(app);
     scheduleDeferredLocaleSuggestion(app, win);
     return app;
