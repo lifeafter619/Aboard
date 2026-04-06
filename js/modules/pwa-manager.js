@@ -2,7 +2,7 @@
 const UPDATE_CHECK_TIMEOUT = 1200;
 const UPDATE_APPLY_TIMEOUT = 5000;
 const UPDATE_IDLE_APPLY_DELAY = 15000;
-const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 const APP_VERSION_URLS = ['version.txt', './version.txt', '/api/version'];
 const UPDATE_PREFERENCE_KEY = 'updatePreference';
 const PWA_PLANNED_UPDATE_RELOAD_KEY = 'aboardPlannedUpdateReload';
@@ -22,6 +22,61 @@ const UPDATE_USER_CHOICES = Object.freeze({
     IDLE: 'idle',
     IMMEDIATE: 'immediate'
 });
+
+function splitVersionParts(version) {
+    const normalized = String(version || '').trim();
+    if (!SEMVER_PATTERN.test(normalized)) {
+        return null;
+    }
+
+    const [withoutBuildMetadata] = normalized.split('+', 1);
+    const separatorIndex = withoutBuildMetadata.indexOf('-');
+    const base = separatorIndex === -1
+        ? withoutBuildMetadata
+        : withoutBuildMetadata.slice(0, separatorIndex);
+    const preRelease = separatorIndex === -1
+        ? ''
+        : withoutBuildMetadata.slice(separatorIndex + 1);
+
+    return {
+        numbers: base.split('.').slice(0, 3).map((segment) => parseInt(segment, 10) || 0),
+        preReleaseSegments: preRelease ? preRelease.split('.') : []
+    };
+}
+
+function comparePreReleaseSegments(segmentsA = [], segmentsB = []) {
+    if (segmentsA.length === 0 && segmentsB.length === 0) return 0;
+    if (segmentsA.length === 0) return 1;
+    if (segmentsB.length === 0) return -1;
+
+    const numericPattern = /^\d+$/;
+    const maxLength = Math.max(segmentsA.length, segmentsB.length);
+    for (let index = 0; index < maxLength; index++) {
+        const segmentA = segmentsA[index];
+        const segmentB = segmentsB[index];
+        if (segmentA == null) return -1;
+        if (segmentB == null) return 1;
+
+        const isNumericA = numericPattern.test(segmentA);
+        const isNumericB = numericPattern.test(segmentB);
+        if (isNumericA && isNumericB) {
+            const numberA = Number(segmentA);
+            const numberB = Number(segmentB);
+            if (numberA > numberB) return 1;
+            if (numberA < numberB) return -1;
+            continue;
+        }
+
+        if (isNumericA !== isNumericB) {
+            return isNumericA ? -1 : 1;
+        }
+
+        if (segmentA > segmentB) return 1;
+        if (segmentA < segmentB) return -1;
+    }
+
+    return 0;
+}
 
 class PWAManager {
     constructor() {
@@ -329,16 +384,8 @@ class PWAManager {
     }
 
     compareVersions(versionA, versionB) {
-        const parseVersion = (version) => {
-            if (!SEMVER_PATTERN.test(String(version || '').trim())) {
-                return null;
-            }
-            const [base, pre = ''] = String(version || '').split('-', 2);
-            const numbers = base.split('.').slice(0, 3).map(v => parseInt(v, 10) || 0);
-            return { numbers, pre };
-        };
-        const a = parseVersion(versionA);
-        const b = parseVersion(versionB);
+        const a = splitVersionParts(versionA);
+        const b = splitVersionParts(versionB);
         if (!a && !b) return 0;
         if (!a) return -1;
         if (!b) return 1;
@@ -346,10 +393,7 @@ class PWAManager {
             if (a.numbers[i] > b.numbers[i]) return 1;
             if (a.numbers[i] < b.numbers[i]) return -1;
         }
-        if (!a.pre && b.pre) return 1;
-        if (a.pre && !b.pre) return -1;
-        if (a.pre && b.pre) return a.pre.localeCompare(b.pre);
-        return 0;
+        return comparePreReleaseSegments(a.preReleaseSegments, b.preReleaseSegments);
     }
 
     normalizeUpdatePreference(value) {

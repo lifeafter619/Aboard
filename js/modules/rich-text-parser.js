@@ -1,3 +1,56 @@
+const LINK_PLACEHOLDER_PATTERN = /%%ABOARD_LINK_(\d+)%%/g;
+
+function splitLinkSuffix(candidate) {
+    let url = candidate;
+    let suffix = '';
+
+    while (url) {
+        const closingTagMatch = url.match(/(\[\/(?:color|size)\])$/i);
+        if (closingTagMatch) {
+            suffix = `${closingTagMatch[1]}${suffix}`;
+            url = url.slice(0, -closingTagMatch[1].length);
+            continue;
+        }
+
+        if (url.endsWith('**') || url.endsWith('__')) {
+            const delimiter = url.slice(-2);
+            suffix = `${delimiter}${suffix}`;
+            url = url.slice(0, -2);
+            continue;
+        }
+
+        if (/[),.!?;:]/.test(url.slice(-1))) {
+            suffix = `${url.slice(-1)}${suffix}`;
+            url = url.slice(0, -1);
+            continue;
+        }
+
+        break;
+    }
+
+    return { url, suffix };
+}
+
+function linkifyEscapedText(text) {
+    const links = [];
+
+    const withPlaceholders = text.replace(/https?:\/\/[^\s<>"']+/g, (candidate) => {
+        const { url, suffix } = splitLinkSuffix(candidate);
+        if (!url) {
+            return candidate;
+        }
+
+        const placeholder = `%%ABOARD_LINK_${links.length}%%`;
+        links.push(url);
+        return `${placeholder}${suffix}`;
+    });
+
+    return withPlaceholders.replace(LINK_PLACEHOLDER_PATTERN, (_, indexText) => {
+        const url = links[Number(indexText)];
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--theme-color, #007AFF); text-decoration: none;">${url}</a>`;
+    });
+}
+
 /**
  * Rich Text Parser Module
  * Parses custom rich text syntax into HTML with sanitization.
@@ -26,57 +79,13 @@ class RichTextParser {
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
 
-        // Bold: **text**
-        result = result.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-
-        // Underline: __text__
-        result = result.replace(/__(.*?)__/g, '<u>$1</u>');
-
-        // Color: [color=red]text[/color] or [color=#ff0000]text[/color]
-        // Regex to capture color value and content
-        result = result.replace(/\[color=([^\]]+)\](.*?)\[\/color\]/g, '<span style="color:$1">$2</span>');
-
-        // Size: [size=20px]text[/size]
-        result = result.replace(/\[size=([^\]]+)\](.*?)\[\/size\]/g, '<span style="font-size:$1">$2</span>');
-
-        // Auto-link URLs
-        // We look for http/https URLs.
-        // Note: We already escaped HTML, so we don't need to worry about breaking existing tags (except the ones we just added? No, the regexes above added HTML tags).
-        // Wait, if we added <span style="...">, we inserted HTML characters.
-        // URL replacement should ideally happen *before* we add our HTML tags if there's a risk of matching inside tags,
-        // OR we need to be careful not to match inside attributes.
-        // However, our custom tags [color] etc don't contain http usually.
-        // But the <span> tags do contain attributes.
-        // A simple URL regex might match parts of style="...".
-        // It's safer to do URL linking *before* HTML escaping? No, because we want the link text to be escaped if it contains malicious chars?
-        // Actually, URL itself should be encoded.
-        // Let's do URL linking *after* escaping but *before* adding custom HTML tags to avoid matching inside the tags we generate.
-
-        // Revised order:
-        // 1. Escape HTML
-        // 2. Auto-link URLs
-        // 3. Apply Custom Syntax (Bold, Color, etc)
-        // 4. Handle Newlines
-
-        // Let's re-implement with this safer order.
-
-        // 1. Escape HTML
-        // (Already done above)
-
-        // 2. Auto-link URLs
-        // Regex for URLs.
-        result = result.replace(/(https?:\/\/[^\s]+)/g, (url) => {
-            return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--theme-color, #007AFF); text-decoration: none;">${url}</a>`;
-        });
+        // 2. Auto-link URLs safely before generating formatting tags.
+        result = linkifyEscapedText(result);
 
         // 3. Apply Custom Syntax
-        // Bold
         result = result.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-        // Underline
         result = result.replace(/__(.*?)__/g, '<u>$1</u>');
-        // Color
         result = result.replace(/\[color=([^\]]+)\](.*?)\[\/color\]/g, '<span style="color:$1">$2</span>');
-        // Size
         result = result.replace(/\[size=([^\]]+)\](.*?)\[\/size\]/g, '<span style="font-size:$1">$2</span>');
 
         // 4. Handle Newlines
