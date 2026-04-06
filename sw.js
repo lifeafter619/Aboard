@@ -1,4 +1,4 @@
-const CORE_CACHE_NAME = 'aboard-core-v32';
+const CORE_CACHE_NAME = 'aboard-core-v36';
 const RUNTIME_CACHE_NAME = 'aboard-runtime-v32';
 const RUNTIME_CACHE_MAX_ENTRIES = 24;
 const RUNTIME_CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'worker', 'image', 'font', 'manifest']);
@@ -28,6 +28,10 @@ const CORE_ASSETS = [
   './index.html',
   './manifest.json',
   './img/icon.svg',
+  './img/ruler_1.png',
+  './img/ruler_2.png',
+  './img/set_square_1.png',
+  './img/set_square_2.png',
   './css/style.css',
   './css/modules/time-display.css',
   './css/modules/feature-area.css',
@@ -82,6 +86,8 @@ const CORE_ASSETS = [
   './js/modules/panel-runtime.js',
   './js/modules/modal-runtime.js',
   './js/modules/lazy-manager-runtime.js',
+  './js/export.js',
+  './js/insert-image.js',
   './js/modules/ui-listeners-core-runtime.js',
   './js/modules/ui-listeners-runtime.js',
   './js/modules/session-runtime.js',
@@ -107,11 +113,24 @@ const CORE_ASSETS = [
   './js/modules/board-helpers-runtime.js',
   './js/modules/deferred-init-runtime.js',
   './js/modules/tool-runtime.js',
+  './js/modules/project-manager.js',
+  './js/modules/timer.js',
+  './js/modules/insert-text-manager.js',
+  './js/modules/random-picker.js',
+  './js/modules/scoreboard.js',
+  './js/modules/project-legacy-compat.js',
+  './js/modules/libgif.js',
   './js/modules/settings-manager.js',
   './js/modules/i18n.js',
   './js/modules/help-system.js',
   './js/modules/storage-manager.js',
   './js/modules/pwa-manager.js',
+  './js/libs/fflate.min.js',
+  './js/libs/xlsx.full.min.js',
+  './sounds/class-bell.MP3',
+  './sounds/exam-end.MP3',
+  './sounds/gentle-alarm.MP3',
+  './sounds/digital-beep.MP3',
   './js/main.js',
   ...LOCALE_ASSETS
 ];
