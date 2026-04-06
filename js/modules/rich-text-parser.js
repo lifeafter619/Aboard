@@ -1,5 +1,11 @@
 const LINK_PLACEHOLDER_PATTERN = /%%ABOARD_LINK_(\d+)%%/g;
 
+function hasUnbalancedTrailingParenthesis(url) {
+    const openingCount = (url.match(/\(/g) || []).length;
+    const closingCount = (url.match(/\)/g) || []).length;
+    return closingCount > openingCount;
+}
+
 function splitLinkSuffix(candidate) {
     let url = candidate;
     let suffix = '';
@@ -19,8 +25,18 @@ function splitLinkSuffix(candidate) {
             continue;
         }
 
-        if (/[),.!?;:]/.test(url.slice(-1))) {
-            suffix = `${url.slice(-1)}${suffix}`;
+        const trailingChar = url.slice(-1);
+        if (trailingChar === ')') {
+            if (!hasUnbalancedTrailingParenthesis(url)) {
+                break;
+            }
+            suffix = `${trailingChar}${suffix}`;
+            url = url.slice(0, -1);
+            continue;
+        }
+
+        if (/[,.!?;:]/.test(trailingChar)) {
+            suffix = `${trailingChar}${suffix}`;
             url = url.slice(0, -1);
             continue;
         }

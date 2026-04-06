@@ -27,7 +27,7 @@ import { registerAnnouncementManagerGlobal } from '../features/announcement/anno
 import { registerGifManagerGlobal } from '../features/media/gif-manager.js';
 import { createLegacyRuntimeBridge } from '../legacy/runtime-bridge.js';
 
-let appStartupPromise = null;
+const appStartupPromises = new WeakMap();
 
 function scheduleAfterFirstPaint(win, callback) {
   if (typeof win.requestAnimationFrame === 'function') {
@@ -67,7 +67,7 @@ function initializeDeferredBoardFeatures(app, win) {
   }
 
   if (!drawingBoard.timeDisplayManager) {
-    const timeDisplayDependencies = window.AboardBoardConstruction?.createTimeDisplayDependencies({
+    const timeDisplayDependencies = win.AboardBoardConstruction?.createTimeDisplayDependencies({
       timeDisplayManager: drawingBoard.timeDisplayManager,
       timeDisplayControls: drawingBoard.timeDisplayControls,
       timeDisplaySettingsModal: drawingBoard.timeDisplaySettingsModal
@@ -265,17 +265,17 @@ export async function createApp({ win = window, doc = document } = {}) {
     return win.__ABOARD_APP__;
   }
 
-  if (appStartupPromise) {
-    return appStartupPromise;
+  if (appStartupPromises.has(win)) {
+    return appStartupPromises.get(win);
   }
 
-  appStartupPromise = (async () => {
-    registerDialogManagerGlobal(win);
+  const startupPromise = (async () => {
+    registerDialogManagerGlobal(win, doc);
     registerRichTextParserGlobal(win);
-    registerScriptLoaderGlobal(win);
-    registerToastManagerGlobal(win);
-    registerAnnouncementManagerGlobal(win);
-    registerGifManagerGlobal(win);
+    registerScriptLoaderGlobal(win, doc);
+    registerToastManagerGlobal(win, doc);
+    registerAnnouncementManagerGlobal(win, doc);
+    registerGifManagerGlobal(win, doc);
 
     await loadLegacyScripts(VISIBLE_CORE_STARTUP_SCRIPTS, { doc });
     await loadLegacyScripts(VISIBLE_CORE_SERVICE_SCRIPTS, { doc });
@@ -316,9 +316,14 @@ export async function createApp({ win = window, doc = document } = {}) {
     });
     return app;
   })().catch((error) => {
-    appStartupPromise = null;
+    appStartupPromises.delete(win);
     throw error;
+  }).finally(() => {
+    if (win.__ABOARD_APP__) {
+      appStartupPromises.delete(win);
+    }
   });
 
-  return appStartupPromise;
+  appStartupPromises.set(win, startupPromise);
+  return startupPromise;
 }

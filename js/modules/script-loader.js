@@ -51,8 +51,14 @@ class ScriptLoader {
             }
         });
 
-        this.pendingLoads.set(src, promise);
-        return promise;
+        const trackedPromise = promise.finally(() => {
+            if (this.pendingLoads.get(src) === trackedPromise) {
+                this.pendingLoads.delete(src);
+            }
+        });
+
+        this.pendingLoads.set(src, trackedPromise);
+        return trackedPromise;
     }
 }
 

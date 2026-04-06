@@ -47,7 +47,10 @@ export function parsePlannedUpdateIntent(rawValue) {
     const parsedValue = typeof rawValue === 'string'
       ? JSON.parse(rawValue)
       : rawValue;
-    if (!parsedValue || parsedValue.reason !== 'update') {
+    const reason = typeof parsedValue?.reason === 'string'
+      ? parsedValue.reason.trim()
+      : '';
+    if (!parsedValue || !reason) {
       return null;
     }
 
@@ -58,6 +61,7 @@ export function parsePlannedUpdateIntent(rawValue) {
 
     return createPlannedUpdateIntent({
       ...parsedValue,
+      reason,
       mode
     });
   } catch {

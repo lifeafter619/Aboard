@@ -1,20 +1,22 @@
 export class DialogManager {
-  constructor() {
+  constructor(win = window, doc = document) {
+    this.win = win;
+    this.doc = doc;
     this.confirmModal = null;
   }
 
   showAlert(message, type = 'info') {
     const text = String(message || '');
-    if (window.drawingBoard?.settingsManager?.toastManager) {
-      window.drawingBoard.settingsManager.toastManager.show(text, type);
+    if (this.win.drawingBoard?.settingsManager?.toastManager) {
+      this.win.drawingBoard.settingsManager.toastManager.show(text, type);
       return;
     }
-    if (window.toastManager) {
-      window.toastManager.show(text, type);
+    if (this.win.toastManager) {
+      this.win.toastManager.show(text, type);
       return;
     }
-    if (window.ToastManager) {
-      new window.ToastManager().show(text, type);
+    if (this.win.ToastManager) {
+      new this.win.ToastManager().show(text, type);
       return;
     }
     console.warn(text);
@@ -22,7 +24,7 @@ export class DialogManager {
 
   ensureConfirmModal() {
     if (this.confirmModal) return;
-    const modal = document.createElement('div');
+    const modal = this.doc.createElement('div');
     modal.id = 'app-confirm-modal';
     modal.className = 'modal';
     modal.innerHTML = `
@@ -41,7 +43,7 @@ export class DialogManager {
         </div>
       </div>
     `;
-    document.body.appendChild(modal);
+    this.doc.body.appendChild(modal);
     this.confirmModal = modal;
   }
 
@@ -50,9 +52,9 @@ export class DialogManager {
     const modal = this.confirmModal;
     const isConfigMode = typeof messageOrConfig === 'object' && messageOrConfig !== null;
     const config = isConfigMode ? messageOrConfig : { message: messageOrConfig, title };
-    const localeTitle = config.title || (window.i18n ? window.i18n.t('common.confirm') : 'Confirm');
-    const cancelText = config.cancelText || (window.i18n ? window.i18n.t('common.cancel') : 'Cancel');
-    const okText = config.confirmText || (window.i18n ? window.i18n.t('common.confirm') : 'OK');
+    const localeTitle = config.title || (this.win.i18n ? this.win.i18n.t('common.confirm') : 'Confirm');
+    const cancelText = config.cancelText || (this.win.i18n ? this.win.i18n.t('common.cancel') : 'Cancel');
+    const okText = config.confirmText || (this.win.i18n ? this.win.i18n.t('common.confirm') : 'OK');
     const message = String(config.message || '');
     const footerText = String(config.footerText || '');
     const selectableItems = Array.isArray(config.selectableItems) ? config.selectableItems : [];
@@ -69,15 +71,15 @@ export class DialogManager {
     footerElement.classList.toggle('show', Boolean(footerText));
 
     selectableItems.forEach((item, index) => {
-      const label = document.createElement('label');
+      const label = this.doc.createElement('label');
       label.className = 'checkbox-label app-confirm-option';
 
-      const checkbox = document.createElement('input');
+      const checkbox = this.doc.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.checked = item.checked !== false;
       checkbox.value = item.value ?? String(index);
 
-      const text = document.createElement('span');
+      const text = this.doc.createElement('span');
       text.textContent = String(item.label || '');
 
       label.appendChild(checkbox);
@@ -103,11 +105,11 @@ export class DialogManager {
           .map((input) => input.value);
         if (selectableItems.length > 0 && config.requireSelection && selectedValues.length === 0) {
           this.showAlert(
-            config.requireSelectionMessage
-              || (window.i18n ? window.i18n.t('settings.more.selectCacheType') : 'Please select at least one item.'),
-            'warning'
-          );
-          return;
+                        config.requireSelectionMessage
+                        || (this.win.i18n ? this.win.i18n.t('settings.more.selectCacheType') : 'Please select at least one item.'),
+                        'warning'
+                    );
+                    return;
         }
         if (config.returnDetails) {
           close({ confirmed: true, selectedValues });
@@ -125,8 +127,8 @@ export class DialogManager {
   }
 }
 
-export function registerDialogManagerGlobal(win = window) {
-  const dialog = new DialogManager();
+export function registerDialogManagerGlobal(win = window, doc = document) {
+  const dialog = new DialogManager(win, doc);
   win.appDialog = dialog;
   return dialog;
 }

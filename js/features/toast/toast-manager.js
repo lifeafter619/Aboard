@@ -1,21 +1,23 @@
 export class ToastManager {
-  constructor() {
+  constructor(win = window, doc = document) {
+    this.win = win;
+    this.doc = doc;
     this.container = null;
     this.init();
   }
 
   init() {
-    if (!document.querySelector('.toast-container')) {
-      this.container = document.createElement('div');
+    if (!this.doc.querySelector('.toast-container')) {
+      this.container = this.doc.createElement('div');
       this.container.className = 'toast-container';
-      document.body.appendChild(this.container);
+      this.doc.body.appendChild(this.container);
     } else {
-      this.container = document.querySelector('.toast-container');
+      this.container = this.doc.querySelector('.toast-container');
     }
   }
 
   show(message, type = 'info', duration = 3000) {
-    const toast = document.createElement('div');
+    const toast = this.doc.createElement('div');
     toast.className = `toast ${type}`;
 
     let iconSvg = '';
@@ -37,11 +39,13 @@ export class ToastManager {
     toast.innerHTML = `${iconSvg}<span>${message}</span>`;
     this.container.appendChild(toast);
 
-    requestAnimationFrame(() => {
+    const scheduleFrame = this.win.requestAnimationFrame || requestAnimationFrame;
+    scheduleFrame(() => {
       toast.classList.add('show');
     });
 
-    setTimeout(() => {
+    const scheduleTimeout = this.win.setTimeout || setTimeout;
+    scheduleTimeout(() => {
       toast.classList.remove('show');
       toast.addEventListener('transitionend', () => {
         if (toast.parentElement) {
@@ -52,7 +56,13 @@ export class ToastManager {
   }
 }
 
-export function registerToastManagerGlobal(win = window) {
-  win.ToastManager = ToastManager;
-  return ToastManager;
+export function registerToastManagerGlobal(win = window, doc = document) {
+  class BoundToastManager extends ToastManager {
+    constructor(...args) {
+      super(win, doc, ...args);
+    }
+  }
+
+  win.ToastManager = BoundToastManager;
+  return BoundToastManager;
 }

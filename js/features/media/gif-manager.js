@@ -1,6 +1,8 @@
 export class GifManager {
-  constructor() {
-    this.layer = document.getElementById('gif-layer');
+  constructor(win = window, doc = document) {
+    this.win = win;
+    this.doc = doc;
+    this.layer = this.doc.getElementById('gif-layer');
     this.gifs = new Map();
     this.nextId = 1;
     this.defaultLoopCount = 0;
@@ -58,7 +60,7 @@ export class GifManager {
 
   addFloatingGif(fileOrUrl, options = {}) {
     const id = `gif-${this.nextId++}`;
-    const container = document.createElement('div');
+    const container = this.doc.createElement('div');
     container.id = id;
     container.className = 'floating-gif-container';
     container.style.position = 'absolute';
@@ -66,15 +68,15 @@ export class GifManager {
     container.style.cursor = 'move';
     container.style.touchAction = 'none';
 
-    const x = options.x !== undefined ? options.x : window.innerWidth / 2 - 100;
-    const y = options.y !== undefined ? options.y : window.innerHeight / 2 - 100;
+    const x = options.x !== undefined ? options.x : this.win.innerWidth / 2 - 100;
+    const y = options.y !== undefined ? options.y : this.win.innerHeight / 2 - 100;
     container.style.left = `${x}px`;
     container.style.top = `${y}px`;
 
     if (options.width) container.style.width = `${options.width}px`;
     if (options.height) container.style.height = `${options.height}px`;
 
-    const img = document.createElement('img');
+    const img = this.doc.createElement('img');
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.display = 'block';
@@ -119,10 +121,10 @@ export class GifManager {
   }
 
   async _initSuperGif(imgElement, container, id, options) {
-    if (!window.SuperGif) {
+    if (!this.win.SuperGif) {
       try {
-        if (window.ScriptLoader) {
-          await ScriptLoader.load('js/modules/libgif.js');
+        if (this.win.ScriptLoader?.load) {
+          await this.win.ScriptLoader.load('js/modules/libgif.js');
         } else {
           console.error('ScriptLoader not found');
           return;
@@ -138,7 +140,7 @@ export class GifManager {
     const autoPlay = options.autoPlay !== undefined ? options.autoPlay : this.defaultAutoPlay;
     const loopCount = options.loopCount !== undefined ? options.loopCount : this.defaultLoopCount;
 
-    const gif = new SuperGif({
+    const gif = new this.win.SuperGif({
       gif: imgElement,
       auto_play: autoPlay,
       loop_mode: loopCount === 0,
@@ -187,7 +189,7 @@ export class GifManager {
   }
 
   _addControls(container, id) {
-    const controls = document.createElement('div');
+    const controls = this.doc.createElement('div');
     controls.className = 'gif-controls';
     controls.style.position = 'absolute';
     controls.style.top = '-40px';
@@ -198,11 +200,11 @@ export class GifManager {
     controls.style.display = 'none';
     controls.style.gap = '5px';
     controls.style.zIndex = '1001';
-    if (window.matchMedia?.('(hover: none) and (pointer: coarse)').matches) {
+    if (this.win.matchMedia?.('(hover: none) and (pointer: coarse)').matches) {
       controls.style.display = 'flex';
     }
 
-    const playBtn = document.createElement('button');
+    const playBtn = this.doc.createElement('button');
     playBtn.innerHTML = '⏸';
     playBtn.style.color = 'white';
     playBtn.style.border = 'none';
@@ -217,7 +219,7 @@ export class GifManager {
     };
     controls.appendChild(playBtn);
 
-    const settingsBtn = document.createElement('button');
+    const settingsBtn = this.doc.createElement('button');
     settingsBtn.innerHTML = '⚙';
     settingsBtn.style.color = 'white';
     settingsBtn.style.border = 'none';
@@ -232,7 +234,7 @@ export class GifManager {
     };
     controls.appendChild(settingsBtn);
 
-    const deleteBtn = document.createElement('button');
+    const deleteBtn = this.doc.createElement('button');
     deleteBtn.innerHTML = '🗑';
     deleteBtn.style.color = 'white';
     deleteBtn.style.border = 'none';
@@ -253,20 +255,20 @@ export class GifManager {
       controls.style.display = 'flex';
     });
     container.addEventListener('mouseleave', () => {
-      if (!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches) {
+      if (!this.win.matchMedia?.('(hover: none) and (pointer: coarse)').matches) {
         controls.style.display = 'none';
       }
     });
     container.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (window.matchMedia?.('(hover: none) and (pointer: coarse)').matches) {
+      if (this.win.matchMedia?.('(hover: none) and (pointer: coarse)').matches) {
         controls.style.display = controls.style.display === 'none' ? 'flex' : 'none';
       }
     });
   }
 
   _addResizeHandles(container) {
-    const handle = document.createElement('div');
+    const handle = this.doc.createElement('div');
     handle.className = 'gif-resize-handle';
     handle.style.position = 'absolute';
     handle.style.right = '-8px';
@@ -310,7 +312,9 @@ export class GifManager {
     const data = this.gifs.get(id);
     if (!data) return;
 
-    const input = prompt('Set loop count (0 = infinite):', String(data.loopCount ?? this.defaultLoopCount));
+    const input = this.win.prompt
+      ? this.win.prompt('Set loop count (0 = infinite):', String(data.loopCount ?? this.defaultLoopCount))
+      : prompt('Set loop count (0 = infinite):', String(data.loopCount ?? this.defaultLoopCount));
     if (input === null) return;
     const loopCount = parseInt(input, 10);
     if (!Number.isNaN(loopCount) && loopCount >= 0) {
@@ -361,28 +365,28 @@ export class GifManager {
       if (isDragging) {
         isDragging = false;
         this.saveState();
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('pointermove', onMove);
-        document.removeEventListener('touchmove', onMove);
-        document.removeEventListener('mouseup', onUp);
-        document.removeEventListener('pointerup', onUp);
-        document.removeEventListener('touchend', onUp);
-        document.removeEventListener('pointercancel', onUp);
-        document.removeEventListener('touchcancel', onUp);
+        this.doc.removeEventListener('mousemove', onMove);
+        this.doc.removeEventListener('pointermove', onMove);
+        this.doc.removeEventListener('touchmove', onMove);
+        this.doc.removeEventListener('mouseup', onUp);
+        this.doc.removeEventListener('pointerup', onUp);
+        this.doc.removeEventListener('touchend', onUp);
+        this.doc.removeEventListener('pointercancel', onUp);
+        this.doc.removeEventListener('touchcancel', onUp);
       }
     };
 
     const onDownWrapper = (e) => {
       onDown(e);
       if (isDragging) {
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('pointermove', onMove);
-        document.addEventListener('touchmove', onMove, { passive: false });
-        document.addEventListener('mouseup', onUp);
-        document.addEventListener('pointerup', onUp);
-        document.addEventListener('touchend', onUp);
-        document.addEventListener('pointercancel', onUp);
-        document.addEventListener('touchcancel', onUp);
+        this.doc.addEventListener('mousemove', onMove);
+        this.doc.addEventListener('pointermove', onMove);
+        this.doc.addEventListener('touchmove', onMove, { passive: false });
+        this.doc.addEventListener('mouseup', onUp);
+        this.doc.addEventListener('pointerup', onUp);
+        this.doc.addEventListener('touchend', onUp);
+        this.doc.addEventListener('pointercancel', onUp);
+        this.doc.addEventListener('touchcancel', onUp);
       }
     };
 
@@ -440,28 +444,28 @@ export class GifManager {
       if (isResizing) {
         isResizing = false;
         this.saveState();
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('pointermove', onMove);
-        document.removeEventListener('touchmove', onMove);
-        document.removeEventListener('mouseup', onUp);
-        document.removeEventListener('pointerup', onUp);
-        document.removeEventListener('touchend', onUp);
-        document.removeEventListener('pointercancel', onUp);
-        document.removeEventListener('touchcancel', onUp);
+        this.doc.removeEventListener('mousemove', onMove);
+        this.doc.removeEventListener('pointermove', onMove);
+        this.doc.removeEventListener('touchmove', onMove);
+        this.doc.removeEventListener('mouseup', onUp);
+        this.doc.removeEventListener('pointerup', onUp);
+        this.doc.removeEventListener('touchend', onUp);
+        this.doc.removeEventListener('pointercancel', onUp);
+        this.doc.removeEventListener('touchcancel', onUp);
       }
     };
 
     const onDownWrapper = (e) => {
       onDown(e);
       if (isResizing) {
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('pointermove', onMove);
-        document.addEventListener('touchmove', onMove, { passive: false });
-        document.addEventListener('mouseup', onUp);
-        document.addEventListener('pointerup', onUp);
-        document.addEventListener('touchend', onUp);
-        document.addEventListener('pointercancel', onUp);
-        document.addEventListener('touchcancel', onUp);
+        this.doc.addEventListener('mousemove', onMove);
+        this.doc.addEventListener('pointermove', onMove);
+        this.doc.addEventListener('touchmove', onMove, { passive: false });
+        this.doc.addEventListener('mouseup', onUp);
+        this.doc.addEventListener('pointerup', onUp);
+        this.doc.addEventListener('touchend', onUp);
+        this.doc.addEventListener('pointercancel', onUp);
+        this.doc.addEventListener('touchcancel', onUp);
       }
     };
 
@@ -471,8 +475,8 @@ export class GifManager {
   }
 }
 
-export function registerGifManagerGlobal(win = window) {
-  const gifManager = new GifManager();
+export function registerGifManagerGlobal(win = window, doc = document) {
+  const gifManager = new GifManager(win, doc);
   win.GifManager = gifManager;
   return gifManager;
 }

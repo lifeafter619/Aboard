@@ -1,24 +1,26 @@
 export class AnnouncementManager {
-  constructor() {
-    this.modal = document.getElementById('announcement-modal');
-    this.titleElement = document.getElementById('announcement-title');
-    this.contentElement = document.getElementById('announcement-content');
-    this.okButton = document.getElementById('announcement-ok-btn');
-    this.noShowButton = document.getElementById('announcement-no-show-btn');
+  constructor(win = window, doc = document) {
+    this.win = win;
+    this.doc = doc;
+    this.modal = this.doc.getElementById('announcement-modal');
+    this.titleElement = this.doc.getElementById('announcement-title');
+    this.contentElement = this.doc.getElementById('announcement-content');
+    this.okButton = this.doc.getElementById('announcement-ok-btn');
+    this.noShowButton = this.doc.getElementById('announcement-no-show-btn');
 
     this.setupEventListeners();
 
-    if (window.i18n) {
+    if (this.win.i18n) {
       this.checkAndShowAnnouncement();
       this.updateSettingsContent();
     } else {
-      window.addEventListener('i18nReady', () => {
+      this.win.addEventListener('i18nReady', () => {
         this.checkAndShowAnnouncement();
         this.updateSettingsContent();
       });
     }
 
-    window.addEventListener('localeChanged', () => {
+    this.win.addEventListener('localeChanged', () => {
       this.updateSettingsContent();
     });
   }
@@ -43,27 +45,27 @@ export class AnnouncementManager {
   checkAndShowAnnouncement() {
     const hideAnnouncement = localStorage.getItem('hideAnnouncement');
 
-    if (!hideAnnouncement && window.i18n) {
+    if (!hideAnnouncement && this.win.i18n) {
       this.showModal();
     }
   }
 
   showModal() {
-    if (!window.i18n || !this.modal || !this.titleElement || !this.contentElement) return;
+    if (!this.win.i18n || !this.modal || !this.titleElement || !this.contentElement) return;
 
-    if (window.drawingBoard?.syncResizableModalState) {
-      window.drawingBoard.syncResizableModalState('announcement-modal');
+    if (this.win.drawingBoard?.syncResizableModalState) {
+      this.win.drawingBoard.syncResizableModalState('announcement-modal');
     } else {
-      window.setTimeout(() => {
-        window.drawingBoard?.syncResizableModalState?.('announcement-modal');
+      this.win.setTimeout(() => {
+        this.win.drawingBoard?.syncResizableModalState?.('announcement-modal');
       }, 0);
     }
 
-    this.titleElement.textContent = window.i18n.t('settings.announcement.title');
+    this.titleElement.textContent = this.win.i18n.t('settings.announcement.title');
 
-    const content = window.i18n.t('settings.announcement.content');
-    if (window.RichTextParser) {
-      this.contentElement.innerHTML = window.RichTextParser.parse(content);
+    const content = this.win.i18n.t('settings.announcement.content');
+    if (this.win.RichTextParser) {
+      this.contentElement.innerHTML = this.win.RichTextParser.parse(content);
     } else if (Array.isArray(content)) {
       const htmlContent = content
         .map((line) => line.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'))
@@ -81,14 +83,14 @@ export class AnnouncementManager {
   }
 
   updateSettingsContent() {
-    if (!window.i18n) return;
+    if (!this.win.i18n) return;
 
-    const settingsContent = document.getElementById('settings-announcement-content');
+    const settingsContent = this.doc.getElementById('settings-announcement-content');
     if (!settingsContent) return;
 
-    const content = window.i18n.t('settings.announcement.content');
-    if (window.RichTextParser) {
-      settingsContent.innerHTML = window.RichTextParser.parse(content);
+    const content = this.win.i18n.t('settings.announcement.content');
+    if (this.win.RichTextParser) {
+      settingsContent.innerHTML = this.win.RichTextParser.parse(content);
     } else if (Array.isArray(content)) {
       const htmlContent = content
         .map((line) => line.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #007AFF; text-decoration: none;">$1</a>'))
@@ -104,7 +106,13 @@ export class AnnouncementManager {
   }
 }
 
-export function registerAnnouncementManagerGlobal(win = window) {
-  win.AnnouncementManager = AnnouncementManager;
-  return AnnouncementManager;
+export function registerAnnouncementManagerGlobal(win = window, doc = document) {
+  class BoundAnnouncementManager extends AnnouncementManager {
+    constructor(...args) {
+      super(win, doc, ...args);
+    }
+  }
+
+  win.AnnouncementManager = BoundAnnouncementManager;
+  return BoundAnnouncementManager;
 }

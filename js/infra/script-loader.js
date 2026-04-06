@@ -1,12 +1,13 @@
 export class ScriptLoader {
   static pendingLoads = new Map();
+  static documentRef = null;
 
-  static load(src) {
+  static load(src, doc = this.documentRef || document) {
     if (this.pendingLoads.has(src)) {
       return this.pendingLoads.get(src);
     }
 
-    const existingScript = Array.from(document.scripts).find(
+    const existingScript = Array.from(doc.scripts).find(
       (script) => script.getAttribute('src') === src
     );
 
@@ -15,7 +16,7 @@ export class ScriptLoader {
     }
 
     const promise = new Promise((resolve, reject) => {
-      const script = existingScript || document.createElement('script');
+      const script = existingScript || doc.createElement('script');
 
       const cleanup = () => {
         script.removeEventListener('load', handleLoad);
@@ -43,16 +44,26 @@ export class ScriptLoader {
       if (!existingScript) {
         script.src = src;
         script.async = true;
-        document.head.appendChild(script);
+        doc.head.appendChild(script);
       }
     });
 
-    this.pendingLoads.set(src, promise);
-    return promise;
+    const trackedPromise = promise.finally(() => {
+      if (this.pendingLoads.get(src) === trackedPromise) {
+        this.pendingLoads.delete(src);
+      }
+    });
+
+    this.pendingLoads.set(src, trackedPromise);
+    return trackedPromise;
   }
 }
 
-export function registerScriptLoaderGlobal(win = window) {
-  win.ScriptLoader = ScriptLoader;
-  return ScriptLoader;
+export function registerScriptLoaderGlobal(win = window, doc = document) {
+  class BoundScriptLoader extends ScriptLoader {}
+
+  BoundScriptLoader.pendingLoads = new Map();
+  BoundScriptLoader.documentRef = doc;
+  win.ScriptLoader = BoundScriptLoader;
+  return BoundScriptLoader;
 }
