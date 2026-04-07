@@ -8,7 +8,8 @@ class BackgroundManager {
         
         this.backgroundColor = localStorage.getItem('backgroundColor') || '#ffffff';
         this.backgroundPattern = localStorage.getItem('backgroundPattern') || 'blank';
-        this.bgOpacity = parseFloat(localStorage.getItem('bgOpacity')) || 1.0;
+        const savedBgOpacity = parseFloat(localStorage.getItem('bgOpacity'));
+        this.bgOpacity = Number.isNaN(savedBgOpacity) ? 1.0 : savedBgOpacity;
         this.patternIntensity = parseFloat(localStorage.getItem('patternIntensity')) || 0.5;
         this.patternDensity = parseFloat(localStorage.getItem('patternDensity')) || 1.0;
         this.backgroundImage = null;

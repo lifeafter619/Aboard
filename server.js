@@ -3,7 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const { URL } = require('url');
 
-const PORT = parseInt(process.env.PORT, 10) || 8080;
+const parsedPort = Number.parseInt(process.env.PORT, 10);
+const PORT = Number.isNaN(parsedPort) ? 8080 : parsedPort;
 const ROOT_DIR = __dirname;
 const VERSION_FILE = path.join(ROOT_DIR, 'version.txt');
 
@@ -70,7 +71,28 @@ function isPublicAssetPath(reqPath) {
     return allowedPrefixes.some((prefix) => normalizedPath.startsWith(prefix));
 }
 
-function serveStatic(reqPath, res) {
+function hasDotSegment(pathname) {
+    return pathname
+        .split('/')
+        .some((segment) => segment === '.' || segment === '..');
+}
+
+function containsEncodedTraversal(pathname) {
+    try {
+        const decodedPath = decodeURIComponent(pathname);
+        return decodedPath !== pathname && hasDotSegment(decodedPath.replace(/\\/g, '/'));
+    } catch {
+        return true;
+    }
+}
+
+function serveStatic(reqPath, res, rawPath = reqPath) {
+    const normalizedRawPath = (rawPath || reqPath || '').replace(/\\/g, '/');
+    if (hasDotSegment(normalizedRawPath) || containsEncodedTraversal(normalizedRawPath)) {
+        sendJson(res, 403, { error: 'Forbidden' });
+        return;
+    }
+
     let safePath = reqPath;
     if (safePath === '/') {
         safePath = '/index.html';
@@ -118,7 +140,7 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    serveStatic(url.pathname, res);
+    serveStatic(url.pathname, res, req.url || url.pathname);
 });
 
 server.listen(PORT, () => {

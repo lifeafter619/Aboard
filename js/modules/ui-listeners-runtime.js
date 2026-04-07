@@ -889,7 +889,8 @@ function setupSettingsListeners() {
                 bgOpacityInput.value = e.target.value;
             });
             bgOpacityInput.addEventListener('input', (e) => {
-                const value = Math.max(0, Math.min(100, parseInt(e.target.value) || 100));
+                const parsedValue = parseInt(e.target.value, 10);
+                const value = Number.isNaN(parsedValue) ? 100 : Math.max(0, Math.min(100, parsedValue));
                 e.target.value = value;
                 bgOpacitySlider.value = value;
                 this.backgroundManager.setOpacity(value / 100);
