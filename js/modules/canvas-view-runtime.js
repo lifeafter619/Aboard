@@ -1,6 +1,12 @@
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+// Keep startup canvas defaults local to this runtime so it does not depend on
+// main.js lexical scope during modular bootstrapping.
+const DEFAULT_MIN_FIT_SCALE = 0.1;
+const DEFAULT_TARGET_COVERAGE = 0.7;
+const DEFAULT_MIN_DEFAULT_SCALE = 0.9;
+
 function initializeCanvasView() {
         // On startup or refresh, set canvas to a larger default scale and center it
         // Only apply if no saved scale exists
@@ -13,7 +19,7 @@ function initializeCanvasView() {
             const scaleForCoverage = DEFAULT_TARGET_COVERAGE / safeFitScale;
             // Keep a higher default scale so the canvas starts larger than the minimum target.
             const boundedScale = Math.max(DEFAULT_MIN_DEFAULT_SCALE, scaleForCoverage);
-            const initialScale = Math.min(this.MAX_CANVAS_SCALE, boundedScale);
+            const initialScale = Number(Math.min(this.MAX_CANVAS_SCALE, boundedScale).toFixed(4));
             this.drawingEngine.canvasScale = initialScale;
             localStorage.setItem('canvasScale', initialScale);
         }
