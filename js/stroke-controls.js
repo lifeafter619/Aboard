@@ -52,7 +52,7 @@ class StrokeControls {
                     <div class="resize-handle left" data-handle="left"></div>
                     
                     <!-- Rotation handle - 旋转控制手柄 -->
-                    <div class="rotate-handle" id="stroke-rotate-handle" data-i18n-title="imageControls.rotate">
+                    <div class="rotate-handle" id="stroke-rotate-handle" data-i18n-title="imageControls.rotate" title="Rotate" aria-label="Rotate">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                             <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                         </svg>
@@ -60,7 +60,7 @@ class StrokeControls {
                     
                     <!-- Control toolbar with action buttons -->
                     <div class="image-controls-toolbar">
-                        <button id="stroke-done-btn" class="image-control-btn image-done-btn" data-i18n-title="selection.done">
+                        <button id="stroke-done-btn" class="image-control-btn image-done-btn" data-i18n-title="selection.done" title="Done" aria-label="Done">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>

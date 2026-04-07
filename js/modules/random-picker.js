@@ -3,6 +3,15 @@
  * Allows users to pick random names or numbers
  */
 
+function getRandomPickerText(key, fallback, params = {}) {
+    if (!window.i18n?.t) {
+        return fallback;
+    }
+
+    const translated = window.i18n.t(key, params);
+    return translated && translated !== key ? translated : fallback;
+}
+
 class RandomPickerInstance {
     constructor(id, manager, config = {}) {
         this.id = id;
@@ -31,6 +40,7 @@ class RandomPickerInstance {
         this.resultElement = null;
         this.dragOffset = { x: 0, y: 0 };
         this.isDragging = false;
+        this.localeChangeHandler = null;
 
         this.createElement();
     }
@@ -48,19 +58,23 @@ class RandomPickerInstance {
         const title = this.config.title || (this.config.mode === 'name' ?
             window.i18n.t('randomPicker.namePicker') :
             window.i18n.t('randomPicker.numberPicker'));
+        const helpLabel = getRandomPickerText('common.help', 'Help');
+        const closeLabel = getRandomPickerText('common.close', 'Close');
+        const startLabel = getRandomPickerText('common.start', 'Start');
+        const settingsLabel = getRandomPickerText('randomPicker.settingsTitle', 'Settings');
 
         div.innerHTML = `
             <div class="random-picker-header">
                 <span class="random-picker-title">${title}</span>
                 <div style="display:flex; gap:6px;">
-                    <button class="random-picker-help-btn" title="${window.i18n.t('common.help')}">
+                    <button class="random-picker-help-btn" title="${helpLabel}" aria-label="${helpLabel}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
                             <line x1="12" y1="17" x2="12" y2="17"></line>
                         </svg>
                     </button>
-                    <button class="random-picker-close-btn">
+                    <button class="random-picker-close-btn" title="${closeLabel}" aria-label="${closeLabel}">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -71,14 +85,14 @@ class RandomPickerInstance {
             <div class="random-picker-content">
                 <div class="random-picker-result">?</div>
                 <div class="random-picker-controls">
-                    <button class="random-picker-btn random-picker-start-btn">
+                    <button class="random-picker-btn random-picker-start-btn" title="${startLabel}" aria-label="${startLabel}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M5 12h14"></path>
                             <path d="M12 5l7 7-7 7"></path>
                         </svg>
-                        <span>${window.i18n.t('common.start')}</span>
+                        <span>${startLabel}</span>
                     </button>
-                    <button class="random-picker-btn random-picker-settings-btn">
+                    <button class="random-picker-btn random-picker-settings-btn" title="${settingsLabel}" aria-label="${settingsLabel}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="3"></circle>
                             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -93,6 +107,11 @@ class RandomPickerInstance {
         this.resultElement = div.querySelector('.random-picker-result');
 
         this.setupEvents();
+        this.localeChangeHandler = () => {
+            this.refreshLocalizedUI();
+        };
+        window.addEventListener('localeChanged', this.localeChangeHandler);
+        this.refreshLocalizedUI();
     }
 
     setupEvents() {
@@ -249,6 +268,7 @@ class RandomPickerInstance {
                 // Fix: startBtn variable was undefined, should use startBtnSpan or re-query
                 startBtnSpan.textContent = window.i18n.t('common.start');
                 startBtnEl.classList.remove('is-stop');
+                this.refreshLocalizedUI();
                 return;
             }
 
@@ -296,6 +316,7 @@ class RandomPickerInstance {
             if (this.isAnimating) this.stopAnimation();
         }, 1000 + Math.random() * 1000);
         */
+        this.refreshLocalizedUI();
     }
 
     stopAnimation() {
@@ -356,6 +377,8 @@ class RandomPickerInstance {
         setTimeout(() => {
             this.resultElement.style.transform = 'scale(1)';
         }, 300);
+
+        this.refreshLocalizedUI();
     }
 
     updateConfig(newConfig) {
@@ -393,6 +416,54 @@ class RandomPickerInstance {
 
         // Reset result
         this.resultElement.textContent = '?';
+        this.refreshLocalizedUI();
+    }
+
+    refreshLocalizedUI() {
+        if (!this.element) {
+            return;
+        }
+
+        const titleEl = this.element.querySelector('.random-picker-title');
+        if (titleEl && !this.config.title) {
+            titleEl.textContent = this.config.mode === 'name'
+                ? getRandomPickerText('randomPicker.namePicker', 'Name Picker')
+                : getRandomPickerText('randomPicker.numberPicker', 'Number Picker');
+        }
+
+        const helpBtn = this.element.querySelector('.random-picker-help-btn');
+        const helpLabel = getRandomPickerText('common.help', 'Help');
+        if (helpBtn) {
+            helpBtn.title = helpLabel;
+            helpBtn.setAttribute('aria-label', helpLabel);
+        }
+
+        const closeBtn = this.element.querySelector('.random-picker-close-btn');
+        const closeLabel = getRandomPickerText('common.close', 'Close');
+        if (closeBtn) {
+            closeBtn.title = closeLabel;
+            closeBtn.setAttribute('aria-label', closeLabel);
+        }
+
+        const startBtn = this.element.querySelector('.random-picker-start-btn');
+        const startLabel = this.isAnimating
+            ? getRandomPickerText('common.stop', 'Stop')
+            : getRandomPickerText('common.start', 'Start');
+        if (startBtn) {
+            startBtn.title = startLabel;
+            startBtn.setAttribute('aria-label', startLabel);
+            const startBtnSpan = startBtn.querySelector('span');
+            if (startBtnSpan) {
+                startBtnSpan.textContent = startLabel;
+            }
+        }
+
+        const settingsBtn = this.element.querySelector('.random-picker-settings-btn');
+        const settingsLabel = getRandomPickerText('randomPicker.settingsTitle', 'Settings');
+        if (settingsBtn) {
+            settingsBtn.title = settingsLabel;
+            settingsBtn.setAttribute('aria-label', settingsLabel);
+        }
     }
 
     resetRemainingNumbers() {
@@ -417,6 +488,10 @@ class RandomPickerInstance {
 
     destroy() {
         clearInterval(this.animationInterval);
+        if (this.localeChangeHandler) {
+            window.removeEventListener('localeChanged', this.localeChangeHandler);
+            this.localeChangeHandler = null;
+        }
         this.element.remove();
         this.manager.remove(this.id);
     }
@@ -426,18 +501,23 @@ class RandomPickerManager {
     constructor() {
         this.instances = new Map();
         this.nextId = 1;
+        this.localeChangeHandler = () => {
+            this.refreshSettingsModalText();
+        };
         this.createSettingsModal();
+        window.addEventListener('localeChanged', this.localeChangeHandler);
     }
 
     createSettingsModal() {
+        const closeLabel = getRandomPickerText('common.close', 'Close');
         const modal = document.createElement('div');
         modal.id = 'random-picker-settings-modal';
         modal.className = 'modal';
         modal.innerHTML = `
             <div class="modal-content random-picker-modal-content settings-panel-modal-content">
                 <div class="modal-header">
-                    <h2>${window.i18n.t('randomPicker.settingsTitle')}</h2>
-                    <button class="modal-close-btn">
+                    <h2 id="random-picker-settings-title">${window.i18n.t('randomPicker.settingsTitle')}</h2>
+                    <button class="modal-close-btn" title="${closeLabel}" aria-label="${closeLabel}">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -451,34 +531,34 @@ class RandomPickerManager {
                     </div>
 
                     <div class="random-picker-input-group">
-                        <label>${window.i18n.t('randomPicker.titleLabel')}</label>
-                        <input type="text" id="rp-title-input" class="export-filename-input" placeholder="${window.i18n.t('randomPicker.titlePlaceholder')}">
+                        <label for="rp-title-input" class="rp-title-label">${window.i18n.t('randomPicker.titleLabel')}</label>
+                        <input type="text" id="rp-title-input" class="export-filename-input" placeholder="${window.i18n.t('randomPicker.titlePlaceholder')}" aria-label="${window.i18n.t('randomPicker.titleLabel')}">
                     </div>
 
                     <div id="rp-name-settings">
                         <div class="random-picker-input-group">
-                            <label>${window.i18n.t('randomPicker.namesLabel')}</label>
-                            <textarea id="rp-names-input" class="random-picker-textarea" placeholder="${window.i18n.t('randomPicker.namesPlaceholder')}"></textarea>
+                            <label for="rp-names-input" class="rp-names-label">${window.i18n.t('randomPicker.namesLabel')}</label>
+                            <textarea id="rp-names-input" class="random-picker-textarea" placeholder="${window.i18n.t('randomPicker.namesPlaceholder')}" aria-label="${window.i18n.t('randomPicker.namesLabel')}"></textarea>
                         </div>
 
                         <div class="random-picker-import-group" style="margin-bottom: 12px; border-top: 1px solid #eee; padding-top: 10px;">
-                            <label style="display:block;margin-bottom:5px;font-size:12px;color:#666;">${window.i18n.t('randomPicker.importLabel')}</label>
+                            <label class="rp-import-label" style="display:block;margin-bottom:5px;font-size:12px;color:#666;">${window.i18n.t('randomPicker.importLabel')}</label>
                             <div style="display:flex; gap:8px; margin-bottom:5px;">
-                                <input type="text" id="rp-import-col" value="${window.i18n.t('randomPicker.defaultColumnName')}" style="width:80px;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:12px;" placeholder="列名">
+                                <input type="text" id="rp-import-col" value="${window.i18n.t('randomPicker.defaultColumnName')}" style="width:80px;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:12px;" placeholder="${window.i18n.t('randomPicker.importColumnPlaceholder')}" aria-label="${window.i18n.t('randomPicker.importColumnPlaceholder')}">
                                 <input type="file" id="rp-import-file" accept=".xlsx, .xls, .csv" style="display:none">
                                 <button id="rp-import-btn" class="button-secondary" style="flex:1;padding:6px;font-size:12px;">${window.i18n.t('randomPicker.importBtn')}</button>
                             </div>
-                            <div class="settings-hint">${window.i18n.t('randomPicker.importHint')}</div>
+                            <div class="settings-hint rp-import-hint">${window.i18n.t('randomPicker.importHint')}</div>
                         </div>
                     </div>
 
                     <div id="rp-number-settings" style="display: none;">
                         <div class="random-picker-input-group">
-                            <label>${window.i18n.t('randomPicker.rangeLabel')}</label>
+                            <label class="rp-range-label">${window.i18n.t('randomPicker.rangeLabel')}</label>
                             <div class="random-picker-range-inputs">
-                                <input type="number" id="rp-min-input" class="random-picker-number-input" value="1">
+                                <input type="number" id="rp-min-input" class="random-picker-number-input" value="1" aria-label="${window.i18n.t('randomPicker.rangeLabel')} Min">
                                 <span>-</span>
-                                <input type="number" id="rp-max-input" class="random-picker-number-input" value="50">
+                                <input type="number" id="rp-max-input" class="random-picker-number-input" value="50" aria-label="${window.i18n.t('randomPicker.rangeLabel')} Max">
                             </div>
                         </div>
                     </div>
@@ -486,7 +566,7 @@ class RandomPickerManager {
                     <div class="random-picker-common-settings" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
                         <label class="random-picker-checkbox">
                             <input type="checkbox" id="rp-allow-repeats" checked>
-                            <span>${window.i18n.t('randomPicker.allowRepeats')}</span>
+                            <span class="rp-allow-repeats-label">${window.i18n.t('randomPicker.allowRepeats')}</span>
                         </label>
                     </div>
 
@@ -540,6 +620,105 @@ class RandomPickerManager {
                 e.target.value = ''; // Reset
             });
         }
+
+        this.refreshSettingsModalText();
+    }
+
+    refreshSettingsModalText() {
+        const modal = document.getElementById('random-picker-settings-modal');
+        if (!modal) {
+            return;
+        }
+
+        const closeLabel = getRandomPickerText('common.close', 'Close');
+        const closeBtn = modal.querySelector('.modal-close-btn');
+        if (closeBtn) {
+            closeBtn.title = closeLabel;
+            closeBtn.setAttribute('aria-label', closeLabel);
+        }
+
+        const titleEl = modal.querySelector('#random-picker-settings-title');
+        if (titleEl) {
+            titleEl.textContent = getRandomPickerText('randomPicker.settingsTitle', 'Picker Settings');
+        }
+
+        const nameModeBtn = modal.querySelector('.random-picker-mode-btn[data-mode="name"]');
+        if (nameModeBtn) {
+            nameModeBtn.textContent = getRandomPickerText('randomPicker.modeName', 'Name Mode');
+        }
+
+        const numberModeBtn = modal.querySelector('.random-picker-mode-btn[data-mode="number"]');
+        if (numberModeBtn) {
+            numberModeBtn.textContent = getRandomPickerText('randomPicker.modeNumber', 'Number Mode');
+        }
+
+        const titleLabel = modal.querySelector('.rp-title-label');
+        if (titleLabel) {
+            titleLabel.textContent = getRandomPickerText('randomPicker.titleLabel', 'Title');
+        }
+
+        const titleInput = modal.querySelector('#rp-title-input');
+        if (titleInput) {
+            titleInput.placeholder = getRandomPickerText('randomPicker.titlePlaceholder', 'Custom Title (Optional)');
+            titleInput.setAttribute('aria-label', getRandomPickerText('randomPicker.titleLabel', 'Title'));
+        }
+
+        const namesLabel = modal.querySelector('.rp-names-label');
+        if (namesLabel) {
+            namesLabel.textContent = getRandomPickerText('randomPicker.namesLabel', 'Names List (One per line)');
+        }
+
+        const namesInput = modal.querySelector('#rp-names-input');
+        if (namesInput) {
+            namesInput.placeholder = getRandomPickerText('randomPicker.namesPlaceholder', 'Student A\nStudent B\nStudent C');
+            namesInput.setAttribute('aria-label', getRandomPickerText('randomPicker.namesLabel', 'Names List'));
+        }
+
+        const importLabel = modal.querySelector('.rp-import-label');
+        if (importLabel) {
+            importLabel.textContent = getRandomPickerText('randomPicker.importLabel', 'Import Names (Excel/CSV)');
+        }
+
+        const importColumnInput = modal.querySelector('#rp-import-col');
+        if (importColumnInput) {
+            importColumnInput.placeholder = getRandomPickerText('randomPicker.importColumnPlaceholder', 'Column');
+            importColumnInput.setAttribute('aria-label', getRandomPickerText('randomPicker.importColumnPlaceholder', 'Column'));
+        }
+
+        const importBtn = modal.querySelector('#rp-import-btn');
+        if (importBtn) {
+            importBtn.textContent = getRandomPickerText('randomPicker.importBtn', 'Select File');
+        }
+
+        const importHint = modal.querySelector('.rp-import-hint');
+        if (importHint) {
+            importHint.textContent = getRandomPickerText('randomPicker.importHint', 'Tip: Reads data from the specified column name');
+        }
+
+        const rangeLabel = modal.querySelector('.rp-range-label');
+        if (rangeLabel) {
+            rangeLabel.textContent = getRandomPickerText('randomPicker.rangeLabel', 'Number Range');
+        }
+
+        const minInput = modal.querySelector('#rp-min-input');
+        if (minInput) {
+            minInput.setAttribute('aria-label', `${getRandomPickerText('randomPicker.rangeLabel', 'Number Range')} Min`);
+        }
+
+        const maxInput = modal.querySelector('#rp-max-input');
+        if (maxInput) {
+            maxInput.setAttribute('aria-label', `${getRandomPickerText('randomPicker.rangeLabel', 'Number Range')} Max`);
+        }
+
+        const allowRepeatsLabel = modal.querySelector('.rp-allow-repeats-label');
+        if (allowRepeatsLabel) {
+            allowRepeatsLabel.textContent = getRandomPickerText('randomPicker.allowRepeats', 'Allow Repeats');
+        }
+
+        const saveBtn = modal.querySelector('#rp-save-btn');
+        if (saveBtn) {
+            saveBtn.textContent = getRandomPickerText('common.confirm', 'Confirm');
+        }
     }
 
     async importFile(file) {
@@ -552,7 +731,10 @@ class RandomPickerManager {
                 }
             } catch (e) {
                 console.error(e);
-                window.appDialog?.showAlert('Excel import library load failed.', 'error');
+                window.appDialog?.showAlert(
+                    getRandomPickerText('randomPicker.importLibraryLoadFailed', 'Failed to load the Excel import library. Please refresh and try again.'),
+                    'error'
+                );
                 return;
             }
         }
@@ -618,6 +800,7 @@ class RandomPickerManager {
     showSettings(instance) {
         this.currentInstance = instance;
         const modal = document.getElementById('random-picker-settings-modal');
+        this.refreshSettingsModalText();
 
         // Populate form
         const config = instance.config;

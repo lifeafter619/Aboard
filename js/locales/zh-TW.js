@@ -22,16 +22,37 @@ window.translations = {
         start: '開始',
         stop: '停止',
         help: '幫助',
+        export: '匯出',
         restoreSize: '恢復大小',
         keepCentered: '保持置中'
     },
 
+    errors: {
+        lazyLoadFailed: '載入{feature}失敗，請重新整理頁面後再試。'
+    },
+
+    prompts: {
+        localeDownloadPrompt: '切換到 {locale} 需要先下載語言包，現在下載嗎？',
+        preferredLocaleSuggestionPrompt: '偵測到你的瀏覽器語言更接近 {locale}，現在下載並切換嗎？'
+    },
+
+    browserCheck: {
+        title: '瀏覽器相容性提示',
+        message: '目前瀏覽器缺少以下必要功能：',
+        updateHint: '建議更新至最新版 Chrome、Edge、Firefox 或 Safari，以獲得完整體驗。',
+        continueAnyway: '仍要繼續',
+        features: {
+            canvas: 'Canvas API 畫布支援',
+            es6: '現代 JavaScript（ES6）支援'
+        }
+    },
     // Recovery dialog
     recovery: {
         title: '恢復上次內容',
         message: '檢測到上次使用時的畫布內容，是否恢復？',
         restore: '恢復',
-        discard: '放棄'
+        discard: '放棄',
+        restoreFailed: '恢復上次內容失敗，請再試一次。'
     },
 
     // App Title
@@ -56,6 +77,7 @@ window.translations = {
         teachingTools: '教具',
         more: '更多',
         settings: '設定',
+        importProject: '匯入專案',
         export: '匯出畫布',
         zoomOut: '縮小 (-)',
         zoomIn: '放大 (+)',
@@ -113,13 +135,14 @@ window.translations = {
             message: '確定要清空畫布嗎？此操作無法撤銷。'
         },
         refresh: {
-            warning: '刷新後畫布內容將清空且無法恢復，確定要刷新嗎？'
+            warning: '離開前將嘗試自動儲存目前白板，下次開啟 Aboard 時可恢復。'
         },
         lineStyle: {
             title: '線條樣式',
             solid: '實線',
             dashed: '虛線',
             dotted: '點線',
+            dashdot: '點劃線',
             wavy: '波浪線',
             double: '雙線',
             triple: '三線',
@@ -139,6 +162,7 @@ window.translations = {
             placeholder: '在此輸入文字',
             size: '大小',
             color: '顏色',
+            colorPicker: '取色器',
             font: '字體',
             style: '樣式',
             bold: '粗體',
@@ -252,10 +276,18 @@ window.translations = {
         addPointHintLineOnly: '開啟後點擊畫布依序添加座標點，僅繪製折線',
         addPointHintAuto: '開啟後點擊畫布依序添加座標點並自動連線',
         addPointHintSelected: '開啟後點擊畫布添加座標點；切到選擇工具後，僅選中的點會連線',
+        addPointHintSelectedInteractive: '開啟後點擊空白處添加座標點；依序點擊兩個點即可連線',
         clearPoints: '清空點',
         clearPlots: '清空圖像',
         pointsCount: '點數',
         plotExpression: '函數表達式',
+        plotColor: '顏色',
+        plotLineStyle: '線型',
+        plotStrokeWidth: '粗細',
+        plotRangeTitle: '顯示範圍',
+        plotRangeAxis: '控制量',
+        plotRangeMin: '最小值',
+        plotRangeMax: '最大值',
         plot: '繪製',
         inputPanel: '輸入面板',
         keypadNumbers: '數字',
@@ -266,12 +298,23 @@ window.translations = {
         plotHintPolar: '極座標：輸入 r = f(theta)，theta 為弧度，deg 為角度',
         plotPlaceholderCartesian: '如：sin(x) + 2',
         plotPlaceholderPolar: '如：2 * sin(4 * theta)',
+        plotRangeMinPlaceholder: '最小值',
+        plotRangeMaxPlaceholder: '最大值',
+        plotAddRange: '添加範圍段',
+        plotCollapse: '收起',
+        plotSave: '儲存',
+        plotRemoveRange: '刪除範圍段',
+        plotNoRange: '未限制顯示範圍，預設顯示全部',
         noPlots: '暫無函數圖像',
         coordinateStatusAddPoint: '繪製點線模式已開啟，點擊畫布依序添加座標點',
         coordinateStatusAddPointLineOnly: '僅繪製線模式已開啟，點擊畫布依序添加座標點',
         coordinateStatusAddPointAuto: '自動連線模式已開啟，點擊畫布依序添加座標點',
         coordinateStatusAddPointSelected: '選擇連線模式已開啟，點擊畫布添加座標點',
+        coordinateStatusAddPointSelectedInteractive: '選擇連線模式已開啟，點擊空白處添加點，再依序點擊兩個點連線',
+        coordinateStatusSelectLineStartPoint: '已選取第一個點，請再點擊一個點進行連線',
         coordinateStatusAddPointOff: '繪製點線模式已關閉',
+        coordinateLineExists: '這兩個點之間已存在連線',
+        coordinateLineCreated: '連線已建立',
         connectPointsEnabled: '點線繪製已開啟',
         connectPointsDisabled: '點線繪製已關閉',
         pointAdded: '已添加座標點',
@@ -383,6 +426,16 @@ window.translations = {
             languageHint: '預設自動偵測系統語言，也可以隨時手動切換',
             globalFont: '全局字體',
             globalFontHint: '選擇套用程序使用的字體',
+            fontManagementHint: '字體管理：支援排序、顯示開關、重新命名與預覽',
+            showFont: '顯示字體',
+            fontPreviewSample: '中文字體預覽 ABC abc 123',
+            fontPreviewText: '預覽內容',
+            fontPreviewSize: '預覽字號',
+            fontPreviewResetText: '恢復內容',
+            renameFont: '修改名稱',
+            expandPreview: '放大',
+            confirmDeleteFont: '確定刪除自訂字體「{font}」嗎？',
+            resetFontManagementConfirm: '恢復預設狀態會刪除已上傳字體，並重設字體順序、名稱與預覽設定。是否繼續？',
             downloadedLanguagePacks: '已下載語言包',
             dismissedLanguageSuggestion: '語言提示忽略狀態',
             updatePreference: '更新方式',
@@ -650,8 +703,10 @@ window.translations = {
         rangeLabel: '數字範圍',
         importLabel: '匯入名單 (Excel/CSV)',
         defaultColumnName: '姓名',
+        importColumnPlaceholder: '欄名',
         importBtn: '選擇檔案匯入',
         importHint: '提示：自動讀取表格中對應列名的內容',
+        importLibraryLoadFailed: '載入 Excel 匯入元件失敗，請重新整理頁面後再試。',
         importSuccess: '成功匯入 {count} 個名字',
         importNoData: '未找到指定列的數據，請檢查列名設定',
         importError: '檔案解析失敗'
@@ -665,6 +720,8 @@ window.translations = {
         confirmRemoveTeam: '確定要移除這個隊伍嗎？',
         teamDefault: '隊伍',
         removeTeam: '刪除隊伍',
+        increaseScore: '為 {team} 加分',
+        decreaseScore: '為 {team} 減分',
         confirmReset: '確定要重置所有分數嗎？'
     },
 
@@ -684,7 +741,9 @@ window.translations = {
         rotate: '旋轉',
         resize: '調整大小',
         delete: '刪除',
-        drawAlongEdge: '沿邊緣畫線'
+        drawAlongEdge: '沿邊緣畫線',
+        increaseCount: '增加 {tool} 數量',
+        decreaseCount: '減少 {tool} 數量',
     },
 
     // Time Display
@@ -843,11 +902,51 @@ window.translations = {
     },
 
     export: {
+        imageTab: '匯出圖片',
+        projectTab: '匯出專案 (.zip)',
+        scopeLabel: '匯出範圍',
+        scopeCurrent: '目前頁面',
+        scopeAll: '全部頁面',
+        scopeSpecific: '指定頁面',
+        pageSelectionLabel: '選擇要匯出的頁面',
+        imageFormatLabel: '圖片格式',
+        imageQualityLabel: '圖片品質',
+        projectHint: '匯出為標準 .zip 專案包，包含頁面場景、背景與資源庫。匯入後可繼續逐頁物件級編輯；舊版 .aboard 僅在設定中開啟相容後按需匯入。',
+        fileNameLabel: '檔案名稱',
+        fileNamePrefixLabel: '檔名前綴',
+        fileNamePlaceholder: '輸入檔名',
+        fileNameHint: '匯出多個頁面時，會自動在檔名後附加頁碼',
         failed: '匯出失敗，請再試一次'
     },
 
+    projectPackage: {
+        importSuccess: '專案匯入成功。',
+        legacyImportSuccess: '舊版專案匯入成功。',
+        importFailed: '匯入專案失敗：{message}',
+        exportFailed: '匯出專案失敗：{message}',
+        overwriteConfirm: '匯入專案將覆蓋目前白板內容，是否繼續？',
+        overwriteDetail: '目前白板中的頁面與資源會被專案包內容取代。',
+        legacyCompatibilityDisabled: '舊版 .aboard 匯入相容未啟用，請先在設定中開啟舊版相容匯入。',
+        zipLoaderUnavailable: 'ZIP 程式庫載入器無法使用。',
+        zipLoadFailed: '載入 ZIP 程式庫失敗。',
+        legacyLoaderUnavailable: '舊版相容載入器無法使用。',
+        legacyModuleLoadFailed: '載入舊版專案相容模組失敗。',
+        base64DecoderUnavailable: 'Base64 解碼器無法使用。',
+        base64EncoderUnavailable: 'Base64 編碼器無法使用。',
+        unsupportedPackage: '這不是受支援的 Aboard 專案包。',
+        missingDocument: '專案包缺少 document.json。',
+        missingPages: '專案包缺少頁面資料。',
+        missingAsset: '專案包缺少資源檔案：{path}',
+        missingPageFile: '專案包缺少頁面檔案：{path}',
+        invalidLegacyFormat: '舊版專案檔案格式無效。',
+        legacyMissingPages: '舊版專案檔案缺少頁面資料。'
+    },
+
     gif: {
-        loopCountPrompt: '設定循環次數（0 代表無限）：'
+        settingsTitle: 'GIF設定',
+        loopCountLabel: '播放次數（0 為無限循環）',
+        loopCountPrompt: '設定循環次數（0 代表無限）：',
+        loopCountInvalid: '請輸入大於或等於 0 的整數。'
     },
 
     // Color names

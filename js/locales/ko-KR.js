@@ -18,18 +18,39 @@ window.translations = {
         no: '아니오',
         ok: '확인',
         help: '도움말',
+        export: '내보내기',
         apply: '적용',
         reset: '재설정',
         restoreSize: '크기 복원',
         keepCentered: '가운데 유지'
     },
 
+    errors: {
+        lazyLoadFailed: '{feature} 기능을 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.'
+    },
+
+    prompts: {
+        localeDownloadPrompt: '{locale} 언어 팩을 지금 다운로드하시겠습니까?',
+        preferredLocaleSuggestionPrompt: '브라우저 기본 언어가 {locale}에 더 가깝습니다. 지금 다운로드하고 전환하시겠습니까?'
+    },
+
+    browserCheck: {
+        title: '브라우저 호환성 안내',
+        message: '현재 브라우저에 다음 필수 기능이 없습니다.',
+        updateHint: '원활한 사용을 위해 Chrome, Edge, Firefox, Safari 최신 버전으로 업데이트해 주세요.',
+        continueAnyway: '계속 진행',
+        features: {
+            canvas: 'Canvas API',
+            es6: '최신 JavaScript(ES6)'
+        }
+    },
     // Recovery dialog
     recovery: {
         title: '이전 콘텐츠 복원',
         message: '이전 캔버스 콘텐츠가 감지되었습니다. 복원하시겠습니까?',
         restore: '복원',
-        discard: '삭제'
+        discard: '삭제',
+        restoreFailed: '이전 콘텐츠를 복원하지 못했습니다. 다시 시도해 주세요.'
     },
 
     // App Title
@@ -54,6 +75,7 @@ window.translations = {
         teachingTools: '교구',
         more: '더보기',
         settings: '설정',
+        importProject: '프로젝트 가져오기',
         export: '캔버스 내보내기',
         zoomOut: '축소 (-)',
         zoomIn: '확대 (+)',
@@ -110,13 +132,14 @@ window.translations = {
             message: '캔버스를 지우시겠습니까? 이 작업은 취소할 수 없습니다.'
         },
         refresh: {
-            warning: '새로 고침하면 캔버스 내용이 모두 지워지며 복구할 수 없습니다. 새로 고침하시겠습니까?'
+            warning: '새로 고침하면 저장되지 않은 변경 사항이 중단될 수 있습니다. 저장된 스냅샷이 있으면 새로 고침 후 복원할 수 있습니다. 새로 고침하시겠습니까?'
         },
         lineStyle: {
             title: '선 스타일',
             solid: '실선',
             dashed: '파선',
             dotted: '점선',
+            dashdot: '점쇄선',
             wavy: '물결선',
             double: '이중선',
             triple: '삼중선',
@@ -136,6 +159,7 @@ window.translations = {
             placeholder: '여기에 텍스트 입력',
             size: '크기',
             color: '색상',
+            colorPicker: '색상 선택기',
             font: '글꼴',
             style: '스타일',
             bold: '굵게',
@@ -248,10 +272,18 @@ window.translations = {
         addPointHintLineOnly: '활성화 후 캔버스를 순서대로 클릭하면 좌표점을 찍고 선만 그립니다',
         addPointHintAuto: '활성화 후 캔버스를 클릭하면 좌표점을 순서대로 찍고 자동으로 연결합니다',
         addPointHintSelected: '활성화 후 캔버스에 좌표점을 추가할 수 있습니다. 선택 도구로 전환하면 선택한 점만 연결됩니다',
+        addPointHintSelectedInteractive: '활성화 후 빈 공간을 클릭해 점을 추가하고, 두 점을 차례로 클릭해 연결할 수 있습니다',
         clearPoints: '점 지우기',
         clearPlots: '그래프 지우기',
         pointsCount: '점 개수',
         plotExpression: '식',
+        plotColor: '색상',
+        plotLineStyle: '선 스타일',
+        plotStrokeWidth: '선 두께',
+        plotRangeTitle: '표시 범위',
+        plotRangeAxis: '축',
+        plotRangeMin: '최솟값',
+        plotRangeMax: '최댓값',
         plot: '그리기',
         inputPanel: '입력 패널',
         keypadNumbers: '숫자',
@@ -262,17 +294,29 @@ window.translations = {
         plotHintPolar: '극좌표: r = f(theta)를 입력하세요. theta는 라디안, deg는 도 단위',
         plotPlaceholderCartesian: '예: sin(x) + 2',
         plotPlaceholderPolar: '예: 2 * sin(4 * theta)',
+        plotRangeMinPlaceholder: '최솟값',
+        plotRangeMaxPlaceholder: '최댓값',
+        plotAddRange: '범위 추가',
+        plotCollapse: '접기',
+        plotSave: '저장',
+        plotRemoveRange: '범위 삭제',
+        plotNoRange: '표시 범위 제한이 없습니다. 기본적으로 전체를 표시합니다.',
         noPlots: '아직 그래프가 없습니다',
         coordinateStatusAddPoint: '점·선 그리기 모드가 켜졌습니다',
         coordinateStatusAddPointLineOnly: '선만 그리기 모드가 켜졌습니다. 캔버스를 클릭해 좌표점을 추가하세요',
         coordinateStatusAddPointAuto: '자동 연결 모드가 켜졌습니다. 캔버스를 클릭해 좌표점을 추가하세요',
         coordinateStatusAddPointSelected: '선택 연결 모드가 켜졌습니다. 캔버스를 클릭해 좌표점을 추가하세요',
+        coordinateStatusAddPointSelectedInteractive: '선택 연결 모드가 켜졌습니다. 빈 공간을 클릭해 점을 추가한 뒤 두 점을 클릭해 연결하세요',
+        coordinateStatusSelectLineStartPoint: '첫 번째 점을 선택했습니다. 연결할 다른 점을 클릭하세요',
         coordinateStatusAddPointOff: '점·선 그리기 모드가 꺼졌습니다',
+        coordinateLineExists: '이 두 점 사이에는 이미 선이 있습니다',
+        coordinateLineCreated: '선이 연결되었습니다',
         connectPointsEnabled: '점선 그리기가 켜졌습니다',
         connectPointsDisabled: '점선 그리기가 꺼졌습니다',
         pointAdded: '좌표점이 추가되었습니다',
         pointsCleared: '좌표점이 삭제되었습니다',
         plotAdded: '함수 그래프가 추가되었습니다',
+        plotUpdated: '함수 그래프가 업데이트되었습니다',
         plotError: '식이 올바르지 않아 그릴 수 없습니다',
         plotsCleared: '함수 그래프가 삭제되었습니다'
     },
@@ -366,6 +410,16 @@ window.translations = {
             languageHint: '기본적으로 시스템 언어를 자동 감지하며, 언제든지 수동으로 전환할 수 있습니다',
             globalFont: '전역 글꼴',
             globalFontHint: '애플리케이션에서 사용할 글꼴 선택',
+            fontManagementHint: '글꼴 관리: 정렬, 표시 전환, 이름 변경 및 미리보기 지원',
+            showFont: '글꼴 표시',
+            fontPreviewSample: '한글 글꼴 미리보기 ABC abc 123',
+            fontPreviewText: '미리보기 문구',
+            fontPreviewSize: '미리보기 크기',
+            fontPreviewResetText: '문구 복원',
+            renameFont: '이름 변경',
+            expandPreview: '확대',
+            confirmDeleteFont: '사용자 지정 글꼴 "{font}"을 삭제하시겠습니까?',
+            resetFontManagementConfirm: '글꼴 관리를 초기 상태로 되돌리면 업로드한 글꼴이 삭제되고 글꼴 순서, 이름, 미리보기 설정도 재설정됩니다. 계속하시겠습니까?',
             downloadedLanguagePacks: '다운로드한 언어 팩',
             dismissedLanguageSuggestion: '언어 제안 숨김 상태',
             updatePreference: '업데이트 방식',
@@ -614,7 +668,9 @@ window.translations = {
         rotate: '회전',
         resize: '크기 조절',
         delete: '삭제',
-        drawAlongEdge: '가장자리를 따라 그리기'
+        drawAlongEdge: '가장자리를 따라 그리기',
+        increaseCount: '{tool} 수량 늘리기',
+        decreaseCount: '{tool} 수량 줄이기',
     },
 
     // Time Display
@@ -808,10 +864,55 @@ window.translations = {
     },
 
     export: {
+        imageTab: '이미지 내보내기',
+        projectTab: '프로젝트 내보내기 (.zip)',
+        scopeLabel: '내보내기 범위',
+        scopeCurrent: '현재 페이지',
+        scopeAll: '모든 페이지',
+        scopeSpecific: '지정한 페이지',
+        pageSelectionLabel: '내보낼 페이지 선택',
+        imageFormatLabel: '이미지 형식',
+        imageQualityLabel: '이미지 품질',
+        projectHint: '페이지 장면, 배경, 자산 라이브러리를 포함한 표준 .zip 프로젝트 패키지로 내보냅니다. 가져온 뒤에도 페이지별 객체 편집을 계속할 수 있으며, 구버전 .aboard 가져오기는 설정에서 호환성을 켠 경우에만 사용할 수 있습니다.',
+        fileNameLabel: '파일 이름',
+        fileNamePrefixLabel: '파일 이름 접두사',
+        fileNamePlaceholder: '파일 이름 입력',
+        fileNameHint: '여러 페이지를 내보낼 때는 파일 이름 뒤에 페이지 번호가 자동으로 붙습니다.',
         failed: '내보내기에 실패했습니다. 다시 시도해 주세요.'
     },
 
+    projectPackage: {
+        importSuccess: '프로젝트를 가져왔습니다.',
+        legacyImportSuccess: '구버전 프로젝트를 가져왔습니다.',
+        importFailed: '프로젝트 가져오기에 실패했습니다: {message}',
+        exportFailed: '프로젝트 내보내기에 실패했습니다: {message}',
+        overwriteConfirm: '프로젝트를 가져오면 현재 화이트보드 내용이 덮어써집니다. 계속하시겠습니까?',
+        overwriteDetail: '현재 화이트보드의 페이지와 리소스가 프로젝트 패키지의 내용으로 교체됩니다.',
+        legacyCompatibilityDisabled: '구버전 .aboard 가져오기 호환이 비활성화되어 있습니다. 먼저 설정에서 구버전 호환 가져오기를 켜 주세요.',
+        zipLoaderUnavailable: 'ZIP 라이브러리 로더를 사용할 수 없습니다.',
+        zipLoadFailed: 'ZIP 라이브러리를 불러오지 못했습니다.',
+        legacyLoaderUnavailable: '구버전 호환 로더를 사용할 수 없습니다.',
+        legacyModuleLoadFailed: '구버전 프로젝트 호환 모듈을 불러오지 못했습니다.',
+        base64DecoderUnavailable: 'Base64 디코더를 사용할 수 없습니다.',
+        base64EncoderUnavailable: 'Base64 인코더를 사용할 수 없습니다.',
+        unsupportedPackage: '지원되는 Aboard 프로젝트 패키지가 아닙니다.',
+        missingDocument: '프로젝트 패키지에 document.json이 없습니다.',
+        missingPages: '프로젝트 패키지에 페이지 데이터가 없습니다.',
+        missingAsset: '프로젝트 패키지에 리소스 파일이 없습니다: {path}',
+        missingPageFile: '프로젝트 패키지에 페이지 파일이 없습니다: {path}',
+        invalidLegacyFormat: '구버전 프로젝트 파일 형식이 올바르지 않습니다.',
+        legacyMissingPages: '구버전 프로젝트 파일에 페이지 데이터가 없습니다.'
+    },
+
+    randomPicker: {
+        importColumnPlaceholder: '열 이름',
+        importLibraryLoadFailed: 'Excel 가져오기 라이브러리를 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.'
+    },
+
     gif: {
-        loopCountPrompt: '반복 횟수를 설정하세요(0은 무한 반복):'
+        settingsTitle: 'GIF 설정',
+        loopCountLabel: '재생 횟수 (0은 무한 반복)',
+        loopCountPrompt: '반복 횟수를 설정하세요(0은 무한 반복):',
+        loopCountInvalid: '0 이상의 정수를 입력해 주세요.'
     }
 };

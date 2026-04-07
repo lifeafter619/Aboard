@@ -3,6 +3,15 @@
  * Allows users to keep score for multiple teams
  */
 
+function getScoreboardText(key, fallback) {
+    if (!window.i18n?.t) {
+        return fallback;
+    }
+
+    const translated = window.i18n.t(key);
+    return translated && translated !== key ? translated : fallback;
+}
+
 class ScoreboardInstance {
     constructor(id, manager, config = {}) {
         this.id = id;
@@ -41,6 +50,7 @@ class ScoreboardInstance {
         this.element = null;
         this.dragOffset = { x: 0, y: 0 };
         this.isDragging = false;
+        this.localeChangeHandler = null;
 
         this.createElement();
     }
@@ -63,18 +73,22 @@ class ScoreboardInstance {
         div.style.top = `${window.innerHeight / 2 - 100 + offset}px`;
 
         const title = this.config.title || window.i18n.t('scoreboard.title');
+        const addTeamLabel = getScoreboardText('scoreboard.addTeam', 'Add Team');
+        const resetLabel = getScoreboardText('scoreboard.reset', 'Reset');
+        const helpLabel = getScoreboardText('common.help', 'Help');
+        const closeLabel = getScoreboardText('common.close', 'Close');
 
         div.innerHTML = `
             <div class="scoreboard-header">
                 <span class="scoreboard-title">${title}</span>
                 <div class="scoreboard-controls-top">
-                    <button class="scoreboard-icon-btn scoreboard-add-team-btn" title="${window.i18n.t('scoreboard.addTeam')}">
+                    <button class="scoreboard-icon-btn scoreboard-add-team-btn" title="${addTeamLabel}" aria-label="${addTeamLabel}">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                     </button>
-                    <button class="scoreboard-icon-btn scoreboard-reset-btn" title="${window.i18n.t('scoreboard.reset')}">
+                    <button class="scoreboard-icon-btn scoreboard-reset-btn" title="${resetLabel}" aria-label="${resetLabel}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
                             <path d="M21 3v5h-5"></path>
@@ -82,14 +96,14 @@ class ScoreboardInstance {
                             <path d="M3 21v-5h5"></path>
                         </svg>
                     </button>
-                    <button class="scoreboard-icon-btn scoreboard-help-btn" title="${window.i18n.t('common.help')}">
+                    <button class="scoreboard-icon-btn scoreboard-help-btn" title="${helpLabel}" aria-label="${helpLabel}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
                             <line x1="12" y1="17" x2="12" y2="17"></line>
                         </svg>
                     </button>
-                    <button class="scoreboard-icon-btn scoreboard-close-btn" title="${window.i18n.t('common.close')}">
+                    <button class="scoreboard-icon-btn scoreboard-close-btn" title="${closeLabel}" aria-label="${closeLabel}">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -109,9 +123,10 @@ class ScoreboardInstance {
         this.setupEvents();
 
         // Listen for locale changes
-        window.addEventListener('localeChanged', (e) => {
+        this.localeChangeHandler = (e) => {
             this.handleLocaleChange(e.detail.locale, e.detail.oldLocale);
-        });
+        };
+        window.addEventListener('localeChanged', this.localeChangeHandler);
     }
 
     handleLocaleChange(newLocale, oldLocale) {
@@ -150,6 +165,15 @@ class ScoreboardInstance {
             this.renderTeams();
             this.saveState();
         }
+
+        this.refreshLocalizedUI();
+    }
+
+    getScoreControlLabel(action, teamName) {
+        const normalizedTeamName = String(teamName || '').trim() || getScoreboardText('scoreboard.teamDefault', 'Team');
+        return action === 'decrease'
+            ? getScoreboardText('scoreboard.decreaseScore', 'Decrease score for {team}').replace('{team}', normalizedTeamName)
+            : getScoreboardText('scoreboard.increaseScore', 'Increase score for {team}').replace('{team}', normalizedTeamName);
     }
 
     renderTeams() {
@@ -162,7 +186,7 @@ class ScoreboardInstance {
             col.dataset.index = index;
 
             col.innerHTML = `
-                <button class="score-remove-btn" title="${window.i18n.t('scoreboard.removeTeam')}">
+                <button class="score-remove-btn" title="${getScoreboardText('scoreboard.removeTeam', 'Remove Team')}" aria-label="${getScoreboardText('scoreboard.removeTeam', 'Remove Team')}">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -171,12 +195,12 @@ class ScoreboardInstance {
                 <div class="score-team-name" contenteditable="true">${team.name}</div>
                 <div class="score-value">${team.score}</div>
                 <div class="score-controls">
-                    <button class="score-btn minus">
+                    <button class="score-btn minus" title="Decrease score" aria-label="Decrease score">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                     </button>
-                    <button class="score-btn plus">
+                    <button class="score-btn plus" title="Increase score" aria-label="Increase score">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -189,6 +213,7 @@ class ScoreboardInstance {
             const nameEl = col.querySelector('.score-team-name');
             nameEl.addEventListener('blur', (e) => {
                 this.config.teams[index].name = e.target.textContent;
+                this.refreshLocalizedUI();
                 this.saveState();
             });
             nameEl.addEventListener('keydown', (e) => {
@@ -236,6 +261,62 @@ class ScoreboardInstance {
             }
 
             container.appendChild(col);
+        });
+
+        this.refreshLocalizedUI();
+    }
+
+    refreshLocalizedUI() {
+        if (!this.element) {
+            return;
+        }
+
+        if (!this.config.title) {
+            const titleEl = this.element.querySelector('.scoreboard-title');
+            if (titleEl) {
+                titleEl.textContent = getScoreboardText('scoreboard.title', 'Scoreboard');
+            }
+        }
+
+        const buttonLabels = [
+            ['.scoreboard-add-team-btn', 'scoreboard.addTeam', 'Add Team'],
+            ['.scoreboard-reset-btn', 'scoreboard.reset', 'Reset'],
+            ['.scoreboard-help-btn', 'common.help', 'Help'],
+            ['.scoreboard-close-btn', 'common.close', 'Close']
+        ];
+
+        buttonLabels.forEach(([selector, key, fallback]) => {
+            const btn = this.element.querySelector(selector);
+            if (!btn) {
+                return;
+            }
+            const label = getScoreboardText(key, fallback);
+            btn.title = label;
+            btn.setAttribute('aria-label', label);
+        });
+
+        this.element.querySelectorAll('.score-remove-btn').forEach(btn => {
+            const label = getScoreboardText('scoreboard.removeTeam', 'Remove Team');
+            btn.title = label;
+            btn.setAttribute('aria-label', label);
+        });
+
+        this.element.querySelectorAll('.score-column').forEach((column, index) => {
+            const teamName = this.config.teams[index]?.name;
+            const minusBtn = column.querySelector('.score-btn.minus');
+            const plusBtn = column.querySelector('.score-btn.plus');
+
+            if (minusBtn) {
+                const label = this.getScoreControlLabel('decrease', teamName);
+                minusBtn.title = label;
+                minusBtn.setAttribute('aria-label', label);
+            }
+
+            if (plusBtn) {
+                const label = this.getScoreControlLabel('increase', teamName);
+                plusBtn.title = label;
+                plusBtn.setAttribute('aria-label', label);
+            }
         });
     }
 
@@ -508,6 +589,10 @@ class ScoreboardInstance {
     }
 
     destroy() {
+        if (this.localeChangeHandler) {
+            window.removeEventListener('localeChanged', this.localeChangeHandler);
+            this.localeChangeHandler = null;
+        }
         this.element.remove();
         this.manager.remove(this.id);
     }

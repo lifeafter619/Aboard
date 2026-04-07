@@ -23,18 +23,40 @@ window.translations = {
         stop: '停止',
         preview: '预览',
         help: '帮助',
+        export: '导出',
         settings: '设置',
+        inputRequired: '请输入内容。',
         dragToMove: '拖动以移动',
         restoreSize: '\u6062\u590d\u5927\u5c0f',
         keepCentered: '\u4fdd\u6301\u5c45\u4e2d'
     },
 
+    errors: {
+        lazyLoadFailed: '加载{feature}失败，请刷新页面后重试。'
+    },
+
+    prompts: {
+        localeDownloadPrompt: '切换到 {locale} 需要先下载语言包，现在下载吗？',
+        preferredLocaleSuggestionPrompt: '检测到你的浏览器语言更接近 {locale}，现在下载并切换吗？'
+    },
+
+    browserCheck: {
+        title: '浏览器兼容性提示',
+        message: '当前浏览器缺少以下必需能力：',
+        updateHint: '建议升级到最新版本的 Chrome、Edge、Firefox 或 Safari，以获得完整体验。',
+        continueAnyway: '仍然继续',
+        features: {
+            canvas: 'Canvas API 画布支持',
+            es6: '现代 JavaScript（ES6）支持'
+        }
+    },
     // Recovery dialog
     recovery: {
         title: '恢复上次内容',
         message: '检测到上次使用时的画布内容，是否恢复？',
         restore: '恢复',
-        discard: '放弃'
+        discard: '放弃',
+        restoreFailed: '恢复上次内容失败，请重试。'
     },
 
     // App Title
@@ -59,6 +81,7 @@ window.translations = {
         teachingTools: '教具',
         more: '更多',
         settings: '设置',
+        importProject: '导入项目',
         export: '导出画布',
         zoomOut: '缩小 (-)',
         zoomIn: '放大 (+)',
@@ -116,13 +139,14 @@ window.translations = {
             message: '确定要清空画布吗？此操作无法撤销。'
         },
         refresh: {
-            warning: '刷新后画布内容将清空且无法恢复，确定要刷新吗？'
+            warning: '离开前将尝试自动保存当前白板，下次打开 Aboard 时可恢复。'
         },
         lineStyle: {
             title: '线条样式',
             solid: '实线',
             dashed: '虚线',
             dotted: '点线',
+            dashdot: '点划线',
             wavy: '波浪线',
             double: '双线',
             triple: '三线',
@@ -142,6 +166,7 @@ window.translations = {
             placeholder: '在此输入文字',
             size: '大小',
             color: '颜色',
+            colorPicker: '取色器',
             font: '字体',
             style: '样式',
             bold: '粗体',
@@ -255,10 +280,18 @@ window.translations = {
         addPointHintLineOnly: '开启后点击画布依次添加坐标点，仅绘制折线',
         addPointHintAuto: '开启后点击画布依次添加坐标点并自动连线',
         addPointHintSelected: '开启后点击画布添加坐标点；切到选择工具后，仅选中的点会连线',
+        addPointHintSelectedInteractive: '开启后点击空白处添加坐标点；依次点击两个点即可连线',
         clearPoints: '清空点',
         clearPlots: '清空图像',
         pointsCount: '点数',
         plotExpression: '函数表达式',
+        plotColor: '颜色',
+        plotLineStyle: '线型',
+        plotStrokeWidth: '粗细',
+        plotRangeTitle: '显示范围',
+        plotRangeAxis: '控制量',
+        plotRangeMin: '最小值',
+        plotRangeMax: '最大值',
         plot: '绘制',
         inputPanel: '输入面板',
         keypadNumbers: '数字',
@@ -269,12 +302,25 @@ window.translations = {
         plotHintPolar: '极坐标：输入 r = f(theta)，theta 为弧度，deg 为角度',
         plotPlaceholderCartesian: '如：sin(x) + 2',
         plotPlaceholderPolar: '如：2 * sin(4 * theta)',
+        plotRangeMinPlaceholder: '最小值',
+        plotRangeMaxPlaceholder: '最大值',
+        plotAddRange: '添加范围段',
+        plotCollapse: '收起',
+        plotSave: '保存',
+        plotRemoveRange: '删除范围段',
+        plotNoRange: '未限制显示范围，默认显示全部',
         noPlots: '暂无函数图像',
         coordinateStatusAddPoint: '绘制点线模式已开启，点击画布依次添加坐标点',
         coordinateStatusAddPointLineOnly: '仅绘制线模式已开启，点击画布依次添加坐标点',
         coordinateStatusAddPointAuto: '自动连线模式已开启，点击画布依次添加坐标点',
         coordinateStatusAddPointSelected: '选择连线模式已开启，点击画布添加坐标点',
+        coordinateStatusAddPointSelectedInteractive: '选择连线模式已开启，点击空白处添加点，再依次点击两个点连线',
+        coordinateStatusSelectLineStartPoint: '已选中第一个点，请再点击一个点进行连线',
         coordinateStatusAddPointOff: '绘制点线模式已关闭',
+        coordinateLineExists: '这两个点之间已存在连线',
+        coordinateLineCreated: '连线已创建',
+        connectPointsEnabled: '点间连线已开启',
+        connectPointsDisabled: '点间连线已关闭',
         pointAdded: '已添加坐标点',
         pointsCleared: '坐标点已清空',
         plotAdded: '函数图像已添加',
@@ -336,7 +382,8 @@ window.translations = {
             oldValue: '旧值',
             newValue: '新值',
             confirm: '确认',
-            cancel: '取消'
+            cancel: '取消',
+            noChanges: '未发现差异，配置完全一致。'
         },
         tabs: {
             general: '通用',
@@ -390,6 +437,13 @@ window.translations = {
             fontManagementHint: '字体管理：支持排序、显示开关、重命名与预览',
             showFont: '显示字体',
             fontPreviewSample: '中文字体预览 ABC abc 123',
+            fontPreviewText: '预览内容',
+            fontPreviewSize: '预览字号',
+            fontPreviewResetText: '恢复内容',
+            renameFont: '修改名称',
+            expandPreview: '放大',
+            confirmDeleteFont: '确定删除自定义字体“{font}”吗？',
+            resetFontManagementConfirm: '恢复默认状态会删除已上传字体，并重置字体顺序、名称和预览设置。是否继续？',
             downloadedLanguagePacks: '已下载语言包',
             dismissedLanguageSuggestion: '语言提示忽略状态',
             updatePreference: '更新方式',
@@ -669,8 +723,10 @@ window.translations = {
         rangeLabel: '数字范围',
         importLabel: '导入名单 (Excel/CSV)',
         defaultColumnName: '姓名',
+        importColumnPlaceholder: '列名',
         importBtn: '选择文件导入',
         importHint: '提示：自动读取表格中对应列名的内容',
+        importLibraryLoadFailed: '加载 Excel 导入组件失败，请刷新页面后重试。',
         importSuccess: '成功导入 {count} 个名字',
         importNoData: '未找到指定列的数据，请检查列名设置',
         importError: '文件解析失败'
@@ -684,6 +740,8 @@ window.translations = {
         confirmRemoveTeam: '确定要移除这个队伍吗？',
         teamDefault: '队伍',
         removeTeam: '删除队伍',
+        increaseScore: '为 {team} 加分',
+        decreaseScore: '为 {team} 减分',
         confirmReset: '确定要重置所有分数吗？'
     },
 
@@ -703,7 +761,9 @@ window.translations = {
         rotate: '旋转',
         resize: '调整大小',
         delete: '删除',
-        drawAlongEdge: '沿边缘画线'
+        drawAlongEdge: '沿边缘画线',
+        increaseCount: '增加 {tool} 数量',
+        decreaseCount: '减少 {tool} 数量',
     },
 
     // Time Display
@@ -825,14 +885,54 @@ window.translations = {
 
     // Export
     export: {
+        imageTab: '导出图片',
+        projectTab: '导出项目 (.zip)',
+        scopeLabel: '导出范围',
+        scopeCurrent: '当前页',
+        scopeAll: '全部页面',
+        scopeSpecific: '指定页面',
+        pageSelectionLabel: '选择要导出的页面',
+        imageFormatLabel: '图片格式',
+        imageQualityLabel: '图片质量',
+        projectHint: '导出为标准 .zip 项目包，包含页面场景、背景和资源库。导入后可继续逐页对象级编辑；旧版 .aboard 仅在设置中开启兼容后按需导入。',
+        fileNameLabel: '文件名',
+        fileNamePrefixLabel: '文件名前缀',
+        fileNamePlaceholder: '输入文件名',
+        fileNameHint: '导出多个页面时，将自动在文件名后添加页码',
         selectAtLeastOnePage: '请至少选择一页',
         paginationRequired: '需要分页',
         noPages: '没有可用页面',
         failed: '导出失败，请重试'
     },
 
+    projectPackage: {
+        importSuccess: '项目导入成功。',
+        legacyImportSuccess: '旧版项目导入成功。',
+        importFailed: '导入项目失败：{message}',
+        exportFailed: '导出项目失败：{message}',
+        overwriteConfirm: '导入项目将覆盖当前白板内容，是否继续？',
+        overwriteDetail: '当前白板中的页面和资源会被项目包内容替换。',
+        legacyCompatibilityDisabled: '旧版 .aboard 导入兼容未启用，请先在设置中开启旧版兼容导入。',
+        zipLoaderUnavailable: 'ZIP 库加载器不可用。',
+        zipLoadFailed: '加载 ZIP 库失败。',
+        legacyLoaderUnavailable: '旧版兼容加载器不可用。',
+        legacyModuleLoadFailed: '加载旧版项目兼容模块失败。',
+        base64DecoderUnavailable: 'Base64 解码器不可用。',
+        base64EncoderUnavailable: 'Base64 编码器不可用。',
+        unsupportedPackage: '这不是受支持的 Aboard 项目包。',
+        missingDocument: '项目包缺少 document.json。',
+        missingPages: '项目包缺少页面数据。',
+        missingAsset: '项目包缺少资源文件：{path}',
+        missingPageFile: '项目包缺少页面文件：{path}',
+        invalidLegacyFormat: '旧版项目文件格式无效。',
+        legacyMissingPages: '旧版项目文件缺少页面数据。'
+    },
+
     gif: {
-        loopCountPrompt: '设置循环次数（0 为无限循环）：'
+        settingsTitle: 'GIF设置',
+        loopCountLabel: '播放次数（0 为无限循环）',
+        loopCountPrompt: '设置循环次数（0 为无限循环）：',
+        loopCountInvalid: '请输入大于或等于 0 的整数。'
     },
 
     // Timezone names

@@ -57,10 +57,28 @@ class InsertTextManager {
         this.MIN_FONT_SIZE = 12;
         this.DEFAULT_MAX_FONT_SIZE = 200;
         this.MAX_FONT_SIZE_LIMIT = 10000;
+        this.textColorKeyMap = {
+            '#000000': { key: 'colors.black', fallback: 'Black' },
+            '#FF0000': { key: 'colors.red', fallback: 'Red' },
+            '#0000FF': { key: 'colors.blue', fallback: 'Blue' },
+            '#008000': { key: 'colors.green', fallback: 'Green' },
+            '#FFA500': { key: 'colors.orange', fallback: 'Orange' },
+            '#800080': { key: 'colors.purple', fallback: 'Purple' },
+            '#FFC0CB': { key: 'colors.pink', fallback: 'Pink' }
+        };
 
         this.createControls();
         this.setupEventListeners();
         this.loadCustomFontsToDocument();
+        this.localeChangeHandler = () => {
+            this.updateTextColorButtonLabels();
+        };
+        window.addEventListener('localeChanged', this.localeChangeHandler);
+    }
+
+    getText(key, fallback) {
+        const translated = window.i18n?.t?.(key);
+        return translated && translated !== key ? translated : fallback;
     }
 
     // Load custom fonts from localStorage
@@ -189,7 +207,7 @@ class InsertTextManager {
                 <div class="modal-content text-input-modal-content">
                     <div class="modal-header">
                         <h2 id="insert-text-modal-title" data-i18n="tools.text.insertTitle"></h2>
-                        <button id="insert-text-modal-close-btn" class="modal-close-btn">
+                        <button id="insert-text-modal-close-btn" class="modal-close-btn" data-i18n-title="common.close" title="Close" aria-label="Close">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -197,25 +215,25 @@ class InsertTextManager {
                         </button>
                     </div>
                     <div class="modal-body">
-                        <textarea id="insert-text-input" class="text-input-area" placeholder="Enter text..." data-i18n-placeholder="tools.text.placeholder"></textarea>
+                        <textarea id="insert-text-input" class="text-input-area" placeholder="Enter text..." data-i18n-placeholder="tools.text.placeholder" data-i18n-aria-label="tools.text.placeholder" aria-label="Enter text..."></textarea>
 
                         <div class="text-input-controls">
                             <div class="text-control-group">
                                 <label data-i18n="tools.text.font">Font</label>
                                 <div class="font-selection-row">
-                                    <select id="insert-text-font-select" class="format-select" aria-label="Font selection">
+                                    <select id="insert-text-font-select" class="format-select" data-i18n-aria-label="tools.text.font" aria-label="Font">
                                         <option value="sans-serif">Sans Serif</option>
                                         <option value="serif">Serif</option>
                                         <option value="monospace">Monospace</option>
                                         <option value="cursive">Cursive</option>
                                     </select>
-                                    <label class="font-upload-btn" for="insert-text-font-upload" data-i18n-title="tools.text.uploadFont" aria-label="Upload custom font">
+                                    <label class="font-upload-btn" for="insert-text-font-upload" role="button" tabindex="0" data-i18n-title="tools.text.uploadFont" aria-label="Upload Font">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                             <polyline points="17 8 12 3 7 8"></polyline>
                                             <line x1="12" y1="3" x2="12" y2="15"></line>
                                         </svg>
-                                        <input type="file" id="insert-text-font-upload" accept=".ttf,.otf,.woff,.woff2" style="display: none;" aria-label="Upload font file">
+                                        <input type="file" id="insert-text-font-upload" accept=".ttf,.otf,.woff,.woff2" style="display: none;" data-i18n-aria-label="tools.text.uploadFont" aria-label="Upload Font">
                                     </label>
                                 </div>
                             </div>
@@ -255,7 +273,7 @@ class InsertTextManager {
                             <div id="text-decoration-settings" class="text-decoration-settings" aria-hidden="true">
                                 <div class="text-control-group">
                                     <label data-i18n="tools.text.decorationStyle">Line Style</label>
-                                    <select id="insert-text-decoration-style" class="format-select" aria-label="Decoration style">
+                                    <select id="insert-text-decoration-style" class="format-select" data-i18n-aria-label="tools.text.decorationStyle" aria-label="Line Style">
                                         <option value="solid" data-i18n="tools.lineStyle.solid">Solid</option>
                                         <option value="dashed" data-i18n="tools.lineStyle.dashed">Dashed</option>
                                         <option value="dotted" data-i18n="tools.lineStyle.dotted">Dotted</option>
@@ -265,34 +283,34 @@ class InsertTextManager {
 
                                 <div class="text-control-group">
                                     <label><span data-i18n="tools.text.decorationWidth">Line Width</span>: <span id="insert-text-decoration-width-value">2</span>px</label>
-                                    <input type="range" id="insert-text-decoration-width" min="1" max="8" value="2" class="slider touch-friendly-slider">
+                                    <input type="range" id="insert-text-decoration-width" min="1" max="8" value="2" class="slider touch-friendly-slider" data-i18n-aria-label="tools.text.decorationWidth" aria-label="Line Width">
                                 </div>
 
                                 <div class="text-control-group">
                                     <label data-i18n="tools.text.decorationColor">Line Color</label>
-                                    <input type="color" id="insert-text-decoration-color" class="text-decoration-color-input" value="#000000" aria-label="Decoration color">
+                                    <input type="color" id="insert-text-decoration-color" class="text-decoration-color-input" value="#000000" data-i18n-aria-label="tools.text.decorationColor" aria-label="Line Color">
                                 </div>
                             </div>
 
                             <div class="text-control-group">
                                 <label><span data-i18n="tools.text.size">Size</span>: <span id="insert-text-size-value">48</span>px</label>
-                                <input type="range" id="insert-text-size-slider" min="12" max="200" value="48" class="slider touch-friendly-slider">
+                                <input type="range" id="insert-text-size-slider" min="12" max="200" value="48" class="slider touch-friendly-slider" data-i18n-aria-label="tools.text.size" aria-label="Size">
                             </div>
 
                             <div class="text-control-group">
                                 <label data-i18n="tools.text.color">Color</label>
                                 <div class="color-picker-row">
                                     <div class="color-picker-main">
-                                        <button class="color-btn active touch-target" data-text-color="#000000" style="background-color: #000000;"></button>
-                                        <button class="color-btn touch-target" data-text-color="#FF0000" style="background-color: #FF0000;"></button>
-                                        <button class="color-btn touch-target" data-text-color="#0000FF" style="background-color: #0000FF;"></button>
-                                        <button class="color-btn touch-target" data-text-color="#008000" style="background-color: #008000;"></button>
+                                        <button class="color-btn active touch-target" data-text-color="#000000" style="background-color: #000000;" title="Black" aria-label="Black"></button>
+                                        <button class="color-btn touch-target" data-text-color="#FF0000" style="background-color: #FF0000;" title="Red" aria-label="Red"></button>
+                                        <button class="color-btn touch-target" data-text-color="#0000FF" style="background-color: #0000FF;" title="Blue" aria-label="Blue"></button>
+                                        <button class="color-btn touch-target" data-text-color="#008000" style="background-color: #008000;" title="Green" aria-label="Green"></button>
                                     </div>
                                     <div class="color-picker-main">
-                                        <button class="color-btn touch-target" data-text-color="#FFA500" style="background-color: #FFA500;"></button>
-                                        <button class="color-btn touch-target" data-text-color="#800080" style="background-color: #800080;"></button>
-                                        <button class="color-btn touch-target" data-text-color="#FFC0CB" style="background-color: #FFC0CB;"></button>
-                                        <label class="color-picker-icon-btn touch-target" for="insert-text-custom-color">
+                                        <button class="color-btn touch-target" data-text-color="#FFA500" style="background-color: #FFA500;" title="Orange" aria-label="Orange"></button>
+                                        <button class="color-btn touch-target" data-text-color="#800080" style="background-color: #800080;" title="Purple" aria-label="Purple"></button>
+                                        <button class="color-btn touch-target" data-text-color="#FFC0CB" style="background-color: #FFC0CB;" title="Pink" aria-label="Pink"></button>
+                                        <label class="color-picker-icon-btn touch-target" for="insert-text-custom-color" data-i18n-title="tools.text.colorPicker" data-color-picker-label-key="tools.text.colorPicker" title="Color Picker" aria-label="Color Picker" role="button" tabindex="0">
                                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                 <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
                                                 <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
@@ -305,8 +323,8 @@ class InsertTextManager {
                         </div>
 
                         <div class="text-input-buttons">
-                            <button id="insert-text-modal-cancel-btn" class="confirm-btn cancel-btn touch-target" data-i18n="common.cancel"></button>
-                            <button id="insert-text-modal-ok-btn" class="confirm-btn ok-btn touch-target" data-i18n="common.confirm"></button>
+                            <button id="insert-text-modal-cancel-btn" class="confirm-btn cancel-btn touch-target" data-i18n="common.cancel" aria-label="Cancel">Cancel</button>
+                            <button id="insert-text-modal-ok-btn" class="confirm-btn ok-btn touch-target" data-i18n="common.confirm" aria-label="Confirm">Confirm</button>
                         </div>
                     </div>
                 </div>
@@ -328,7 +346,7 @@ class InsertTextManager {
                     <div class="resize-handle bottom-right" data-handle="bottom-right"></div>
 
                     <!-- Rotation Handle -->
-                    <div class="rotate-handle" id="insert-text-rotate-handle" data-i18n-title="imageControls.rotate">
+                    <div class="rotate-handle" id="insert-text-rotate-handle" data-i18n-title="imageControls.rotate" aria-label="Rotate">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                             <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                         </svg>
@@ -336,19 +354,19 @@ class InsertTextManager {
 
                     <!-- Toolbar -->
                     <div class="text-controls-toolbar">
-                        <button id="insert-text-edit-btn" class="text-control-btn text-edit-btn" data-i18n-title="common.edit">
+                        <button id="insert-text-edit-btn" class="text-control-btn text-edit-btn" data-i18n-title="common.edit" aria-label="Edit">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
                         </button>
-                        <button id="insert-text-cancel-btn" class="text-control-btn text-cancel-btn" data-i18n-title="common.cancel">
+                        <button id="insert-text-cancel-btn" class="text-control-btn text-cancel-btn" data-i18n-title="common.cancel" aria-label="Cancel">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
                             </svg>
                         </button>
-                        <button id="insert-text-confirm-btn" class="text-control-btn text-done-btn" data-i18n-title="common.confirm">
+                        <button id="insert-text-confirm-btn" class="text-control-btn text-done-btn" data-i18n-title="common.confirm" aria-label="Confirm">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
@@ -369,9 +387,37 @@ class InsertTextManager {
         if (window.i18n) {
             window.i18n.applyTranslations();
         }
+        this.updateTextColorButtonLabels();
 
         // Populate fonts
         this.populateFonts();
+    }
+
+    updateTextColorButtonLabels() {
+        const colorLabel = this.getText('tools.text.color', 'Color');
+        document.querySelectorAll('#insert-text-modal .color-btn[data-text-color]').forEach((button) => {
+            const colorValue = button.getAttribute('data-text-color');
+            const colorMeta = this.textColorKeyMap[colorValue];
+            const colorName = colorMeta
+                ? this.getText(colorMeta.key, colorMeta.fallback)
+                : colorValue;
+            const label = `${colorLabel}: ${colorName}`;
+            button.title = label;
+            button.setAttribute('aria-label', label);
+            button.setAttribute('aria-pressed', button.classList.contains('active') ? 'true' : 'false');
+        });
+
+        const customColorLabel = this.getText('tools.text.colorPicker', 'Color Picker');
+        const customColorTrigger = document.querySelector('label[for="insert-text-custom-color"]');
+        if (customColorTrigger) {
+            customColorTrigger.title = customColorLabel;
+            customColorTrigger.setAttribute('aria-label', customColorLabel);
+        }
+
+        const customColorInput = document.getElementById('insert-text-custom-color');
+        if (customColorInput) {
+            customColorInput.setAttribute('aria-label', customColorLabel);
+        }
     }
 
     populateFonts() {
@@ -492,6 +538,16 @@ class InsertTextManager {
                     }
                 }
             });
+
+            const fontUploadTrigger = fontUpload.closest('label.font-upload-btn');
+            if (fontUploadTrigger) {
+                fontUploadTrigger.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        fontUpload.click();
+                    }
+                });
+            }
         }
 
         // Bold Button
@@ -555,6 +611,7 @@ class InsertTextManager {
                 // Deactivate custom picker visual
                 const customLabel = document.querySelector('label[for="insert-text-custom-color"]');
                 if (customLabel) customLabel.classList.remove('active');
+                this.updateTextColorButtonLabels();
             });
         });
 
@@ -565,6 +622,14 @@ class InsertTextManager {
             document.querySelectorAll('#insert-text-modal .color-btn').forEach(b => b.classList.remove('active'));
             const customLabel = document.querySelector('label[for="insert-text-custom-color"]');
             if (customLabel) customLabel.classList.add('active');
+            this.updateTextColorButtonLabels();
+        });
+        const customColorLabel = document.querySelector('label[for="insert-text-custom-color"]');
+        customColorLabel?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                customColorPicker.click();
+            }
         });
 
         // Overlay Events
@@ -690,6 +755,7 @@ class InsertTextManager {
         document.querySelector('.color-btn[data-text-color="#000000"]').classList.add('active');
         const customLabel = document.querySelector('label[for="insert-text-custom-color"]');
         if (customLabel) customLabel.classList.remove('active');
+        this.updateTextColorButtonLabels();
         this.updateDecorationControlsVisibility();
 
         this.showModal();

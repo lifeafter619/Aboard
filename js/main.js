@@ -306,7 +306,9 @@ class DrawingBoard {
                 return undefined;
             }
             // Show warning message when user tries to refresh or close the page
-            const message = window.i18n ? window.i18n.t('tools.refresh.warning') : 'Refreshing will clear all canvas content and cannot be recovered. Are you sure you want to refresh?';
+            const message = window.i18n
+                ? window.i18n.t('tools.refresh.warning')
+                : 'Your board will be saved automatically before leaving. You can restore it the next time you open Aboard.';
             e.preventDefault();
             e.returnValue = message;
             return message;
@@ -790,21 +792,7 @@ class DrawingBoard {
     }
 
     initFontManagement() {
-        const resetDefaultsBtn = document.getElementById('font-reset-defaults-btn');
-        resetDefaultsBtn?.addEventListener('click', () => {
-            const confirmed = window.confirm('恢复默认状态会删除已上传字体，并重置字体顺序、名称和预览设置。是否继续？');
-            if (!confirmed) return;
-            this.settingsManager.resetFontManagementToDefaults();
-            this.openFontPreviewPanels.clear();
-            this.editingFontAliasFont = null;
-            this.activeFontPreviewFont = null;
-            this.insertTextManager?.populateFonts?.();
-            this.renderFontManagementList();
-            this.closeFontPreviewModal();
-        });
-
-        this.initFontPreviewModal();
-        this.renderFontManagementList();
+        return fontManagementRuntime.initFontManagement?.(this);
     }
     getTextWithFallback(key, fallback) {
         return fontManagementRuntime.getTextWithFallback?.(this, key, fallback);

@@ -18,18 +18,39 @@ window.translations = {
         no: 'No',
         ok: 'OK',
         help: 'Ayuda',
+        export: 'Exportar',
         apply: 'Aplicar',
         reset: 'Restablecer',
         restoreSize: 'Restablecer tamaño',
         keepCentered: 'Mantener centrado'
     },
 
+    errors: {
+        lazyLoadFailed: 'No se pudo cargar {feature}. Recarga la página e inténtalo de nuevo.'
+    },
+
+    prompts: {
+        localeDownloadPrompt: '¿Descargar ahora el paquete de idioma de {locale}?',
+        preferredLocaleSuggestionPrompt: 'Hemos detectado que tu idioma preferido del navegador es {locale}. ¿Quieres descargarlo y cambiar ahora?'
+    },
+
+    browserCheck: {
+        title: 'Compatibilidad del navegador',
+        message: 'A este navegador le faltan las siguientes funciones obligatorias:',
+        updateHint: 'Para disfrutar de la mejor experiencia, actualiza a la última versión de Chrome, Edge, Firefox o Safari.',
+        continueAnyway: 'Continuar de todos modos',
+        features: {
+            canvas: 'API Canvas',
+            es6: 'JavaScript moderno (ES6)'
+        }
+    },
     // Recovery dialog
     recovery: {
         title: 'Restaurar contenido anterior',
         message: 'Se detectó contenido de lienzo anterior. ¿Desea restaurarlo?',
         restore: 'Restaurar',
-        discard: 'Descartar'
+        discard: 'Descartar',
+        restoreFailed: 'No se pudo restaurar el contenido anterior. Inténtalo de nuevo.'
     },
 
     // App Title
@@ -54,6 +75,7 @@ window.translations = {
         teachingTools: 'Herramientas',
         more: 'Más',
         settings: 'Configuración',
+        importProject: 'Importar proyecto',
         export: 'Exportar lienzo',
         zoomOut: 'Alejar (-)',
         zoomIn: 'Acercar (+)',
@@ -108,13 +130,14 @@ window.translations = {
             message: '¿Está seguro de que desea borrar el lienzo? Esta acción no se puede deshacer.'
         },
         refresh: {
-            warning: 'Al actualizar se borrará todo el contenido del lienzo y no se podrá recuperar. ¿Está seguro de que desea actualizar?'
+            warning: 'Aboard intentará guardar la pizarra actual antes de salir para que puedas restaurarla la próxima vez que la abras.'
         },
         lineStyle: {
             title: 'Estilo de línea',
             solid: 'Sólido',
             dashed: 'Discontinuo',
             dotted: 'Punteado',
+            dashdot: 'Guion y punto',
             wavy: 'Ondulado',
             double: 'Doble',
             triple: 'Triple',
@@ -134,6 +157,7 @@ window.translations = {
             placeholder: 'Ingrese el texto aquí',
             size: 'Tamaño',
             color: 'Color',
+            colorPicker: 'Selector de color',
             font: 'Fuente',
             style: 'Estilo',
             bold: 'Negrita',
@@ -244,10 +268,18 @@ window.translations = {
         addPointHintLineOnly: 'Al activarlo, haga clic en el lienzo para colocar puntos y dibujar solo la polilínea',
         addPointHintAuto: 'Al activarlo, haga clic en el lienzo para colocar puntos y conectarlos automáticamente',
         addPointHintSelected: 'Al activarlo, haga clic en el lienzo para añadir puntos. Al cambiar a Selección, solo se conectarán los puntos seleccionados',
+        addPointHintSelectedInteractive: 'Al activarlo, haga clic en un espacio vacío para añadir puntos y luego en dos puntos seguidos para conectarlos',
         clearPoints: 'Borrar puntos',
         clearPlots: 'Borrar gráficas',
         pointsCount: 'Puntos',
         plotExpression: 'Expresión',
+        plotColor: 'Color',
+        plotLineStyle: 'Estilo de línea',
+        plotStrokeWidth: 'Grosor',
+        plotRangeTitle: 'Rango de visualización',
+        plotRangeAxis: 'Eje',
+        plotRangeMin: 'Mínimo',
+        plotRangeMax: 'Máximo',
         plot: 'Graficar',
         inputPanel: 'Panel de entrada',
         keypadNumbers: 'Números',
@@ -258,17 +290,29 @@ window.translations = {
         plotHintPolar: 'Polar: introduzca r = f(theta), theta en radianes y deg en grados',
         plotPlaceholderCartesian: 'ej.: sin(x) + 2',
         plotPlaceholderPolar: 'ej.: 2 * sin(4 * theta)',
+        plotRangeMinPlaceholder: 'Valor mínimo',
+        plotRangeMaxPlaceholder: 'Valor máximo',
+        plotAddRange: 'Agregar rango',
+        plotCollapse: 'Contraer',
+        plotSave: 'Guardar',
+        plotRemoveRange: 'Eliminar rango',
+        plotNoRange: 'No hay límite de rango de visualización. Se muestra todo por defecto.',
         noPlots: 'Aún no hay gráficas',
         coordinateStatusAddPoint: 'Modo de dibujar puntos y líneas activado',
         coordinateStatusAddPointLineOnly: 'Modo solo línea activado. Haga clic en el lienzo para colocar puntos de coordenadas',
         coordinateStatusAddPointAuto: 'Modo conexión automática activado. Haga clic en el lienzo para colocar puntos de coordenadas',
         coordinateStatusAddPointSelected: 'Modo conectar selección activado. Haga clic en el lienzo para colocar puntos de coordenadas',
+        coordinateStatusAddPointSelectedInteractive: 'Modo conectar selección activado. Haga clic en un espacio vacío para añadir puntos y luego en dos puntos para conectarlos',
+        coordinateStatusSelectLineStartPoint: 'Se ha seleccionado el primer punto. Haga clic en otro punto para conectarlos.',
         coordinateStatusAddPointOff: 'Modo de dibujar puntos y líneas desactivado',
+        coordinateLineExists: 'Ya existe una línea entre estos dos puntos.',
+        coordinateLineCreated: 'Línea conectada.',
         connectPointsEnabled: 'Línea de puntos activada',
         connectPointsDisabled: 'Línea de puntos desactivada',
         pointAdded: 'Punto de coordenadas agregado',
         pointsCleared: 'Puntos de coordenadas borrados',
         plotAdded: 'Gráfica agregada',
+        plotUpdated: 'Gráfica actualizada',
         plotError: 'Expresión no válida, no se puede graficar',
         plotsCleared: 'Gráficas borradas'
     },
@@ -362,6 +406,16 @@ window.translations = {
             languageHint: 'Detecta automáticamente el idioma del sistema por defecto y permite cambiarlo manualmente en cualquier momento',
             globalFont: 'Fuente global',
             globalFontHint: 'Elegir la fuente utilizada en la aplicación',
+            fontManagementHint: 'Gestión de fuentes: permite ordenar, mostrar u ocultar, renombrar y previsualizar',
+            showFont: 'Mostrar fuente',
+            fontPreviewSample: 'Vista previa de fuente ABC abc 123',
+            fontPreviewText: 'Texto de vista previa',
+            fontPreviewSize: 'Tamaño de vista previa',
+            fontPreviewResetText: 'Restaurar texto',
+            renameFont: 'Renombrar',
+            expandPreview: 'Ampliar',
+            confirmDeleteFont: '¿Seguro que quieres eliminar la fuente personalizada "{font}"?',
+            resetFontManagementConfirm: 'Restablecer la gestión de fuentes eliminará las fuentes subidas y restaurará el orden, los nombres y la vista previa predeterminados. ¿Continuar?',
             downloadedLanguagePacks: 'Paquetes de idioma descargados',
             dismissedLanguageSuggestion: 'Estado de descarte de la sugerencia de idioma',
             updatePreference: 'Modo de actualización',
@@ -628,7 +682,9 @@ window.translations = {
         rotate: 'Rotar',
         resize: 'Cambiar tamaño',
         delete: 'Eliminar',
-        drawAlongEdge: 'Dibujar a lo largo del borde'
+        drawAlongEdge: 'Dibujar a lo largo del borde',
+        increaseCount: 'Aumentar la cantidad de {tool}',
+        decreaseCount: 'Disminuir la cantidad de {tool}',
     },
 
     // Time Display
@@ -805,10 +861,55 @@ Consejos de uso:
     },
 
     export: {
+        imageTab: 'Exportar imagen',
+        projectTab: 'Exportar proyecto (.zip)',
+        scopeLabel: 'Alcance de la exportación',
+        scopeCurrent: 'Página actual',
+        scopeAll: 'Todas las páginas',
+        scopeSpecific: 'Páginas específicas',
+        pageSelectionLabel: 'Seleccionar páginas para exportar',
+        imageFormatLabel: 'Formato de imagen',
+        imageQualityLabel: 'Calidad de imagen',
+        projectHint: 'Exporta como un paquete de proyecto .zip estándar que incluye páginas, fondos y recursos. Después de importarlo, podrás seguir editando objetos por página; la importación heredada de .aboard sigue siendo opcional desde Ajustes.',
+        fileNameLabel: 'Nombre del archivo',
+        fileNamePrefixLabel: 'Prefijo del nombre de archivo',
+        fileNamePlaceholder: 'Introducir nombre del archivo',
+        fileNameHint: 'Al exportar varias páginas, los números de página se añadirán automáticamente al nombre del archivo.',
         failed: 'La exportación ha fallado. Inténtalo de nuevo.'
     },
 
+    projectPackage: {
+        importSuccess: 'Proyecto importado correctamente.',
+        legacyImportSuccess: 'Proyecto heredado importado correctamente.',
+        importFailed: 'La importación del proyecto ha fallado: {message}',
+        exportFailed: 'La exportación del proyecto ha fallado: {message}',
+        overwriteConfirm: 'Importar un proyecto reemplazará el contenido actual de la pizarra. ¿Continuar?',
+        overwriteDetail: 'Las páginas y recursos actuales de la pizarra se reemplazarán por el contenido del paquete del proyecto.',
+        legacyCompatibilityDisabled: 'La compatibilidad de importación heredada .aboard está desactivada. Actívala primero en la configuración.',
+        zipLoaderUnavailable: 'El cargador de la biblioteca ZIP no está disponible.',
+        zipLoadFailed: 'No se pudo cargar la biblioteca ZIP.',
+        legacyLoaderUnavailable: 'El cargador de compatibilidad heredada no está disponible.',
+        legacyModuleLoadFailed: 'No se pudo cargar el módulo de compatibilidad de proyectos heredados.',
+        base64DecoderUnavailable: 'El decodificador Base64 no está disponible.',
+        base64EncoderUnavailable: 'El codificador Base64 no está disponible.',
+        unsupportedPackage: 'Este no es un paquete de proyecto Aboard compatible.',
+        missingDocument: 'El paquete del proyecto no incluye document.json.',
+        missingPages: 'El paquete del proyecto no contiene datos de páginas.',
+        missingAsset: 'El paquete del proyecto no contiene el archivo de recurso: {path}',
+        missingPageFile: 'El paquete del proyecto no contiene el archivo de página: {path}',
+        invalidLegacyFormat: 'Formato de archivo de proyecto heredado no válido.',
+        legacyMissingPages: 'El archivo de proyecto heredado no contiene datos de páginas.'
+    },
+
+    randomPicker: {
+        importColumnPlaceholder: 'Columna',
+        importLibraryLoadFailed: 'No se pudo cargar la biblioteca de importación de Excel. Recarga la página e inténtalo de nuevo.'
+    },
+
     gif: {
-        loopCountPrompt: 'Define el número de repeticiones (0 para infinito):'
+        settingsTitle: 'Configuración GIF',
+        loopCountLabel: 'Número de reproducciones (0 = bucle infinito)',
+        loopCountPrompt: 'Define el número de repeticiones (0 para infinito):',
+        loopCountInvalid: 'Introduce un número entero mayor o igual que 0.'
     }
 };

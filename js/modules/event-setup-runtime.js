@@ -5,6 +5,15 @@ function bindIfPresent(element, eventName, handler, options) {
         element?.addEventListener?.(eventName, handler, options);
 }
 
+function getLazyFeatureLabel(key, fallback) {
+        if (!window.i18n?.t) {
+            return fallback;
+        }
+
+        const translated = window.i18n.t(key);
+        return translated && translated !== key ? translated : fallback;
+}
+
 function setupEventListeners() {
         // Canvas drawing events - use Pointer Events for unified Mouse/Touch/Pen support
         // Track all pointers for multi-touch gesture detection (pinch zoom)
@@ -109,7 +118,7 @@ function setupEventListeners() {
                 this.resetSelectedCoordinateLineConnection();
                 this.savePageBackground(this.currentPage);
                 this.updateBackgroundUI();
-                this.showCoordinateToast('background.pointAdded', '已添加坐标点', 'success');
+                this.showCoordinateToast('background.pointAdded', 'Coordinate point added', 'success');
                 return;
             }
 
@@ -517,7 +526,7 @@ function setupEventListeners() {
                 const exportManager = await this.getExportManager();
                 exportManager.showModal();
             } catch (error) {
-                this.showLazyLoadError('导出', error);
+                this.showLazyLoadError(getLazyFeatureLabel('toolbar.export', 'Export'), error);
             }
         });
 
@@ -535,7 +544,7 @@ function setupEventListeners() {
                         const projectManager = await this.getProjectManager();
                         await projectManager.importProject(e.target.files[0]);
                     } catch (error) {
-                        this.showLazyLoadError('项目导入', error);
+                        this.showLazyLoadError(getLazyFeatureLabel('settings.more.compatibilityLabel', 'Project Import'), error);
                     }
                 }
             };

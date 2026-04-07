@@ -7,7 +7,20 @@ export class GifManager {
     this.nextId = 1;
     this.defaultLoopCount = 0;
     this.defaultAutoPlay = true;
+    this.handleLocaleChanged = () => this.refreshControlLabels();
+    this.win.addEventListener?.('localeChanged', this.handleLocaleChanged);
     this.loadState();
+  }
+
+  getText(key, fallback) {
+    const translated = this.win.i18n?.t?.(key);
+    return translated && translated !== key ? translated : fallback;
+  }
+
+  getPlayButtonLabel(isPlaying) {
+    return isPlaying
+      ? this.getText('common.stop', 'Stop')
+      : this.getText('common.start', 'Start');
   }
 
   saveState() {
@@ -101,7 +114,7 @@ export class GifManager {
       };
     }
 
-    this._addControls(container, id);
+    const controls = this._addControls(container, id);
     this._addResizeHandles(container, id);
 
     this.layer.appendChild(container);
@@ -112,8 +125,10 @@ export class GifManager {
       container,
       src,
       loopCount: options.loopCount !== undefined ? options.loopCount : this.defaultLoopCount,
-      isPlaying: options.autoPlay !== undefined ? options.autoPlay : this.defaultAutoPlay
+      isPlaying: options.autoPlay !== undefined ? options.autoPlay : this.defaultAutoPlay,
+      controls
     });
+    this._updatePlayButton(id);
 
     if (!options.skipSave && src) this.saveState();
 
@@ -205,6 +220,8 @@ export class GifManager {
     }
 
     const playBtn = this.doc.createElement('button');
+    playBtn.type = 'button';
+    playBtn.dataset.gifAction = 'toggle-play';
     playBtn.innerHTML = '⏸';
     playBtn.style.color = 'white';
     playBtn.style.border = 'none';
@@ -220,6 +237,8 @@ export class GifManager {
     controls.appendChild(playBtn);
 
     const settingsBtn = this.doc.createElement('button');
+    settingsBtn.type = 'button';
+    settingsBtn.dataset.gifAction = 'open-settings';
     settingsBtn.innerHTML = '⚙';
     settingsBtn.style.color = 'white';
     settingsBtn.style.border = 'none';
@@ -235,6 +254,8 @@ export class GifManager {
     controls.appendChild(settingsBtn);
 
     const deleteBtn = this.doc.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.dataset.gifAction = 'delete';
     deleteBtn.innerHTML = '🗑';
     deleteBtn.style.color = 'white';
     deleteBtn.style.border = 'none';
@@ -265,6 +286,8 @@ export class GifManager {
         controls.style.display = controls.style.display === 'none' ? 'flex' : 'none';
       }
     });
+
+    return { playBtn, settingsBtn, deleteBtn };
   }
 
   _addResizeHandles(container) {
@@ -287,10 +310,39 @@ export class GifManager {
   _updatePlayButton(id) {
     const data = this.gifs.get(id);
     if (!data) return;
-    const playBtn = data.container.querySelector('.gif-controls button');
+    data.controls?.playBtn && (data.controls.playBtn.innerHTML = data.isPlaying ? '⏸' : '▶');
+    this._updateControlLabels(id);
+  }
+
+  _updateControlLabels(id) {
+    const data = this.gifs.get(id);
+    if (!data?.controls) return;
+
+    const { playBtn, settingsBtn, deleteBtn } = data.controls;
     if (playBtn) {
-      playBtn.innerHTML = data.isPlaying ? '⏸' : '▶';
+      const label = this.getPlayButtonLabel(data.isPlaying);
+      playBtn.title = label;
+      playBtn.setAttribute('aria-label', label);
+      playBtn.setAttribute('aria-pressed', data.isPlaying ? 'true' : 'false');
     }
+
+    if (settingsBtn) {
+      const label = this.getText('gif.settingsTitle', 'GIF Settings');
+      settingsBtn.title = label;
+      settingsBtn.setAttribute('aria-label', label);
+    }
+
+    if (deleteBtn) {
+      const label = this.getText('common.delete', 'Delete');
+      deleteBtn.title = label;
+      deleteBtn.setAttribute('aria-label', label);
+    }
+  }
+
+  refreshControlLabels() {
+    this.gifs.forEach((_, id) => {
+      this._updateControlLabels(id);
+    });
   }
 
   togglePlay(id) {
@@ -301,6 +353,12 @@ export class GifManager {
       data.instance.pause();
       data.isPlaying = false;
     } else {
+      if (data.loopCount > 0 && data.currentLoop >= data.loopCount) {
+        data.currentLoop = 0;
+        if (typeof data.instance.move_to === 'function') {
+          data.instance.move_to(0);
+        }
+      }
       data.instance.play();
       data.isPlaying = true;
     }
@@ -312,16 +370,43 @@ export class GifManager {
     const data = this.gifs.get(id);
     if (!data) return;
 
-    const input = this.win.prompt
-      ? this.win.prompt('Set loop count (0 = infinite):', String(data.loopCount ?? this.defaultLoopCount))
-      : prompt('Set loop count (0 = infinite):', String(data.loopCount ?? this.defaultLoopCount));
-    if (input === null) return;
-    const loopCount = parseInt(input, 10);
-    if (!Number.isNaN(loopCount) && loopCount >= 0) {
+    const promptMessage = this.win.i18n?.t('gif.loopCountPrompt') || 'Set loop count (0 for infinite):';
+    const invalidMessage = this.win.i18n?.t('gif.loopCountInvalid') || 'Please enter an integer that is 0 or greater.';
+    const dialog = this.win.appDialog;
+    if (!dialog?.showPrompt) {
+      console.warn('DialogManager prompt is unavailable for GIF settings; ignoring the request.');
+      dialog?.showAlert?.(invalidMessage, 'warning');
+      return;
+    }
+
+    dialog.showPrompt({
+      title: this.getText('gif.settingsTitle', 'GIF Settings'),
+      message: promptMessage,
+      label: promptMessage,
+      defaultValue: String(data.loopCount ?? this.defaultLoopCount),
+      inputType: 'number',
+      inputMode: 'numeric',
+      min: 0,
+      step: 1,
+      required: true,
+      requiredMessage: invalidMessage,
+      validate: (value) => {
+        if (!/^\d+$/.test(String(value || ''))) {
+          return invalidMessage;
+        }
+        return Number.parseInt(value, 10) >= 0 ? '' : invalidMessage;
+      }
+    }).then((inputValue) => {
+      if (inputValue === null) return;
+      const loopCount = Number.parseInt(inputValue, 10);
+      if (Number.isNaN(loopCount) || loopCount < 0) {
+        dialog.showAlert?.(invalidMessage, 'warning');
+        return;
+      }
       data.loopCount = loopCount;
       data.currentLoop = 0;
       this.saveState();
-    }
+    });
   }
 
   removeGif(id) {

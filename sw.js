@@ -97,6 +97,7 @@ const CORE_ASSETS = [
   './js/modules/cache-runtime.js',
   './js/modules/customization-runtime.js',
   './js/modules/display-runtime.js',
+  './js/modules/page-scene-runtime.js',
   './js/modules/pagination-runtime.js',
   './js/modules/interaction-runtime.js',
   './js/modules/uploaded-images-runtime.js',
@@ -200,16 +201,24 @@ async function networkFirst(request) {
 }
 
 async function cacheFirst(request) {
-  const cache = await caches.open(RUNTIME_CACHE_NAME);
-  const cached = await cache.match(request);
-  if (cached) {
-    return cached;
+  const runtimeCache = await caches.open(RUNTIME_CACHE_NAME);
+  const runtimeCached = await runtimeCache.match(request);
+  if (runtimeCached) {
+    return runtimeCached;
+  }
+
+  const coreCache = await caches.open(CORE_CACHE_NAME);
+  const coreCached = await coreCache.match(request);
+  if (coreCached) {
+    return coreCached;
   }
 
   const response = await fetch(request);
   if (response && response.ok) {
-    await storeRuntimeResponse(cache, request, response);
+    await storeRuntimeResponse(runtimeCache, request, response);
+    return response;
   }
+
   return response;
 }
 

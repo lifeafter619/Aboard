@@ -8,12 +8,19 @@ function getTextWithFallback(key, fallback) {
     
 }
 
+function getI18nText(key, fallback) {
+        const translated = window.i18n?.t?.(key);
+        return translated && translated !== key ? translated : fallback;
+
+}
+
 function getFontPreviewSettings() {
+        const previewSample = getI18nText('settings.general.fontPreviewSample', 'Font Preview ABC abc 123');
         return this.settingsManager?.getFontPreviewSettings?.() || {
-            sampleText: '一个白板-Aboard-123',
+            sampleText: previewSample,
             fontSize: 48
         };
-    
+
 }
 
 function updateSharedFontPreviewSettings(partialSettings = {}) {
@@ -24,6 +31,22 @@ function updateSharedFontPreviewSettings(partialSettings = {}) {
 function resetSharedFontPreviewSettings(options = {}) {
         this.settingsManager?.resetFontPreviewSettings?.(options);
         this.syncFontPreviewDisplays();
+}
+
+function getDialogConfirm(board, config) {
+        if (window.appDialog?.showConfirm) {
+            return window.appDialog.showConfirm(config);
+        }
+        console.warn('DialogManager is unavailable for confirmation; cancelling the action.');
+        return Promise.resolve(false);
+}
+
+function formatTextWithFallback(key, fallback, replacements = {}) {
+        const template = getTextWithFallback(key, fallback);
+        return Object.entries(replacements).reduce(
+            (message, [name, value]) => message.replaceAll(`{${name}}`, String(value ?? '')),
+            String(template)
+        );
 }
 
 function buildFontPreviewPanel(font) {
@@ -38,7 +61,7 @@ function buildFontPreviewPanel(font) {
         const textField = document.createElement('label');
         textField.className = 'font-preview-field';
         const textLabel = document.createElement('span');
-        textLabel.textContent = this.getTextWithFallback('settings.general.fontPreviewText', '预览内容');
+        textLabel.textContent = this.getTextWithFallback('settings.general.fontPreviewText', 'Preview Text');
         const textInput = document.createElement('input');
         textInput.type = 'text';
         textInput.className = 'font-preview-text-input';
@@ -50,7 +73,7 @@ function buildFontPreviewPanel(font) {
         const sizeField = document.createElement('div');
         sizeField.className = 'font-preview-field';
         const sizeLabel = document.createElement('span');
-        sizeLabel.textContent = this.getTextWithFallback('settings.general.fontPreviewSize', '预览字号');
+        sizeLabel.textContent = this.getTextWithFallback('settings.general.fontPreviewSize', 'Preview Size');
         const sizeRow = document.createElement('div');
         sizeRow.className = 'font-preview-size-row';
         const sizeRange = document.createElement('input');
@@ -73,12 +96,12 @@ function buildFontPreviewPanel(font) {
         sizeResetBtn.type = 'button';
         sizeResetBtn.className = 'button-secondary font-preview-inline-btn';
         sizeResetBtn.dataset.fontPreviewControl = 'size-reset';
-        sizeResetBtn.textContent = this.getTextWithFallback('common.restoreSize', '恢复大小');
+        sizeResetBtn.textContent = this.getTextWithFallback('common.restoreSize', 'Restore Size');
         const textResetBtn = document.createElement('button');
         textResetBtn.type = 'button';
         textResetBtn.className = 'button-secondary font-preview-inline-btn';
         textResetBtn.dataset.fontPreviewControl = 'text-reset';
-        textResetBtn.textContent = this.getTextWithFallback('settings.general.fontPreviewResetText', '恢复内容');
+        textResetBtn.textContent = this.getTextWithFallback('settings.general.fontPreviewResetText', 'Restore Text');
         sizeRow.appendChild(sizeRange);
         sizeRow.appendChild(sizeInput);
         sizeRow.appendChild(sizeResetBtn);
@@ -225,7 +248,7 @@ function syncFontPreviewModal() {
 
         this.activeFontPreviewFont = activeFont.value;
         if (title) {
-            title.textContent = `${this.getTextWithFallback('common.preview', '预览')} · ${activeFont.label}`;
+            title.textContent = `${this.getTextWithFallback('common.preview', 'Preview')} · ${activeFont.label}`;
         }
         if (sample) {
             sample.textContent = settings.sampleText;
@@ -249,13 +272,13 @@ function renderFontManagementList() {
         if (!list || !this.settingsManager?.getManagedFontOptions) return;
 
         const fonts = this.settingsManager.getManagedFontOptions();
-        const showLabel = this.getTextWithFallback('settings.general.showFont', '显示字体');
-        const renameLabel = this.getTextWithFallback('settings.general.renameFont', '修改名称');
-        const previewLabel = this.getTextWithFallback('common.preview', '预览');
-        const expandLabel = this.getTextWithFallback('settings.general.expandPreview', '放大');
-        const confirmLabel = this.getTextWithFallback('common.confirm', '确定');
-        const cancelLabel = this.getTextWithFallback('common.cancel', '取消');
-        const deleteLabel = this.getTextWithFallback('common.delete', '删除');
+        const showLabel = this.getTextWithFallback('settings.general.showFont', 'Show Font');
+        const renameLabel = this.getTextWithFallback('settings.general.renameFont', 'Rename');
+        const previewLabel = this.getTextWithFallback('common.preview', 'Preview');
+        const expandLabel = this.getTextWithFallback('settings.general.expandPreview', 'Expand');
+        const confirmLabel = this.getTextWithFallback('common.confirm', 'Confirm');
+        const cancelLabel = this.getTextWithFallback('common.cancel', 'Cancel');
+        const deleteLabel = this.getTextWithFallback('common.delete', 'Delete');
         list.innerHTML = '';
 
         fonts.forEach(font => {
@@ -394,8 +417,17 @@ function renderFontManagementList() {
             });
 
             const deleteBtn = actionGroup.querySelector('.delete-btn');
-            deleteBtn?.addEventListener('click', () => {
-                const confirmed = window.confirm(`确定删除自定义字体“${font.label}”吗？`);
+            deleteBtn?.addEventListener('click', async () => {
+                const confirmed = await getDialogConfirm(this, {
+                    title: this.getTextWithFallback('common.delete', 'Delete'),
+                    message: formatTextWithFallback(
+                        'settings.general.confirmDeleteFont',
+                        'Are you sure you want to delete the custom font "{font}"?',
+                        { font: font.label }
+                    ),
+                    confirmText: this.getTextWithFallback('common.delete', 'Delete'),
+                    cancelText: this.getTextWithFallback('common.cancel', 'Cancel')
+                });
                 if (!confirmed) return;
                 if (this.settingsManager.deleteCustomFont(font.value)) {
                     this.openFontPreviewPanels.delete(font.value);
@@ -438,8 +470,16 @@ function renderFontManagementList() {
 
 function initFontManagement() {
         const resetDefaultsBtn = document.getElementById('font-reset-defaults-btn');
-        resetDefaultsBtn?.addEventListener('click', () => {
-            const confirmed = window.confirm('恢复默认状态会删除已上传字体，并重置字体顺序、名称和预览设置。是否继续？');
+        resetDefaultsBtn?.addEventListener('click', async () => {
+            const confirmed = await getDialogConfirm(this, {
+                title: this.getTextWithFallback('common.reset', 'Reset'),
+                message: this.getTextWithFallback(
+                    'settings.general.resetFontManagementConfirm',
+                    'Resetting font management will remove uploaded fonts and restore the default order, names, and preview settings. Continue?'
+                ),
+                confirmText: this.getTextWithFallback('common.reset', 'Reset'),
+                cancelText: this.getTextWithFallback('common.cancel', 'Cancel')
+            });
             if (!confirmed) return;
             this.settingsManager.resetFontManagementToDefaults();
             this.openFontPreviewPanels.clear();

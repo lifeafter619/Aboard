@@ -191,11 +191,20 @@ function restorePageBackground(pageNumber) {
 }
 
 function updatePaginationUI() {
-        document.getElementById('page-input').value = this.currentPage;
-        document.getElementById('page-total').textContent = `/ ${this.pages.length}`;
-        
+        const pageInput = document.getElementById('page-input');
+        const pageTotal = document.getElementById('page-total');
         const prevBtn = document.getElementById('prev-page-btn');
         const nextOrAddBtn = document.getElementById('next-or-add-page-btn');
+
+        if (pageInput) {
+            pageInput.value = this.currentPage;
+        }
+        if (pageTotal) {
+            pageTotal.textContent = `/ ${this.pages.length}`;
+        }
+        if (!prevBtn || !nextOrAddBtn) {
+            return;
+        }
         
         prevBtn.disabled = this.currentPage <= 1;
         nextOrAddBtn.disabled = false;
@@ -210,7 +219,9 @@ function updatePaginationUI() {
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
             `;
-            nextOrAddBtn.title = window.i18n ? window.i18n.t('page.newPage') : '新建页面';
+            const label = window.i18n ? window.i18n.t('page.newPage') : 'New Page';
+            nextOrAddBtn.title = label;
+            nextOrAddBtn.setAttribute('aria-label', label);
         } else {
             // Show next icon
             nextOrAddBtn.innerHTML = `
@@ -218,7 +229,9 @@ function updatePaginationUI() {
                     <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>
             `;
-            nextOrAddBtn.title = window.i18n ? window.i18n.t('page.next') : '下一页';
+            const label = window.i18n ? window.i18n.t('page.next') : 'Next Page';
+            nextOrAddBtn.title = label;
+            nextOrAddBtn.setAttribute('aria-label', label);
         }
     
 }

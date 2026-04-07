@@ -3,7 +3,7 @@
 
         Example usage:
 
-                <img src="./example1_preview.gif" rel:animated_src="./example1.gif" width="360" height="360" rel:auto_play="1" />
+                <img src="./example1_preview.gif" rel:animated_src="./example1.gif" width="360" height="360" rel:auto_play="1" alt="" />
 
                 <script type="text/javascript">
                         $$('img').each(function (img_tag) {

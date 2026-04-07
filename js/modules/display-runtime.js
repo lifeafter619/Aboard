@@ -14,7 +14,9 @@ function toggleFullscreen() {
                     <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
                 </svg>
             `;
-            btn.title = this.getFullscreenButtonTitle(true);
+            const label = this.getFullscreenButtonTitle(true);
+            btn.title = label;
+            btn.setAttribute('aria-label', label);
         } else {
             // Exit fullscreen
             document.exitFullscreen();
@@ -25,7 +27,9 @@ function toggleFullscreen() {
                     <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
                 </svg>
             `;
-            btn.title = this.getFullscreenButtonTitle(false);
+            const label = this.getFullscreenButtonTitle(false);
+            btn.title = label;
+            btn.setAttribute('aria-label', label);
         }
     
 }
@@ -67,7 +71,9 @@ function handleFullscreenChange() {
                     <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
                 </svg>
             `;
-            btn.title = this.getFullscreenButtonTitle(false);
+            const label = this.getFullscreenButtonTitle(false);
+            btn.title = label;
+            btn.setAttribute('aria-label', label);
         } else {
             // Entered fullscreen
             btn.innerHTML = `
@@ -75,7 +81,9 @@ function handleFullscreenChange() {
                     <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
                 </svg>
             `;
-            btn.title = this.getFullscreenButtonTitle(true);
+            const label = this.getFullscreenButtonTitle(true);
+            btn.title = label;
+            btn.setAttribute('aria-label', label);
         }
     
 }

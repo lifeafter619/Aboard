@@ -57,21 +57,21 @@ class ImageControls {
                     <div class="resize-handle left" data-handle="left"></div>
                     
                     <!-- Rotation handle -->
-                    <div class="rotate-handle" id="rotate-handle" data-i18n-title="imageControls.rotate">
+                    <div class="rotate-handle" id="rotate-handle" data-i18n-title="imageControls.rotate" title="Rotate" aria-label="Rotate">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                             <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                         </svg>
                     </div>
                     
                     <!-- Flip horizontal handle -->
-                    <div class="flip-handle flip-horizontal" id="flip-horizontal-handle" data-i18n-title="imageControls.flipHorizontal">
+                    <div class="flip-handle flip-horizontal" id="flip-horizontal-handle" data-i18n-title="imageControls.flipHorizontal" title="Flip Horizontal" aria-label="Flip Horizontal">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                             <path d="M12 3v18M8 6l-5 6 5 6M16 6l5 6-5 6"/>
                         </svg>
                     </div>
                     
                     <!-- Flip vertical handle -->
-                    <div class="flip-handle flip-vertical" id="flip-vertical-handle" data-i18n-title="imageControls.flipVertical">
+                    <div class="flip-handle flip-vertical" id="flip-vertical-handle" data-i18n-title="imageControls.flipVertical" title="Flip Vertical" aria-label="Flip Vertical">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                             <path d="M3 12h18M6 8l6-5 6 5M6 16l6 5 6-5"/>
                         </svg>
@@ -79,19 +79,19 @@ class ImageControls {
                     
                     <!-- Control toolbar -->
                     <div class="image-controls-toolbar">
-                        <button id="image-copy-btn" class="image-control-btn" type="button" data-i18n-title="selection.copy">
+                        <button id="image-copy-btn" class="image-control-btn" type="button" data-i18n-title="selection.copy" title="Copy" aria-label="Copy">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                             </svg>
                         </button>
-                        <button id="image-delete-btn" class="image-control-btn image-cancel-btn" type="button" data-i18n-title="selection.delete">
+                        <button id="image-delete-btn" class="image-control-btn image-cancel-btn" type="button" data-i18n-title="selection.delete" title="Delete" aria-label="Delete">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                             </svg>
                         </button>
-                        <button id="image-done-btn" class="image-control-btn image-done-btn" data-i18n-title="imageControls.confirm">
+                        <button id="image-done-btn" class="image-control-btn image-done-btn" data-i18n-title="imageControls.confirm" title="Confirm" aria-label="Confirm">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>

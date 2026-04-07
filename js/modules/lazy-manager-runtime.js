@@ -32,7 +32,9 @@ async function loadManagerConstructor(board, name) {
 
 function showLazyLoadError(board, featureName, error) {
     console.error(`Failed to load ${featureName}:`, error);
-    const message = `加载${featureName}功能失败，请刷新页面后重试。`;
+    const message = window.i18n
+        ? window.i18n.t('errors.lazyLoadFailed', { feature: featureName })
+        : `Failed to load ${featureName}. Please refresh and try again.`;
     if (board.settingsManager?.toastManager) {
         board.settingsManager.toastManager.show(message, 'error');
         return;

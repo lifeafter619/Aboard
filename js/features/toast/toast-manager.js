@@ -64,5 +64,8 @@ export function registerToastManagerGlobal(win = window, doc = document) {
   }
 
   win.ToastManager = BoundToastManager;
+  if (!win.toastManager) {
+    win.toastManager = new BoundToastManager();
+  }
   return BoundToastManager;
 }

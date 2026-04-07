@@ -1,5 +1,21 @@
 // Legacy .aboard/.json project compatibility, loaded on demand.
 
+function getProjectPackageText(manager, key, fallback, replacements = null) {
+    if (typeof manager?.t === 'function') {
+        return manager.t(key, fallback, replacements);
+    }
+
+    const translated = window.i18n?.t?.(key) || fallback;
+    if (!replacements || typeof translated !== 'string') {
+        return translated;
+    }
+
+    return Object.entries(replacements).reduce(
+        (message, [name, value]) => message.replaceAll(`{${name}}`, String(value ?? '')),
+        translated
+    );
+}
+
 async function importLegacyProject(manager, file) {
     if (!file) return false;
 
@@ -8,11 +24,11 @@ async function importLegacyProject(manager, file) {
     try {
         data = JSON.parse(text);
     } catch (error) {
-        throw new Error('无效的旧版项目文件格式');
+        throw new Error(getProjectPackageText(manager, 'projectPackage.invalidLegacyFormat', 'Invalid legacy project file format.'));
     }
 
     if (!data.pages || !Array.isArray(data.pages) || data.pages.length === 0) {
-        throw new Error('旧版项目文件缺少页面数据');
+        throw new Error(getProjectPackageText(manager, 'projectPackage.legacyMissingPages', 'The legacy project file does not contain page data.'));
     }
 
     const confirmed = await manager.confirmImportOverwrite();
@@ -52,7 +68,7 @@ async function importLegacyProject(manager, file) {
         pageCount: pagesImageData.length
     });
 
-    window.appDialog?.showAlert?.('旧版项目导入成功', 'success');
+    window.appDialog?.showAlert?.(getProjectPackageText(manager, 'projectPackage.legacyImportSuccess', 'Legacy project imported successfully.'), 'success');
     return true;
 }
 

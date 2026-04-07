@@ -37,12 +37,14 @@ class LineStyleModal {
     }
     
     createModal() {
+        const closeLabel = window.i18n?.t?.('common.close') || 'Close';
+        const expandPreviewLabel = window.i18n?.t?.('settings.general.expandPreview') || 'Expand';
         const modalHTML = `
             <div id="line-style-modal" class="modal">
                 <div class="modal-content line-style-modal-content">
                     <div class="line-style-modal-header">
                         <h2 data-i18n="tools.lineStyle.title">Line Style</h2>
-                        <button id="line-style-modal-close" class="line-style-modal-close" title="Close">
+                        <button id="line-style-modal-close" class="line-style-modal-close" data-i18n-title="common.close" aria-label="${closeLabel}" title="${closeLabel}">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -93,25 +95,25 @@ class LineStyleModal {
                             <!-- Dash Density Setting -->
                             <div class="line-style-modal-setting" id="modal-dash-density-setting" style="display: none;">
                                 <label><span data-i18n="tools.lineStyle.dashDensity">Dash Density</span>: <span id="modal-dash-density-value">50</span></label>
-                                <input type="range" id="modal-dash-density-slider" min="1" max="100" value="50" class="slider">
+                                <input type="range" id="modal-dash-density-slider" min="1" max="100" value="50" class="slider" data-i18n-aria-label="tools.lineStyle.dashDensity" aria-label="Dash Density">
                             </div>
                             
                             <!-- Wave Density Setting -->
                             <div class="line-style-modal-setting" id="modal-wave-density-setting" style="display: none;">
                                 <label><span data-i18n="tools.lineStyle.waveDensity">Wave Density</span>: <span id="modal-wave-density-value">10</span></label>
-                                <input type="range" id="modal-wave-density-slider" min="5" max="30" value="10" class="slider">
+                                <input type="range" id="modal-wave-density-slider" min="5" max="30" value="10" class="slider" data-i18n-aria-label="tools.lineStyle.waveDensity" aria-label="Wave Density">
                             </div>
                             
                             <!-- Multi-line Count Setting -->
                             <div class="line-style-modal-setting" id="modal-line-count-setting" style="display: none;">
                                 <label><span data-i18n="tools.lineStyle.lineCount">Line Count</span>: <span id="modal-line-count-value">2</span></label>
-                                <input type="range" id="modal-line-count-slider" min="2" max="10" value="2" class="slider">
+                                <input type="range" id="modal-line-count-slider" min="2" max="10" value="2" class="slider" data-i18n-aria-label="tools.lineStyle.lineCount" aria-label="Line Count">
                             </div>
                             
                             <!-- Multi-line Spacing Setting -->
                             <div class="line-style-modal-setting" id="modal-line-spacing-setting" style="display: none;">
                                 <label><span data-i18n="tools.lineStyle.lineSpacing">Line Spacing</span>: <span id="modal-line-spacing-value">10</span>px</label>
-                                <input type="range" id="modal-line-spacing-slider" min="5" max="50" value="10" class="slider">
+                                <input type="range" id="modal-line-spacing-slider" min="5" max="50" value="10" class="slider" data-i18n-aria-label="tools.lineStyle.lineSpacing" aria-label="Line Spacing">
                             </div>
                         </div>
                         
@@ -120,7 +122,7 @@ class LineStyleModal {
                             <label data-i18n="lineStyleModal.preview">Preview</label>
                             <div class="line-style-preview-area" id="line-style-preview-container">
                                 <canvas id="line-style-preview-canvas" width="320" height="80"></canvas>
-                                <button id="preview-expand-btn" class="preview-expand-btn" style="display: none;" title="Expand Preview">
+                                <button id="preview-expand-btn" class="preview-expand-btn" style="display: none;" data-i18n-title="settings.general.expandPreview" aria-label="${expandPreviewLabel}" title="${expandPreviewLabel}">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                                     </svg>
@@ -585,6 +587,7 @@ class LineStyleModal {
     
     // Show expanded preview modal
     showExpandedPreview() {
+        const closeLabel = window.i18n?.t?.('common.close') || 'Close';
         // Create expanded preview modal if it doesn't exist
         let expandedModal = document.getElementById('line-style-preview-expanded-modal');
         if (!expandedModal) {
@@ -593,7 +596,7 @@ class LineStyleModal {
                     <div class="modal-content expanded-preview-modal-content">
                         <div class="line-style-modal-header">
                             <h2 data-i18n="lineStyleModal.preview">Preview</h2>
-                            <button id="expanded-preview-close" class="line-style-modal-close" title="Close">
+                            <button id="expanded-preview-close" class="line-style-modal-close" data-i18n-title="common.close" aria-label="${closeLabel}" title="${closeLabel}">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <line x1="18" y1="6" x2="6" y2="18"></line>
                                     <line x1="6" y1="6" x2="18" y2="18"></line>

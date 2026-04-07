@@ -7,7 +7,7 @@ function showConfigDiffModal(diff, newSettings) {
         list.innerHTML = '';
 
         if (diff.length === 0) {
-            const noChangeMsg = window.i18n ? window.i18n.t('settings.importNoChange') : '没有检测到配置变更';
+            const noChangeMsg = window.i18n?.t('settings.importNoChange') || 'No configuration changes detected';
             list.innerHTML = `<div style="padding:10px; text-align:center;">${noChangeMsg}</div>`;
         } else {
             diff.forEach((item, index) => {
@@ -180,7 +180,7 @@ function showConfigDiffModal(diff, newSettings) {
                 }
                 this.repositionModalsOnResize();
 
-                const successMsg = window.i18n ? window.i18n.t('settings.importSuccess') : '配置已导入';
+                const successMsg = window.i18n?.t('settings.importSuccess') || 'Configuration imported successfully';
                 if (this.settingsManager.toastManager) {
                     this.settingsManager.toastManager.show(successMsg, 'success');
                 } else {

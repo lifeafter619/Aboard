@@ -18,18 +18,39 @@ window.translations = {
         no: 'Nein',
         ok: 'OK',
         help: 'Hilfe',
+        export: 'Exportieren',
         apply: 'Anwenden',
         reset: 'Zurücksetzen',
         restoreSize: 'Größe zurücksetzen',
         keepCentered: 'Zentriert halten'
     },
 
+    errors: {
+        lazyLoadFailed: '{feature} konnte nicht geladen werden. Bitte laden Sie die Seite neu und versuchen Sie es erneut.'
+    },
+
+    prompts: {
+        localeDownloadPrompt: 'Sprachpaket für {locale} jetzt herunterladen?',
+        preferredLocaleSuggestionPrompt: 'Wir haben erkannt, dass Ihre bevorzugte Browsersprache {locale} ist. Jetzt herunterladen und dorthin wechseln?'
+    },
+
+    browserCheck: {
+        title: 'Browser-Kompatibilität',
+        message: 'Diesem Browser fehlen folgende erforderliche Funktionen:',
+        updateHint: 'Für das beste Erlebnis aktualisieren Sie bitte auf die neueste Version von Chrome, Edge, Firefox oder Safari.',
+        continueAnyway: 'Trotzdem fortfahren',
+        features: {
+            canvas: 'Canvas-API',
+            es6: 'Modernes JavaScript (ES6)'
+        }
+    },
     // Recovery dialog
     recovery: {
         title: 'Vorherigen Inhalt wiederherstellen',
         message: 'Vorheriger Canvas-Inhalt wurde erkannt. Möchten Sie ihn wiederherstellen?',
         restore: 'Wiederherstellen',
-        discard: 'Verwerfen'
+        discard: 'Verwerfen',
+        restoreFailed: 'Der vorherige Inhalt konnte nicht wiederhergestellt werden. Bitte versuchen Sie es erneut.'
     },
 
     // App Title
@@ -54,6 +75,7 @@ window.translations = {
         teachingTools: 'Werkzeuge',
         more: 'Mehr',
         settings: 'Einstellungen',
+        importProject: 'Projekt importieren',
         export: 'Leinwand exportieren',
         zoomOut: 'Verkleinern (-)',
         zoomIn: 'Vergrößern (+)',
@@ -110,13 +132,14 @@ window.translations = {
             message: 'Möchten Sie die Leinwand wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.'
         },
         refresh: {
-            warning: 'Beim Aktualisieren wird der gesamte Inhalt der Leinwand gelöscht und kann nicht wiederhergestellt werden. Möchten Sie wirklich aktualisieren?'
+            warning: 'Aboard versucht vor dem Verlassen, das aktuelle Whiteboard zu speichern, damit es beim nächsten Öffnen wiederhergestellt werden kann.'
         },
         lineStyle: {
             title: 'Linienstil',
             solid: 'Durchgehend',
             dashed: 'Gestrichelt',
             dotted: 'Gepunktet',
+            dashdot: 'Punkt-Strich',
             wavy: 'Wellig',
             double: 'Doppelt',
             triple: 'Dreifach',
@@ -136,6 +159,7 @@ window.translations = {
             placeholder: 'Text hier eingeben',
             size: 'Größe',
             color: 'Farbe',
+            colorPicker: 'Farbwähler',
             font: 'Schriftart',
             style: 'Stil',
             bold: 'Fett',
@@ -246,10 +270,18 @@ window.translations = {
         addPointHintLineOnly: 'Nach dem Aktivieren nacheinander auf die Leinwand klicken, um Punkte zu setzen und nur die Linie zu zeichnen',
         addPointHintAuto: 'Nach dem Aktivieren nacheinander auf die Leinwand klicken, um Punkte zu setzen und automatisch zu verbinden',
         addPointHintSelected: 'Nach dem Aktivieren Punkte setzen; nach dem Wechsel zum Auswahlwerkzeug werden nur ausgewählte Punkte verbunden',
+        addPointHintSelectedInteractive: 'Nach dem Aktivieren auf leere Bereiche klicken, um Punkte hinzuzufügen; klicken Sie dann nacheinander auf zwei Punkte, um sie zu verbinden',
         clearPoints: 'Punkte löschen',
         clearPlots: 'Graphen löschen',
         pointsCount: 'Punkte',
         plotExpression: 'Funktionsausdruck',
+        plotColor: 'Farbe',
+        plotLineStyle: 'Linienstil',
+        plotStrokeWidth: 'Strichstärke',
+        plotRangeTitle: 'Anzeigebereich',
+        plotRangeAxis: 'Achse',
+        plotRangeMin: 'Minimum',
+        plotRangeMax: 'Maximum',
         plot: 'Zeichnen',
         inputPanel: 'Eingabefeld',
         keypadNumbers: 'Zahlen',
@@ -260,17 +292,29 @@ window.translations = {
         plotHintPolar: 'Polar: r = f(theta) eingeben, theta in Radiant, deg in Grad',
         plotPlaceholderCartesian: 'z. B. sin(x) + 2',
         plotPlaceholderPolar: 'z. B. 2 * sin(4 * theta)',
+        plotRangeMinPlaceholder: 'Minimalwert',
+        plotRangeMaxPlaceholder: 'Maximalwert',
+        plotAddRange: 'Bereich hinzufügen',
+        plotCollapse: 'Einklappen',
+        plotSave: 'Speichern',
+        plotRemoveRange: 'Bereich entfernen',
+        plotNoRange: 'Kein Anzeigebereich festgelegt. Standardmäßig wird alles angezeigt.',
         noPlots: 'Noch keine Funktionsgraphen',
         coordinateStatusAddPoint: 'Punkte/Linien-Zeichenmodus aktiviert',
         coordinateStatusAddPointLineOnly: 'Nur-Linie-Modus aktiviert. Klicken Sie auf die Leinwand, um Koordinatenpunkte zu setzen',
         coordinateStatusAddPointAuto: 'Auto-Verbinden-Modus aktiviert. Klicken Sie auf die Leinwand, um Koordinatenpunkte zu setzen',
         coordinateStatusAddPointSelected: 'Auswahl-Verbinden-Modus aktiviert. Klicken Sie auf die Leinwand, um Koordinatenpunkte zu setzen',
+        coordinateStatusAddPointSelectedInteractive: 'Auswahl-Verbinden-Modus aktiviert. Klicken Sie auf leere Stellen, um Punkte hinzuzufügen, und dann auf zwei Punkte, um sie zu verbinden',
+        coordinateStatusSelectLineStartPoint: 'Ersten Punkt ausgewählt. Klicken Sie auf einen weiteren Punkt, um beide zu verbinden.',
         coordinateStatusAddPointOff: 'Punkte/Linien-Zeichenmodus deaktiviert',
+        coordinateLineExists: 'Zwischen diesen beiden Punkten besteht bereits eine Verbindung.',
+        coordinateLineCreated: 'Linie verbunden.',
         connectPointsEnabled: 'Punktlinie aktiviert',
         connectPointsDisabled: 'Punktlinie deaktiviert',
         pointAdded: 'Koordinatenpunkt hinzugefügt',
         pointsCleared: 'Koordinatenpunkte gelöscht',
         plotAdded: 'Funktionsgraph hinzugefügt',
+        plotUpdated: 'Funktionsgraph aktualisiert',
         plotError: 'Ungültiger Ausdruck, Zeichnen fehlgeschlagen',
         plotsCleared: 'Funktionsgraphen gelöscht'
     },
@@ -364,6 +408,16 @@ window.translations = {
             languageHint: 'Erkennt standardmäßig automatisch die Systemsprache und erlaubt jederzeit einen manuellen Wechsel',
             globalFont: 'Globale Schriftart',
             globalFontHint: 'Wählen Sie die Schriftart für die Anwendung',
+            fontManagementHint: 'Schriftverwaltung: Sortieren, Ein-/Ausblenden, Umbenennen und Vorschau werden unterstützt',
+            showFont: 'Schrift anzeigen',
+            fontPreviewSample: 'Schriftvorschau ABC abc 123',
+            fontPreviewText: 'Vorschautext',
+            fontPreviewSize: 'Vorschaugröße',
+            fontPreviewResetText: 'Text zurücksetzen',
+            renameFont: 'Umbenennen',
+            expandPreview: 'Vergrößern',
+            confirmDeleteFont: 'Möchten Sie die benutzerdefinierte Schriftart "{font}" wirklich löschen?',
+            resetFontManagementConfirm: 'Wenn Sie die Schriftverwaltung zurücksetzen, werden hochgeladene Schriftarten entfernt und Reihenfolge, Namen sowie Vorschau-Einstellungen wiederhergestellt. Fortfahren?',
             downloadedLanguagePacks: 'Heruntergeladene Sprachpakete',
             dismissedLanguageSuggestion: 'Status der ausgeblendeten Sprachhinweise',
             updatePreference: 'Update-Verhalten',
@@ -636,7 +690,9 @@ window.translations = {
         rotate: 'Drehen',
         resize: 'Größe ändern',
         delete: 'Löschen',
-        drawAlongEdge: 'Entlang der Kante zeichnen'
+        drawAlongEdge: 'Entlang der Kante zeichnen',
+        increaseCount: 'Anzahl für {tool} erhöhen',
+        decreaseCount: 'Anzahl für {tool} verringern',
     },
 
     // Time Display
@@ -826,10 +882,55 @@ Viel Spaß bei Ihrer kreativen Arbeit!`,
     },
 
     export: {
+        imageTab: 'Bild exportieren',
+        projectTab: 'Projekt exportieren (.zip)',
+        scopeLabel: 'Exportbereich',
+        scopeCurrent: 'Aktuelle Seite',
+        scopeAll: 'Alle Seiten',
+        scopeSpecific: 'Bestimmte Seiten',
+        pageSelectionLabel: 'Zu exportierende Seiten auswählen',
+        imageFormatLabel: 'Bildformat',
+        imageQualityLabel: 'Bildqualität',
+        projectHint: 'Als standardisiertes .zip-Projektpaket mit Seiten, Hintergründen und Ressourcen exportieren. Nach dem Import können Seitenobjekte weiter einzeln bearbeitet werden; alte .aboard-Importe bleiben in den Einstellungen optional aktivierbar.',
+        fileNameLabel: 'Dateiname',
+        fileNamePrefixLabel: 'Dateinamenspräfix',
+        fileNamePlaceholder: 'Dateinamen eingeben',
+        fileNameHint: 'Beim Export mehrerer Seiten werden Seitennummern automatisch an den Dateinamen angehängt.',
         failed: 'Export fehlgeschlagen. Bitte versuchen Sie es erneut.'
     },
 
+    projectPackage: {
+        importSuccess: 'Projekt erfolgreich importiert.',
+        legacyImportSuccess: 'Altes Projekt erfolgreich importiert.',
+        importFailed: 'Projektimport fehlgeschlagen: {message}',
+        exportFailed: 'Projektexport fehlgeschlagen: {message}',
+        overwriteConfirm: 'Beim Importieren eines Projekts wird der aktuelle Whiteboard-Inhalt ersetzt. Fortfahren?',
+        overwriteDetail: 'Die aktuellen Whiteboard-Seiten und Ressourcen werden durch die Inhalte des Projektpakets ersetzt.',
+        legacyCompatibilityDisabled: 'Die alte .aboard-Importkompatibilität ist deaktiviert. Aktivieren Sie sie zuerst in den Einstellungen.',
+        zipLoaderUnavailable: 'ZIP-Bibliotheks-Loader ist nicht verfügbar.',
+        zipLoadFailed: 'Die ZIP-Bibliothek konnte nicht geladen werden.',
+        legacyLoaderUnavailable: 'Loader für alte Kompatibilität ist nicht verfügbar.',
+        legacyModuleLoadFailed: 'Das alte Projekt-Kompatibilitätsmodul konnte nicht geladen werden.',
+        base64DecoderUnavailable: 'Base64-Decoder ist nicht verfügbar.',
+        base64EncoderUnavailable: 'Base64-Encoder ist nicht verfügbar.',
+        unsupportedPackage: 'Dies ist kein unterstütztes Aboard-Projektpaket.',
+        missingDocument: 'Im Projektpaket fehlt document.json.',
+        missingPages: 'Das Projektpaket enthält keine Seitendaten.',
+        missingAsset: 'Im Projektpaket fehlt die Ressourcendatei: {path}',
+        missingPageFile: 'Im Projektpaket fehlt die Seitendatei: {path}',
+        invalidLegacyFormat: 'Ungültiges altes Projektdateiformat.',
+        legacyMissingPages: 'Die alte Projektdatei enthält keine Seitendaten.'
+    },
+
+    randomPicker: {
+        importColumnPlaceholder: 'Spalte',
+        importLibraryLoadFailed: 'Die Excel-Importbibliothek konnte nicht geladen werden. Bitte laden Sie die Seite neu und versuchen Sie es erneut.'
+    },
+
     gif: {
-        loopCountPrompt: 'Anzahl der Wiederholungen festlegen (0 für unendlich):'
+        settingsTitle: 'GIF-Einstellungen',
+        loopCountLabel: 'Wiedergabeanzahl (0 = Endlosschleife)',
+        loopCountPrompt: 'Anzahl der Wiederholungen festlegen (0 für unendlich):',
+        loopCountInvalid: 'Bitte geben Sie eine ganze Zahl größer oder gleich 0 ein.'
     }
 };

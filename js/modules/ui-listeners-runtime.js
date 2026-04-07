@@ -5,6 +5,15 @@ function bindIfPresent(element, eventName, handler, options) {
         element?.addEventListener?.(eventName, handler, options);
 }
 
+function getLazyFeatureLabel(key, fallback) {
+        if (!window.i18n?.t) {
+            return fallback;
+        }
+
+        const translated = window.i18n.t(key);
+        return translated && translated !== key ? translated : fallback;
+}
+
 function setupToolConfigListeners() {
         const customColorPicker = document.getElementById('custom-color-picker');
         const customColorPickerBtn = document.querySelector('label[for="custom-color-picker"]');
@@ -16,6 +25,7 @@ function setupToolConfigListeners() {
         const arrowSizeValue = document.getElementById('arrow-size-value');
         const eraserSizeSlider = document.getElementById('eraser-size-slider');
         const eraserSizeValue = document.getElementById('eraser-size-value');
+        const syncGenericColorAccessibility = () => window.i18n?.syncGenericColorControls?.();
 
 // Pen type buttons
         document.querySelectorAll('.pen-type-btn').forEach(btn => {
@@ -42,6 +52,7 @@ function setupToolConfigListeners() {
                 if (shapeColorPicker) {
                     shapeColorPicker.value = e.target.dataset.color;
                 }
+                syncGenericColorAccessibility();
             });
         });
         
@@ -58,6 +69,7 @@ function setupToolConfigListeners() {
                 if (shapeColorPicker) {
                     shapeColorPicker.value = e.target.value;
                 }
+                syncGenericColorAccessibility();
             });
         }
         // Deactivate color picker when a preset is selected
@@ -71,6 +83,7 @@ function setupToolConfigListeners() {
                 if (shapeCustomColorPickerBtn) {
                     shapeCustomColorPickerBtn.classList.remove('active');
                 }
+                syncGenericColorAccessibility();
             });
         });
         
@@ -177,6 +190,7 @@ function setupShapeToolConfigListeners() {
         const shapeCustomColorPickerBtn = document.querySelector('label[for="shape-custom-color-picker"]');
         const penColorPicker = document.getElementById('custom-color-picker');
         const penColorPickerBtn = document.querySelector('label[for="custom-color-picker"]');
+        const syncGenericColorAccessibility = () => window.i18n?.syncGenericColorControls?.();
 
         if (shapeSizeSlider && shapeSizeValue) {
             shapeSizeSlider.value = this.drawingEngine.penSize;
@@ -234,6 +248,7 @@ function setupShapeToolConfigListeners() {
                 if (penColorPickerBtn) {
                     penColorPickerBtn.classList.add('active');
                 }
+                syncGenericColorAccessibility();
             });
         }
 
@@ -289,7 +304,7 @@ function setupMoreFeatureToolConfigListeners() {
                     timerManager.showSettingsModal();
                     this.handleMoreFeaturePanelAfterAction();
                 } catch (error) {
-                    this.showLazyLoadError('计时器', error);
+                    this.showLazyLoadError(getLazyFeatureLabel('features.timer', 'Timer'), error);
                 }
             });
         }
@@ -304,7 +319,7 @@ function setupMoreFeatureToolConfigListeners() {
                     insertTextManager.trigger();
                     this.handleMoreFeaturePanelAfterAction();
                 } catch (error) {
-                    this.showLazyLoadError('文字插入', error);
+                    this.showLazyLoadError(getLazyFeatureLabel('features.insertText', 'Insert Text'), error);
                 }
             });
         }
@@ -320,7 +335,7 @@ function setupMoreFeatureToolConfigListeners() {
                     this.bringLatestElement('.random-picker-widget');
                     this.handleMoreFeaturePanelAfterAction();
                 } catch (error) {
-                    this.showLazyLoadError('随机点名', error);
+                    this.showLazyLoadError(getLazyFeatureLabel('features.randomPicker', 'Random Picker'), error);
                 }
             });
         }
@@ -336,7 +351,7 @@ function setupMoreFeatureToolConfigListeners() {
                     this.bringLatestElement('.scoreboard-widget');
                     this.handleMoreFeaturePanelAfterAction();
                 } catch (error) {
-                    this.showLazyLoadError('计分板', error);
+                    this.showLazyLoadError(getLazyFeatureLabel('features.scoreboard', 'Scoreboard'), error);
                 }
             });
         }
@@ -351,7 +366,7 @@ function setupMoreFeatureToolConfigListeners() {
                     insertImageManager.triggerSelect();
                     this.handleMoreFeaturePanelAfterAction();
                 } catch (error) {
-                    this.showLazyLoadError('图片插入', error);
+                    this.showLazyLoadError(getLazyFeatureLabel('features.insertImage', 'Insert Image'), error);
                 }
             });
         }
@@ -369,6 +384,7 @@ function setupMoreFeatureToolConfigListeners() {
 }
 
 function setupBackgroundToolConfigListeners() {
+        const syncGenericColorAccessibility = () => window.i18n?.syncGenericColorControls?.();
         // Background color picker
         document.querySelectorAll('.color-btn[data-bg-color]').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -379,6 +395,7 @@ function setupBackgroundToolConfigListeners() {
                 if (!this.settingsManager.infiniteCanvas) {
                     this.savePageBackground(this.currentPage);
                 }
+                syncGenericColorAccessibility();
             });
         });
         
@@ -396,6 +413,7 @@ function setupBackgroundToolConfigListeners() {
                 if (!this.settingsManager.infiniteCanvas) {
                     this.savePageBackground(this.currentPage);
                 }
+                syncGenericColorAccessibility();
             });
         }
         // Deactivate color picker when a preset is selected
@@ -404,6 +422,7 @@ function setupBackgroundToolConfigListeners() {
                 if (customBgColorPickerBtn) {
                     customBgColorPickerBtn.classList.remove('active');
                 }
+                syncGenericColorAccessibility();
             });
         });
         
@@ -465,6 +484,11 @@ function setupBackgroundToolConfigListeners() {
 
             const isGif = this.backgroundManager.isGif(this.backgroundManager.backgroundImageData);
             playbackBtn.style.display = isGif ? 'inline-flex' : 'none';
+            const playbackLabel = this.backgroundManager.isImagePaused
+                ? (window.i18n?.t?.('timer.continue') || 'Continue')
+                : (window.i18n?.t?.('timer.pause') || 'Pause');
+            playbackBtn.title = playbackLabel;
+            playbackBtn.setAttribute('aria-label', playbackLabel);
 
             if (this.backgroundManager.isImagePaused) {
                 playbackBtn.classList.add('paused');
@@ -485,6 +509,7 @@ function setupBackgroundToolConfigListeners() {
         };
 
         window.addEventListener('backgroundMediaStateChanged', refreshBackgroundMediaControls);
+        window.addEventListener('localeChanged', refreshBackgroundMediaControls);
         
         // Background image size slider
         const bgImageSizeSlider = document.getElementById('bg-image-size-slider');
@@ -688,7 +713,7 @@ function setupBackgroundToolConfigListeners() {
                 this.backgroundManager.clearCoordinatePoints();
                 this.savePageBackground(this.currentPage);
                 this.updateBackgroundUI();
-                this.showCoordinateToast('background.pointsCleared', '坐标点已清空', 'success');
+                this.showCoordinateToast('background.pointsCleared', 'Coordinate points cleared.', 'success');
             });
         }
 
@@ -699,7 +724,7 @@ function setupBackgroundToolConfigListeners() {
                 this.backgroundManager.clearCoordinatePlots(this.backgroundManager.backgroundPattern);
                 this.savePageBackground(this.currentPage);
                 this.updateBackgroundUI();
-                this.showCoordinateToast('background.plotsCleared', '函数图像已清空', 'success');
+                this.showCoordinateToast('background.plotsCleared', 'Function plots cleared.', 'success');
             });
         }
 
@@ -716,10 +741,10 @@ function setupBackgroundToolConfigListeners() {
                 this.syncCoordinateExpressionDisplay();
                 this.savePageBackground(this.currentPage);
                 this.updateBackgroundUI();
-                this.showCoordinateToast('background.plotAdded', '函数图像已添加', 'success');
+                this.showCoordinateToast('background.plotAdded', 'Function plot added.', 'success');
             } catch (error) {
                 console.error('Failed to add coordinate plot:', error);
-                this.showCoordinateToast('background.plotError', '表达式无效，无法绘制', 'error');
+                this.showCoordinateToast('background.plotError', 'Invalid expression. Unable to plot.', 'error');
             }
         };
 
@@ -938,6 +963,16 @@ function setupSettingsListeners() {
                     this.renderFontManagementList?.();
                 }
             });
+
+            const globalFontUploadTrigger = globalFontUpload.closest('label.font-upload-btn');
+            if (globalFontUploadTrigger) {
+                globalFontUploadTrigger.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        globalFontUpload.click();
+                    }
+                });
+            }
         }
         
         // Populate custom fonts on load
@@ -1054,6 +1089,7 @@ function setupSettingsListeners() {
                 this.settingsManager.setThemeColor(e.target.dataset.themeColor);
                 document.querySelectorAll('.color-btn[data-theme-color]').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
+                window.i18n?.syncGenericColorControls?.();
             });
         });
         
@@ -1067,6 +1103,7 @@ function setupSettingsListeners() {
                 if (customThemeColorPickerBtn) {
                     customThemeColorPickerBtn.classList.add('active');
                 }
+                window.i18n?.syncGenericColorControls?.();
             });
         }
         // Deactivate color picker when a preset is selected
@@ -1075,6 +1112,7 @@ function setupSettingsListeners() {
                 if (customThemeColorPickerBtn) {
                     customThemeColorPickerBtn.classList.remove('active');
                 }
+                window.i18n?.syncGenericColorControls?.();
             });
         });
         
@@ -1105,7 +1143,7 @@ function setupSettingsListeners() {
                         const diff = this.settingsManager.getSettingsDiff(newSettings);
                         this.showConfigDiffModal(diff, newSettings);
                     } catch (err) {
-                        const errorMsg = window.i18n ? window.i18n.t('settings.importError') : '配置文件无效';
+                        const errorMsg = window.i18n?.t('settings.importError') || 'Invalid configuration file';
                         if (this.settingsManager.toastManager) {
                             this.settingsManager.toastManager.show(errorMsg, 'error');
                         } else {

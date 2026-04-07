@@ -23,18 +23,40 @@ window.translations = {
         stop: 'Stop',
         preview: 'Preview',
         help: 'Help',
+        export: 'Export',
         settings: 'Settings',
+        inputRequired: 'Please enter a value.',
         dragToMove: 'Drag to move',
         restoreSize: 'Restore Size',
         keepCentered: 'Keep Centered'
     },
 
+    errors: {
+        lazyLoadFailed: 'Failed to load {feature}. Please refresh and try again.'
+    },
+
+    prompts: {
+        localeDownloadPrompt: 'Download the {locale} language pack now?',
+        preferredLocaleSuggestionPrompt: 'We detected that your preferred browser language is {locale}. Download and switch to it now?'
+    },
+
+    browserCheck: {
+        title: 'Browser compatibility',
+        message: 'Your browser is missing the following required features:',
+        updateHint: 'Please update to the latest version of Chrome, Edge, Firefox, or Safari for the best experience.',
+        continueAnyway: 'Continue anyway',
+        features: {
+            canvas: 'Canvas API',
+            es6: 'Modern JavaScript (ES6)'
+        }
+    },
     // Recovery dialog
     recovery: {
         title: 'Restore Previous Content',
         message: 'Previous canvas content was detected. Would you like to restore it?',
         restore: 'Restore',
-        discard: 'Discard'
+        discard: 'Discard',
+        restoreFailed: 'Failed to restore your previous content. Please try again.'
     },
 
     // App Title
@@ -59,6 +81,7 @@ window.translations = {
         teachingTools: 'Tools',
         more: 'More',
         settings: 'Settings',
+        importProject: 'Import Project',
         export: 'Export Canvas',
         zoomOut: 'Zoom Out (-)',
         zoomIn: 'Zoom In (+)',
@@ -116,13 +139,14 @@ window.translations = {
             message: 'Are you sure you want to clear the canvas? This action cannot be undone.'
         },
         refresh: {
-            warning: 'Refreshing will clear all canvas content and cannot be recovered. Are you sure you want to refresh?'
+            warning: 'Aboard will try to save the current board before leaving so you can restore it next time.'
         },
         lineStyle: {
             title: 'Line Style',
             solid: 'Solid',
             dashed: 'Dashed',
             dotted: 'Dotted',
+            dashdot: 'Dash-dot',
             wavy: 'Wavy',
             double: 'Double',
             triple: 'Triple',
@@ -142,6 +166,7 @@ window.translations = {
             placeholder: 'Enter text here',
             size: 'Size',
             color: 'Color',
+            colorPicker: 'Color Picker',
             font: 'Font',
             style: 'Style',
             bold: 'Bold',
@@ -255,10 +280,18 @@ window.translations = {
         addPointHintLineOnly: 'When enabled, click the canvas to place coordinate points and draw only the polyline',
         addPointHintAuto: 'When enabled, click the canvas to place coordinate points and connect them automatically',
         addPointHintSelected: 'When enabled, click the canvas to add coordinate points. After switching to Select, only the selected points will connect',
+        addPointHintSelectedInteractive: 'When enabled, click empty space to add points; click two points in sequence to connect them',
         clearPoints: 'Clear Points',
         clearPlots: 'Clear Plots',
         pointsCount: 'Points',
         plotExpression: 'Function Expression',
+        plotColor: 'Color',
+        plotLineStyle: 'Line Style',
+        plotStrokeWidth: 'Stroke Width',
+        plotRangeTitle: 'Display Range',
+        plotRangeAxis: 'Axis',
+        plotRangeMin: 'Min',
+        plotRangeMax: 'Max',
         plot: 'Plot',
         inputPanel: 'Input Panel',
         keypadNumbers: 'Numbers',
@@ -269,12 +302,23 @@ window.translations = {
         plotHintPolar: 'Polar: enter r = f(theta), theta is radians and deg is degrees',
         plotPlaceholderCartesian: 'e.g. sin(x) + 2',
         plotPlaceholderPolar: 'e.g. 2 * sin(4 * theta)',
+        plotRangeMinPlaceholder: 'Min value',
+        plotRangeMaxPlaceholder: 'Max value',
+        plotAddRange: 'Add Range',
+        plotCollapse: 'Collapse',
+        plotSave: 'Save',
+        plotRemoveRange: 'Remove range',
+        plotNoRange: 'No display range limit. Showing all by default.',
         noPlots: 'No plotted functions yet',
         coordinateStatusAddPoint: 'Draw points & lines mode enabled',
         coordinateStatusAddPointLineOnly: 'Line-only mode enabled. Click the canvas to place coordinate points',
         coordinateStatusAddPointAuto: 'Auto-connect mode enabled. Click the canvas to place coordinate points',
         coordinateStatusAddPointSelected: 'Selected-connect mode enabled. Click the canvas to place coordinate points',
+        coordinateStatusAddPointSelectedInteractive: 'Selected-connect mode enabled. Click empty space to add points, then click two points to connect them',
+        coordinateStatusSelectLineStartPoint: 'Selected the first point. Click another point to connect them.',
         coordinateStatusAddPointOff: 'Draw points & lines mode disabled',
+        coordinateLineExists: 'A line already exists between these two points.',
+        coordinateLineCreated: 'Line connected.',
         connectPointsEnabled: 'Point line enabled',
         connectPointsDisabled: 'Point line disabled',
         pointAdded: 'Coordinate point added',
@@ -326,12 +370,15 @@ window.translations = {
     settings: {
         title: 'Settings',
         exportSuccess: 'Configuration exported successfully',
+        exportFailed: 'Failed to export configuration',
         importSuccess: 'Configuration imported successfully',
         importError: 'Invalid configuration file',
         importNoChange: 'No configuration changes detected',
         diff: {
             title: 'Configuration Differences',
             message: 'Differences detected between import and current settings:',
+            current: 'Current',
+            new: 'New',
             oldValue: 'Current',
             newValue: 'New',
             confirm: 'Update Settings',
@@ -390,6 +437,13 @@ window.translations = {
             fontManagementHint: 'Font management: reorder, show/hide, rename and preview',
             showFont: 'Show font',
             fontPreviewSample: 'Font Preview ABC abc 123',
+            fontPreviewText: 'Preview Text',
+            fontPreviewSize: 'Preview Size',
+            fontPreviewResetText: 'Restore Text',
+            renameFont: 'Rename',
+            expandPreview: 'Expand',
+            confirmDeleteFont: 'Are you sure you want to delete the custom font "{font}"?',
+            resetFontManagementConfirm: 'Resetting font management will remove uploaded fonts and restore the default order, names, and preview settings. Continue?',
             downloadedLanguagePacks: 'Downloaded language packs',
             dismissedLanguageSuggestion: 'Dismissed language suggestion state',
             updatePreference: 'Update behavior',
@@ -671,8 +725,10 @@ window.translations = {
         rangeLabel: 'Number Range',
         importLabel: 'Import Names (Excel/CSV)',
         defaultColumnName: 'Name',
+        importColumnPlaceholder: 'Column',
         importBtn: 'Select File',
         importHint: 'Tip: Reads data from the specified column name',
+        importLibraryLoadFailed: 'Failed to load the Excel import library. Please refresh and try again.',
         importSuccess: 'Successfully imported {count} names',
         importNoData: 'No data found in specified column. Check column name.',
         importError: 'Failed to parse file'
@@ -686,6 +742,8 @@ window.translations = {
         confirmRemoveTeam: 'Are you sure you want to remove this team?',
         teamDefault: 'Team',
         removeTeam: 'Remove Team',
+        increaseScore: 'Increase score for {team}',
+        decreaseScore: 'Decrease score for {team}',
         confirmReset: 'Are you sure you want to reset all scores?'
     },
 
@@ -705,7 +763,9 @@ window.translations = {
         rotate: 'Rotate',
         resize: 'Resize',
         delete: 'Delete',
-        drawAlongEdge: 'Draw Along Edge'
+        drawAlongEdge: 'Draw Along Edge',
+        increaseCount: 'Increase count for {tool}',
+        decreaseCount: 'Decrease count for {tool}',
     },
 
     // Time Display
@@ -827,14 +887,54 @@ window.translations = {
 
     // Export
     export: {
+        imageTab: 'Export Image',
+        projectTab: 'Export Project (.zip)',
+        scopeLabel: 'Export Scope',
+        scopeCurrent: 'Current Page',
+        scopeAll: 'All Pages',
+        scopeSpecific: 'Specific Pages',
+        pageSelectionLabel: 'Select Pages to Export',
+        imageFormatLabel: 'Image Format',
+        imageQualityLabel: 'Image Quality',
+        projectHint: 'Export as a standard .zip project package including pages, backgrounds, and assets. After importing, you can continue editing page objects individually; legacy .aboard imports remain optional in Settings.',
+        fileNameLabel: 'File Name',
+        fileNamePrefixLabel: 'File Name Prefix',
+        fileNamePlaceholder: 'Enter file name',
+        fileNameHint: 'When exporting multiple pages, page numbers will be appended automatically.',
         selectAtLeastOnePage: 'Please select at least one page to export',
         paginationRequired: 'Currently in Infinite Canvas mode. Please enable Pagination Mode in Settings to use this feature.',
         noPages: 'No pages to export.',
         failed: 'Export failed. Please try again.'
     },
 
+    projectPackage: {
+        importSuccess: 'Project imported successfully.',
+        legacyImportSuccess: 'Legacy project imported successfully.',
+        importFailed: 'Project import failed: {message}',
+        exportFailed: 'Project export failed: {message}',
+        overwriteConfirm: 'Importing a project will replace the current board content. Continue?',
+        overwriteDetail: 'The current whiteboard pages and assets will be replaced by the project package.',
+        legacyCompatibilityDisabled: 'Legacy .aboard import compatibility is disabled. Enable it in Settings first.',
+        zipLoaderUnavailable: 'ZIP library loader is not available.',
+        zipLoadFailed: 'Failed to load the ZIP library.',
+        legacyLoaderUnavailable: 'Legacy compatibility loader is not available.',
+        legacyModuleLoadFailed: 'Failed to load the legacy project compatibility module.',
+        base64DecoderUnavailable: 'Base64 decoder is not available.',
+        base64EncoderUnavailable: 'Base64 encoder is not available.',
+        unsupportedPackage: 'This is not a supported Aboard project package.',
+        missingDocument: 'The project package is missing document.json.',
+        missingPages: 'The project package does not contain page data.',
+        missingAsset: 'The project package is missing asset file: {path}',
+        missingPageFile: 'The project package is missing page file: {path}',
+        invalidLegacyFormat: 'Invalid legacy project file format.',
+        legacyMissingPages: 'The legacy project file does not contain page data.'
+    },
+
     gif: {
-        loopCountPrompt: 'Set loop count (0 for infinite):'
+        settingsTitle: 'GIF Settings',
+        loopCountLabel: 'Playback count (0 for infinite loop)',
+        loopCountPrompt: 'Set loop count (0 for infinite):',
+        loopCountInvalid: 'Please enter an integer that is 0 or greater.'
     },
 
     // Timezone names

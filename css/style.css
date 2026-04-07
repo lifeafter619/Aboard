@@ -2094,6 +2094,44 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     display: flex;
 }
 
+.app-confirm-input-container {
+    display: none;
+}
+
+.app-confirm-input-container.show {
+    display: block;
+}
+
+.app-confirm-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-confirm-input-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+.app-confirm-input {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid #d7d7dc;
+    border-radius: 10px;
+    font-size: 15px;
+    color: #222;
+    background: #fff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-confirm-input:focus {
+    outline: none;
+    border-color: #007aff;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.16);
+}
+
 .app-confirm-option {
     align-items: flex-start;
     padding: 10px 12px;

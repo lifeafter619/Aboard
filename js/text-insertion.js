@@ -1,6 +1,15 @@
 // Text Insertion Module
 // Handles text insertion, editing, and manipulation
 
+function getTextInsertionText(key, fallback) {
+    if (!window.i18n?.t) {
+        return fallback;
+    }
+
+    const translated = window.i18n.t(key);
+    return translated && translated !== key ? translated : fallback;
+}
+
 class TextInsertionManager {
     constructor(canvas, ctx, historyManager) {
         this.canvas = canvas;
@@ -53,6 +62,19 @@ class TextInsertionManager {
     
     // Show text input dialog
     showTextInputDialog() {
+        const title = getTextInsertionText('tools.text.insertTitle', 'Insert Text');
+        const closeTitle = getTextInsertionText('common.close', 'Close');
+        const placeholder = getTextInsertionText('tools.text.placeholder', 'Enter text here');
+        const sizeLabel = getTextInsertionText('tools.text.size', 'Size');
+        const colorLabel = getTextInsertionText('tools.text.color', 'Color');
+        const blackTitle = getTextInsertionText('colors.black', 'Black');
+        const redTitle = getTextInsertionText('colors.red', 'Red');
+        const blueTitle = getTextInsertionText('colors.blue', 'Blue');
+        const greenTitle = getTextInsertionText('colors.green', 'Green');
+        const colorPickerTitle = getTextInsertionText('tools.text.colorPicker', 'Color Picker');
+        const cancelLabel = getTextInsertionText('common.cancel', 'Cancel');
+        const confirmLabel = getTextInsertionText('common.confirm', 'Confirm');
+
         // Create modal for text input
         const modal = document.createElement('div');
         modal.className = 'modal show';
@@ -60,8 +82,8 @@ class TextInsertionManager {
         modal.innerHTML = `
             <div class="modal-content text-input-modal-content">
                 <div class="modal-header">
-                    <h2>插入文字</h2>
-                    <button id="text-input-close-btn" class="modal-close-btn" title="关闭">
+                    <h2>${title}</h2>
+                    <button id="text-input-close-btn" class="modal-close-btn" data-i18n-title="common.close" title="${closeTitle}" aria-label="${closeTitle}">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -69,20 +91,20 @@ class TextInsertionManager {
                     </button>
                 </div>
                 <div class="modal-body">
-                    <textarea id="text-input-area" class="text-input-area" placeholder="请输入文字..." autofocus></textarea>
+                    <textarea id="text-input-area" class="text-input-area" placeholder="${placeholder}" aria-label="${placeholder}" autofocus></textarea>
                     <div class="text-input-controls">
                         <div class="text-control-group">
-                            <label>字号 <span id="text-font-size-value">${this.defaultFontSize}</span>px</label>
-                            <input type="range" id="text-font-size-slider" min="12" max="72" value="${this.defaultFontSize}" class="slider">
+                            <label>${sizeLabel} <span id="text-font-size-value">${this.defaultFontSize}</span>px</label>
+                            <input type="range" id="text-font-size-slider" min="12" max="72" value="${this.defaultFontSize}" class="slider" aria-label="${sizeLabel}">
                         </div>
                         <div class="text-control-group">
-                            <label>颜色</label>
+                            <label>${colorLabel}</label>
                             <div class="color-picker-row">
-                                <button class="color-btn active" data-text-color="#000000" style="background-color: #000000;" title="黑色"></button>
-                                <button class="color-btn" data-text-color="#FF0000" style="background-color: #FF0000;" title="红色"></button>
-                                <button class="color-btn" data-text-color="#0000FF" style="background-color: #0000FF;" title="蓝色"></button>
-                                <button class="color-btn" data-text-color="#00FF00" style="background-color: #00FF00;" title="绿色"></button>
-                                <label class="color-picker-icon-btn" for="text-custom-color-picker" title="取色器">
+                                <button class="color-btn active" data-text-color="#000000" style="background-color: #000000;" title="${blackTitle}" aria-label="${blackTitle}"></button>
+                                <button class="color-btn" data-text-color="#FF0000" style="background-color: #FF0000;" title="${redTitle}" aria-label="${redTitle}"></button>
+                                <button class="color-btn" data-text-color="#0000FF" style="background-color: #0000FF;" title="${blueTitle}" aria-label="${blueTitle}"></button>
+                                <button class="color-btn" data-text-color="#00FF00" style="background-color: #00FF00;" title="${greenTitle}" aria-label="${greenTitle}"></button>
+                                <label class="color-picker-icon-btn" for="text-custom-color-picker" title="${colorPickerTitle}" aria-label="${colorPickerTitle}" role="button" tabindex="0">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
                                         <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
@@ -93,14 +115,15 @@ class TextInsertionManager {
                         </div>
                     </div>
                     <div class="text-input-buttons">
-                        <button id="text-input-cancel-btn" class="confirm-btn cancel-btn">取消</button>
-                        <button id="text-input-ok-btn" class="confirm-btn ok-btn">确定</button>
+                        <button id="text-input-cancel-btn" class="confirm-btn cancel-btn">${cancelLabel}</button>
+                        <button id="text-input-ok-btn" class="confirm-btn ok-btn">${confirmLabel}</button>
                     </div>
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
+        window.i18n?.applyTranslations?.();
         
         this.isInputting = true;
         this.setupTextInputListeners(modal);

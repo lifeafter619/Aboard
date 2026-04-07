@@ -2,12 +2,29 @@
  * Browser Compatibility Checker
  */
 class BrowserCheck {
+    static getText(key, fallback) {
+        const translated = window.i18n?.t?.(key);
+        return translated && translated !== key ? translated : fallback;
+    }
+
+    static getFeatureLabel(feature) {
+        if (feature?.key === 'canvas') {
+            return this.getText('browserCheck.features.canvas', 'Canvas API');
+        }
+
+        if (feature?.key === 'es6') {
+            return this.getText('browserCheck.features.es6', 'Modern JavaScript (ES6)');
+        }
+
+        return String(feature?.label || feature || '');
+    }
+
     static init() {
         const warnings = [];
 
         // Check for Canvas support
         if (!window.HTMLCanvasElement) {
-            warnings.push("Canvas API");
+            warnings.push({ key: 'canvas' });
         }
 
         // Check for ES6 features (basic check)
@@ -15,7 +32,7 @@ class BrowserCheck {
             eval("class Test {}");
             eval("const test = () => {}");
         } catch (e) {
-            warnings.push("ES6 JavaScript Support");
+            warnings.push({ key: 'es6' });
         }
 
         if (warnings.length > 0) {
@@ -24,20 +41,79 @@ class BrowserCheck {
     }
 
     static showWarning(missingFeatures) {
-        const div = document.createElement('div');
-        div.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;color:white;text-align:center;font-family:sans-serif;';
-        div.innerHTML = `
-            <div style="background:#333;padding:20px;border-radius:10px;max-width:400px;color:white;">
-                <h2 style="margin-bottom:10px;color:#ff5555;">⚠️ Browser Outdated</h2>
-                <p>Your browser does not support the following required features:</p>
-                <ul style="text-align:left;margin:15px auto;display:inline-block;color:#ccc;">
-                    ${missingFeatures.map(f => `<li>${f}</li>`).join('')}
-                </ul>
-                <p style="margin-bottom:20px;">Please update your browser to the latest version of Chrome, Edge, Firefox, or Safari.</p>
-                <button onclick="this.closest('div').parentElement.remove()" style="padding:10px 20px;cursor:pointer;background:#007AFF;border:none;border-radius:5px;color:white;font-weight:bold;">Continue Anyway</button>
-            </div>
-        `;
-        document.body.appendChild(div);
+        if (document.getElementById('browser-check-overlay')) {
+            return;
+        }
+
+        const overlay = document.createElement('div');
+        overlay.id = 'browser-check-overlay';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-labelledby', 'browser-check-title');
+        overlay.setAttribute('aria-describedby', 'browser-check-message browser-check-update');
+        overlay.tabIndex = -1;
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;color:white;text-align:center;font-family:sans-serif;';
+
+        const panel = document.createElement('div');
+        panel.style.cssText = 'background:#333;padding:20px;border-radius:10px;max-width:420px;width:min(100%,420px);color:white;box-sizing:border-box;';
+
+        const title = document.createElement('h2');
+        title.id = 'browser-check-title';
+        title.style.cssText = 'margin:0 0 10px;color:#ff5555;';
+        title.textContent = this.getText('browserCheck.title', 'Browser support issue');
+
+        const message = document.createElement('p');
+        message.id = 'browser-check-message';
+        message.style.cssText = 'margin:0;';
+        message.textContent = this.getText(
+            'browserCheck.message',
+            'Your browser is missing the following required features:'
+        );
+
+        const list = document.createElement('ul');
+        list.style.cssText = 'text-align:left;margin:15px auto;display:inline-block;color:#ccc;padding-left:20px;';
+        missingFeatures
+            .map(feature => this.getFeatureLabel(feature))
+            .filter(Boolean)
+            .forEach((featureLabel) => {
+                const item = document.createElement('li');
+                item.textContent = featureLabel;
+                list.appendChild(item);
+            });
+
+        const updateHint = document.createElement('p');
+        updateHint.id = 'browser-check-update';
+        updateHint.style.cssText = 'margin:0 0 20px;';
+        updateHint.textContent = this.getText(
+            'browserCheck.updateHint',
+            'Please update to the latest version of Chrome, Edge, Firefox, or Safari for the best experience.'
+        );
+
+        const dismissButton = document.createElement('button');
+        dismissButton.type = 'button';
+        dismissButton.style.cssText = 'padding:10px 20px;cursor:pointer;background:#007AFF;border:none;border-radius:5px;color:white;font-weight:bold;';
+        dismissButton.textContent = this.getText('browserCheck.continueAnyway', 'Continue anyway');
+
+        const close = () => {
+            overlay.remove();
+        };
+
+        dismissButton.addEventListener('click', close);
+        overlay.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                close();
+            }
+        });
+
+        panel.appendChild(title);
+        panel.appendChild(message);
+        panel.appendChild(list);
+        panel.appendChild(updateHint);
+        panel.appendChild(dismissButton);
+        overlay.appendChild(panel);
+        document.body.appendChild(overlay);
+        window.requestAnimationFrame?.(() => dismissButton.focus());
     }
 }
 

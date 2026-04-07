@@ -336,21 +336,21 @@ class SelectionManager {
                     <div class="resize-handle left" data-handle="left"></div>
                     
                     <!-- Rotation handle -->
-                    <div class="rotate-handle" id="selection-rotate-handle" data-i18n-title="imageControls.rotate">
+                    <div class="rotate-handle" id="selection-rotate-handle" data-i18n-title="imageControls.rotate" aria-label="Rotate">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                             <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                         </svg>
                     </div>
                     
                     <!-- Rotate 90° button -->
-                    <div class="selection-transform-handle" id="selection-rotate90-handle" data-i18n-title="selection.rotate90" title="Rotate 90°">
+                    <div class="selection-transform-handle" id="selection-rotate90-handle" data-i18n-title="selection.rotate90" aria-label="Rotate 90°" title="Rotate 90°">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                             <path d="M21.5 2v6h-6M21 8a9 9 0 1 0-2.67 6.33"/>
                         </svg>
                     </div>
                     
                     <!-- Flip horizontal button -->
-                    <div class="selection-transform-handle" id="selection-flip-h-handle" data-i18n-title="selection.flipH" title="Flip Horizontal">
+                    <div class="selection-transform-handle" id="selection-flip-h-handle" data-i18n-title="selection.flipH" aria-label="Flip Horizontal" title="Flip Horizontal">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                             <path d="M12 3v18M8 6l-5 6 5 6M16 6l5 6-5 6"/>
                         </svg>
@@ -358,20 +358,20 @@ class SelectionManager {
                     
                     <!-- Control toolbar with action buttons -->
                     <div class="image-controls-toolbar selection-action-toolbar">
-                        <button id="selection-edit-btn" class="image-control-btn" data-i18n-title="selection.edit" title="Edit" style="display:none;">
+                        <button id="selection-edit-btn" class="image-control-btn" data-i18n-title="selection.edit" aria-label="Edit" title="Edit" style="display:none;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
                         </button>
-                        <button id="selection-copy-btn" class="image-control-btn" data-i18n-title="selection.copy" title="Copy">
+                        <button id="selection-copy-btn" class="image-control-btn" data-i18n-title="selection.copy" aria-label="Copy" title="Copy">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                 <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
                             </svg>
                         </button>
                         <div id="selection-color-wrapper" class="selection-color-picker-wrapper" style="display:none;">
-                            <button id="selection-color-btn" type="button" class="image-control-btn selection-color-btn" data-i18n-title="selection.color" title="Color" aria-expanded="false">
+                            <button id="selection-color-btn" type="button" class="image-control-btn selection-color-btn" data-i18n-title="selection.color" aria-label="Color" title="Color" aria-expanded="false">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M12 3c4.97 0 9 3.58 9 8 0 2.76-1.57 4.91-4.14 5.96-.65.26-1.06.9-1.06 1.6V20a1 1 0 0 1-1 1h-2.5a1.5 1.5 0 0 1-1.5-1.5v-.34a2 2 0 0 0-2-2H8a5 5 0 0 1-5-5c0-5.08 4.03-9.16 9-9.16Z"></path>
                                     <circle cx="7.5" cy="10.5" r="1"></circle>
@@ -387,7 +387,7 @@ class SelectionManager {
                                 <input id="selection-color-input" type="color" class="selection-color-input" tabindex="-1" aria-hidden="true">
                             </div>
                         </div>
-                        <button id="selection-position-btn" class="image-control-btn" data-i18n-title="selection.position" title="Position" style="display:none;">
+                        <button id="selection-position-btn" class="image-control-btn" data-i18n-title="selection.position" aria-label="Position" title="Position" style="display:none;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M12 3v18"></path>
                                 <path d="M3 12h18"></path>
@@ -396,7 +396,7 @@ class SelectionManager {
                             </svg>
                         </button>
                         <div class="selection-layer-menu-wrapper">
-                            <button id="selection-layer-btn" class="image-control-btn" data-i18n-title="selection.layer" title="Layer">
+                            <button id="selection-layer-btn" class="image-control-btn" data-i18n-title="selection.layer" aria-label="Layer" title="Layer">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
                                     <path d="M2 12l10 5 10-5"></path>
@@ -410,7 +410,7 @@ class SelectionManager {
                                 <button class="selection-layer-item" data-layer-action="move-backward" data-i18n="selection.layerDown">Move Backward</button>
                             </div>
                         </div>
-                        <button id="selection-group-btn" class="image-control-btn" data-i18n-title="selection.group" title="Group" style="display:none;">
+                        <button id="selection-group-btn" class="image-control-btn" data-i18n-title="selection.group" aria-label="Group" title="Group" style="display:none;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="3" y="3" width="5" height="5" rx="1"></rect>
                                 <rect x="16" y="3" width="5" height="5" rx="1"></rect>
@@ -421,7 +421,7 @@ class SelectionManager {
                                 <path d="M12 16 12 12.75"></path>
                             </svg>
                         </button>
-                        <button id="selection-ungroup-btn" class="image-control-btn" data-i18n-title="selection.ungroup" title="Ungroup" style="display:none;">
+                        <button id="selection-ungroup-btn" class="image-control-btn" data-i18n-title="selection.ungroup" aria-label="Ungroup" title="Ungroup" style="display:none;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="12" cy="11" r="1.75"></circle>
                                 <rect x="3" y="3" width="5" height="5" rx="1"></rect>
@@ -435,13 +435,13 @@ class SelectionManager {
                                 <path d="M10.5 14.2 12 15.8 13.5 14.2"></path>
                             </svg>
                         </button>
-                        <button id="selection-delete-btn" class="image-control-btn image-cancel-btn" data-i18n-title="selection.delete" title="Delete">
+                        <button id="selection-delete-btn" class="image-control-btn image-cancel-btn" data-i18n-title="selection.delete" aria-label="Delete" title="Delete">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
                             </svg>
                         </button>
-                        <button id="selection-done-btn" class="image-control-btn image-done-btn" data-i18n-title="selection.done" title="Done">
+                        <button id="selection-done-btn" class="image-control-btn image-done-btn" data-i18n-title="selection.done" aria-label="Done" title="Done">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
@@ -453,7 +453,7 @@ class SelectionManager {
                 <div class="modal-content coordinate-position-modal-content">
                     <div class="modal-header">
                         <h2 data-i18n="selection.position">位置</h2>
-                        <button id="selection-coordinate-position-close-btn" class="modal-close-btn">
+                        <button id="selection-coordinate-position-close-btn" class="modal-close-btn" data-i18n-title="common.close" title="Close" aria-label="Close">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -2308,11 +2308,11 @@ class SelectionManager {
                 <div class="selection-coordinate-position-fields">
                     <label>
                         <span>X</span>
-                        <input type="number" step="0.1" data-point-id="${point.id}" data-axis="x" value="${point.x}">
+                        <input type="number" step="0.1" data-point-id="${point.id}" data-axis="x" value="${point.x}" aria-label="X">
                     </label>
                     <label>
                         <span>Y</span>
-                        <input type="number" step="0.1" data-point-id="${point.id}" data-axis="y" value="${point.y}">
+                        <input type="number" step="0.1" data-point-id="${point.id}" data-axis="y" value="${point.y}" aria-label="Y">
                     </label>
                 </div>
             </div>

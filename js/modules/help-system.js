@@ -300,6 +300,7 @@ class HelpSystem {
         btn.dataset.helpKey = helpKey;
         btn.setAttribute('data-i18n-title', 'common.help');
         btn.setAttribute('aria-label', window.i18n?.t('common.help') || 'Help');
+        btn.title = window.i18n?.t('common.help') || 'Help';
         btn.innerHTML = `
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"></circle>
@@ -340,12 +341,13 @@ class HelpSystem {
             modal.id = modalId;
             modal.className = 'modal';
             // Set highest z-index to ensure help modal is always on top
+            const closeLabel = window.i18n?.t('common.close') || 'Close';
             modal.style.zIndex = '99999';
             modal.innerHTML = `
                 <div class="modal-content help-modal-content">
                     <div class="modal-header">
                         <h2>${window.i18n.t('common.help')}</h2>
-                        <button class="modal-close-btn">
+                        <button class="modal-close-btn" type="button" data-i18n-title="common.close" aria-label="${closeLabel}" title="${closeLabel}">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
@@ -375,6 +377,12 @@ class HelpSystem {
 
         // Update title in case language changed
         modal.querySelector('h2').textContent = window.i18n.t('common.help');
+        const closeBtn = modal.querySelector('.modal-close-btn');
+        const closeLabel = window.i18n?.t('common.close') || 'Close';
+        if (closeBtn) {
+            closeBtn.title = closeLabel;
+            closeBtn.setAttribute('aria-label', closeLabel);
+        }
 
         // Parse simple markdown-like syntax using RichTextParser
         let formattedContent = window.RichTextParser ? window.RichTextParser.parse(content) : content;

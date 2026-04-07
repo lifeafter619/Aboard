@@ -66,21 +66,21 @@ class InsertImageManager {
                     <div class="resize-handle left" data-handle="left"></div>
 
                     <!-- Rotation handle -->
-                    <div class="rotate-handle" id="insert-image-rotate-handle" data-i18n-title="imageControls.rotate">
+                    <div class="rotate-handle" id="insert-image-rotate-handle" data-i18n-title="imageControls.rotate" title="Rotate" aria-label="Rotate">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                             <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                         </svg>
                     </div>
 
                     <!-- Flip horizontal handle -->
-                    <div class="flip-handle flip-horizontal" id="insert-image-flip-horizontal" data-i18n-title="imageControls.flipHorizontal">
+                    <div class="flip-handle flip-horizontal" id="insert-image-flip-horizontal" data-i18n-title="imageControls.flipHorizontal" title="Flip Horizontal" aria-label="Flip Horizontal">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                             <path d="M12 3v18M8 6l-5 6 5 6M16 6l5 6-5 6"/>
                         </svg>
                     </div>
 
                     <!-- Flip vertical handle -->
-                    <div class="flip-handle flip-vertical" id="insert-image-flip-vertical" data-i18n-title="imageControls.flipVertical">
+                    <div class="flip-handle flip-vertical" id="insert-image-flip-vertical" data-i18n-title="imageControls.flipVertical" title="Flip Vertical" aria-label="Flip Vertical">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                             <path d="M3 12h18M6 8l6-5 6 5M6 16l6 5 6-5"/>
                         </svg>
@@ -88,20 +88,20 @@ class InsertImageManager {
 
                     <!-- Control toolbar -->
                     <div class="image-controls-toolbar">
-                        <button id="insert-image-help-btn" class="image-control-btn image-help-btn" type="button" data-help-key="help.features.insertImage" data-i18n-title="common.help" title="${window.i18n.t('common.help')}">
+                        <button id="insert-image-help-btn" class="image-control-btn image-help-btn" type="button" data-help-key="help.features.insertImage" data-i18n-title="common.help" title="${window.i18n.t('common.help')}" aria-label="${window.i18n.t('common.help')}">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
                                 <line x1="12" y1="17" x2="12" y2="17"></line>
                             </svg>
                         </button>
-                        <button id="insert-image-cancel-btn" class="image-control-btn image-cancel-btn" data-i18n-title="common.cancel">
+                        <button id="insert-image-cancel-btn" class="image-control-btn image-cancel-btn" data-i18n-title="common.cancel" title="Cancel" aria-label="Cancel">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
                             </svg>
                         </button>
-                        <button id="insert-image-confirm-btn" class="image-control-btn image-done-btn" data-i18n-title="imageControls.confirm">
+                        <button id="insert-image-confirm-btn" class="image-control-btn image-done-btn" data-i18n-title="imageControls.confirm" title="Confirm" aria-label="Confirm">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>

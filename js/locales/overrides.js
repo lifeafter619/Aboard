@@ -87,9 +87,14 @@ window.locale_translation_overrides = (() => {
         },
         'zh-TW': {
             common: {
+                inputRequired: '請輸入內容。',
                 preview: '預覽',
                 settings: '設定',
                 dragToMove: '拖曳以移動'
+            },
+            teachingTools: {
+                increaseCount: '增加 {tool} 數量',
+                decreaseCount: '減少 {tool} 數量'
             },
             timeDisplay: {
                 am: '上午',
@@ -148,11 +153,16 @@ window.locale_translation_overrides = (() => {
         },
         'ja-JP': {
             common: {
+                inputRequired: '内容を入力してください。',
                 start: '開始',
                 stop: '停止',
                 preview: 'プレビュー',
                 settings: '設定',
                 dragToMove: 'ドラッグして移動'
+            },
+            teachingTools: {
+                increaseCount: '{tool} の数を増やす',
+                decreaseCount: '{tool} の数を減らす'
             },
             tools: {
                 pen: {
@@ -239,6 +249,7 @@ window.locale_translation_overrides = (() => {
                 allowRepeats: '重複を許可',
                 rangeLabel: '数値範囲',
                 importLabel: 'リストをインポート',
+                importColumnPlaceholder: '列名',
                 defaultColumnName: '名前',
                 importBtn: 'Excel/CSVをインポート',
                 importHint: '.xlsx・.xls・.csv に対応し、名前列を自動検出します',
@@ -253,6 +264,8 @@ window.locale_translation_overrides = (() => {
                 confirmRemoveTeam: 'このチームを削除しますか？',
                 teamDefault: 'チーム',
                 removeTeam: 'チームを削除',
+                increaseScore: '{team} に加点',
+                decreaseScore: '{team} を減点',
                 confirmReset: 'すべてのスコアをリセットしますか？'
             },
             timer: {
@@ -260,7 +273,8 @@ window.locale_translation_overrides = (() => {
                 titleFontSize: 'タイトル文字サイズ',
                 timeFontSize: '時刻文字サイズ',
                 minimal: '最小表示',
-                minimalMode: '最小表示（ダブルクリックで復元）'
+                minimalMode: '最小表示（ダブルクリックで復元）',
+                preview: '試聴'
             },
             export: {
                 selectAtLeastOnePage: '少なくとも1ページを選択してください',
@@ -270,11 +284,16 @@ window.locale_translation_overrides = (() => {
         },
         'ko-KR': {
             common: {
+                inputRequired: '내용을 입력해 주세요.',
                 start: '시작',
                 stop: '중지',
                 preview: '미리보기',
                 settings: '설정',
                 dragToMove: '드래그하여 이동'
+            },
+            teachingTools: {
+                increaseCount: '{tool} 수 늘리기',
+                decreaseCount: '{tool} 수 줄이기'
             },
             tools: {
                 pen: {
@@ -361,6 +380,7 @@ window.locale_translation_overrides = (() => {
                 allowRepeats: '중복 허용',
                 rangeLabel: '숫자 범위',
                 importLabel: '목록 가져오기',
+                importColumnPlaceholder: '열 이름',
                 defaultColumnName: '이름',
                 importBtn: 'Excel/CSV 가져오기',
                 importHint: '.xlsx, .xls, .csv를 지원하며 이름 열을 자동으로 감지합니다',
@@ -375,6 +395,8 @@ window.locale_translation_overrides = (() => {
                 confirmRemoveTeam: '이 팀을 삭제할까요?',
                 teamDefault: '팀',
                 removeTeam: '팀 삭제',
+                increaseScore: '{team} 점수 올리기',
+                decreaseScore: '{team} 점수 내리기',
                 confirmReset: '모든 점수를 초기화할까요?'
             },
             timer: {
@@ -382,7 +404,8 @@ window.locale_translation_overrides = (() => {
                 titleFontSize: '제목 글꼴 크기',
                 timeFontSize: '시간 글꼴 크기',
                 minimal: '최소 표시',
-                minimalMode: '최소 표시 모드(더블클릭으로 복원)'
+                minimalMode: '최소 표시 모드(더블클릭으로 복원)',
+                preview: '미리듣기'
             },
             export: {
                 selectAtLeastOnePage: '최소 한 페이지를 선택하세요',
@@ -392,11 +415,16 @@ window.locale_translation_overrides = (() => {
         },
         'fr-FR': {
             common: {
+                inputRequired: 'Veuillez saisir du contenu.',
                 start: 'Demarrer',
                 stop: 'Arreter',
                 preview: 'Apercu',
                 settings: 'Parametres',
                 dragToMove: 'Faire glisser pour deplacer'
+            },
+            teachingTools: {
+                increaseCount: 'Augmenter le nombre de {tool}',
+                decreaseCount: 'Diminuer le nombre de {tool}'
             },
             tools: {
                 pen: {
@@ -504,6 +532,7 @@ window.locale_translation_overrides = (() => {
                 allowRepeats: 'Autoriser les repetitions',
                 rangeLabel: 'Plage de nombres',
                 importLabel: 'Importer une liste',
+                importColumnPlaceholder: 'Colonne',
                 defaultColumnName: 'Nom',
                 importBtn: 'Importer Excel/CSV',
                 importHint: 'Prend en charge .xlsx, .xls et .csv, et detecte automatiquement la colonne des noms',
@@ -518,6 +547,8 @@ window.locale_translation_overrides = (() => {
                 confirmRemoveTeam: 'Supprimer cette equipe ?',
                 teamDefault: 'Equipe',
                 removeTeam: 'Supprimer l\'equipe',
+                increaseScore: 'Augmenter le score de {team}',
+                decreaseScore: 'Diminuer le score de {team}',
                 confirmReset: 'Reinitialiser tous les scores ?'
             },
             timer: {
@@ -528,6 +559,9 @@ window.locale_translation_overrides = (() => {
                 setStartTime: 'Definir l\'heure de depart',
                 titleFontSize: 'Taille de police du titre',
                 timeFontSize: 'Taille de police du temps',
+                minimal: 'Minimal',
+                minimalMode: 'Mode minimal',
+                preview: 'Aperçu',
                 opacity: 'Opacite',
                 opacityLabel: 'Opacite : Actuelle',
                 fullscreenFontSize: 'Taille de police en plein ecran',
@@ -541,11 +575,16 @@ window.locale_translation_overrides = (() => {
         },
         'es-ES': {
             common: {
+                inputRequired: 'Introduce contenido.',
                 start: 'Iniciar',
                 stop: 'Detener',
                 preview: 'Vista previa',
                 settings: 'Configuracion',
                 dragToMove: 'Arrastra para mover'
+            },
+            teachingTools: {
+                increaseCount: 'Aumentar la cantidad de {tool}',
+                decreaseCount: 'Reducir la cantidad de {tool}'
             },
             tools: {
                 pen: {
@@ -653,6 +692,7 @@ window.locale_translation_overrides = (() => {
                 allowRepeats: 'Permitir repeticiones',
                 rangeLabel: 'Rango numerico',
                 importLabel: 'Importar lista',
+                importColumnPlaceholder: 'Columna',
                 defaultColumnName: 'Nombre',
                 importBtn: 'Importar Excel/CSV',
                 importHint: 'Compatible con .xlsx, .xls y .csv; detecta automaticamente la columna de nombres',
@@ -667,6 +707,8 @@ window.locale_translation_overrides = (() => {
                 confirmRemoveTeam: 'Eliminar este equipo?',
                 teamDefault: 'Equipo',
                 removeTeam: 'Eliminar equipo',
+                increaseScore: 'Aumentar la puntuacion de {team}',
+                decreaseScore: 'Disminuir la puntuacion de {team}',
                 confirmReset: 'Restablecer todas las puntuaciones?'
             },
             timer: {
@@ -677,6 +719,9 @@ window.locale_translation_overrides = (() => {
                 setStartTime: 'Definir hora inicial',
                 titleFontSize: 'Tamano de fuente del titulo',
                 timeFontSize: 'Tamano de fuente del tiempo',
+                minimal: 'Mínimo',
+                minimalMode: 'Modo mínimo',
+                preview: 'Vista previa',
                 opacity: 'Opacidad',
                 opacityLabel: 'Opacidad: Actual',
                 fullscreenFontSize: 'Tamano de fuente en pantalla completa',
@@ -690,11 +735,16 @@ window.locale_translation_overrides = (() => {
         },
         'de-DE': {
             common: {
+                inputRequired: 'Bitte geben Sie einen Inhalt ein.',
                 start: 'Starten',
                 stop: 'Stoppen',
                 preview: 'Vorschau',
                 settings: 'Einstellungen',
                 dragToMove: 'Zum Verschieben ziehen'
+            },
+            teachingTools: {
+                increaseCount: 'Anzahl fur {tool} erhohen',
+                decreaseCount: 'Anzahl fur {tool} verringern'
             },
             tools: {
                 pen: {
@@ -802,6 +852,7 @@ window.locale_translation_overrides = (() => {
                 allowRepeats: 'Wiederholungen erlauben',
                 rangeLabel: 'Zahlenbereich',
                 importLabel: 'Liste importieren',
+                importColumnPlaceholder: 'Spalte',
                 defaultColumnName: 'Name',
                 importBtn: 'Excel/CSV importieren',
                 importHint: 'Unterstutzt .xlsx, .xls und .csv und erkennt die Namensspalte automatisch',
@@ -816,6 +867,8 @@ window.locale_translation_overrides = (() => {
                 confirmRemoveTeam: 'Dieses Team entfernen?',
                 teamDefault: 'Team',
                 removeTeam: 'Team entfernen',
+                increaseScore: 'Punktzahl fur {team} erhohen',
+                decreaseScore: 'Punktzahl fur {team} verringern',
                 confirmReset: 'Alle Punktestande zurucksetzen?'
             },
             timer: {
@@ -828,6 +881,7 @@ window.locale_translation_overrides = (() => {
                 timeFontSize: 'Zeitschriftgrosse',
                 minimal: 'Minimal',
                 minimalMode: 'Minimalanzeige (Doppelklick zum Wiederherstellen)',
+                preview: 'Vorschau',
                 opacity: 'Transparenz',
                 opacityLabel: 'Transparenz: Aktuell',
                 fullscreenFontSize: 'Schriftgrosse im Vollbild',

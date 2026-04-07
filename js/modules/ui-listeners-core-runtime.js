@@ -12,6 +12,7 @@ function setupToolConfigListeners() {
         const arrowSizeValue = document.getElementById('arrow-size-value');
         const eraserSizeSlider = document.getElementById('eraser-size-slider');
         const eraserSizeValue = document.getElementById('eraser-size-value');
+        const syncGenericColorAccessibility = () => window.i18n?.syncGenericColorControls?.();
 
         document.querySelectorAll('.pen-type-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -35,6 +36,7 @@ function setupToolConfigListeners() {
                 if (shapeColorPicker) {
                     shapeColorPicker.value = e.target.dataset.color;
                 }
+                syncGenericColorAccessibility();
             });
         });
         
@@ -49,6 +51,7 @@ function setupToolConfigListeners() {
                 if (shapeColorPicker) {
                     shapeColorPicker.value = e.target.value;
                 }
+                syncGenericColorAccessibility();
             });
         }
 
@@ -61,6 +64,7 @@ function setupToolConfigListeners() {
                 if (shapeCustomColorPickerBtn) {
                     shapeCustomColorPickerBtn.classList.remove('active');
                 }
+                syncGenericColorAccessibility();
             });
         });
         

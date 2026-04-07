@@ -3,26 +3,41 @@
 
 const SESSION_RUNTIME_PLANNED_UPDATE_RELOAD_KEY = 'aboardPlannedUpdateReload';
 
+function getRecoveryFailureMessage() {
+        return window.i18n?.t('recovery.restoreFailed') || 'Failed to restore your previous content. Please try again.';
+}
+
 function showRecoveryModal() {
         const modal = document.getElementById('recovery-modal');
         if (!modal) return;
+        const restoreBtn = document.getElementById('recovery-restore-btn');
+        const discardBtn = document.getElementById('recovery-discard-btn');
+
+        const setPendingState = (isPending) => {
+            if (restoreBtn) restoreBtn.disabled = isPending;
+            if (discardBtn) discardBtn.disabled = isPending;
+        };
         
         modal.classList.add('show');
-        
-        // Restore button
-        const restoreBtn = document.getElementById('recovery-restore-btn');
+
         if (restoreBtn) {
-            restoreBtn.onclick = () => {
-                this.restoreSession();
-                modal.classList.remove('show');
+            restoreBtn.onclick = async () => {
+                setPendingState(true);
+                const restored = await this.restoreSession();
+                setPendingState(false);
+                if (restored) {
+                    modal.classList.remove('show');
+                    return;
+                }
+                window.appDialog?.showAlert?.(getRecoveryFailureMessage(), 'error');
             };
         }
-        
-        // Discard button
-        const discardBtn = document.getElementById('recovery-discard-btn');
+
         if (discardBtn) {
-            discardBtn.onclick = () => {
-                this.clearSessionData();
+            discardBtn.onclick = async () => {
+                setPendingState(true);
+                await this.clearSessionData();
+                setPendingState(false);
                 modal.classList.remove('show');
             };
         }
@@ -237,6 +252,7 @@ function syncSettingsUI(settings) {
             const customPicker = document.getElementById('custom-color-picker');
             if (customPicker) customPicker.value = settings.penColor;
         }
+        window.i18n?.syncGenericColorControls?.();
     
 }
 

@@ -1,9 +1,17 @@
 // Extracted coordinate tools runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+function getCoordinateText(key, fallback, params = {}) {
+    if (!window.i18n?.t) {
+        return fallback;
+    }
+
+    const translated = window.i18n.t(key, params);
+    return translated && translated !== key ? translated : fallback;
+}
+
 function showCoordinateToast(i18nKey, fallback, type = 'info') {
-    const message = window.i18n ? window.i18n.t(i18nKey) : fallback;
-    this.settingsManager?.toastManager?.show(message === i18nKey ? fallback : message, type);
+    this.settingsManager?.toastManager?.show(getCoordinateText(i18nKey, fallback), type);
 }
 
 function getLogicalCanvasPointFromEvent(e) {
@@ -37,7 +45,7 @@ function handleSelectedCoordinateLinePointClick(pointId) {
         this.pendingCoordinateLineStartId = pointId;
         this.showCoordinateToast(
             'background.coordinateStatusSelectLineStartPoint',
-            '已选中第一个点，再点一个点即可连线'
+            'Selected the first point. Click another point to connect them.'
         );
         return true;
     }
@@ -47,7 +55,7 @@ function handleSelectedCoordinateLinePointClick(pointId) {
         this.resetSelectedCoordinateLineConnection();
         this.showCoordinateToast(
             'background.coordinateLineExists',
-            '这两个点之间已经有线段了'
+            'A line already exists between these two points.'
         );
         return true;
     }
@@ -56,7 +64,7 @@ function handleSelectedCoordinateLinePointClick(pointId) {
     this.resetSelectedCoordinateLineConnection();
     this.savePageBackground(this.currentPage);
     this.updateBackgroundUI();
-    this.showCoordinateToast('background.coordinateLineCreated', '线段已连接', 'success');
+    this.showCoordinateToast('background.coordinateLineCreated', 'Line connected.', 'success');
     return true;
 }
 
@@ -88,13 +96,16 @@ function createCoordinatePlotRangeRowMarkup(segment = {}, coordinateType = this.
     const minValue = segment.min ?? '';
     const maxValue = segment.max ?? '';
     const segmentId = segment.id || `segment-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+    const axisLabel = getCoordinateText('background.plotRangeAxis', 'Axis');
+    const minLabel = getCoordinateText('background.plotRangeMin', 'Min');
+    const maxLabel = getCoordinateText('background.plotRangeMax', 'Max');
 
     return `
         <div class="coordinate-plot-range-row" data-range-row data-segment-id="${this.escapeHtml(segmentId)}">
-            <select data-range-field="axis">${axisOptions}</select>
-            <input type="number" step="0.1" data-range-field="min" value="${this.escapeHtml(minValue)}" placeholder="最小值">
-            <input type="number" step="0.1" data-range-field="max" value="${this.escapeHtml(maxValue)}" placeholder="最大值">
-            <button type="button" class="coordinate-plot-range-remove" data-plot-range-remove="${this.escapeHtml(segmentId)}" title="删除范围段">✕</button>
+            <select data-range-field="axis" aria-label="${this.escapeHtml(axisLabel)}">${axisOptions}</select>
+            <input type="number" step="0.1" data-range-field="min" value="${this.escapeHtml(minValue)}" placeholder="${this.escapeHtml(getCoordinateText('background.plotRangeMinPlaceholder', 'Min value'))}" aria-label="${this.escapeHtml(minLabel)}">
+            <input type="number" step="0.1" data-range-field="max" value="${this.escapeHtml(maxValue)}" placeholder="${this.escapeHtml(getCoordinateText('background.plotRangeMaxPlaceholder', 'Max value'))}" aria-label="${this.escapeHtml(maxLabel)}">
+            <button type="button" class="coordinate-plot-range-remove" data-plot-range-remove="${this.escapeHtml(segmentId)}" title="${this.escapeHtml(getCoordinateText('background.plotRemoveRange', 'Remove range'))}" aria-label="${this.escapeHtml(getCoordinateText('background.plotRemoveRange', 'Remove range'))}">✕</button>
         </div>
     `;
 }
@@ -143,7 +154,7 @@ function handleCoordinatePlotListClick(e) {
         const editor = actionButton.closest('.coordinate-plot-editor');
         const rangeList = editor?.querySelector('.coordinate-plot-range-list');
         if (rangeList && !rangeList.querySelector('[data-range-row]')) {
-            rangeList.innerHTML = '<div class="coordinate-plot-range-empty">未限制显示范围，默认显示全部</div>';
+            rangeList.innerHTML = `<div class="coordinate-plot-range-empty">${this.escapeHtml(getCoordinateText('background.plotNoRange', 'No display range limit. Showing all by default.'))}</div>`;
         }
     }
 }
@@ -194,10 +205,10 @@ function saveCoordinatePlotEditor(plotId) {
         this.expandedCoordinatePlotId = null;
         this.savePageBackground(this.currentPage);
         this.updateBackgroundUI();
-        this.showCoordinateToast('background.plotUpdated', '函数图像已更新', 'success');
+        this.showCoordinateToast('background.plotUpdated', 'Function plot updated.', 'success');
     } catch (error) {
         console.error('Failed to update coordinate plot:', error);
-        this.showCoordinateToast('background.plotError', '表达式无效，无法绘制', 'error');
+        this.showCoordinateToast('background.plotError', 'Invalid expression. Unable to plot.', 'error');
     }
 }
 
@@ -210,27 +221,27 @@ function getCoordinatePointLineModeMeta(mode = this.getCoordinatePointLineMode()
     const modeConfig = {
         line: {
             hintKey: 'background.addPointHintLineOnly',
-            hintFallback: '开启后点击画布依次添加坐标点，仅绘制折线',
+            hintFallback: 'When enabled, click the canvas to place coordinate points and draw only the polyline',
             statusOnKey: 'background.coordinateStatusAddPointLineOnly',
-            statusOnFallback: '仅绘制线模式已开启，点击画布依次添加坐标点',
+            statusOnFallback: 'Line-only mode enabled. Click the canvas to place coordinate points',
             statusOffKey: 'background.coordinateStatusAddPointOff',
-            statusOffFallback: '绘制点线模式已关闭'
+            statusOffFallback: 'Draw points & lines mode disabled'
         },
         auto: {
             hintKey: 'background.addPointHintAuto',
-            hintFallback: '开启后点击画布依次添加坐标点并自动连线',
+            hintFallback: 'When enabled, click the canvas to place coordinate points and connect them automatically',
             statusOnKey: 'background.coordinateStatusAddPointAuto',
-            statusOnFallback: '自动连线模式已开启，点击画布依次添加坐标点',
+            statusOnFallback: 'Auto-connect mode enabled. Click the canvas to place coordinate points',
             statusOffKey: 'background.coordinateStatusAddPointOff',
-            statusOffFallback: '绘制点线模式已关闭'
+            statusOffFallback: 'Draw points & lines mode disabled'
         },
         selected: {
             hintKey: 'background.addPointHintSelectedInteractive',
-            hintFallback: '开启后点击空白处添加坐标点；依次点击两个点即可连接线段',
+            hintFallback: 'When enabled, click empty space to add points; click two points in sequence to connect them',
             statusOnKey: 'background.coordinateStatusAddPointSelectedInteractive',
-            statusOnFallback: '选择连线模式已开启，点击空白处添加点，点击两个点可连线',
+            statusOnFallback: 'Selected-connect mode enabled. Click empty space to add points, then click two points to connect them',
             statusOffKey: 'background.coordinateStatusAddPointOff',
-            statusOffFallback: '绘制点线模式已关闭'
+            statusOffFallback: 'Draw points & lines mode disabled'
         }
     };
     return modeConfig[normalizedMode];

@@ -1,6 +1,15 @@
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+function getBackgroundText(key, fallback, params = {}) {
+        if (!window.i18n?.t) {
+            return fallback;
+        }
+
+        const translated = window.i18n.t(key, params);
+        return translated && translated !== key ? translated : fallback;
+}
+
 function renderCoordinatePlotList(currentPattern) {
         const plotList = document.getElementById('coordinate-plot-list');
         if (!plotList) return;
@@ -11,19 +20,35 @@ function renderCoordinatePlotList(currentPattern) {
             .filter(plot => plot.coordinateType === currentPattern);
 
         if (activePlots.length === 0) {
-            const emptyText = window.i18n ? window.i18n.t('background.noPlots') : '暂无函数图像';
+            const emptyText = getBackgroundText('background.noPlots', 'No plotted functions yet');
             plotList.innerHTML = `<div class="coordinate-empty-state">${emptyText}</div>`;
             return;
         }
 
-        const editTitle = window.i18n ? window.i18n.t('selection.edit') : '编辑';
-        const deleteTitle = window.i18n ? window.i18n.t('selection.delete') : '删除';
+        const editTitle = getBackgroundText('selection.edit', 'Edit');
+        const deleteTitle = getBackgroundText('selection.delete', 'Delete');
         const dashStyleLabels = {
-            solid: '实线',
-            dashed: '虚线',
-            dotted: '点线',
-            dashdot: '点划线'
+            solid: getBackgroundText('tools.lineStyle.solid', 'Solid'),
+            dashed: getBackgroundText('tools.lineStyle.dashed', 'Dashed'),
+            dotted: getBackgroundText('tools.lineStyle.dotted', 'Dotted'),
+            dashdot: getBackgroundText('tools.lineStyle.dashdot', 'Dash-dot')
         };
+        const expressionLabel = getBackgroundText('background.plotExpression', 'Function Expression');
+        const colorLabel = getBackgroundText('background.plotColor', 'Color');
+        const lineStyleLabel = getBackgroundText('background.plotLineStyle', 'Line Style');
+        const strokeWidthLabel = getBackgroundText('background.plotStrokeWidth', 'Stroke Width');
+        const rangeTitle = getBackgroundText('background.plotRangeTitle', 'Display Range');
+        const axisLabel = getBackgroundText('background.plotRangeAxis', 'Axis');
+        const minLabel = getBackgroundText('background.plotRangeMin', 'Min');
+        const maxLabel = getBackgroundText('background.plotRangeMax', 'Max');
+        const addRangeLabel = getBackgroundText('background.plotAddRange', 'Add Range');
+        const collapseLabel = getBackgroundText('background.plotCollapse', 'Collapse');
+        const saveLabel = getBackgroundText('background.plotSave', 'Save');
+        const expressionInputLabel = getBackgroundText('background.plotExpression', 'Function Expression');
+        const colorInputLabel = getBackgroundText('background.plotColor', 'Color');
+        const lineStyleInputLabel = getBackgroundText('background.plotLineStyle', 'Line Style');
+        const strokeWidthInputLabel = getBackgroundText('background.plotStrokeWidth', 'Stroke Width');
+        const noRangeText = getBackgroundText('background.plotNoRange', 'No display range limit. Showing all by default.');
 
         plotList.innerHTML = activePlots.map(plot => {
             const isExpanded = this.expandedCoordinatePlotId === plot.id;
@@ -32,7 +57,7 @@ function renderCoordinatePlotList(currentPattern) {
                 .join('');
             const rangeRows = Array.isArray(plot.segments) && plot.segments.length
                 ? plot.segments.map(segment => this.createCoordinatePlotRangeRowMarkup(segment, plot.coordinateType)).join('')
-                : '<div class="coordinate-plot-range-empty">未限制显示范围，默认显示全部</div>';
+                : `<div class="coordinate-plot-range-empty">${this.escapeHtml(noRangeText)}</div>`;
 
             return `
                 <div class="coordinate-plot-item ${isExpanded ? 'expanded' : ''}" data-plot-id="${this.escapeHtml(plot.id)}" data-coordinate-type="${this.escapeHtml(plot.coordinateType)}">
@@ -40,46 +65,46 @@ function renderCoordinatePlotList(currentPattern) {
                         <span class="coordinate-plot-color" style="background:${plot.color};"></span>
                         <span class="coordinate-plot-expression">${this.getCoordinateExpressionPrefix(plot.coordinateType)}${this.escapeHtml(plot.expression)}</span>
                         <div class="coordinate-plot-actions">
-                            <button type="button" class="coordinate-plot-action-btn" data-plot-toggle-edit="${this.escapeHtml(plot.id)}" title="${this.escapeHtml(editTitle)}">✎</button>
-                            <button type="button" class="coordinate-plot-remove" data-plot-remove="${this.escapeHtml(plot.id)}" title="${this.escapeHtml(deleteTitle)}">×</button>
+                            <button type="button" class="coordinate-plot-action-btn" data-plot-toggle-edit="${this.escapeHtml(plot.id)}" title="${this.escapeHtml(editTitle)}" aria-label="${this.escapeHtml(editTitle)}">✎</button>
+                            <button type="button" class="coordinate-plot-remove" data-plot-remove="${this.escapeHtml(plot.id)}" title="${this.escapeHtml(deleteTitle)}" aria-label="${this.escapeHtml(deleteTitle)}">×</button>
                         </div>
                     </div>
                     <div class="coordinate-plot-editor">
                         <div class="coordinate-plot-field">
-                            <label>表达式</label>
-                            <input type="text" data-plot-field="expression" value="${this.escapeHtml(plot.expression)}">
+                            <label>${this.escapeHtml(expressionLabel)}</label>
+                            <input type="text" data-plot-field="expression" value="${this.escapeHtml(plot.expression)}" aria-label="${this.escapeHtml(expressionInputLabel)}">
                         </div>
                         <div class="coordinate-plot-style-grid">
                             <div class="coordinate-plot-field">
-                                <label>颜色</label>
-                                <input class="coordinate-plot-color-input" type="color" data-plot-field="color" value="${this.escapeHtml(plot.color)}">
+                                <label>${this.escapeHtml(colorLabel)}</label>
+                                <input class="coordinate-plot-color-input" type="color" data-plot-field="color" value="${this.escapeHtml(plot.color)}" aria-label="${this.escapeHtml(colorInputLabel)}">
                             </div>
                             <div class="coordinate-plot-field">
-                                <label>线型</label>
-                                <select data-plot-field="dashStyle">${dashOptions}</select>
+                                <label>${this.escapeHtml(lineStyleLabel)}</label>
+                                <select data-plot-field="dashStyle" aria-label="${this.escapeHtml(lineStyleInputLabel)}">${dashOptions}</select>
                             </div>
                             <div class="coordinate-plot-field">
-                                <label>粗细</label>
-                                <input type="number" min="1" max="12" step="0.5" data-plot-field="strokeWidth" value="${this.escapeHtml(plot.strokeWidth ?? 2.5)}">
+                                <label>${this.escapeHtml(strokeWidthLabel)}</label>
+                                <input type="number" min="1" max="12" step="0.5" data-plot-field="strokeWidth" value="${this.escapeHtml(plot.strokeWidth ?? 2.5)}" aria-label="${this.escapeHtml(strokeWidthInputLabel)}">
                             </div>
                         </div>
                         <div class="coordinate-plot-field">
-                            <div class="coordinate-plot-range-title">显示范围（可组合多段）</div>
+                            <div class="coordinate-plot-range-title">${this.escapeHtml(rangeTitle)}</div>
                             <div class="coordinate-plot-range-header">
-                                <span>控制量</span>
-                                <span>最小值</span>
-                                <span>最大值</span>
+                                <span>${this.escapeHtml(axisLabel)}</span>
+                                <span>${this.escapeHtml(minLabel)}</span>
+                                <span>${this.escapeHtml(maxLabel)}</span>
                                 <span></span>
                             </div>
                             <div class="coordinate-plot-range-list">${rangeRows}</div>
                         </div>
                         <div class="coordinate-plot-editor-actions">
                             <div class="coordinate-plot-editor-actions-left">
-                                <button type="button" class="coordinate-plot-editor-btn" data-plot-add-segment="${this.escapeHtml(plot.id)}">添加范围段</button>
+                                <button type="button" class="coordinate-plot-editor-btn" data-plot-add-segment="${this.escapeHtml(plot.id)}">${this.escapeHtml(addRangeLabel)}</button>
                             </div>
                             <div class="coordinate-plot-editor-actions-right">
-                                <button type="button" class="coordinate-plot-editor-btn" data-plot-cancel="${this.escapeHtml(plot.id)}">收起</button>
-                                <button type="button" class="coordinate-plot-editor-btn primary" data-plot-save="${this.escapeHtml(plot.id)}">保存</button>
+                                <button type="button" class="coordinate-plot-editor-btn" data-plot-cancel="${this.escapeHtml(plot.id)}">${this.escapeHtml(collapseLabel)}</button>
+                                <button type="button" class="coordinate-plot-editor-btn primary" data-plot-save="${this.escapeHtml(plot.id)}">${this.escapeHtml(saveLabel)}</button>
                             </div>
                         </div>
                     </div>
@@ -116,6 +141,7 @@ function updateBackgroundUI() {
         if (customBgColorPicker) {
             customBgColorPicker.value = this.backgroundManager.backgroundColor;
         }
+        window.i18n?.syncGenericColorControls?.();
 
         const patternDensitySlider = document.getElementById('pattern-density-slider');
         const patternDensityValue = document.getElementById('pattern-density-value');
@@ -247,10 +273,9 @@ function updateBackgroundUI() {
         if (coordinatePlotHint) {
             const hintKey = currentPattern === 'polar' ? 'background.plotHintPolar' : 'background.plotHintCartesian';
             const fallback = currentPattern === 'polar'
-                ? '极坐标：输入 r = f(theta)，theta 为弧度，deg 为角度'
-                : '直角坐标：输入 y = f(x)，可用 sin cos PI';
-            const translated = window.i18n ? window.i18n.t(hintKey) : fallback;
-            coordinatePlotHint.textContent = translated === hintKey ? fallback : translated;
+                ? 'Polar: enter r = f(theta), theta is radians and deg is degrees'
+                : 'Cartesian: enter y = f(x), you can use sin cos PI';
+            coordinatePlotHint.textContent = getBackgroundText(hintKey, fallback);
         }
 
         const coordinateExpressionInput = document.getElementById('coordinate-expression-input');
@@ -258,9 +283,8 @@ function updateBackgroundUI() {
             const placeholderKey = currentPattern === 'polar'
                 ? 'background.plotPlaceholderPolar'
                 : 'background.plotPlaceholderCartesian';
-            const fallback = currentPattern === 'polar' ? '如：2 * sin(4 * theta)' : '如：sin(x) + 2';
-            const translated = window.i18n ? window.i18n.t(placeholderKey) : fallback;
-            coordinateExpressionInput.placeholder = translated === placeholderKey ? fallback : translated;
+            const fallback = currentPattern === 'polar' ? 'e.g. 2 * sin(4 * theta)' : 'e.g. sin(x) + 2';
+            coordinateExpressionInput.placeholder = getBackgroundText(placeholderKey, fallback);
         }
 
         const coordinateAddPointBtn = document.getElementById('coordinate-add-point-btn');

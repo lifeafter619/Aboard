@@ -17,7 +17,10 @@ class I18n {
         this.currentLocale = 'zh-CN'; // Default language
         this.translations = {};
         this.fallbackTranslations = {};
+        this.secondaryFallbackTranslations = {};
         this.fallbackLocale = 'zh-CN';
+        this.translationFallbackLocale = 'zh-CN';
+        this.secondaryFallbackLocale = null;
         this.localeOverrides = null;
         this.coreLocales = ['zh-CN', 'en-US'];
         this.localePreferenceModeStorageKey = 'aboardLocalePreferenceMode';
@@ -66,6 +69,14 @@ class I18n {
      */
     saveLocale(locale) {
         localStorage.setItem('locale', locale);
+    }
+
+    isAriaSyncTarget(el) {
+        if (!el || typeof el.matches !== 'function') {
+            return false;
+        }
+
+        return el.matches('button, [role="button"], input:not([type="hidden"]), a, select, textarea, summary, .rotate-handle, .selection-transform-handle, .flip-handle');
     }
 
     getSavedLocalePreferenceMode() {
@@ -169,22 +180,26 @@ class I18n {
 
     getLocaleDownloadPrompt(locale) {
         const localeName = this.availableLocales[locale] || locale;
-        const promptLocale = this.currentLocale === 'en-US' ? 'en-US' : 'zh-CN';
-        if (promptLocale === 'en-US') {
-            return `Download the ${localeName} language pack now?`;
-        }
-
-        return `切换到 ${localeName} 需要先下载语言包，现在下载吗？`;
+        return this.t('prompts.localeDownloadPrompt', { locale: localeName });
     }
 
     getPreferredLocaleSuggestionPrompt(locale) {
         const localeName = this.availableLocales[locale] || locale;
-        const promptLocale = this.currentLocale === 'en-US' ? 'en-US' : 'zh-CN';
-        if (promptLocale === 'en-US') {
-            return `We detected that your preferred browser language is ${localeName}. Download and switch to it now?`;
+        return this.t('prompts.preferredLocaleSuggestionPrompt', { locale: localeName });
+    }
+
+    async showLocaleConfirm(message, title = null) {
+        if (window.appDialog?.showConfirm) {
+            return window.appDialog.showConfirm({
+                title: title || this.t('common.confirm'),
+                message,
+                confirmText: this.t('common.confirm'),
+                cancelText: this.t('common.cancel')
+            });
         }
 
-        return `检测到你的浏览器语言更接近 ${localeName}，现在下载并切换吗？`;
+        console.warn('DialogManager is unavailable for locale confirmation; keeping the current locale.', message);
+        return false;
     }
 
     getBrowserLanguages() {
@@ -261,6 +276,15 @@ class I18n {
         return this.fallbackLocale;
     }
 
+    resolveTranslationFallbackLocales(locale) {
+        const normalizedLocale = String(locale || '').toLowerCase();
+        if (normalizedLocale.startsWith('zh')) {
+            return ['zh-CN'];
+        }
+
+        return ['en-US', 'zh-CN'];
+    }
+
     getDismissedPreferredLocaleSuggestion() {
         const dismissedLocale = localStorage.getItem(this.localeSuggestionDismissStorageKey);
         return this.availableLocales[dismissedLocale] ? dismissedLocale : null;
@@ -302,9 +326,9 @@ class I18n {
             return false;
         }
 
-        const shouldSwitch = typeof window.confirm === 'function'
-            ? window.confirm(this.getPreferredLocaleSuggestionPrompt(preferredLocale))
-            : true;
+        const shouldSwitch = await this.showLocaleConfirm(
+            this.getPreferredLocaleSuggestionPrompt(preferredLocale)
+        );
 
         if (!shouldSwitch) {
             this.setDismissedPreferredLocaleSuggestion(preferredLocale);
@@ -345,6 +369,10 @@ class I18n {
             return 'en-US';
         }
 
+        if (primaryBrowserLocale && primaryBrowserLocale !== 'en-US' && !hasChineseSignal) {
+            return primaryBrowserLocale;
+        }
+
         if (hasChineseSignal) {
             return this.fallbackLocale;
         }
@@ -382,40 +410,63 @@ class I18n {
             };
 
             const requestedLocale = this.currentLocale;
-            const fallbackLocalePromise = loadLocaleFile(this.fallbackLocale);
-            const requestedLocalePromise = requestedLocale === this.fallbackLocale
-                ? fallbackLocalePromise
-                : loadLocaleFile(requestedLocale);
+            const [primaryFallbackLocale, secondaryFallbackLocale = null] = this.resolveTranslationFallbackLocales(requestedLocale);
+            const localeLoadPromises = new Map();
+            const ensureLocalePromise = (locale) => {
+                if (!locale) {
+                    return Promise.resolve(null);
+                }
+                if (!localeLoadPromises.has(locale)) {
+                    localeLoadPromises.set(locale, loadLocaleFile(locale));
+                }
+                return localeLoadPromises.get(locale);
+            };
+
+            const primaryFallbackLocalePromise = ensureLocalePromise(primaryFallbackLocale);
+            const secondaryFallbackLocalePromise = ensureLocalePromise(secondaryFallbackLocale);
+            const requestedLocalePromise = ensureLocalePromise(requestedLocale);
             const localeOverridesPromise = this.localeOverrides === null
                 ? loadScriptData('js/locales/overrides.js', 'locale_translation_overrides')
                 : Promise.resolve(this.localeOverrides);
 
             const [
-                fallbackLocaleTranslationsResult,
+                primaryFallbackTranslationsResult,
+                secondaryFallbackTranslationsResult,
                 requestedLocaleTranslationsResult,
                 localeOverrides
             ] = await Promise.all([
-                fallbackLocalePromise,
+                primaryFallbackLocalePromise,
+                secondaryFallbackLocalePromise,
                 requestedLocalePromise,
                 localeOverridesPromise
             ]);
 
-            const fallbackLocaleTranslations = fallbackLocaleTranslationsResult || {};
+            const primaryFallbackTranslations = primaryFallbackTranslationsResult || {};
+            const secondaryFallbackTranslations = secondaryFallbackTranslationsResult || {};
             let effectiveLocale = requestedLocale;
-            let localeTranslations = effectiveLocale === this.fallbackLocale
-                ? cloneTranslations(fallbackLocaleTranslations)
+            let localeTranslations = effectiveLocale === primaryFallbackLocale
+                ? cloneTranslations(primaryFallbackTranslations)
+                : effectiveLocale === secondaryFallbackLocale
+                    ? cloneTranslations(secondaryFallbackTranslations)
                 : requestedLocaleTranslationsResult;
 
             if (!localeTranslations) {
-                console.warn(`Failed to load ${this.currentLocale}, falling back to ${this.fallbackLocale}`);
-                effectiveLocale = this.fallbackLocale;
-                this.currentLocale = this.fallbackLocale;
-                localeTranslations = cloneTranslations(fallbackLocaleTranslations);
+                console.warn(`Failed to load ${this.currentLocale}, falling back to ${primaryFallbackLocale}`);
+                effectiveLocale = primaryFallbackLocale;
+                this.currentLocale = primaryFallbackLocale;
+                localeTranslations = cloneTranslations(primaryFallbackTranslations);
             }
 
-            this.fallbackTranslations = cloneTranslations(fallbackLocaleTranslations);
-            this.translations = effectiveLocale === this.fallbackLocale
+            this.translationFallbackLocale = primaryFallbackLocale;
+            this.secondaryFallbackLocale = secondaryFallbackLocale;
+            this.fallbackTranslations = cloneTranslations(primaryFallbackTranslations);
+            this.secondaryFallbackTranslations = secondaryFallbackLocale
+                ? cloneTranslations(secondaryFallbackTranslations)
+                : {};
+            this.translations = effectiveLocale === primaryFallbackLocale
                 ? this.fallbackTranslations
+                : effectiveLocale === secondaryFallbackLocale
+                    ? this.secondaryFallbackTranslations
                 : cloneTranslations(localeTranslations || {});
 
             if (!this.isCoreLocale(effectiveLocale)) {
@@ -425,22 +476,36 @@ class I18n {
             if (this.localeOverrides === null) {
                 this.localeOverrides = localeOverrides || {};
             }
-            this.mergeTranslations(this.fallbackTranslations, this.localeOverrides[this.fallbackLocale]);
-            if (effectiveLocale !== this.fallbackLocale) {
+            this.mergeTranslations(this.fallbackTranslations, this.localeOverrides[primaryFallbackLocale]);
+            if (secondaryFallbackLocale && secondaryFallbackLocale !== primaryFallbackLocale) {
+                this.mergeTranslations(this.secondaryFallbackTranslations, this.localeOverrides[secondaryFallbackLocale]);
+            }
+            if (effectiveLocale !== primaryFallbackLocale && effectiveLocale !== secondaryFallbackLocale) {
                 this.mergeTranslations(this.translations, this.localeOverrides[effectiveLocale]);
             }
 
             // Load help translations
             try {
                 const [fallbackHelpTranslations, helpTranslations] = await Promise.all([
-                    loadScriptData(`js/locales/help/${this.fallbackLocale}.js`, 'help_translations'),
-                    effectiveLocale !== this.fallbackLocale
+                    loadScriptData(`js/locales/help/${primaryFallbackLocale}.js`, 'help_translations'),
+                    effectiveLocale !== primaryFallbackLocale
                         ? loadScriptData(`js/locales/help/${effectiveLocale}.js`, 'help_translations')
                         : Promise.resolve(null)
                 ]);
 
                 if (fallbackHelpTranslations) {
                     this.mergeTranslations(this.fallbackTranslations, fallbackHelpTranslations);
+                }
+
+                if (secondaryFallbackLocale && secondaryFallbackLocale !== primaryFallbackLocale) {
+                    try {
+                        const secondaryHelpTranslations = await loadScriptData(`js/locales/help/${secondaryFallbackLocale}.js`, 'help_translations');
+                        if (secondaryHelpTranslations) {
+                            this.mergeTranslations(this.secondaryFallbackTranslations, secondaryHelpTranslations);
+                        }
+                    } catch (secondaryHelpError) {
+                        console.warn('Failed to load secondary fallback help translations', secondaryHelpError);
+                    }
                 }
 
                 if (helpTranslations) {
@@ -500,6 +565,9 @@ class I18n {
             value = resolve(this.fallbackTranslations);
         }
         if (value === undefined) {
+            value = resolve(this.secondaryFallbackTranslations);
+        }
+        if (value === undefined) {
             console.warn(`Translation missing for key: ${key}`);
             return key;
         }
@@ -556,6 +624,15 @@ class I18n {
                 }
             }
         });
+
+        const altElements = document.querySelectorAll('[data-i18n-alt]');
+        altElements.forEach(el => {
+            const key = el.getAttribute('data-i18n-alt');
+            const translation = this.t(key);
+            if (translation !== key) {
+                el.setAttribute('alt', translation);
+            }
+        });
         
         // Translate title attributes
         const titleElements = document.querySelectorAll('[data-i18n-title]');
@@ -567,6 +644,18 @@ class I18n {
             const translation = this.t(key);
             if (translation !== key) {
                 el.title = translation;
+                if (this.isAriaSyncTarget(el)) {
+                    el.setAttribute('aria-label', translation);
+                }
+            }
+        });
+
+        const ariaLabelElements = document.querySelectorAll('[data-i18n-aria-label]');
+        ariaLabelElements.forEach(el => {
+            const key = el.getAttribute('data-i18n-aria-label');
+            const translation = this.t(key);
+            if (translation !== key) {
+                el.setAttribute('aria-label', translation);
             }
         });
         
@@ -585,6 +674,8 @@ class I18n {
         // Auto-translate common elements based on their ID or class
         this.autoTranslateElements();
         this.applyFallbackTitles();
+        this.syncUnboundFormFieldLabels();
+        this.syncGenericColorControls();
     }
     
     /**
@@ -594,6 +685,7 @@ class I18n {
     autoTranslateElements() {
         // Translate toolbar buttons
         const toolbarMappings = {
+            'import-project-btn': { title: 'toolbar.importProject' },
             'undo-btn': { span: 'toolbar.undo', title: 'toolbar.undo' },
             'redo-btn': { span: 'toolbar.redo', title: 'toolbar.redo' },
             'pen-btn': { span: 'toolbar.pen', title: 'toolbar.pen' },
@@ -619,7 +711,11 @@ class I18n {
                     }
                 }
                 if (mapping.title) {
-                    el.title = this.t(mapping.title);
+                    const translation = this.t(mapping.title);
+                    el.title = translation;
+                    if (this.isAriaSyncTarget(el)) {
+                        el.setAttribute('aria-label', translation);
+                    }
                 }
             }
         });
@@ -630,7 +726,9 @@ class I18n {
         // Translate zoom input placeholder
         const zoomInput = document.getElementById('zoom-input');
         if (zoomInput) {
-            zoomInput.title = this.t('toolbar.zoomPlaceholder');
+            const zoomLabel = this.t('toolbar.zoomPlaceholder');
+            zoomInput.title = zoomLabel;
+            zoomInput.setAttribute('aria-label', zoomLabel);
         }
         
         // Translate configuration panel labels
@@ -657,6 +755,10 @@ class I18n {
         const elements = document.querySelectorAll('button, [role="button"]');
         elements.forEach(el => {
             const currentTitle = el.getAttribute('title');
+            const currentAriaLabel = el.getAttribute('aria-label');
+            if ((!currentAriaLabel || currentAriaLabel.trim() === '') && currentTitle && currentTitle.trim() !== '') {
+                el.setAttribute('aria-label', currentTitle.trim());
+            }
             if (currentTitle && currentTitle.trim() !== '') {
                 return;
             }
@@ -668,23 +770,264 @@ class I18n {
             }
         });
     }
+
+    extractLabelText(label) {
+        if (!label) {
+            return '';
+        }
+
+        const clone = label.cloneNode(true);
+        clone.querySelectorAll('input, select, textarea, button').forEach((el) => el.remove());
+        return clone.textContent.replace(/\s+/g, ' ').trim();
+    }
+
+    findContainerLabelText(control) {
+        const candidates = [
+            control.closest('.time-input-field'),
+            control.closest('.random-picker-input-group'),
+            control.closest('.line-style-modal-setting'),
+            control.closest('.text-control-group'),
+            control.closest('.custom-size-row'),
+            control.closest('.settings-group'),
+            control.closest('.config-group')
+        ].filter(Boolean);
+
+        const seen = new Set();
+        for (const container of candidates) {
+            if (seen.has(container)) {
+                continue;
+            }
+            seen.add(container);
+
+            const directLabel = Array.from(container.children).find((child) => {
+                if (!(child instanceof HTMLElement)) {
+                    return false;
+                }
+                return child.tagName === 'LABEL' || child.classList.contains('rp-range-label');
+            });
+
+            const labelText = this.extractLabelText(directLabel);
+            if (labelText) {
+                return labelText;
+            }
+        }
+
+        return '';
+    }
+
+    syncUnboundFormFieldLabels() {
+        const controls = document.querySelectorAll('input:not([type="hidden"]), select, textarea');
+        controls.forEach((control) => {
+            if (control.getAttribute('aria-hidden') === 'true') {
+                return;
+            }
+
+            const currentAriaLabel = control.getAttribute('aria-label');
+            if (currentAriaLabel && currentAriaLabel.trim() !== '') {
+                return;
+            }
+
+            const currentTitle = control.getAttribute('title');
+            if (currentTitle && currentTitle.trim() !== '') {
+                control.setAttribute('aria-label', currentTitle.trim());
+                return;
+            }
+
+            const hasAssociatedLabel = (control.labels && control.labels.length > 0) || !!control.closest('label');
+            if (hasAssociatedLabel) {
+                return;
+            }
+
+            const labelText = this.findContainerLabelText(control);
+            if (labelText) {
+                control.setAttribute('aria-label', labelText);
+                if (!control.title) {
+                    control.title = labelText;
+                }
+            }
+        });
+    }
+
+    getTranslatedLabel(key, fallback) {
+        if (!key) {
+            return fallback || '';
+        }
+
+        const translated = this.t(key);
+        return translated !== key ? translated : (fallback || key);
+    }
+
+    getColorNameLabel(colorValue) {
+        const normalizedValue = String(colorValue || '').trim().toLowerCase();
+        if (!normalizedValue) {
+            return '';
+        }
+
+        const colorKeyMap = {
+            '#000000': 'colors.black',
+            '#ffffff': 'colors.white',
+            '#ff0000': 'colors.red',
+            '#ff3b30': 'colors.red',
+            '#0000ff': 'colors.blue',
+            '#007aff': 'colors.blue',
+            '#00ff00': 'colors.green',
+            '#34c759': 'colors.green',
+            '#ffff00': 'colors.yellow',
+            '#ffcc00': 'colors.yellow',
+            '#ff8800': 'colors.orange',
+            '#ff9500': 'colors.orange',
+            '#8800ff': 'colors.purple',
+            '#af52de': 'colors.purple',
+            '#ff2d55': 'settings.display.themeColors.pink',
+            '#5ac8fa': 'settings.display.themeColors.cyan'
+        };
+
+        const translationKey = colorKeyMap[normalizedValue];
+        if (translationKey) {
+            return this.getTranslatedLabel(translationKey, normalizedValue.toUpperCase());
+        }
+
+        return normalizedValue.toUpperCase();
+    }
+
+    getColorButtonLabel(contextKey, contextFallback, colorValue) {
+        const contextLabel = this.getTranslatedLabel(contextKey, contextFallback);
+        const colorLabel = this.getColorNameLabel(colorValue);
+        if (contextLabel && colorLabel) {
+            return `${contextLabel}: ${colorLabel}`;
+        }
+        return colorLabel || contextLabel;
+    }
+
+    getCustomColorTriggerLabel(contextKey, contextFallback, isActive, colorValue) {
+        const contextLabel = this.getTranslatedLabel(contextKey, contextFallback);
+        const customColorLabel = this.getTranslatedLabel('timeDisplay.customColor', 'Custom Color');
+        const activeColorLabel = isActive ? this.getColorNameLabel(colorValue) : '';
+
+        if (contextLabel && activeColorLabel) {
+            return `${contextLabel}: ${customColorLabel} (${activeColorLabel})`;
+        }
+        if (contextLabel) {
+            return `${contextLabel}: ${customColorLabel}`;
+        }
+        if (activeColorLabel) {
+            return `${customColorLabel} (${activeColorLabel})`;
+        }
+        return customColorLabel;
+    }
+
+    syncGenericColorControls() {
+        const groupConfigs = [
+            {
+                buttonSelector: '.color-btn[data-color]',
+                datasetKey: 'color',
+                pickerIds: ['custom-color-picker', 'shape-custom-color-picker'],
+                contextKey: 'tools.pen.colorAndSize',
+                contextFallback: 'Color'
+            },
+            {
+                buttonSelector: '.color-btn[data-bg-color]',
+                datasetKey: 'bgColor',
+                pickerIds: ['custom-bg-color-picker'],
+                contextKey: 'background.color',
+                contextFallback: 'Background Color'
+            },
+            {
+                buttonSelector: '.color-btn[data-theme-color]',
+                datasetKey: 'themeColor',
+                pickerIds: ['custom-theme-color-picker'],
+                contextKey: 'settings.display.themeColor',
+                contextFallback: 'Theme Color'
+            }
+        ];
+
+        groupConfigs.forEach((config) => {
+            const buttons = Array.from(document.querySelectorAll(config.buttonSelector));
+            const pickers = config.pickerIds
+                .map((pickerId) => document.getElementById(pickerId))
+                .filter(Boolean);
+            const triggers = config.pickerIds
+                .map((pickerId) => document.querySelector(`label[for="${pickerId}"]`))
+                .filter(Boolean);
+
+            if (buttons.length === 0 && triggers.length === 0) {
+                return;
+            }
+
+            const activeButton = buttons.find((btn) => btn.classList.contains('active'));
+            let selectedValue = activeButton?.dataset?.[config.datasetKey] || '';
+            if (!selectedValue) {
+                selectedValue = pickers.find((picker) => /^#[0-9a-f]{6}$/i.test(String(picker.value || '')))?.value || '';
+            }
+
+            const normalizedSelectedValue = String(selectedValue || '').toLowerCase();
+            let hasPresetMatch = false;
+
+            buttons.forEach((btn) => {
+                const buttonValue = String(btn.dataset?.[config.datasetKey] || '').toLowerCase();
+                const isActive = normalizedSelectedValue !== '' && buttonValue === normalizedSelectedValue;
+                btn.classList.toggle('active', isActive);
+                btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                const label = this.getColorButtonLabel(config.contextKey, config.contextFallback, buttonValue || btn.dataset?.[config.datasetKey]);
+                if (label) {
+                    btn.title = label;
+                    btn.setAttribute('aria-label', label);
+                }
+                if (isActive) {
+                    hasPresetMatch = true;
+                }
+            });
+
+            const customIsActive = normalizedSelectedValue !== '' && !hasPresetMatch;
+            const pickerValue = hasPresetMatch
+                ? normalizedSelectedValue
+                : String(pickers[0]?.value || selectedValue || '').toLowerCase();
+
+            pickers.forEach((picker) => {
+                if (pickerValue && /^#[0-9a-f]{6}$/i.test(pickerValue)) {
+                    picker.value = pickerValue;
+                }
+            });
+
+            triggers.forEach((trigger) => {
+                trigger.classList.toggle('active', customIsActive);
+                trigger.setAttribute('aria-pressed', customIsActive ? 'true' : 'false');
+                trigger.setAttribute('role', 'button');
+                trigger.setAttribute('tabindex', '0');
+                const label = this.getCustomColorTriggerLabel(
+                    config.contextKey,
+                    config.contextFallback,
+                    customIsActive,
+                    pickerValue
+                );
+                trigger.title = label;
+                trigger.setAttribute('aria-label', label);
+            });
+        });
+    }
     
     translatePageControls() {
         // Translate pagination buttons
         const prevBtn = document.getElementById('prev-page-btn');
         if (prevBtn) {
-            prevBtn.title = this.t('page.previous');
+            const label = this.t('page.previous');
+            prevBtn.title = label;
+            prevBtn.setAttribute('aria-label', label);
         }
         
         const nextBtn = document.getElementById('next-or-add-page-btn');
         if (nextBtn) {
             const isLastPage = true; // This will be determined by context
-            nextBtn.title = this.t('page.next');
+            const label = this.t('page.next');
+            nextBtn.title = label;
+            nextBtn.setAttribute('aria-label', label);
         }
         
         const pageInput = document.getElementById('page-input');
         if (pageInput) {
-            pageInput.title = this.t('page.jumpPlaceholder');
+            const pageLabel = this.t('page.jumpPlaceholder');
+            pageInput.title = pageLabel;
+            pageInput.setAttribute('aria-label', pageLabel);
         }
     }
     
@@ -820,7 +1163,9 @@ class I18n {
         closeButtons.forEach(({ id, key }) => {
             const btn = document.getElementById(id);
             if (btn) {
-                btn.title = this.t(key);
+                const label = this.t(key);
+                btn.title = label;
+                btn.setAttribute('aria-label', label);
             }
         });
     }
@@ -1042,7 +1387,9 @@ class I18n {
         // Close button
         const tdCloseBtn = document.getElementById('time-display-settings-close-btn');
         if (tdCloseBtn) {
-            tdCloseBtn.title = this.t('common.close');
+            const closeLabel = this.t('common.close');
+            tdCloseBtn.title = closeLabel;
+            tdCloseBtn.setAttribute('aria-label', closeLabel);
         }
         
         // Checkbox labels in time display area
@@ -1057,7 +1404,9 @@ class I18n {
         // Settings button
         const tdSettingsBtn = document.getElementById('time-display-area-settings-btn');
         if (tdSettingsBtn) {
-            tdSettingsBtn.title = this.t('timeDisplay.settings');
+            const settingsLabel = this.t('timeDisplay.settings');
+            tdSettingsBtn.title = settingsLabel;
+            tdSettingsBtn.setAttribute('aria-label', settingsLabel);
         }
         
         // Label mappings for time display settings
@@ -1121,9 +1470,13 @@ class I18n {
         
         // Translate color button titles in time display settings
         document.querySelectorAll('#time-display-settings-modal .color-btn').forEach(btn => {
-            const colorValue = btn.getAttribute('data-td-time-color') || btn.getAttribute('data-td-time-bg-color');
+            const colorValue = btn.getAttribute('data-td-time-color')
+                || btn.getAttribute('data-td-time-bg-color')
+                || btn.getAttribute('data-td-fs-color')
+                || btn.getAttribute('data-td-fs-bg-color');
+            let label = btn.getAttribute('aria-label') || btn.getAttribute('title') || 'Color';
             if (colorValue === 'transparent') {
-                btn.title = this.t('timeDisplay.transparent');
+                label = this.t('timeDisplay.transparent');
             } else {
                 // Translate color names
                 const colorMap = {
@@ -1137,9 +1490,12 @@ class I18n {
                     '#8800FF': 'colors.purple'
                 };
                 if (colorMap[colorValue]) {
-                    btn.title = this.t(colorMap[colorValue]);
+                    label = this.t(colorMap[colorValue]);
                 }
             }
+            btn.title = label;
+            btn.setAttribute('aria-label', label);
+            btn.setAttribute('aria-pressed', btn.classList.contains('active') ? 'true' : 'false');
         });
         
         // Translate fullscreen slider labels
@@ -1192,11 +1548,48 @@ class I18n {
             timezoneSelect.options[14].text = this.t('timezones.utc');
         }
         
-        // Translate "Custom Color" labels for all color picker icon buttons
-        document.querySelectorAll('.color-picker-icon-btn').forEach(btn => {
-            // Only update if it's actually a color picker button with a title attribute
-            if (btn.hasAttribute('title')) {
-                btn.title = this.t('timeDisplay.customColor');
+        // Translate and enhance custom color picker triggers
+        document.querySelectorAll('label.color-picker-icon-btn[for]').forEach(btn => {
+            const pickerId = btn.getAttribute('for') || '';
+            let labelKey = btn.dataset.colorPickerLabelKey || '';
+            let fallback = btn.getAttribute('aria-label') || btn.getAttribute('title') || 'Color Picker';
+
+            if (!labelKey) {
+                if (pickerId.startsWith('td-')) {
+                    labelKey = 'timeDisplay.customColor';
+                    fallback = 'Custom Color';
+                } else if (pickerId.startsWith('custom-timer-')) {
+                    labelKey = 'timer.customColor';
+                    fallback = 'Custom Color';
+                } else if (pickerId === 'custom-theme-color-picker') {
+                    labelKey = 'settings.display.colorPicker';
+                    fallback = 'Color Picker';
+                } else {
+                    labelKey = 'tools.text.colorPicker';
+                    fallback = 'Color Picker';
+                }
+            }
+
+            const translated = this.t(labelKey);
+            const label = translated !== labelKey ? translated : fallback;
+            btn.title = label;
+            btn.setAttribute('aria-label', label);
+            btn.setAttribute('role', 'button');
+            btn.setAttribute('tabindex', '0');
+
+            if (btn.dataset.keyboardColorPickerBound !== 'true') {
+                btn.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') {
+                        return;
+                    }
+                    event.preventDefault();
+                    const input = pickerId
+                        ? document.getElementById(pickerId)
+                        : btn.querySelector('input[type="color"]');
+                    input?.click();
+                    input?.focus?.();
+                });
+                btn.dataset.keyboardColorPickerBound = 'true';
             }
         });
         
@@ -1366,8 +1759,12 @@ class I18n {
         
         // Timer color button titles
         document.querySelectorAll('#timer-settings-modal .color-btn').forEach(btn => {
-            const colorValue = btn.getAttribute('data-timer-text-color') || btn.getAttribute('data-timer-bg-color');
+            const colorValue = btn.getAttribute('data-timer-text-color')
+                || btn.getAttribute('data-timer-bg-color')
+                || btn.getAttribute('data-timer-fs-text-color')
+                || btn.getAttribute('data-timer-fs-bg-color');
             if (colorValue) {
+                let label = btn.getAttribute('aria-label') || btn.getAttribute('title') || 'Color';
                 const colorMap = {
                     '#333333': 'timer.colors.darkGray',
                     '#000000': 'timer.colors.black',
@@ -1385,14 +1782,12 @@ class I18n {
                     '#FFE5CC': 'timer.colors.lightOrange'
                 };
                 if (colorMap[colorValue]) {
-                    btn.title = this.t(colorMap[colorValue]);
+                    label = this.t(colorMap[colorValue]);
                 }
+                btn.title = label;
+                btn.setAttribute('aria-label', label);
+                btn.setAttribute('aria-pressed', btn.classList.contains('active') ? 'true' : 'false');
             }
-        });
-        
-        // Timer custom color picker title
-        document.querySelectorAll('.timer-color-picker-icon').forEach(icon => {
-            icon.title = this.t('timer.customColor');
         });
         
         // Timer start button
@@ -1404,12 +1799,16 @@ class I18n {
         // Timer fullscreen close button
         const timerFullscreenClose = document.getElementById('timer-fullscreen-close-btn');
         if (timerFullscreenClose) {
-            timerFullscreenClose.title = this.t('common.close');
+            const closeLabel = this.t('common.close');
+            timerFullscreenClose.title = closeLabel;
+            timerFullscreenClose.setAttribute('aria-label', closeLabel);
         }
         
         const timeFullscreenClose = document.getElementById('time-fullscreen-close-btn');
         if (timeFullscreenClose) {
-            timeFullscreenClose.title = this.t('common.close');
+            const closeLabel = this.t('common.close');
+            timeFullscreenClose.title = closeLabel;
+            timeFullscreenClose.setAttribute('aria-label', closeLabel);
         }
     }
     
@@ -1581,9 +1980,9 @@ class I18n {
         }
 
         if (!options.skipDownloadPrompt && !this.canUseLocaleImmediately(newLocale)) {
-            const shouldDownload = typeof window.confirm === 'function'
-                ? window.confirm(this.getLocaleDownloadPrompt(newLocale))
-                : true;
+            const shouldDownload = await this.showLocaleConfirm(
+                this.getLocaleDownloadPrompt(newLocale)
+            );
             if (!shouldDownload) {
                 return false;
             }

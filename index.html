@@ -40,29 +40,29 @@
 <body>
     <!-- Zoom controls in top right corner -->
     <div id="history-controls">
-        <button id="import-project-btn" class="history-btn" title="导入项目">
+        <button id="import-project-btn" class="history-btn" data-i18n-title="toolbar.importProject" title="导入项目" aria-label="导入项目">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="17 8 12 3 7 8"></polyline>
                 <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
         </button>
-        <button id="export-btn-top" class="history-btn">
+        <button id="export-btn-top" class="history-btn" data-i18n-title="toolbar.export" title="导出画布" aria-label="导出画布">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
                 <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
         </button>
-        <button id="zoom-out-btn" class="history-btn">
+        <button id="zoom-out-btn" class="history-btn" data-i18n-title="toolbar.zoomOut" title="缩小 (-)" aria-label="缩小 (-)">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"></circle>
                 <path d="M21 21l-4.35-4.35"></path>
                 <line x1="8" y1="11" x2="14" y2="11"></line>
             </svg>
         </button>
-        <input type="text" id="zoom-input" class="zoom-input" value="100%">
-        <button id="zoom-in-btn" class="history-btn">
+        <input type="text" id="zoom-input" class="zoom-input" value="100%" data-i18n-title="toolbar.zoomPlaceholder" data-i18n-aria-label="toolbar.zoomPlaceholder" title="缩放比例（输入百分比）" aria-label="缩放比例（输入百分比）">
+        <button id="zoom-in-btn" class="history-btn" data-i18n-title="toolbar.zoomIn" title="放大 (+)" aria-label="放大 (+)">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"></circle>
                 <path d="M21 21l-4.35-4.35"></path>
@@ -70,7 +70,7 @@
                 <line x1="8" y1="11" x2="14" y2="11"></line>
             </svg>
         </button>
-        <button id="fullscreen-btn" class="history-btn">
+        <button id="fullscreen-btn" class="history-btn" data-i18n-title="toolbar.fullscreen" title="全屏 (F11)" aria-label="全屏 (F11)">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
             </svg>
@@ -95,7 +95,7 @@
     <!-- Dynamic configuration area (appears above toolbar) -->
     <div id="config-area">
         <!-- Close button for config panel -->
-        <button id="config-close-btn" class="config-close-btn">
+        <button id="config-close-btn" class="config-close-btn" data-i18n-title="common.close" title="关闭" aria-label="关闭">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -162,20 +162,20 @@
                 <label data-i18n="tools.pen.colorAndSize">Color & Size</label>
                 <div class="color-picker-row">
                     <div class="color-picker-main">
-                        <button class="color-btn active" data-color="#000000" style="background-color: #000000;"></button>
-                        <button class="color-btn" data-color="#FF0000" style="background-color: #FF0000;"></button>
-                        <button class="color-btn" data-color="#0000FF" style="background-color: #0000FF;"></button>
-                        <button class="color-btn" data-color="#00FF00" style="background-color: #00FF00;"></button>
+                        <button class="color-btn active" data-color="#000000" style="background-color: #000000;" title="Color" aria-label="Color"></button>
+                        <button class="color-btn" data-color="#FF0000" style="background-color: #FF0000;" title="Color" aria-label="Color"></button>
+                        <button class="color-btn" data-color="#0000FF" style="background-color: #0000FF;" title="Color" aria-label="Color"></button>
+                        <button class="color-btn" data-color="#00FF00" style="background-color: #00FF00;" title="Color" aria-label="Color"></button>
                     </div>
                     <div class="color-picker-main">
-                        <button class="color-btn" data-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;"></button>
-                        <button class="color-btn" data-color="#FF8800" style="background-color: #FF8800;"></button>
-                        <button class="color-btn" data-color="#8800FF" style="background-color: #8800FF;"></button>
-                        <button class="color-btn" data-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;"></button>
+                        <button class="color-btn" data-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="Color" aria-label="Color"></button>
+                        <button class="color-btn" data-color="#FF8800" style="background-color: #FF8800;" title="Color" aria-label="Color"></button>
+                        <button class="color-btn" data-color="#8800FF" style="background-color: #8800FF;" title="Color" aria-label="Color"></button>
+                        <button class="color-btn" data-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="Color" aria-label="Color"></button>
                     </div>
                 </div>
                 <div class="color-and-size-row">
-                    <label class="color-picker-icon-btn" for="custom-color-picker">
+                    <label class="color-picker-icon-btn" for="custom-color-picker" data-i18n-title="tools.text.colorPicker" data-color-picker-label-key="tools.text.colorPicker" title="Color Picker" aria-label="Color Picker" role="button" tabindex="0">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
                             <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
@@ -184,7 +184,7 @@
                     </label>
                     <div class="pen-size-inline">
                         <label><span data-i18n="tools.pen.thickness">Thickness</span>: <span id="pen-size-value">5</span>px</label>
-                        <input type="range" id="pen-size-slider" min="1" max="50" value="5" class="slider slider-compact">
+                        <input type="range" id="pen-size-slider" min="1" max="50" value="5" class="slider slider-compact" data-i18n-title="tools.pen.thickness" data-i18n-aria-label="tools.pen.thickness" title="笔粗细" aria-label="笔粗细">
                     </div>
                 </div>
             </div>
@@ -249,20 +249,20 @@
                 <label data-i18n="tools.pen.colorAndSize">Color & Size</label>
                 <div class="color-picker-row">
                     <div class="color-picker-main">
-                        <button class="color-btn" data-color="#000000" style="background-color: #000000;"></button>
-                        <button class="color-btn" data-color="#FF0000" style="background-color: #FF0000;"></button>
-                        <button class="color-btn" data-color="#0000FF" style="background-color: #0000FF;"></button>
-                        <button class="color-btn" data-color="#00FF00" style="background-color: #00FF00;"></button>
+                        <button class="color-btn" data-color="#000000" style="background-color: #000000;" title="Color" aria-label="Color"></button>
+                        <button class="color-btn" data-color="#FF0000" style="background-color: #FF0000;" title="Color" aria-label="Color"></button>
+                        <button class="color-btn" data-color="#0000FF" style="background-color: #0000FF;" title="Color" aria-label="Color"></button>
+                        <button class="color-btn" data-color="#00FF00" style="background-color: #00FF00;" title="Color" aria-label="Color"></button>
                     </div>
                     <div class="color-picker-main">
-                        <button class="color-btn" data-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;"></button>
-                        <button class="color-btn" data-color="#FF8800" style="background-color: #FF8800;"></button>
-                        <button class="color-btn" data-color="#8800FF" style="background-color: #8800FF;"></button>
-                        <button class="color-btn" data-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;"></button>
+                        <button class="color-btn" data-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="Color" aria-label="Color"></button>
+                        <button class="color-btn" data-color="#FF8800" style="background-color: #FF8800;" title="Color" aria-label="Color"></button>
+                        <button class="color-btn" data-color="#8800FF" style="background-color: #8800FF;" title="Color" aria-label="Color"></button>
+                        <button class="color-btn" data-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="Color" aria-label="Color"></button>
                     </div>
                 </div>
                 <div class="color-and-size-row">
-                    <label class="color-picker-icon-btn" for="shape-custom-color-picker">
+                    <label class="color-picker-icon-btn" for="shape-custom-color-picker" data-i18n-title="tools.text.colorPicker" data-color-picker-label-key="tools.text.colorPicker" title="Color Picker" aria-label="Color Picker" role="button" tabindex="0">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
                             <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
@@ -271,7 +271,7 @@
                     </label>
                     <div class="pen-size-inline">
                         <label><span data-i18n="tools.pen.size">Size</span>: <span id="shape-size-value">5</span>px</label>
-                        <input type="range" id="shape-size-slider" min="1" max="50" value="5" class="slider slider-compact">
+                        <input type="range" id="shape-size-slider" min="1" max="50" value="5" class="slider slider-compact" data-i18n-title="tools.pen.size" data-i18n-aria-label="tools.pen.size" title="大小" aria-label="大小">
                     </div>
                 </div>
             </div>
@@ -279,7 +279,7 @@
             <div id="arrow-size-group" class="config-group" style="display: none;">
                 <div class="pen-size-inline">
                     <label><span data-i18n="tools.shape.arrowSize">Arrow Size</span>: <span id="arrow-size-value">15</span>px</label>
-                    <input type="range" id="arrow-size-slider" min="5" max="100" value="15" class="slider slider-compact">
+                    <input type="range" id="arrow-size-slider" min="5" max="100" value="15" class="slider slider-compact" data-i18n-title="tools.shape.arrowSize" data-i18n-aria-label="tools.shape.arrowSize" title="箭头大小" aria-label="箭头大小">
                 </div>
             </div>
             <div class="config-group">
@@ -308,7 +308,7 @@
             </div>
             <div class="config-group">
                 <label><span data-i18n="tools.eraser.sizeLabel">橡皮擦大小：当前</span> <span id="eraser-size-value">20</span>px</label>
-                <input type="range" id="eraser-size-slider" min="10" max="150" value="20" class="slider">
+                <input type="range" id="eraser-size-slider" min="10" max="150" value="20" class="slider" data-i18n-title="tools.eraser.size" data-i18n-aria-label="tools.eraser.size" title="擦除大小" aria-label="擦除大小">
             </div>
         </div>
 
@@ -318,19 +318,19 @@
                 <label data-i18n="background.color">背景颜色</label>
                 <div class="color-picker-row">
                     <div class="color-picker-main">
-                        <button class="color-btn active" data-bg-color="#ffffff" style="background-color: #ffffff; border: 1px solid #ccc;"></button>
-                        <button class="color-btn" data-bg-color="#f5f5f5" style="background-color: #f5f5f5; border: 1px solid #ccc;"></button>
-                        <button class="color-btn" data-bg-color="#fffef0" style="background-color: #fffef0; border: 1px solid #ccc;"></button>
-                        <button class="color-btn" data-bg-color="#000000" style="background-color: #000000;"></button>
+                        <button class="color-btn active" data-bg-color="#ffffff" style="background-color: #ffffff; border: 1px solid #ccc;" title="Background Color" aria-label="Background Color"></button>
+                        <button class="color-btn" data-bg-color="#f5f5f5" style="background-color: #f5f5f5; border: 1px solid #ccc;" title="Background Color" aria-label="Background Color"></button>
+                        <button class="color-btn" data-bg-color="#fffef0" style="background-color: #fffef0; border: 1px solid #ccc;" title="Background Color" aria-label="Background Color"></button>
+                        <button class="color-btn" data-bg-color="#000000" style="background-color: #000000;" title="Background Color" aria-label="Background Color"></button>
                     </div>
                     <div class="color-picker-main">
-                        <button class="color-btn" data-bg-color="#2d5016" style="background-color: #2d5016;"></button>
-                        <button class="color-btn" data-bg-color="#4a7c59" style="background-color: #4a7c59;"></button>
-                        <button class="color-btn" data-bg-color="#654321" style="background-color: #654321;"></button>
-                        <button class="color-btn" data-bg-color="#8B4513" style="background-color: #8B4513;"></button>
+                        <button class="color-btn" data-bg-color="#2d5016" style="background-color: #2d5016;" title="Background Color" aria-label="Background Color"></button>
+                        <button class="color-btn" data-bg-color="#4a7c59" style="background-color: #4a7c59;" title="Background Color" aria-label="Background Color"></button>
+                        <button class="color-btn" data-bg-color="#654321" style="background-color: #654321;" title="Background Color" aria-label="Background Color"></button>
+                        <button class="color-btn" data-bg-color="#8B4513" style="background-color: #8B4513;" title="Background Color" aria-label="Background Color"></button>
                     </div>
                 </div>
-                <label class="color-picker-icon-btn" for="custom-bg-color-picker" style="margin-top: 8px;">
+                <label class="color-picker-icon-btn" for="custom-bg-color-picker" data-i18n-title="tools.text.colorPicker" data-color-picker-label-key="tools.text.colorPicker" title="Color Picker" aria-label="Color Picker" role="button" tabindex="0" style="margin-top: 8px;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
                         <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
@@ -443,8 +443,8 @@
                     <div class="compact-slider-item" id="pattern-density-group" style="display: none;">
                         <label><span data-i18n="background.densityLabel">密度：当前</span> <span id="pattern-density-value">100</span>%</label>
                         <div style="display: flex; gap: 8px; align-items: center;">
-                            <input type="range" id="pattern-density-slider" min="20" max="300" value="100" class="slider slider-compact" style="flex: 1;">
-                            <button id="move-origin-btn" class="icon-btn" title="移动坐标原点" data-i18n-title="background.moveCoordinateOrigin">
+                            <input type="range" id="pattern-density-slider" min="20" max="300" value="100" class="slider slider-compact" style="flex: 1;" data-i18n-title="background.density" data-i18n-aria-label="background.density" title="密度" aria-label="密度">
+                            <button id="move-origin-btn" class="icon-btn" title="&#31227;&#21160;&#22352;&#26631;&#21407;&#28857;" aria-label="&#31227;&#21160;&#22352;&#26631;&#21407;&#28857;" data-i18n-title="background.moveCoordinateOrigin">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M12 2v20M2 12h20"></path>
                                     <circle cx="12" cy="12" r="3"></circle>
@@ -455,20 +455,20 @@
                     <div class="compact-slider-item" id="image-size-group" style="display: none;">
                         <label><span data-i18n="background.sizeLabel">大小：当前</span> <span id="bg-image-size-value">100</span>%</label>
                         <div style="display: flex; gap: 8px; align-items: center;">
-                            <input type="range" id="bg-image-size-slider" min="10" max="200" value="100" class="slider slider-compact" style="flex: 1;">
-                            <button id="bg-gif-settings-btn" class="icon-btn" title="GIF设置" style="display: none;">
+                            <input type="range" id="bg-image-size-slider" min="10" max="200" value="100" class="slider slider-compact" style="flex: 1;" data-i18n-title="background.size" data-i18n-aria-label="background.size" title="大小" aria-label="大小">
+                            <button id="bg-gif-settings-btn" class="icon-btn" data-i18n-title="common.settings" title="设置" aria-label="设置" style="display: none;">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="12" cy="12" r="3"></circle>
                                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                                 </svg>
                             </button>
-                            <button id="bg-image-playback-btn" class="icon-btn" title="播放/暂停" style="display: none;">
+                            <button id="bg-image-playback-btn" class="icon-btn" aria-label="暂停" title="暂停" style="display: none;">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="6" y="4" width="4" height="16"></rect>
                                     <rect x="14" y="4" width="4" height="16"></rect>
                                 </svg>
                             </button>
-                            <button id="adjust-bg-image-btn" class="icon-btn">
+                            <button id="adjust-bg-image-btn" class="icon-btn" data-i18n-title="common.edit" title="编辑" aria-label="编辑">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -515,7 +515,7 @@
     <!-- Time Display Area (independent, draggable, with edge snapping) -->
     <div id="time-display-area">
         <!-- Close button for time display area -->
-        <button id="time-display-area-close-btn" class="config-close-btn">
+        <button id="time-display-area-close-btn" class="config-close-btn" data-i18n-title="common.close" title="关闭" aria-label="关闭">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -527,11 +527,11 @@
             <div class="time-display-options-row">
                 <div class="time-display-checkboxes">
                     <label class="checkbox-label">
-                        <input type="checkbox" id="show-date-checkbox-area">
+                        <input type="checkbox" id="show-date-checkbox-area" data-i18n-title="timeDisplay.showDate" data-i18n-aria-label="timeDisplay.showDate" title="显示日期" aria-label="显示日期">
                         <span data-i18n="timeDisplay.showDate">Show Date</span>
                     </label>
                     <label class="checkbox-label" style="margin-top: 8px;">
-                        <input type="checkbox" id="show-time-checkbox-area">
+                        <input type="checkbox" id="show-time-checkbox-area" data-i18n-title="timeDisplay.showTime" data-i18n-aria-label="timeDisplay.showTime" title="显示时间" aria-label="显示时间">
                         <span data-i18n="timeDisplay.showTime">Show Time</span>
                     </label>
                 </div>
@@ -544,7 +544,7 @@
                         </svg>
                         <span data-i18n="timeDisplay.settings">Settings</span>
                     </button>
-                    <button id="time-display-fullscreen-btn" class="time-display-settings-btn-with-text" data-i18n-title="timeDisplay.fullscreenDisplay">
+                    <button id="time-display-fullscreen-btn" class="time-display-settings-btn-with-text" data-i18n-title="timeDisplay.fullscreenDisplay" title="Fullscreen" aria-label="Fullscreen">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
                         </svg>
@@ -558,7 +558,7 @@
     <!-- Feature buttons area (independent, draggable, with edge snapping) -->
     <div id="feature-area" class="feature-area">
         <!-- Close button for feature panel -->
-        <button id="feature-close-btn" class="config-close-btn">
+        <button id="feature-close-btn" class="config-close-btn" data-i18n-title="common.close" title="关闭" aria-label="关闭">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -568,7 +568,7 @@
         <div class="config-group">
             <label data-i18n="features.moreFeatures">More Features</label>
             <div class="more-features-grid">
-                <button id="more-shape-btn" class="feature-btn" data-i18n-title="toolbar.shape">
+                <button id="more-shape-btn" class="feature-btn" data-i18n-title="toolbar.shape" title="Shape" aria-label="Shape">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="5" y1="19" x2="19" y2="5"></line>
                         <circle cx="19" cy="5" r="2"></circle>
@@ -576,7 +576,7 @@
                     </svg>
                     <span data-i18n="toolbar.shape">Shape</span>
                 </button>
-                <button id="more-teaching-tools-btn" class="feature-btn" data-i18n-title="toolbar.teachingTools">
+                <button id="more-teaching-tools-btn" class="feature-btn" data-i18n-title="toolbar.teachingTools" title="Tools" aria-label="Tools">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polygon points="3,21 3,3 21,21"></polygon>
                         <line x1="6" y1="18" x2="6" y2="6"></line>
@@ -586,14 +586,14 @@
                     </svg>
                     <span data-i18n="toolbar.teachingTools">Tools</span>
                 </button>
-                <button id="time-display-feature-btn" class="feature-btn" data-i18n-title="features.time">
+                <button id="time-display-feature-btn" class="feature-btn" data-i18n-title="features.time" title="Time" aria-label="Time">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
                         <polyline points="12 6 12 12 16 14"></polyline>
                     </svg>
                     <span data-i18n="features.time">Time</span>
                 </button>
-                <button id="timer-feature-btn" class="feature-btn" data-i18n-title="features.timer">
+                <button id="timer-feature-btn" class="feature-btn" data-i18n-title="features.timer" title="Timer" aria-label="Timer">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="13" r="8"></circle>
                         <path d="M12 9v4l2 2"></path>
@@ -602,20 +602,20 @@
                     </svg>
                     <span data-i18n="features.timer">Timer</span>
                 </button>
-                <button id="random-picker-feature-btn" class="feature-btn" data-i18n-title="features.randomPicker">
+                <button id="random-picker-feature-btn" class="feature-btn" data-i18n-title="features.randomPicker" title="Random Picker" aria-label="Random Picker">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M5 12h14"></path>
                         <path d="M12 5l7 7-7 7"></path>
                     </svg>
                     <span data-i18n="features.randomPicker">Picker</span>
                 </button>
-                <button id="scoreboard-feature-btn" class="feature-btn" data-i18n-title="features.scoreboard">
+                <button id="scoreboard-feature-btn" class="feature-btn" data-i18n-title="features.scoreboard" title="Scoreboard" aria-label="Scoreboard">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
                     </svg>
                     <span data-i18n="features.scoreboard">Score</span>
                 </button>
-                <button id="insert-image-feature-btn" class="feature-btn" data-i18n-title="features.insertImage">
+                <button id="insert-image-feature-btn" class="feature-btn" data-i18n-title="features.insertImage" title="Image" aria-label="Image">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                         <circle cx="8.5" cy="8.5" r="1.5"></circle>
@@ -623,7 +623,7 @@
                     </svg>
                     <span data-i18n="features.insertImage">Image</span>
                 </button>
-                <button id="insert-text-feature-btn" class="feature-btn" data-i18n-title="features.insertText">
+                <button id="insert-text-feature-btn" class="feature-btn" data-i18n-title="features.insertText" title="Text" aria-label="Text">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 7V4h16v3M9 20h6M12 4v16"/>
                     </svg>
@@ -635,14 +635,14 @@
 
     <!-- Pagination controls (below zoom, only visible when not in infinite canvas mode) -->
     <div id="pagination-controls">
-        <button id="prev-page-btn" class="page-nav-btn">
+        <button id="prev-page-btn" class="page-nav-btn" data-i18n-title="page.previous" title="上一页" aria-label="上一页">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
         </button>
-        <input type="number" id="page-input" class="page-input" value="1" min="1">
+        <input type="number" id="page-input" class="page-input" value="1" min="1" data-i18n-title="page.jumpPlaceholder" data-i18n-aria-label="page.jumpPlaceholder" title="输入页码跳转" aria-label="输入页码跳转">
         <span id="page-total">/ 1</span>
-        <button id="next-or-add-page-btn" class="page-nav-btn">
+        <button id="next-or-add-page-btn" class="page-nav-btn" data-i18n-title="page.next" title="下一页" aria-label="下一页">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
@@ -654,7 +654,7 @@
         <div class="modal-content settings-modal-content">
             <div class="modal-header">
                 <h2 data-i18n="settings.title">设置</h2>
-                <button id="settings-close-btn" class="modal-close-btn">
+                <button id="settings-close-btn" class="modal-close-btn" data-i18n-title="common.close" title="关闭" aria-label="关闭">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -729,7 +729,7 @@
                         <div class="settings-group">
                             <label data-i18n="settings.general.language">语言 / Language</label>
                             <p class="settings-hint" data-i18n="settings.general.languageHint">选择界面语言 / Choose interface language</p>
-                            <select id="language-select" class="format-select">
+                            <select id="language-select" class="format-select" data-i18n-title="settings.general.language" data-i18n-aria-label="settings.general.language" title="语言" aria-label="语言">
                                 <option value="zh-CN">中文简体</option>
                                 <option value="zh-TW">中文繁體</option>
                                 <option value="en-US">English</option>
@@ -744,7 +744,7 @@
                             <label data-i18n="settings.general.globalFont">全局字体</label>
                             <p class="settings-hint" data-i18n="settings.general.globalFontHint">选择应用程序使用的字体</p>
                             <div class="font-selection-row">
-                                <select id="global-font-select" class="format-select" style="flex: 1;">
+                                <select id="global-font-select" class="format-select" style="flex: 1;" data-i18n-title="settings.general.globalFont" data-i18n-aria-label="settings.general.globalFont" title="全局字体" aria-label="全局字体">
                                     <option value="system">系统默认</option>
                                     <option value="serif">宋体（衬线体）</option>
                                     <option value="sans-serif">黑体（无衬线体）</option>
@@ -756,7 +756,7 @@
                                     <option value="KaiTi">楷体</option>
                                     <option value="STXingkai">华文行楷（手写）</option>
                                 </select>
-                                <label class="font-upload-btn" for="global-font-upload" role="button" tabindex="0" data-i18n-title="tools.text.uploadFont" aria-label="Upload custom font">
+                                <label class="font-upload-btn" for="global-font-upload" role="button" tabindex="0" data-i18n-title="tools.text.uploadFont" aria-label="上传字体">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                         <polyline points="17 8 12 3 7 8"></polyline>
@@ -773,21 +773,21 @@
                         </div>
                         <div class="settings-group">
                             <label class="checkbox-label">
-                                <input type="checkbox" id="edge-snap-checkbox" checked>
+                                <input type="checkbox" id="edge-snap-checkbox" checked data-i18n-title="settings.general.edgeSnap" data-i18n-aria-label="settings.general.edgeSnap" title="启用边缘吸附" aria-label="启用边缘吸附">
                                 <span data-i18n="settings.general.edgeSnap">启用边缘吸附</span>
                             </label>
                             <p class="settings-hint" data-i18n="settings.general.edgeSnapHint">拖动控制面板时自动吸附到屏幕边缘</p>
                         </div>
                         <div class="settings-group">
                             <label class="checkbox-label">
-                                <input type="checkbox" id="touch-zoom-checkbox" checked>
+                                <input type="checkbox" id="touch-zoom-checkbox" checked data-i18n-title="settings.general.touchZoom" data-i18n-aria-label="settings.general.touchZoom" title="触控缩放" aria-label="触控缩放">
                                 <span data-i18n="settings.general.touchZoom">触控缩放</span>
                             </label>
                             <p class="settings-hint" data-i18n="settings.general.touchZoomHint">允许使用双指捏合手势缩放画布</p>
                         </div>
                         <div class="settings-group">
                             <label class="checkbox-label">
-                                <input type="checkbox" id="keep-more-panel-open-checkbox">
+                                <input type="checkbox" id="keep-more-panel-open-checkbox" data-i18n-title="settings.general.morePanelBehaviorLabel" data-i18n-aria-label="settings.general.morePanelBehaviorLabel" title="更多功能面板行为" aria-label="更多功能面板行为">
                                 <span data-i18n="settings.general.morePanelBehaviorLabel">更多功能面板行为</span>
                             </label>
                             <p class="settings-hint" data-i18n="settings.general.keepMorePanelOpenHint">点击“更多”中的功能按钮后默认不关闭“更多”框</p>
@@ -799,52 +799,52 @@
                             <p class="settings-hint" data-i18n="settings.general.toolbarCustomizationHint">选择要在工具栏中显示的工具，拖动可调整顺序</p>
                             <div id="toolbar-customization-list" class="toolbar-customization-list">
                                 <div class="toolbar-item" data-tool="undo" draggable="true">
-                                    <input type="checkbox" id="toolbar-show-undo" checked>
+                                    <input type="checkbox" id="toolbar-show-undo" checked data-i18n-title="settings.general.toolbarTools.undo" data-i18n-aria-label="settings.general.toolbarTools.undo" title="撤销" aria-label="撤销">
                                     <span class="drag-handle">☰</span>
                                     <span data-i18n="settings.general.toolbarTools.undo">撤销</span>
                                 </div>
                                 <div class="toolbar-item" data-tool="redo" draggable="true">
-                                    <input type="checkbox" id="toolbar-show-redo" checked>
+                                    <input type="checkbox" id="toolbar-show-redo" checked data-i18n-title="settings.general.toolbarTools.redo" data-i18n-aria-label="settings.general.toolbarTools.redo" title="重做" aria-label="重做">
                                     <span class="drag-handle">☰</span>
                                     <span data-i18n="settings.general.toolbarTools.redo">重做</span>
                                 </div>
                                 <div class="toolbar-item" data-tool="pen" draggable="true">
-                                    <input type="checkbox" id="toolbar-show-pen" checked>
+                                    <input type="checkbox" id="toolbar-show-pen" checked data-i18n-title="settings.general.toolbarTools.pen" data-i18n-aria-label="settings.general.toolbarTools.pen" title="笔" aria-label="笔">
                                     <span class="drag-handle">☰</span>
                                     <span data-i18n="settings.general.toolbarTools.pen">笔</span>
                                 </div>
                                 <div class="toolbar-item" data-tool="pan" draggable="true">
-                                    <input type="checkbox" id="toolbar-show-pan" checked>
+                                    <input type="checkbox" id="toolbar-show-pan" checked data-i18n-title="settings.general.toolbarTools.move" data-i18n-aria-label="settings.general.toolbarTools.move" title="移动" aria-label="移动">
                                     <span class="drag-handle">☰</span>
                                     <span data-i18n="settings.general.toolbarTools.move">移动</span>
                                 </div>
                                 <div class="toolbar-item" data-tool="select" draggable="true">
-                                    <input type="checkbox" id="toolbar-show-select" checked>
+                                    <input type="checkbox" id="toolbar-show-select" checked data-i18n-title="settings.general.toolbarTools.select" data-i18n-aria-label="settings.general.toolbarTools.select" title="选择" aria-label="选择">
                                     <span class="drag-handle">☰</span>
                                     <span data-i18n="settings.general.toolbarTools.select">选择</span>
                                 </div>
                                 <div class="toolbar-item" data-tool="eraser" draggable="true">
-                                    <input type="checkbox" id="toolbar-show-eraser" checked>
+                                    <input type="checkbox" id="toolbar-show-eraser" checked data-i18n-title="settings.general.toolbarTools.eraser" data-i18n-aria-label="settings.general.toolbarTools.eraser" title="擦除" aria-label="擦除">
                                     <span class="drag-handle">☰</span>
                                     <span data-i18n="settings.general.toolbarTools.eraser">擦除</span>
                                 </div>
                                 <div class="toolbar-item" data-tool="clear" draggable="true">
-                                    <input type="checkbox" id="toolbar-show-clear" checked>
+                                    <input type="checkbox" id="toolbar-show-clear" checked data-i18n-title="settings.general.toolbarTools.clear" data-i18n-aria-label="settings.general.toolbarTools.clear" title="清空" aria-label="清空">
                                     <span class="drag-handle">☰</span>
                                     <span data-i18n="settings.general.toolbarTools.clear">清空</span>
                                 </div>
                                 <div class="toolbar-item" data-tool="background" draggable="true">
-                                    <input type="checkbox" id="toolbar-show-background" checked>
+                                    <input type="checkbox" id="toolbar-show-background" checked data-i18n-title="settings.general.toolbarTools.background" data-i18n-aria-label="settings.general.toolbarTools.background" title="背景" aria-label="背景">
                                     <span class="drag-handle">☰</span>
                                     <span data-i18n="settings.general.toolbarTools.background">背景</span>
                                 </div>
                                 <div class="toolbar-item" data-tool="more" draggable="true">
-                                    <input type="checkbox" id="toolbar-show-more" checked>
+                                    <input type="checkbox" id="toolbar-show-more" checked data-i18n-title="settings.general.toolbarTools.more" data-i18n-aria-label="settings.general.toolbarTools.more" title="更多" aria-label="更多">
                                     <span class="drag-handle">☰</span>
                                     <span data-i18n="settings.general.toolbarTools.more">更多</span>
                                 </div>
                                 <div class="toolbar-item" data-tool="settings" draggable="true">
-                                    <input type="checkbox" id="toolbar-show-settings" checked>
+                                    <input type="checkbox" id="toolbar-show-settings" checked data-i18n-title="settings.general.toolbarTools.settings" data-i18n-aria-label="settings.general.toolbarTools.settings" title="设置" aria-label="设置">
                                     <span class="drag-handle">☰</span>
                                     <span data-i18n="settings.general.toolbarTools.settings">设置</span>
                                 </div>
@@ -859,42 +859,42 @@
                                 <div class="control-button-item" data-control="zoom" draggable="true">
                                     <span class="drag-handle">☰</span>
                                     <label class="checkbox-label">
-                                        <input type="checkbox" id="control-show-zoom" checked>
+                                        <input type="checkbox" id="control-show-zoom" checked data-i18n-title="settings.general.controlButtons.zoom" data-i18n-aria-label="settings.general.controlButtons.zoom" title="缩放按钮" aria-label="缩放按钮">
                                         <span data-i18n="settings.general.controlButtons.zoom">缩放按钮</span>
                                     </label>
                                 </div>
                                 <div class="control-button-item" data-control="pagination" draggable="true">
                                     <span class="drag-handle">☰</span>
                                     <label class="checkbox-label">
-                                        <input type="checkbox" id="control-show-pagination" checked>
+                                        <input type="checkbox" id="control-show-pagination" checked data-i18n-title="settings.general.controlButtons.pagination" data-i18n-aria-label="settings.general.controlButtons.pagination" title="分页按钮" aria-label="分页按钮">
                                         <span data-i18n="settings.general.controlButtons.pagination">分页按钮</span>
                                     </label>
                                 </div>
                                 <div class="control-button-item" data-control="time" draggable="true">
                                     <span class="drag-handle">☰</span>
                                     <label class="checkbox-label">
-                                        <input type="checkbox" id="control-show-time" checked>
+                                        <input type="checkbox" id="control-show-time" checked data-i18n-title="settings.general.controlButtons.time" data-i18n-aria-label="settings.general.controlButtons.time" title="时间显示" aria-label="时间显示">
                                         <span data-i18n="settings.general.controlButtons.time">时间显示</span>
                                     </label>
                                 </div>
                                 <div class="control-button-item" data-control="fullscreen" draggable="true">
                                     <span class="drag-handle">☰</span>
                                     <label class="checkbox-label">
-                                        <input type="checkbox" id="control-show-fullscreen" checked>
+                                        <input type="checkbox" id="control-show-fullscreen" checked data-i18n-title="settings.general.controlButtons.fullscreen" data-i18n-aria-label="settings.general.controlButtons.fullscreen" title="全屏按钮" aria-label="全屏按钮">
                                         <span data-i18n="settings.general.controlButtons.fullscreen">全屏按钮</span>
                                     </label>
                                 </div>
                                 <div class="control-button-item" data-control="import" draggable="true">
                                     <span class="drag-handle">☰</span>
                                     <label class="checkbox-label">
-                                        <input type="checkbox" id="control-show-import" checked>
+                                        <input type="checkbox" id="control-show-import" checked data-i18n-title="settings.general.controlButtons.import" data-i18n-aria-label="settings.general.controlButtons.import" title="导入按钮" aria-label="导入按钮">
                                         <span data-i18n="settings.general.controlButtons.import">导入按钮</span>
                                     </label>
                                 </div>
                                 <div class="control-button-item" data-control="export" draggable="true">
                                     <span class="drag-handle">☰</span>
                                     <label class="checkbox-label">
-                                        <input type="checkbox" id="control-show-export" checked>
+                                        <input type="checkbox" id="control-show-export" checked data-i18n-title="settings.general.controlButtons.export" data-i18n-aria-label="settings.general.controlButtons.export" title="导出按钮" aria-label="导出按钮">
                                         <span data-i18n="settings.general.controlButtons.export">导出按钮</span>
                                     </label>
                                 </div>
@@ -918,21 +918,21 @@
                         <h3 data-i18n="settings.display.title">显示设置</h3>
                         <div class="settings-group">
                             <label class="checkbox-label">
-                                <input type="checkbox" id="show-zoom-controls-checkbox" checked>
+                                <input type="checkbox" id="show-zoom-controls-checkbox" checked data-i18n-title="settings.display.showZoomControls" data-i18n-aria-label="settings.display.showZoomControls" title="显示缩放控件" aria-label="显示缩放控件">
                                 <span data-i18n="settings.display.showZoomControls">显示缩放控件</span>
                             </label>
                             <p class="settings-hint" data-i18n="settings.display.showZoomControlsHint">勾选后，在画布上方显示缩放控件</p>
                         </div>
                         <div class="settings-group">
                             <label class="checkbox-label">
-                                <input type="checkbox" id="show-import-export-btn-checkbox" checked>
+                                <input type="checkbox" id="show-import-export-btn-checkbox" checked data-i18n-title="settings.display.showImportExportBtn" data-i18n-aria-label="settings.display.showImportExportBtn" title="显示导入导出按钮" aria-label="显示导入导出按钮">
                                 <span data-i18n="settings.display.showImportExportBtn">显示导入导出按钮</span>
                             </label>
                             <p class="settings-hint" data-i18n="settings.display.showImportExportBtnHint">勾选后，在缩放控件旁显示导入导出按钮</p>
                         </div>
                         <div class="settings-group">
                             <label class="checkbox-label">
-                                <input type="checkbox" id="show-fullscreen-btn-checkbox" checked>
+                                <input type="checkbox" id="show-fullscreen-btn-checkbox" checked data-i18n-title="settings.display.showFullscreenBtn" data-i18n-aria-label="settings.display.showFullscreenBtn" title="显示全屏按钮" aria-label="显示全屏按钮">
                                 <span data-i18n="settings.display.showFullscreenBtn">显示全屏按钮</span>
                             </label>
                             <p class="settings-hint" data-i18n="settings.display.showFullscreenBtnHint">勾选后，在缩放控件旁显示全屏按钮</p>
@@ -941,21 +941,21 @@
                             <label><span data-i18n="settings.display.toolbarSizeLabel">工具栏大小：当前</span> <span id="toolbar-size-value">60</span>px</label>
                             <p class="settings-hint" data-i18n="settings.display.toolbarSizeHint">调整底部工具栏的大小</p>
                             <div style="display: flex; gap: 10px; align-items: center;">
-                                <input type="range" id="toolbar-size-slider" min="30" max="100" value="60" class="slider" step="5" style="flex: 1;">
-                                <input type="number" id="toolbar-size-input" min="30" max="100" value="60" step="5" style="width: 60px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                <input type="range" id="toolbar-size-slider" min="30" max="100" value="60" class="slider" step="5" style="flex: 1;" data-i18n-title="settings.display.toolbarSize" data-i18n-aria-label="settings.display.toolbarSize" title="工具栏大小" aria-label="工具栏大小">
+                                <input type="number" id="toolbar-size-input" min="30" max="100" value="60" step="5" style="width: 60px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center;" data-i18n-title="settings.display.toolbarSize" data-i18n-aria-label="settings.display.toolbarSize" title="工具栏大小" aria-label="工具栏大小">
                             </div>
                         </div>
                         <div class="settings-group">
                             <label><span data-i18n="settings.display.configScaleLabel">属性栏大小：当前</span> <span id="config-scale-value">100</span>%</label>
                             <p class="settings-hint" data-i18n="settings.display.configScaleHint">调整弹出具体属性面板的大小</p>
                             <div style="display: flex; gap: 10px; align-items: center;">
-                                <input type="range" id="config-scale-slider" min="50" max="150" value="100" class="slider" step="5" style="flex: 1;">
-                                <input type="number" id="config-scale-input" min="50" max="150" value="100" step="5" style="width: 60px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                <input type="range" id="config-scale-slider" min="50" max="150" value="100" class="slider" step="5" style="flex: 1;" data-i18n-title="settings.display.configScale" data-i18n-aria-label="settings.display.configScale" title="属性栏大小" aria-label="属性栏大小">
+                                <input type="number" id="config-scale-input" min="50" max="150" value="100" step="5" style="width: 60px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center;" data-i18n-title="settings.display.configScale" data-i18n-aria-label="settings.display.configScale" title="属性栏大小" aria-label="属性栏大小">
                             </div>
                         </div>
                         <div class="settings-group">
                             <label class="checkbox-label">
-                                <input type="checkbox" id="show-toolbar-text-checkbox" checked>
+                                <input type="checkbox" id="show-toolbar-text-checkbox" checked data-i18n-title="settings.display.showToolbarText" data-i18n-aria-label="settings.display.showToolbarText" title="显示工具栏文字" aria-label="显示工具栏文字">
                                 <span data-i18n="settings.display.showToolbarText">显示工具栏文字</span>
                             </label>
                             <p class="settings-hint" data-i18n="settings.display.showToolbarTextHint">是否在工具栏按钮中显示文字标签</p>
@@ -965,19 +965,19 @@
                             <p class="settings-hint" data-i18n="settings.display.themeColorHint">工具栏被选中时的颜色</p>
                             <div class="color-picker-row">
                                 <div class="color-picker-main">
-                                    <button class="color-btn active" data-theme-color="#007AFF" style="background-color: #007AFF;"></button>
-                                    <button class="color-btn" data-theme-color="#34C759" style="background-color: #34C759;"></button>
-                                    <button class="color-btn" data-theme-color="#FF3B30" style="background-color: #FF3B30;"></button>
-                                    <button class="color-btn" data-theme-color="#FF9500" style="background-color: #FF9500;"></button>
+                                    <button class="color-btn active" data-theme-color="#007AFF" style="background-color: #007AFF;" title="Theme Color" aria-label="Theme Color"></button>
+                                    <button class="color-btn" data-theme-color="#34C759" style="background-color: #34C759;" title="Theme Color" aria-label="Theme Color"></button>
+                                    <button class="color-btn" data-theme-color="#FF3B30" style="background-color: #FF3B30;" title="Theme Color" aria-label="Theme Color"></button>
+                                    <button class="color-btn" data-theme-color="#FF9500" style="background-color: #FF9500;" title="Theme Color" aria-label="Theme Color"></button>
                                 </div>
                                 <div class="color-picker-main">
-                                    <button class="color-btn" data-theme-color="#AF52DE" style="background-color: #AF52DE;"></button>
-                                    <button class="color-btn" data-theme-color="#FF2D55" style="background-color: #FF2D55;"></button>
-                                    <button class="color-btn" data-theme-color="#5AC8FA" style="background-color: #5AC8FA;"></button>
-                                    <button class="color-btn" data-theme-color="#FFCC00" style="background-color: #FFCC00; border: 1px solid #ccc;"></button>
+                                    <button class="color-btn" data-theme-color="#AF52DE" style="background-color: #AF52DE;" title="Theme Color" aria-label="Theme Color"></button>
+                                    <button class="color-btn" data-theme-color="#FF2D55" style="background-color: #FF2D55;" title="Theme Color" aria-label="Theme Color"></button>
+                                    <button class="color-btn" data-theme-color="#5AC8FA" style="background-color: #5AC8FA;" title="Theme Color" aria-label="Theme Color"></button>
+                                    <button class="color-btn" data-theme-color="#FFCC00" style="background-color: #FFCC00; border: 1px solid #ccc;" title="Theme Color" aria-label="Theme Color"></button>
                                 </div>
                             </div>
-                            <label class="color-picker-icon-btn" for="custom-theme-color-picker" style="margin-top: 8px;">
+                            <label class="color-picker-icon-btn" for="custom-theme-color-picker" data-i18n-title="settings.display.colorPicker" data-color-picker-label-key="settings.display.colorPicker" title="Color Picker" aria-label="Color Picker" role="button" tabindex="0" style="margin-top: 8px;">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
                                     <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
@@ -992,7 +992,7 @@
                         <h3 data-i18n="settings.canvas.title">画布设置</h3>
                         <div class="settings-group">
                             <label class="checkbox-label">
-                                <input type="checkbox" id="unlimited-zoom-checkbox">
+                                <input type="checkbox" id="unlimited-zoom-checkbox" data-i18n-title="settings.canvas.unlimitedZoom" data-i18n-aria-label="settings.canvas.unlimitedZoom" title="允许无限放大" aria-label="允许无限放大">
                                 <span data-i18n="settings.canvas.unlimitedZoom">允许无限放大</span>
                             </label>
                             <p class="settings-hint" data-i18n="settings.canvas.unlimitedZoomHint">勾选后，画布可以无限放大（最高500倍）</p>
@@ -1014,17 +1014,17 @@
                             <div class="canvas-custom-size" id="canvas-custom-size">
                                 <div class="custom-size-row">
                                     <label data-i18n="settings.canvas.customSize.width">宽度</label>
-                                    <input type="number" id="canvas-width-input" value="1920" min="300" max="4000" step="10">
+                                    <input type="number" id="canvas-width-input" value="1920" min="300" max="4000" step="10" data-i18n-title="settings.canvas.customSize.width" data-i18n-aria-label="settings.canvas.customSize.width" title="宽度" aria-label="宽度">
                                     <span data-i18n="tools.pen.sizePx">px</span>
                                 </div>
                                 <div class="custom-size-row">
                                     <label data-i18n="settings.canvas.customSize.height">高度</label>
-                                    <input type="number" id="canvas-height-input" value="1080" min="300" max="4000" step="10">
+                                    <input type="number" id="canvas-height-input" value="1080" min="300" max="4000" step="10" data-i18n-title="settings.canvas.customSize.height" data-i18n-aria-label="settings.canvas.customSize.height" title="高度" aria-label="高度">
                                     <span data-i18n="tools.pen.sizePx">px</span>
                                 </div>
                                 <div class="custom-size-row">
                                     <label data-i18n="settings.canvas.customSize.ratio">比例</label>
-                                    <select id="canvas-ratio-select">
+                                    <select id="canvas-ratio-select" data-i18n-title="settings.canvas.customSize.ratio" data-i18n-aria-label="settings.canvas.customSize.ratio" title="比例" aria-label="比例">
                                         <option value="custom">自定义</option>
                                         <option value="16:9">16:9</option>
                                         <option value="4:3">4:3</option>
@@ -1044,16 +1044,16 @@
                             <label><span data-i18n="settings.background.opacityLabel">背景透明度：当前</span> <span id="bg-opacity-value">100</span>%</label>
                             <p class="settings-hint" data-i18n="settings.background.opacityHint">调整背景的透明度,100%为完全不透明</p>
                             <div style="display: flex; gap: 10px; align-items: center;">
-                                <input type="range" id="bg-opacity-slider" min="0" max="100" value="100" class="slider" style="flex: 1;">
-                                <input type="number" id="bg-opacity-input" min="0" max="100" value="100" step="1" style="width: 60px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                <input type="range" id="bg-opacity-slider" min="0" max="100" value="100" class="slider" style="flex: 1;" data-i18n-title="settings.background.opacity" data-i18n-aria-label="settings.background.opacity" title="背景透明度" aria-label="背景透明度">
+                                <input type="number" id="bg-opacity-input" min="0" max="100" value="100" step="1" style="width: 60px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center;" data-i18n-title="settings.background.opacity" data-i18n-aria-label="settings.background.opacity" title="背景透明度" aria-label="背景透明度">
                             </div>
                         </div>
                         <div class="settings-group">
                             <label><span data-i18n="settings.background.patternIntensityLabel">图案透明度：当前</span> <span id="pattern-intensity-value">50</span>%</label>
                             <p class="settings-hint" data-i18n="settings.background.patternIntensityHint">调整背景图案线条的明暗程度</p>
                             <div style="display: flex; gap: 10px; align-items: center;">
-                                <input type="range" id="pattern-intensity-slider" min="10" max="200" value="50" class="slider" style="flex: 1;">
-                                <input type="number" id="pattern-intensity-input" min="10" max="200" value="50" step="1" style="width: 60px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                                <input type="range" id="pattern-intensity-slider" min="10" max="200" value="50" class="slider" style="flex: 1;" data-i18n-title="settings.background.patternIntensity" data-i18n-aria-label="settings.background.patternIntensity" title="图案透明度" aria-label="图案透明度">
+                                <input type="number" id="pattern-intensity-input" min="10" max="200" value="50" step="1" style="width: 60px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center;" data-i18n-title="settings.background.patternIntensity" data-i18n-aria-label="settings.background.patternIntensity" title="图案透明度" aria-label="图案透明度">
                             </div>
                         </div>
                         <div class="settings-group">
@@ -1153,7 +1153,7 @@
                             <div class="about-section settings-group">
                                 <h4 data-i18n="settings.general.updatePreference">更新方式</h4>
                                 <p class="settings-hint" data-i18n="settings.general.updatePreferenceHint">检测到新版本时，选择更新方式</p>
-                                <div class="button-size-options button-size-options-2" role="group" aria-label="更新方式">
+                        <div class="button-size-options button-size-options-2" role="group" data-i18n-aria-label="settings.general.updatePreference" aria-label="更新方式">
                                     <button class="update-preference-option-btn active" data-update-preference="prompt" type="button" data-i18n="settings.general.updatePreferencePrompt" aria-pressed="true">空闲时更新</button>
                                     <button class="update-preference-option-btn" data-update-preference="auto" type="button" data-i18n="settings.general.updatePreferenceAuto" aria-pressed="false">立即更新</button>
                                 </div>
@@ -1199,7 +1199,7 @@
                             <label data-i18n="settings.more.compatibilityLabel">兼容导入</label>
                             <p class="settings-hint" data-i18n="settings.more.compatibilityHint">仅在需要时启用旧版 .aboard / .json 导入兼容</p>
                             <label class="checkbox-label">
-                                <input type="checkbox" id="legacy-project-import-checkbox">
+                                <input type="checkbox" id="legacy-project-import-checkbox" data-i18n-title="settings.more.legacyProjectImportEnabled" data-i18n-aria-label="settings.more.legacyProjectImportEnabled" title="启用旧版项目导入兼容" aria-label="启用旧版项目导入兼容">
                                 <span data-i18n="settings.more.legacyProjectImportEnabled">启用旧版项目导入兼容</span>
                             </label>
                             <p class="settings-hint settings-hint-compact" data-i18n="settings.more.legacyProjectImportEnabledHint">开启后，项目导入将额外支持 .aboard / .json，并按需加载兼容模块。</p>
@@ -1266,7 +1266,7 @@
         <div class="modal-content coordinate-tools-modal-content">
             <div class="modal-header">
                 <h2 data-i18n="background.coordinateTools">坐标设置</h2>
-                <button id="coordinate-tools-modal-close-btn" class="modal-close-btn">
+                <button id="coordinate-tools-modal-close-btn" class="modal-close-btn" data-i18n-title="common.close" title="关闭" aria-label="关闭">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1294,7 +1294,7 @@
         <div class="modal-content coordinate-point-modal-content">
             <div class="modal-header">
                 <h2 data-i18n="background.drawPointLine">绘制点线</h2>
-                <button id="coordinate-point-modal-close-btn" class="modal-close-btn">
+                <button id="coordinate-point-modal-close-btn" class="modal-close-btn" data-i18n-title="common.close" title="关闭" aria-label="关闭">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1323,7 +1323,7 @@
                         </div>
                     </div>
                     <div id="coordinate-point-mode-section" class="coordinate-point-mode-section" hidden>
-                        <div class="button-size-options coordinate-point-mode-options" role="group" aria-label="Coordinate point line modes">
+                        <div class="button-size-options coordinate-point-mode-options" role="group" data-i18n-aria-label="background.connectPoints" aria-label="点间连线">
                             <button id="coordinate-point-mode-line-btn" type="button" class="pattern-option-btn coordinate-point-mode-btn" data-coordinate-point-mode="line" data-i18n="background.pointLineModeLineOnly">仅绘制线</button>
                             <button id="coordinate-point-mode-auto-btn" type="button" class="pattern-option-btn coordinate-point-mode-btn" data-coordinate-point-mode="auto" data-i18n="background.pointLineModeAuto">自动连线</button>
                             <button id="coordinate-point-mode-selected-btn" type="button" class="pattern-option-btn coordinate-point-mode-btn" data-coordinate-point-mode="selected" data-i18n="background.pointLineModeSelected">选择连线</button>
@@ -1357,7 +1357,7 @@
         <div class="modal-content coordinate-keypad-modal-content">
             <div class="modal-header">
                 <h2 data-i18n="background.inputPanel">输入面板</h2>
-                <button id="coordinate-keypad-modal-close-btn" class="modal-close-btn">
+                <button id="coordinate-keypad-modal-close-btn" class="modal-close-btn" data-i18n-title="common.close" title="关闭" aria-label="关闭">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1435,7 +1435,7 @@
                 <div class="modal-title-group">
                     <h2 id="font-preview-modal-title">字体预览</h2>
                 </div>
-                <button id="font-preview-modal-close-btn" class="modal-close-btn">
+                <button id="font-preview-modal-close-btn" class="modal-close-btn" data-i18n-title="common.close" title="关闭" aria-label="关闭">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1446,14 +1446,14 @@
                 <div class="font-preview-modal-controls">
                     <label class="font-preview-field">
                         <span>预览内容</span>
-                        <input id="font-preview-modal-text-input" type="text" class="export-filename-input" value="一个白板-Aboard-123">
+                        <input id="font-preview-modal-text-input" type="text" class="export-filename-input" value="一个白板-Aboard-123" data-i18n-title="settings.general.fontPreviewText" data-i18n-aria-label="settings.general.fontPreviewText" title="预览内容" aria-label="预览内容">
                     </label>
                     <div class="font-preview-size-editor">
                         <label class="font-preview-field">
                             <span>预览字号</span>
-                            <input id="font-preview-modal-size-range" type="range" class="slider" min="16" max="160" step="1" value="48">
+                            <input id="font-preview-modal-size-range" type="range" class="slider" min="16" max="160" step="1" value="48" data-i18n-title="settings.general.fontPreviewSize" data-i18n-aria-label="settings.general.fontPreviewSize" title="预览字号" aria-label="预览字号">
                         </label>
-                        <input id="font-preview-modal-size-input" type="number" class="size-input" min="16" max="160" step="1" value="48">
+                        <input id="font-preview-modal-size-input" type="number" class="size-input" min="16" max="160" step="1" value="48" data-i18n-title="settings.general.fontPreviewSize" data-i18n-aria-label="settings.general.fontPreviewSize" title="预览字号" aria-label="预览字号">
                         <button id="font-preview-modal-size-increase-btn" type="button" class="button-secondary">放大</button>
                         <button id="font-preview-modal-size-reset-btn" type="button" class="button-secondary">恢复字号</button>
                         <button id="font-preview-modal-text-reset-btn" type="button" class="button-secondary">恢复内容</button>
@@ -1501,8 +1501,8 @@
     <div id="gif-settings-modal" class="modal">
         <div class="modal-content confirm-modal-content">
             <div class="modal-header">
-                <h2>GIF设置</h2>
-                <button id="gif-settings-close-btn" class="modal-close-btn">
+                <h2 data-i18n="gif.settingsTitle">GIF Settings</h2>
+                <button id="gif-settings-close-btn" class="modal-close-btn" data-i18n-title="common.close" aria-label="关闭" title="关闭">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1511,7 +1511,7 @@
             </div>
             <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <label for="gif-loop-count-input">播放次数 (0为无限循环)</label>
+                    <label for="gif-loop-count-input" data-i18n="gif.loopCountLabel">Playback count (0 for infinite loop)</label>
                     <input type="number" id="gif-loop-count-input" min="0" max="999" value="0" style="width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
                 </div>
                 <div class="confirm-buttons">
@@ -1631,21 +1631,21 @@
             <div class="fullscreen-settings-panel" id="time-fullscreen-settings-panel" style="display: none;">
                 <div class="fullscreen-slider-group">
                     <label data-i18n="timeDisplay.titleFontSize">标题字体大小</label>
-                    <input type="range" id="time-fullscreen-title-font-slider" class="fullscreen-slider" min="2" max="20" value="5" step="0.5">
+                    <input type="range" id="time-fullscreen-title-font-slider" class="fullscreen-slider" min="2" max="20" value="5" step="0.5" data-i18n-title="timeDisplay.titleFontSize" data-i18n-aria-label="timeDisplay.titleFontSize" title="标题字体大小" aria-label="标题字体大小">
                 </div>
                 <div class="fullscreen-slider-group">
                     <label data-i18n="timeDisplay.timeFontSize">时间字体大小</label>
-                    <input type="range" id="time-fullscreen-font-slider" class="fullscreen-slider" min="10" max="85" value="15" step="0.5">
+                    <input type="range" id="time-fullscreen-font-slider" class="fullscreen-slider" min="10" max="85" value="15" step="0.5" data-i18n-title="timeDisplay.timeFontSize" data-i18n-aria-label="timeDisplay.timeFontSize" title="时间字体大小" aria-label="时间字体大小">
                 </div>
             </div>
             <div class="fullscreen-button-row">
-                <button id="time-fullscreen-settings-btn" class="fullscreen-control-btn" data-i18n-title="common.settings">
+                <button id="time-fullscreen-settings-btn" class="fullscreen-control-btn" data-i18n-title="common.settings" title="Settings" aria-label="Settings">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="3"></circle>
                         <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"></path>
                     </svg>
                 </button>
-                <button id="time-fullscreen-close-btn" class="fullscreen-control-btn fullscreen-close-btn" data-i18n-title="common.close">
+                <button id="time-fullscreen-close-btn" class="fullscreen-control-btn fullscreen-close-btn" data-i18n-title="common.close" title="Close" aria-label="Close">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1662,21 +1662,21 @@
             <div class="fullscreen-settings-panel" id="timer-fullscreen-settings-panel" style="display: none;">
                 <div class="fullscreen-slider-group">
                     <label data-i18n="timer.titleFontSize">标题字体大小</label>
-                    <input type="range" id="timer-fullscreen-title-font-slider" class="fullscreen-slider" min="2" max="20" value="5" step="0.5">
+                    <input type="range" id="timer-fullscreen-title-font-slider" class="fullscreen-slider" min="2" max="20" value="5" step="0.5" data-i18n-title="timer.titleFontSize" data-i18n-aria-label="timer.titleFontSize" title="标题字体大小" aria-label="标题字体大小">
                 </div>
                 <div class="fullscreen-slider-group">
                     <label data-i18n="timer.timeFontSize">时间字体大小</label>
-                    <input type="range" id="timer-fullscreen-font-slider" class="fullscreen-slider" min="10" max="85" value="15" step="0.5">
+                    <input type="range" id="timer-fullscreen-font-slider" class="fullscreen-slider" min="10" max="85" value="15" step="0.5" data-i18n-title="timer.timeFontSize" data-i18n-aria-label="timer.timeFontSize" title="时间字体大小" aria-label="时间字体大小">
                 </div>
             </div>
             <div class="fullscreen-button-row">
-                <button id="timer-fullscreen-settings-btn" class="fullscreen-control-btn" data-i18n-title="common.settings">
+                <button id="timer-fullscreen-settings-btn" class="fullscreen-control-btn" data-i18n-title="common.settings" title="Settings" aria-label="Settings">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="3"></circle>
                         <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"></path>
                     </svg>
                 </button>
-                <button id="timer-fullscreen-close-btn" class="fullscreen-control-btn fullscreen-close-btn" data-i18n-title="common.close">
+                <button id="timer-fullscreen-close-btn" class="fullscreen-control-btn fullscreen-close-btn" data-i18n-title="common.close" title="Close" aria-label="Close">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1691,7 +1691,7 @@
         <div class="timer-modal-content settings-panel-modal-content settings-panel-modal-wide">
             <div class="timer-modal-header">
                 <h2 data-i18n="timeDisplay.settingsTitle">时间显示设置</h2>
-                <button id="time-display-settings-close-btn" class="modal-close-btn">
+                <button id="time-display-settings-close-btn" class="modal-close-btn" data-i18n-title="common.close" title="关闭" aria-label="关闭">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1720,7 +1720,7 @@
                     <!-- Timezone -->
                     <div class="timer-input-group">
                         <label data-i18n="timeDisplay.timezone">时区</label>
-                        <select id="td-timezone-select" class="format-select">
+                        <select id="td-timezone-select" class="format-select" data-i18n-title="timeDisplay.timezone" data-i18n-aria-label="timeDisplay.timezone" title="时区" aria-label="时区">
                             <option value="Asia/Shanghai">中国 (UTC+8)</option>
                             <option value="America/New_York">纽约 (UTC-5/-4)</option>
                             <option value="America/Los_Angeles">洛杉矶 (UTC-8/-7)</option>
@@ -1742,7 +1742,7 @@
                     <!-- Time Format -->
                     <div class="timer-input-group">
                         <label data-i18n="timeDisplay.timeFormat">时间格式</label>
-                        <select id="td-time-format-select" class="format-select">
+                        <select id="td-time-format-select" class="format-select" data-i18n-title="timeDisplay.timeFormat" data-i18n-aria-label="timeDisplay.timeFormat" title="时间格式" aria-label="时间格式">
                             <option value="12h">12小时制 (上午/下午)</option>
                             <option value="24h">24小时制</option>
                         </select>
@@ -1751,7 +1751,7 @@
                     <!-- Date Format -->
                     <div class="timer-input-group">
                         <label data-i18n="timeDisplay.dateFormat">日期格式</label>
-                        <select id="td-date-format-select" class="format-select">
+                        <select id="td-date-format-select" class="format-select" data-i18n-title="timeDisplay.dateFormat" data-i18n-aria-label="timeDisplay.dateFormat" title="日期格式" aria-label="日期格式">
                             <option value="auto">自动 (Auto)</option>
                             <option value="yyyy-mm-dd">年-月-日 (2024-01-01)</option>
                             <option value="mm-dd-yyyy">月-日-年 (01-01-2024)</option>
@@ -1768,19 +1768,19 @@
                                 <label class="settings-sub-label" data-i18n="timeDisplay.textColor">字体颜色</label>
                                 <div class="color-picker-row">
                                     <div class="color-picker-main">
-                                        <button class="color-btn active" data-td-time-color="#000000" style="background-color: #000000;"></button>
-                                        <button class="color-btn" data-td-time-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-td-time-color="#007AFF" style="background-color: #007AFF;"></button>
-                                        <button class="color-btn" data-td-time-color="#FF0000" style="background-color: #FF0000;"></button>
+                                        <button class="color-btn active" data-td-time-color="#000000" style="background-color: #000000;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-time-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-time-color="#007AFF" style="background-color: #007AFF;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-time-color="#FF0000" style="background-color: #FF0000;" title="Time Display Color" aria-label="Time Display Color"></button>
                                     </div>
                                     <div class="color-picker-main">
-                                        <button class="color-btn" data-td-time-color="#00FF00" style="background-color: #00FF00;"></button>
-                                        <button class="color-btn" data-td-time-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-td-time-color="#FF8800" style="background-color: #FF8800;"></button>
-                                        <button class="color-btn" data-td-time-color="#8800FF" style="background-color: #8800FF;"></button>
+                                        <button class="color-btn" data-td-time-color="#00FF00" style="background-color: #00FF00;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-time-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-time-color="#FF8800" style="background-color: #FF8800;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-time-color="#8800FF" style="background-color: #8800FF;" title="Time Display Color" aria-label="Time Display Color"></button>
                                     </div>
                                 </div>
-                                <label class="color-picker-icon-btn settings-color-picker-icon" for="td-custom-time-color-picker">
+                                <label class="color-picker-icon-btn settings-color-picker-icon" for="td-custom-time-color-picker" data-i18n-title="timeDisplay.customColor" data-color-picker-label-key="timeDisplay.customColor" title="Custom Color" aria-label="Custom Color" role="button" tabindex="0">
                                     <svg width="24" height="24" viewBox="-0.4 -5 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polygon points="18 2 22 6 12 16 8 16 8 12 18 2" style="position: relative; z-index: 2;"></polygon>
                                         <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34" style="position: relative; z-index: 2;"></path>
@@ -1792,19 +1792,19 @@
                                 <label class="settings-sub-label" data-i18n="timeDisplay.bgColor">背景颜色</label>
                                 <div class="color-picker-row">
                                     <div class="color-picker-main">
-                                        <button class="color-btn active" data-td-time-bg-color="#000000" style="background-color: #000000;"></button>
-                                        <button class="color-btn" data-td-time-bg-color="#FF0000" style="background-color: #FF0000;"></button>
-                                        <button class="color-btn" data-td-time-bg-color="#0000FF" style="background-color: #0000FF;"></button>
-                                        <button class="color-btn" data-td-time-bg-color="#00FF00" style="background-color: #00FF00;"></button>
+                                        <button class="color-btn active" data-td-time-bg-color="#000000" style="background-color: #000000;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-time-bg-color="#FF0000" style="background-color: #FF0000;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-time-bg-color="#0000FF" style="background-color: #0000FF;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-time-bg-color="#00FF00" style="background-color: #00FF00;" title="Time Display Color" aria-label="Time Display Color"></button>
                                     </div>
                                     <div class="color-picker-main">
-                                        <button class="color-btn" data-td-time-bg-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-td-time-bg-color="#FF8800" style="background-color: #FF8800;"></button>
-                                        <button class="color-btn" data-td-time-bg-color="#8800FF" style="background-color: #8800FF;"></button>
-                                        <button class="color-btn" data-td-time-bg-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;"></button>
+                                        <button class="color-btn" data-td-time-bg-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-time-bg-color="#FF8800" style="background-color: #FF8800;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-time-bg-color="#8800FF" style="background-color: #8800FF;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-time-bg-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="Time Display Color" aria-label="Time Display Color"></button>
                                     </div>
                                 </div>
-                                <label class="color-picker-icon-btn settings-color-picker-icon" for="td-custom-bg-color-picker">
+                                <label class="color-picker-icon-btn settings-color-picker-icon" for="td-custom-bg-color-picker" data-i18n-title="timeDisplay.customColor" data-color-picker-label-key="timeDisplay.customColor" title="Custom Color" aria-label="Custom Color" role="button" tabindex="0">
                                     <svg width="24" height="24" viewBox="-0.4 -5 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polygon points="18 2 22 6 12 16 8 16 8 12 18 2" style="position: relative; z-index: 2;"></polygon>
                                         <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34" style="position: relative; z-index: 2;"></path>
@@ -1819,8 +1819,8 @@
                     <div class="timer-input-group">
                         <label><span data-i18n="timeDisplay.fontSizeLabel">字体大小：当前</span> <span id="td-time-font-size-value">16</span>px</label>
                         <div class="settings-input-row">
-                            <input type="range" id="td-time-font-size-slider" min="12" max="48" value="16" class="slider">
-                            <input type="number" id="td-time-font-size-input" min="12" max="48" value="16" class="size-input">
+                            <input type="range" id="td-time-font-size-slider" min="12" max="48" value="16" class="slider" data-i18n-title="timeDisplay.fontSize" data-i18n-aria-label="timeDisplay.fontSize" title="字体大小" aria-label="字体大小">
+                            <input type="number" id="td-time-font-size-input" min="12" max="48" value="16" class="size-input" data-i18n-title="timeDisplay.fontSize" data-i18n-aria-label="timeDisplay.fontSize" title="字体大小" aria-label="字体大小">
                         </div>
                     </div>
 
@@ -1828,8 +1828,8 @@
                     <div class="timer-input-group">
                         <label><span data-i18n="timeDisplay.opacityLabel">透明度：当前</span> <span id="td-time-opacity-value">100</span>%</label>
                         <div class="settings-input-row">
-                            <input type="range" id="td-time-opacity-slider" min="10" max="100" value="100" class="slider">
-                            <input type="number" id="td-time-opacity-input" min="10" max="100" value="100" class="size-input">
+                            <input type="range" id="td-time-opacity-slider" min="10" max="100" value="100" class="slider" data-i18n-title="timeDisplay.opacity" data-i18n-aria-label="timeDisplay.opacity" title="透明度" aria-label="透明度">
+                            <input type="number" id="td-time-opacity-input" min="10" max="100" value="100" class="size-input" data-i18n-title="timeDisplay.opacity" data-i18n-aria-label="timeDisplay.opacity" title="透明度" aria-label="透明度">
                         </div>
                     </div>
                 </div>
@@ -1851,8 +1851,8 @@
                         <label><span data-i18n="timeDisplay.fullscreenFontSizeLabel">全屏字体大小：当前</span> <span id="td-time-fullscreen-font-size-value">15</span>%</label>
                         <p class="settings-hint settings-hint-compact" data-i18n="timeDisplay.fullscreenFontSizeHint">调整全屏时间显示的字体大小，范围10%-85%</p>
                         <div class="settings-input-row">
-                            <input type="range" id="td-time-fullscreen-font-size-slider" min="10" max="85" value="15" class="slider">
-                            <input type="number" id="td-time-fullscreen-font-size-input" min="10" max="85" value="15" class="size-input">
+                            <input type="range" id="td-time-fullscreen-font-size-slider" min="10" max="85" value="15" class="slider" data-i18n-title="timeDisplay.fullscreenFontSize" data-i18n-aria-label="timeDisplay.fullscreenFontSize" title="全屏字体大小" aria-label="全屏字体大小">
+                            <input type="number" id="td-time-fullscreen-font-size-input" min="10" max="85" value="15" class="size-input" data-i18n-title="timeDisplay.fullscreenFontSize" data-i18n-aria-label="timeDisplay.fullscreenFontSize" title="全屏字体大小" aria-label="全屏字体大小">
                         </div>
                     </div>
 
@@ -1864,19 +1864,19 @@
                                 <label class="settings-sub-label" data-i18n="timeDisplay.textColor">字体颜色</label>
                                 <div class="color-picker-row">
                                     <div class="color-picker-main">
-                                        <button class="color-btn active" data-td-fs-color="#ffffff" style="background-color: #ffffff; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-td-fs-color="#000000" style="background-color: #000000;"></button>
-                                        <button class="color-btn" data-td-fs-color="#007AFF" style="background-color: #007AFF;"></button>
-                                        <button class="color-btn" data-td-fs-color="#FF0000" style="background-color: #FF0000;"></button>
+                                        <button class="color-btn active" data-td-fs-color="#ffffff" style="background-color: #ffffff; border: 1px solid #ccc;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-fs-color="#000000" style="background-color: #000000;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-fs-color="#007AFF" style="background-color: #007AFF;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-fs-color="#FF0000" style="background-color: #FF0000;" title="Time Display Color" aria-label="Time Display Color"></button>
                                     </div>
                                     <div class="color-picker-main">
-                                        <button class="color-btn" data-td-fs-color="#00FF00" style="background-color: #00FF00;"></button>
-                                        <button class="color-btn" data-td-fs-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-td-fs-color="#FF8800" style="background-color: #FF8800;"></button>
-                                        <button class="color-btn" data-td-fs-color="#8800FF" style="background-color: #8800FF;"></button>
+                                        <button class="color-btn" data-td-fs-color="#00FF00" style="background-color: #00FF00;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-fs-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-fs-color="#FF8800" style="background-color: #FF8800;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-fs-color="#8800FF" style="background-color: #8800FF;" title="Time Display Color" aria-label="Time Display Color"></button>
                                     </div>
                                 </div>
-                                <label class="color-picker-icon-btn settings-color-picker-icon" for="td-custom-fs-color-picker">
+                                <label class="color-picker-icon-btn settings-color-picker-icon" for="td-custom-fs-color-picker" data-i18n-title="timeDisplay.customColor" data-color-picker-label-key="timeDisplay.customColor" title="Custom Color" aria-label="Custom Color" role="button" tabindex="0">
                                     <svg width="24" height="24" viewBox="-0.4 -5 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polygon points="18 2 22 6 12 16 8 16 8 12 18 2" style="position: relative; z-index: 2;"></polygon>
                                         <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34" style="position: relative; z-index: 2;"></path>
@@ -1888,19 +1888,19 @@
                                 <label class="settings-sub-label" data-i18n="timeDisplay.bgColor">背景颜色</label>
                                 <div class="color-picker-row">
                                     <div class="color-picker-main">
-                                        <button class="color-btn active" data-td-fs-bg-color="#000000" style="background-color: #000000;"></button>
-                                        <button class="color-btn" data-td-fs-bg-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-td-fs-bg-color="#007AFF" style="background-color: #007AFF;"></button>
-                                        <button class="color-btn" data-td-fs-bg-color="#FF0000" style="background-color: #FF0000;"></button>
+                                        <button class="color-btn active" data-td-fs-bg-color="#000000" style="background-color: #000000;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-fs-bg-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-fs-bg-color="#007AFF" style="background-color: #007AFF;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-fs-bg-color="#FF0000" style="background-color: #FF0000;" title="Time Display Color" aria-label="Time Display Color"></button>
                                     </div>
                                     <div class="color-picker-main">
-                                        <button class="color-btn" data-td-fs-bg-color="#00FF00" style="background-color: #00FF00;"></button>
-                                        <button class="color-btn" data-td-fs-bg-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-td-fs-bg-color="#FF8800" style="background-color: #FF8800;"></button>
-                                        <button class="color-btn" data-td-fs-bg-color="#8800FF" style="background-color: #8800FF;"></button>
+                                        <button class="color-btn" data-td-fs-bg-color="#00FF00" style="background-color: #00FF00;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-fs-bg-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-fs-bg-color="#FF8800" style="background-color: #FF8800;" title="Time Display Color" aria-label="Time Display Color"></button>
+                                        <button class="color-btn" data-td-fs-bg-color="#8800FF" style="background-color: #8800FF;" title="Time Display Color" aria-label="Time Display Color"></button>
                                     </div>
                                 </div>
-                                <label class="color-picker-icon-btn settings-color-picker-icon" for="td-custom-fs-bg-color-picker">
+                                <label class="color-picker-icon-btn settings-color-picker-icon" for="td-custom-fs-bg-color-picker" data-i18n-title="timeDisplay.customColor" data-color-picker-label-key="timeDisplay.customColor" title="Custom Color" aria-label="Custom Color" role="button" tabindex="0">
                                     <svg width="24" height="24" viewBox="-0.4 -5 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polygon points="18 2 22 6 12 16 8 16 8 12 18 2" style="position: relative; z-index: 2;"></polygon>
                                         <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34" style="position: relative; z-index: 2;"></path>
@@ -1915,8 +1915,8 @@
                     <div class="timer-input-group">
                         <label><span data-i18n="timeDisplay.opacityLabel">透明度：当前</span> <span id="td-fs-opacity-value">95</span>%</label>
                         <div class="settings-input-row">
-                            <input type="range" id="td-fs-opacity-slider" min="10" max="100" value="95" class="slider">
-                            <input type="number" id="td-fs-opacity-input" min="10" max="100" value="95" class="size-input">
+                            <input type="range" id="td-fs-opacity-slider" min="10" max="100" value="95" class="slider" data-i18n-title="timeDisplay.opacity" data-i18n-aria-label="timeDisplay.opacity" title="透明度" aria-label="透明度">
+                            <input type="number" id="td-fs-opacity-input" min="10" max="100" value="95" class="size-input" data-i18n-title="timeDisplay.opacity" data-i18n-aria-label="timeDisplay.opacity" title="透明度" aria-label="透明度">
                         </div>
                     </div>
                 </div>
@@ -1931,7 +1931,7 @@
         <div class="timer-modal-content settings-panel-modal-content">
             <div class="timer-modal-header">
                 <h2 data-i18n="timer.settingsTitle">计时器设置</h2>
-                <button id="timer-settings-close-btn" class="modal-close-btn">
+                <button id="timer-settings-close-btn" class="modal-close-btn" data-i18n-title="common.close" title="关闭" aria-label="关闭">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1975,15 +1975,15 @@
                     <div class="time-inputs">
                         <div class="time-input-field">
                             <label data-i18n="timer.hours">小时</label>
-                            <input type="number" id="timer-hours" min="0" max="23" value="0">
+                            <input type="number" id="timer-hours" min="0" max="23" value="0" data-i18n-title="timer.hours" data-i18n-aria-label="timer.hours" title="小时" aria-label="小时">
                         </div>
                         <div class="time-input-field">
                             <label data-i18n="timer.minutes">分钟</label>
-                            <input type="number" id="timer-minutes" min="0" max="59" value="0">
+                            <input type="number" id="timer-minutes" min="0" max="59" value="0" data-i18n-title="timer.minutes" data-i18n-aria-label="timer.minutes" title="分钟" aria-label="分钟">
                         </div>
                         <div class="time-input-field">
                             <label data-i18n="timer.seconds">秒</label>
-                            <input type="number" id="timer-seconds" min="0" max="59" value="0">
+                            <input type="number" id="timer-seconds" min="0" max="59" value="0" data-i18n-title="timer.seconds" data-i18n-aria-label="timer.seconds" title="秒" aria-label="秒">
                         </div>
                     </div>
                 </div>
@@ -2002,19 +2002,19 @@
                                 <label data-i18n="timer.textColor">字体颜色</label>
                                 <div class="color-picker-row">
                                     <div class="color-picker-main">
-                                        <button class="color-btn active" data-timer-text-color="#333333" style="background-color: #333333;"></button>
-                                        <button class="color-btn" data-timer-text-color="#000000" style="background-color: #000000;"></button>
-                                        <button class="color-btn" data-timer-text-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-timer-text-color="#FF0000" style="background-color: #FF0000;"></button>
+                                        <button class="color-btn active" data-timer-text-color="#333333" style="background-color: #333333;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-text-color="#000000" style="background-color: #000000;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-text-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-text-color="#FF0000" style="background-color: #FF0000;" title="Timer Color" aria-label="Timer Color"></button>
                                     </div>
                                     <div class="color-picker-main">
-                                        <button class="color-btn" data-timer-text-color="#0000FF" style="background-color: #0000FF;"></button>
-                                        <button class="color-btn" data-timer-text-color="#00FF00" style="background-color: #00FF00;"></button>
-                                        <button class="color-btn" data-timer-text-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-timer-text-color="#FF8800" style="background-color: #FF8800;"></button>
+                                        <button class="color-btn" data-timer-text-color="#0000FF" style="background-color: #0000FF;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-text-color="#00FF00" style="background-color: #00FF00;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-text-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-text-color="#FF8800" style="background-color: #FF8800;" title="Timer Color" aria-label="Timer Color"></button>
                                     </div>
                                 </div>
-                                <label class="color-picker-icon-btn timer-color-picker-icon" for="custom-timer-text-color-picker">
+                                <label class="color-picker-icon-btn timer-color-picker-icon" for="custom-timer-text-color-picker" data-i18n-title="timer.customColor" data-color-picker-label-key="timer.customColor" title="Custom Color" aria-label="Custom Color" role="button" tabindex="0">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
                                         <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
@@ -2026,19 +2026,19 @@
                                 <label data-i18n="timer.bgColor">背景颜色</label>
                                 <div class="color-picker-row">
                                     <div class="color-picker-main">
-                                        <button class="color-btn active" data-timer-bg-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-timer-bg-color="#000000" style="background-color: #000000;"></button>
-                                        <button class="color-btn" data-timer-bg-color="#F0F0F0" style="background-color: #F0F0F0; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-timer-bg-color="#FFE5E5" style="background-color: #FFE5E5;"></button>
+                                        <button class="color-btn active" data-timer-bg-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-bg-color="#000000" style="background-color: #000000;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-bg-color="#F0F0F0" style="background-color: #F0F0F0; border: 1px solid #ccc;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-bg-color="#FFE5E5" style="background-color: #FFE5E5;" title="Timer Color" aria-label="Timer Color"></button>
                                     </div>
                                     <div class="color-picker-main">
-                                        <button class="color-btn" data-timer-bg-color="#E5F0FF" style="background-color: #E5F0FF;"></button>
-                                        <button class="color-btn" data-timer-bg-color="#E5FFE5" style="background-color: #E5FFE5;"></button>
-                                        <button class="color-btn" data-timer-bg-color="#FFFFE5" style="background-color: #FFFFE5; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-timer-bg-color="#FFE5CC" style="background-color: #FFE5CC;"></button>
+                                        <button class="color-btn" data-timer-bg-color="#E5F0FF" style="background-color: #E5F0FF;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-bg-color="#E5FFE5" style="background-color: #E5FFE5;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-bg-color="#FFFFE5" style="background-color: #FFFFE5; border: 1px solid #ccc;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-bg-color="#FFE5CC" style="background-color: #FFE5CC;" title="Timer Color" aria-label="Timer Color"></button>
                                     </div>
                                 </div>
-                                <label class="color-picker-icon-btn timer-color-picker-icon" for="custom-timer-bg-color-picker">
+                                <label class="color-picker-icon-btn timer-color-picker-icon" for="custom-timer-bg-color-picker" data-i18n-title="timer.customColor" data-color-picker-label-key="timer.customColor" title="Custom Color" aria-label="Custom Color" role="button" tabindex="0">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
                                         <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
@@ -2055,19 +2055,19 @@
                                 <label data-i18n="timeDisplay.textColor">字体颜色</label>
                                 <div class="color-picker-row">
                                     <div class="color-picker-main">
-                                        <button class="color-btn active" data-timer-fs-text-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-timer-fs-text-color="#000000" style="background-color: #000000;"></button>
-                                        <button class="color-btn" data-timer-fs-text-color="#007AFF" style="background-color: #007AFF;"></button>
-                                        <button class="color-btn" data-timer-fs-text-color="#FF0000" style="background-color: #FF0000;"></button>
+                                        <button class="color-btn active" data-timer-fs-text-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-fs-text-color="#000000" style="background-color: #000000;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-fs-text-color="#007AFF" style="background-color: #007AFF;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-fs-text-color="#FF0000" style="background-color: #FF0000;" title="Timer Color" aria-label="Timer Color"></button>
                                     </div>
                                     <div class="color-picker-main">
-                                        <button class="color-btn" data-timer-fs-text-color="#0000FF" style="background-color: #0000FF;"></button>
-                                        <button class="color-btn" data-timer-fs-text-color="#00FF00" style="background-color: #00FF00;"></button>
-                                        <button class="color-btn" data-timer-fs-text-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-timer-fs-text-color="#FF8800" style="background-color: #FF8800;"></button>
+                                        <button class="color-btn" data-timer-fs-text-color="#0000FF" style="background-color: #0000FF;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-fs-text-color="#00FF00" style="background-color: #00FF00;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-fs-text-color="#FFFF00" style="background-color: #FFFF00; border: 1px solid #ccc;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-fs-text-color="#FF8800" style="background-color: #FF8800;" title="Timer Color" aria-label="Timer Color"></button>
                                     </div>
                                 </div>
-                                <label class="color-picker-icon-btn timer-color-picker-icon" for="custom-timer-fs-text-color-picker">
+                                <label class="color-picker-icon-btn timer-color-picker-icon" for="custom-timer-fs-text-color-picker" data-i18n-title="timer.customColor" data-color-picker-label-key="timer.customColor" title="Custom Color" aria-label="Custom Color" role="button" tabindex="0">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
                                         <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
@@ -2079,19 +2079,19 @@
                                 <label data-i18n="timeDisplay.bgColor">背景颜色</label>
                                 <div class="color-picker-row">
                                     <div class="color-picker-main">
-                                        <button class="color-btn active" data-timer-fs-bg-color="#000000" style="background-color: #000000;"></button>
-                                        <button class="color-btn" data-timer-fs-bg-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-timer-fs-bg-color="#F0F0F0" style="background-color: #F0F0F0; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-timer-fs-bg-color="#FFE5E5" style="background-color: #FFE5E5;"></button>
+                                        <button class="color-btn active" data-timer-fs-bg-color="#000000" style="background-color: #000000;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-fs-bg-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ccc;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-fs-bg-color="#F0F0F0" style="background-color: #F0F0F0; border: 1px solid #ccc;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-fs-bg-color="#FFE5E5" style="background-color: #FFE5E5;" title="Timer Color" aria-label="Timer Color"></button>
                                     </div>
                                     <div class="color-picker-main">
-                                        <button class="color-btn" data-timer-fs-bg-color="#E5F0FF" style="background-color: #E5F0FF;"></button>
-                                        <button class="color-btn" data-timer-fs-bg-color="#E5FFE5" style="background-color: #E5FFE5;"></button>
-                                        <button class="color-btn" data-timer-fs-bg-color="#FFFFE5" style="background-color: #FFFFE5; border: 1px solid #ccc;"></button>
-                                        <button class="color-btn" data-timer-fs-bg-color="#FFE5CC" style="background-color: #FFE5CC;"></button>
+                                        <button class="color-btn" data-timer-fs-bg-color="#E5F0FF" style="background-color: #E5F0FF;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-fs-bg-color="#E5FFE5" style="background-color: #E5FFE5;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-fs-bg-color="#FFFFE5" style="background-color: #FFFFE5; border: 1px solid #ccc;" title="Timer Color" aria-label="Timer Color"></button>
+                                        <button class="color-btn" data-timer-fs-bg-color="#FFE5CC" style="background-color: #FFE5CC;" title="Timer Color" aria-label="Timer Color"></button>
                                     </div>
                                 </div>
-                                <label class="color-picker-icon-btn timer-color-picker-icon" for="custom-timer-fs-bg-color-picker">
+                                <label class="color-picker-icon-btn timer-color-picker-icon" for="custom-timer-fs-bg-color-picker" data-i18n-title="timer.customColor" data-color-picker-label-key="timer.customColor" title="Custom Color" aria-label="Custom Color" role="button" tabindex="0">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
                                         <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
@@ -2139,7 +2139,7 @@
                                     <div class="setting-row">
                                         <label for="timer-playback-speed" data-i18n="timer.playbackSpeed">播放倍速</label>
                                         <div class="speed-control">
-                                            <input type="range" id="timer-playback-speed" min="0.5" max="2.0" step="0.1" value="1.0">
+                                            <input type="range" id="timer-playback-speed" min="0.5" max="2.0" step="0.1" value="1.0" data-i18n-title="timer.playbackSpeed" data-i18n-aria-label="timer.playbackSpeed" title="播放倍速" aria-label="播放倍速">
                                             <span id="timer-playback-speed-value">1.0x</span>
                                         </div>
                                     </div>
@@ -2194,7 +2194,7 @@
     <div id="timer-display">
         <div class="timer-display-header">
             <div class="timer-display-mode" data-i18n="timer.stopwatch">正计时</div>
-            <button class="timer-close-btn" id="timer-display-close-btn">
+            <button class="timer-close-btn" id="timer-display-close-btn" data-i18n-title="common.close" title="Close" aria-label="Close">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>

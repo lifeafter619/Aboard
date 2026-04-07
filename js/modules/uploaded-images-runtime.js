@@ -23,7 +23,7 @@ function saveUploadedImage(imageData) {
         
         // Limit to approximately 4MB total to avoid hitting localStorage limits
         if (currentSize + imageSize > 4 * 1024 * 1024) {
-            const msg = window.i18n ? window.i18n.t('background.storageFull') : '存储空间不足，无法保存更多图片。请清除一些旧图片。';
+            const msg = window.i18n?.t('background.storageFull') || 'Storage is full. Please remove some old images before saving more.';
             if (this.settingsManager.toastManager) {
                 this.settingsManager.toastManager.show(msg, 'warning');
             } else {
@@ -45,7 +45,7 @@ function saveUploadedImage(imageData) {
             this.updateUploadedImagesButtons();
         } catch (e) {
             console.error('Failed to save image to localStorage:', e);
-            const msg = window.i18n ? window.i18n.t('background.saveError') : '保存图片失败，存储空间可能不足。';
+            const msg = window.i18n?.t('background.saveError') || 'Failed to save image. Storage may be full.';
             if (this.settingsManager.toastManager) {
                 this.settingsManager.toastManager.show(msg, 'error');
             } else {

@@ -35,8 +35,8 @@ class DialogManager {
                     <div id="app-confirm-options" class="app-confirm-options"></div>
                     <p id="app-confirm-footer" class="confirm-message app-confirm-footer"></p>
                     <div class="confirm-buttons">
-                        <button id="app-confirm-cancel-btn" class="confirm-btn cancel-btn"></button>
-                        <button id="app-confirm-ok-btn" class="confirm-btn ok-btn"></button>
+                        <button id="app-confirm-cancel-btn" class="confirm-btn cancel-btn" aria-label="Cancel"></button>
+                        <button id="app-confirm-ok-btn" class="confirm-btn ok-btn" aria-label="OK"></button>
                     </div>
                 </div>
             </div>
@@ -87,7 +87,9 @@ class DialogManager {
             optionsContainer.appendChild(label);
         });
         modal.querySelector('#app-confirm-cancel-btn').textContent = cancelText;
+        modal.querySelector('#app-confirm-cancel-btn').setAttribute('aria-label', cancelText);
         modal.querySelector('#app-confirm-ok-btn').textContent = okText;
+        modal.querySelector('#app-confirm-ok-btn').setAttribute('aria-label', okText);
 
         return new Promise((resolve) => {
             const close = (result) => {

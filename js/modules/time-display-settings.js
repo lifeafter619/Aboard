@@ -7,6 +7,27 @@ class TimeDisplaySettingsModal {
         this.modal = document.getElementById('time-display-settings-modal');
         this.setupEventListeners();
         this.setupSettingsControls();
+        this.updateColorControlAccessibility();
+    }
+
+    updateColorControlAccessibility() {
+        document.querySelectorAll(
+            '.color-btn[data-td-time-color], .color-btn[data-td-time-bg-color], .color-btn[data-td-fs-color], .color-btn[data-td-fs-bg-color]'
+        ).forEach((btn) => {
+            btn.setAttribute('aria-pressed', btn.classList.contains('active') ? 'true' : 'false');
+        });
+
+        [
+            'td-custom-time-color-picker',
+            'td-custom-bg-color-picker',
+            'td-custom-fs-color-picker',
+            'td-custom-fs-bg-color-picker'
+        ].forEach((pickerId) => {
+            const trigger = document.querySelector(`label[for="${pickerId}"]`);
+            if (trigger) {
+                trigger.setAttribute('aria-pressed', trigger.classList.contains('active') ? 'true' : 'false');
+            }
+        });
     }
     
     setupEventListeners() {
@@ -65,6 +86,7 @@ class TimeDisplaySettingsModal {
                 if (customTimeColorPickerBtn) {
                     customTimeColorPickerBtn.classList.remove('active');
                 }
+                this.updateColorControlAccessibility();
                 this.applySettings(); // Instant apply
             });
         });
@@ -78,6 +100,7 @@ class TimeDisplaySettingsModal {
                 if (customBgColorPickerBtn) {
                     customBgColorPickerBtn.classList.remove('active');
                 }
+                this.updateColorControlAccessibility();
                 this.applySettings(); // Instant apply
             });
         });
@@ -95,6 +118,7 @@ class TimeDisplaySettingsModal {
                 if (customTimeColorPickerBtn) {
                     customTimeColorPickerBtn.classList.add('active');
                 }
+                this.updateColorControlAccessibility();
                 this.applySettings(); // Instant apply
             });
         }
@@ -111,6 +135,7 @@ class TimeDisplaySettingsModal {
                 if (customBgColorPickerBtn) {
                     customBgColorPickerBtn.classList.add('active');
                 }
+                this.updateColorControlAccessibility();
                 this.applySettings(); // Instant apply
             });
         }
@@ -192,6 +217,7 @@ class TimeDisplaySettingsModal {
                 btn.classList.add('active');
                 const customBtn = document.querySelector('label[for="td-custom-fs-color-picker"]');
                 if (customBtn) customBtn.classList.remove('active');
+                this.updateColorControlAccessibility();
                 this.applySettings();
             });
         });
@@ -202,6 +228,7 @@ class TimeDisplaySettingsModal {
                 btn.classList.add('active');
                 const customBtn = document.querySelector('label[for="td-custom-fs-bg-color-picker"]');
                 if (customBtn) customBtn.classList.remove('active');
+                this.updateColorControlAccessibility();
                 this.applySettings();
             });
         });
@@ -214,6 +241,7 @@ class TimeDisplaySettingsModal {
                 document.querySelectorAll('.color-btn[data-td-fs-color]').forEach(b => b.classList.remove('active'));
                 customFsColorPicker.dataset.selectedColor = e.target.value;
                 if (customBtn) customBtn.classList.add('active');
+                this.updateColorControlAccessibility();
                 this.applySettings();
             };
             customFsColorPicker.addEventListener('change', handler);
@@ -227,6 +255,7 @@ class TimeDisplaySettingsModal {
                 document.querySelectorAll('.color-btn[data-td-fs-bg-color]').forEach(b => b.classList.remove('active'));
                 customFsBgColorPicker.dataset.selectedColor = e.target.value;
                 if (customBtn) customBtn.classList.add('active');
+                this.updateColorControlAccessibility();
                 this.applySettings();
             };
             customFsBgColorPicker.addEventListener('change', handler);
@@ -451,6 +480,8 @@ class TimeDisplaySettingsModal {
             fsOpacityInput.value = opacity;
             if (fsOpacityValue) fsOpacityValue.textContent = opacity;
         }
+
+        this.updateColorControlAccessibility();
     }
     
     applySettings() {

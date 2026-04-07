@@ -1,6 +1,15 @@
 // Timer Module - Refactored to support multiple timer instances
 // Each timer can be stopwatch or countdown, independently controlled
 
+function getTimerText(key, fallback) {
+    if (!window.i18n?.t) {
+        return fallback;
+    }
+
+    const translated = window.i18n.t(key);
+    return translated && translated !== key ? translated : fallback;
+}
+
 // Single Timer Instance Class
 class TimerInstance {
     constructor(options) {
@@ -63,7 +72,8 @@ class TimerInstance {
         // Minimal display mode (replaces auto-hide)
         this.isMinimal = false;
         this.fullscreenTitleFontSizePercent = 5; // percentage of viewport for title in fullscreen
-        
+        this.localeChangeHandler = null;
+
         this.createDisplayElement();
         this.setupFullscreenModal();
         this.startTimerLoop();
@@ -145,19 +155,28 @@ class TimerInstance {
         const titleHTML = this.title ? `<div class="timer-display-title">${this.title}</div>` : '';
         
         const modeText = this.mode === 'stopwatch' ? window.i18n.t('timer.stopwatch') : window.i18n.t('timer.countdown');
+        const helpLabel = getTimerText('common.help', 'Help');
+        const closeLabel = getTimerText('common.close', 'Close');
+        const pauseLabel = getTimerText('timer.pause', 'Pause');
+        const resetLabel = getTimerText('timer.reset', 'Reset');
+        const minimalLabel = getTimerText('timer.minimal', 'Minimal');
+        const minimalTitle = getTimerText('timer.minimalMode', 'Minimal mode (double-click to restore)');
+        const adjustLabel = getTimerText('timer.adjust', 'Adjust');
+        const fullscreenLabel = getTimerText('timeDisplay.fullscreenDisplay', 'Fullscreen Display');
+        const fontSizeLabel = getTimerText('timer.fontSize', 'Font Size');
 
         display.innerHTML = `
             <div class="timer-display-header">
                 <div class="timer-display-mode">${modeText}</div>
                 <div class="timer-display-header-actions">
-                    <button class="timer-help-btn" type="button" data-help-key="help.features.timer" data-i18n-title="common.help" title="${window.i18n.t('common.help')}">
+                    <button class="timer-help-btn" type="button" data-help-key="help.features.timer" data-i18n-title="common.help" aria-label="${helpLabel}" title="${helpLabel}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
                             <line x1="12" y1="17" x2="12" y2="17"></line>
                         </svg>
                     </button>
-                    <button class="timer-close-btn" type="button" title="${window.i18n.t('common.close')}">
+                    <button class="timer-close-btn" type="button" title="${closeLabel}" aria-label="${closeLabel}">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -168,49 +187,49 @@ class TimerInstance {
             ${titleHTML}
             <div class="timer-display-time">00:00:00</div>
             <div class="timer-display-controls">
-                <button class="timer-control-btn timer-play-pause-btn">
+                <button class="timer-control-btn timer-play-pause-btn" title="${pauseLabel}" aria-label="${pauseLabel}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="6" y="4" width="4" height="16"></rect>
                         <rect x="14" y="4" width="4" height="16"></rect>
                     </svg>
-                    ${window.i18n.t('timer.pause')}
+                    <span class="timer-play-pause-label">${pauseLabel}</span>
                 </button>
-                <button class="timer-control-btn timer-reset-btn">
+                <button class="timer-control-btn timer-reset-btn" title="${resetLabel}" aria-label="${resetLabel}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
                         <path d="M21 3v5h-5"></path>
                         <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
                         <path d="M3 21v-5h5"></path>
                     </svg>
-                    ${window.i18n.t('timer.reset')}
+                    <span class="timer-reset-label">${resetLabel}</span>
                 </button>
             </div>
             <div class="timer-display-actions">
-                <button class="timer-action-btn timer-minimal-btn" title="${window.i18n.t('timer.minimalMode') || '最简显示 (双击恢复)'}">
+                <button class="timer-action-btn timer-minimal-btn" title="${minimalTitle}" aria-label="${minimalTitle}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                         <line x1="9" y1="9" x2="15" y2="15"></line>
                         <line x1="15" y1="9" x2="9" y2="15"></line>
                     </svg>
-                    ${window.i18n.t('timer.minimal') || '最简'}
+                    <span class="timer-minimal-label">${minimalLabel}</span>
                 </button>
-                <button class="timer-action-btn timer-adjust-btn" title="${window.i18n.t('timer.adjust')}">
+                <button class="timer-action-btn timer-adjust-btn" title="${adjustLabel}" aria-label="${adjustLabel}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="3"></circle>
                         <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"></path>
                     </svg>
-                    ${window.i18n.t('timer.adjust')}
+                    <span class="timer-adjust-label">${adjustLabel}</span>
                 </button>
-                <button class="timer-action-btn timer-fullscreen-btn" title="${window.i18n.t('timeDisplay.fullscreenDisplay')}">
+                <button class="timer-action-btn timer-fullscreen-btn" title="${fullscreenLabel}" aria-label="${fullscreenLabel}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
                     </svg>
-                    ${window.i18n.t('timeDisplay.fullscreenDisplay')}
+                    <span class="timer-fullscreen-label">${fullscreenLabel}</span>
                 </button>
             </div>
             <div class="timer-font-size-control">
-                <label>${window.i18n.t('timer.fontSize')}</label>
-                <input type="range" class="timer-font-size-slider" min="16" max="60" value="32" step="2">
+                <label><span class="timer-font-size-label">${fontSizeLabel}</span></label>
+                <input type="range" class="timer-font-size-slider" min="16" max="60" value="32" step="2" aria-label="${fontSizeLabel}" title="${fontSizeLabel}">
             </div>
         `;
         
@@ -218,7 +237,11 @@ class TimerInstance {
         this.displayElement = display;
         window.drawingBoard?.helpSystem?.bindDataHelpButtons?.();
         window.drawingBoard?.helpSystem?.refreshHelpButtonLabels?.();
-        
+        this.localeChangeHandler = () => {
+            this.refreshLocalizedUI();
+        };
+        window.addEventListener('localeChanged', this.localeChangeHandler);
+
         // Apply custom colors
         display.style.backgroundColor = this.bgColor;
         display.style.color = this.textColor;
@@ -245,6 +268,8 @@ class TimerInstance {
         } else {
             this.displayTime(this.remainingTime);
         }
+
+        this.refreshLocalizedUI();
     }
     
     setupEventListeners() {
@@ -462,12 +487,17 @@ class TimerInstance {
     updatePlayPauseButton() {
         const btn = this.displayElement.querySelector('.timer-play-pause-btn');
         if (btn) {
+            const label = this.isPaused
+                ? getTimerText('timer.continue', 'Continue')
+                : getTimerText('timer.pause', 'Pause');
+            btn.title = label;
+            btn.setAttribute('aria-label', label);
             if (this.isPaused) {
                 btn.innerHTML = `
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polygon points="5 3 19 12 5 21 5 3"></polygon>
                     </svg>
-                    ${window.i18n.t('timer.continue') || '继续'}
+                    <span class="timer-play-pause-label">${label}</span>
                 `;
             } else {
                 btn.innerHTML = `
@@ -475,9 +505,99 @@ class TimerInstance {
                         <rect x="6" y="4" width="4" height="16"></rect>
                         <rect x="14" y="4" width="4" height="16"></rect>
                     </svg>
-                    ${window.i18n.t('timer.pause')}
+                    <span class="timer-play-pause-label">${label}</span>
                 `;
             }
+        }
+    }
+
+    refreshLocalizedUI() {
+        if (!this.displayElement) {
+            return;
+        }
+
+        const modeDisplay = this.displayElement.querySelector('.timer-display-mode');
+        if (modeDisplay) {
+            modeDisplay.textContent = this.mode === 'stopwatch'
+                ? getTimerText('timer.stopwatch', 'Stopwatch')
+                : getTimerText('timer.countdown', 'Countdown');
+        }
+
+        const helpBtn = this.displayElement.querySelector('.timer-help-btn');
+        const helpLabel = getTimerText('common.help', 'Help');
+        if (helpBtn) {
+            helpBtn.title = helpLabel;
+            helpBtn.setAttribute('aria-label', helpLabel);
+        }
+
+        const closeBtn = this.displayElement.querySelector('.timer-close-btn');
+        const closeLabel = getTimerText('common.close', 'Close');
+        if (closeBtn) {
+            closeBtn.title = closeLabel;
+            closeBtn.setAttribute('aria-label', closeLabel);
+        }
+
+        const resetBtn = this.displayElement.querySelector('.timer-reset-btn');
+        const resetLabel = getTimerText('timer.reset', 'Reset');
+        if (resetBtn) {
+            resetBtn.title = resetLabel;
+            resetBtn.setAttribute('aria-label', resetLabel);
+            const resetLabelEl = resetBtn.querySelector('.timer-reset-label');
+            if (resetLabelEl) {
+                resetLabelEl.textContent = resetLabel;
+            }
+        }
+
+        const minimalBtn = this.displayElement.querySelector('.timer-minimal-btn');
+        const minimalText = getTimerText('timer.minimal', 'Minimal');
+        const minimalTitle = getTimerText('timer.minimalMode', 'Minimal mode (double-click to restore)');
+        if (minimalBtn) {
+            minimalBtn.title = minimalTitle;
+            minimalBtn.setAttribute('aria-label', minimalTitle);
+            const minimalLabelEl = minimalBtn.querySelector('.timer-minimal-label');
+            if (minimalLabelEl) {
+                minimalLabelEl.textContent = minimalText;
+            }
+        }
+
+        const adjustBtn = this.displayElement.querySelector('.timer-adjust-btn');
+        const adjustLabel = getTimerText('timer.adjust', 'Adjust');
+        if (adjustBtn) {
+            adjustBtn.title = adjustLabel;
+            adjustBtn.setAttribute('aria-label', adjustLabel);
+            const adjustLabelEl = adjustBtn.querySelector('.timer-adjust-label');
+            if (adjustLabelEl) {
+                adjustLabelEl.textContent = adjustLabel;
+            }
+        }
+
+        const fullscreenBtn = this.displayElement.querySelector('.timer-fullscreen-btn');
+        const fullscreenLabel = getTimerText('timeDisplay.fullscreenDisplay', 'Fullscreen Display');
+        if (fullscreenBtn) {
+            fullscreenBtn.title = fullscreenLabel;
+            fullscreenBtn.setAttribute('aria-label', fullscreenLabel);
+            const fullscreenLabelEl = fullscreenBtn.querySelector('.timer-fullscreen-label');
+            if (fullscreenLabelEl) {
+                fullscreenLabelEl.textContent = fullscreenLabel;
+            }
+        }
+
+        const fontSizeLabel = this.displayElement.querySelector('.timer-font-size-label');
+        if (fontSizeLabel) {
+            fontSizeLabel.textContent = getTimerText('timer.fontSize', 'Font Size');
+        }
+
+        const fontSizeSlider = this.displayElement.querySelector('.timer-font-size-slider');
+        if (fontSizeSlider) {
+            const fontSizeControlLabel = getTimerText('timer.fontSize', 'Font Size');
+            fontSizeSlider.setAttribute('aria-label', fontSizeControlLabel);
+            fontSizeSlider.title = fontSizeControlLabel;
+        }
+
+        this.updatePlayPauseButton();
+
+        if (this.isFullscreen) {
+            this.updateFullscreenDisplay();
         }
     }
     
@@ -588,12 +708,12 @@ class TimerInstance {
         });
         
         audio.addEventListener('error', (err) => {
-            console.warn('无法播放音频:', err);
+            console.warn('Failed to play timer audio:', err);
             this.currentAudio = null;
         });
-        
+
         audio.play().catch(err => {
-            console.warn('无法播放音频:', err);
+            console.warn('Failed to play timer audio:', err);
             this.currentAudio = null;
         });
     }
@@ -714,6 +834,11 @@ class TimerInstance {
     }
     
     closeTimer() {
+        if (this.localeChangeHandler) {
+            window.removeEventListener('localeChanged', this.localeChangeHandler);
+            this.localeChangeHandler = null;
+        }
+
         // Exit fullscreen if active
         if (this.isFullscreen) {
             this.exitFullscreen();
@@ -885,6 +1010,53 @@ class TimerManager {
         }
     }
 
+    updateTimerColorAccessibility() {
+        document.querySelectorAll(
+            '.color-btn[data-timer-text-color], .color-btn[data-timer-bg-color], .color-btn[data-timer-fs-text-color], .color-btn[data-timer-fs-bg-color]'
+        ).forEach((btn) => {
+            btn.setAttribute('aria-pressed', btn.classList.contains('active') ? 'true' : 'false');
+        });
+
+        document.querySelectorAll('label.timer-color-picker-icon[for]').forEach((trigger) => {
+            trigger.setAttribute('aria-pressed', trigger.classList.contains('active-custom') ? 'true' : 'false');
+        });
+    }
+
+    syncTimerColorSelections({
+        textColor = '#333333',
+        bgColor = '#FFFFFF',
+        fullscreenTextColor = '#FFFFFF',
+        fullscreenBgColor = '#000000'
+    } = {}) {
+        const syncGroup = (selector, datasetKey, value, pickerId) => {
+            const normalizedValue = String(value || '').toLowerCase();
+            let foundPreset = false;
+
+            document.querySelectorAll(selector).forEach((btn) => {
+                const isMatch = String(btn.dataset[datasetKey] || '').toLowerCase() === normalizedValue;
+                btn.classList.toggle('active', isMatch);
+                if (isMatch) {
+                    foundPreset = true;
+                }
+            });
+
+            const picker = document.getElementById(pickerId);
+            const trigger = picker?.closest('.color-picker-icon-btn');
+            if (trigger) {
+                trigger.classList.toggle('active-custom', !foundPreset);
+            }
+            if (picker && /^#[0-9a-f]{6}$/i.test(String(value || ''))) {
+                picker.value = value;
+            }
+        };
+
+        syncGroup('.color-btn[data-timer-text-color]', 'timerTextColor', textColor, 'custom-timer-text-color-picker');
+        syncGroup('.color-btn[data-timer-bg-color]', 'timerBgColor', bgColor, 'custom-timer-bg-color-picker');
+        syncGroup('.color-btn[data-timer-fs-text-color]', 'timerFsTextColor', fullscreenTextColor, 'custom-timer-fs-text-color-picker');
+        syncGroup('.color-btn[data-timer-fs-bg-color]', 'timerFsBgColor', fullscreenBgColor, 'custom-timer-fs-bg-color-picker');
+        this.updateTimerColorAccessibility();
+    }
+
     preloadSounds() {
         // Preload all preset sounds for immediate playback
         Object.keys(this.sounds).forEach(key => {
@@ -958,12 +1130,12 @@ class TimerManager {
             btn.innerHTML = `
                 ${displayName}
                 <div style="display: flex; gap: 4px;">
-                    <button class="sound-preview-btn" title="预览">
+                    <button class="sound-preview-btn" title="${getTimerText('timer.preview', 'Preview')}" aria-label="${getTimerText('timer.preview', 'Preview')}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polygon points="5 3 19 12 5 21 5 3"></polygon>
                         </svg>
                     </button>
-                    <button class="sound-delete-btn" title="删除">
+                    <button class="sound-delete-btn" title="${getTimerText('common.delete', 'Delete')}" aria-label="${getTimerText('common.delete', 'Delete')}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1146,6 +1318,11 @@ class TimerManager {
                 e.stopPropagation();
                 document.querySelectorAll('.color-btn[data-timer-text-color]').forEach(b => b.classList.remove('active'));
                 e.currentTarget.classList.add('active');
+                const customTrigger = document.querySelector('label[for="custom-timer-text-color-picker"]');
+                if (customTrigger) {
+                    customTrigger.classList.remove('active-custom');
+                }
+                this.updateTimerColorAccessibility();
             });
         });
         
@@ -1154,6 +1331,11 @@ class TimerManager {
                 e.stopPropagation();
                 document.querySelectorAll('.color-btn[data-timer-bg-color]').forEach(b => b.classList.remove('active'));
                 e.currentTarget.classList.add('active');
+                const customTrigger = document.querySelector('label[for="custom-timer-bg-color-picker"]');
+                if (customTrigger) {
+                    customTrigger.classList.remove('active-custom');
+                }
+                this.updateTimerColorAccessibility();
             });
         });
         
@@ -1163,6 +1345,11 @@ class TimerManager {
                 e.stopPropagation();
                 document.querySelectorAll('.color-btn[data-timer-fs-text-color]').forEach(b => b.classList.remove('active'));
                 e.currentTarget.classList.add('active');
+                const customTrigger = document.querySelector('label[for="custom-timer-fs-text-color-picker"]');
+                if (customTrigger) {
+                    customTrigger.classList.remove('active-custom');
+                }
+                this.updateTimerColorAccessibility();
             });
         });
 
@@ -1171,6 +1358,11 @@ class TimerManager {
                 e.stopPropagation();
                 document.querySelectorAll('.color-btn[data-timer-fs-bg-color]').forEach(b => b.classList.remove('active'));
                 e.currentTarget.classList.add('active');
+                const customTrigger = document.querySelector('label[for="custom-timer-fs-bg-color-picker"]');
+                if (customTrigger) {
+                    customTrigger.classList.remove('active-custom');
+                }
+                this.updateTimerColorAccessibility();
             });
         });
 
@@ -1194,6 +1386,7 @@ class TimerManager {
                 document.querySelectorAll('.color-btn[data-timer-fs-text-color]').forEach(b => b.classList.remove('active'));
                 const parentBtn = e.target.closest('.color-picker-icon-btn');
                 if (parentBtn) parentBtn.classList.add('active-custom');
+                this.updateTimerColorAccessibility();
             });
         }
 
@@ -1203,6 +1396,7 @@ class TimerManager {
                 document.querySelectorAll('.color-btn[data-timer-fs-bg-color]').forEach(b => b.classList.remove('active'));
                 const parentBtn = e.target.closest('.color-picker-icon-btn');
                 if (parentBtn) parentBtn.classList.add('active-custom');
+                this.updateTimerColorAccessibility();
             });
         }
 
@@ -1217,6 +1411,7 @@ class TimerManager {
                 if (parentBtn) {
                     parentBtn.classList.add('active-custom');
                 }
+                this.updateTimerColorAccessibility();
             });
         }
         
@@ -1230,6 +1425,7 @@ class TimerManager {
                 if (parentBtn) {
                     parentBtn.classList.add('active-custom');
                 }
+                this.updateTimerColorAccessibility();
             });
         }
         
@@ -1361,6 +1557,17 @@ class TimerManager {
             document.getElementById('timer-playback-speed-value').textContent = '1.0x';
             document.getElementById('timer-loop-interval').value = '1';
 
+            const colorCheckbox = document.getElementById('timer-color-checkbox');
+            const colorSettings = document.getElementById('timer-color-settings');
+            if (colorCheckbox) {
+                colorCheckbox.checked = false;
+            }
+            if (colorSettings) {
+                colorSettings.style.display = 'none';
+            }
+
+            this.syncTimerColorSelections();
+
             // Reset More Settings UI
             const moreSettingsBtn = document.getElementById('timer-more-settings-btn');
             const moreSettingsContent = document.getElementById('timer-more-settings-content');
@@ -1453,42 +1660,12 @@ class TimerManager {
                 }
             }
 
-            // Set colors (Widget)
-            // ... (handled implicitly by existing logic if I didn't break it? wait, existing logic is missing in search block, but I need to add Fullscreen color population)
-
-            // Set colors (Fullscreen)
-            // Reset all active states first
-            document.querySelectorAll('.color-btn[data-timer-fs-text-color]').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.color-btn[data-timer-fs-bg-color]').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.timer-color-picker-icon').forEach(b => b.classList.remove('active-custom'));
-
-            // Text Color (Fullscreen)
-            const fsTextColorBtn = document.querySelector(`.color-btn[data-timer-fs-text-color="${timer.fullscreenTextColor}"]`);
-            if (fsTextColorBtn) {
-                fsTextColorBtn.classList.add('active');
-            } else {
-                // Custom color
-                const picker = document.getElementById('custom-timer-fs-text-color-picker');
-                if (picker) {
-                    picker.value = timer.fullscreenTextColor;
-                    const parent = picker.closest('.color-picker-icon-btn');
-                    if (parent) parent.classList.add('active-custom');
-                }
-            }
-
-            // Bg Color (Fullscreen)
-            const fsBgColorBtn = document.querySelector(`.color-btn[data-timer-fs-bg-color="${timer.fullscreenBgColor}"]`);
-            if (fsBgColorBtn) {
-                fsBgColorBtn.classList.add('active');
-            } else {
-                // Custom color
-                const picker = document.getElementById('custom-timer-fs-bg-color-picker');
-                if (picker) {
-                    picker.value = timer.fullscreenBgColor;
-                    const parent = picker.closest('.color-picker-icon-btn');
-                    if (parent) parent.classList.add('active-custom');
-                }
-            }
+            this.syncTimerColorSelections({
+                textColor: timer.textColor,
+                bgColor: timer.bgColor,
+                fullscreenTextColor: timer.fullscreenTextColor,
+                fullscreenBgColor: timer.fullscreenBgColor
+            });
 
             this.updateMainPreviewButtonState();
         }
@@ -1584,7 +1761,7 @@ class TimerManager {
         
         // Use custom modal instead of browser alert
         if (mode === 'countdown' && duration === 0) {
-            this.showAlertModal(window.i18n.t('timer.alertSetTime') || '请设置倒计时时间');
+            this.showAlertModal(getTimerText('timer.alertSetTime', 'Please set the countdown time.'));
             return;
         }
         
@@ -1634,14 +1811,14 @@ class TimerManager {
         // Reset all preview button states
         if (this.currentPreviewButton) {
             if (this.currentPreviewButton.id === 'timer-sound-preview-btn') {
-                this.currentPreviewButton.textContent = window.i18n.t('common.preview') || '预览';
+                this.currentPreviewButton.textContent = getTimerText('timer.preview', 'Preview');
             } else {
                 this.currentPreviewButton.innerHTML = `
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polygon points="5 3 19 12 5 21 5 3"></polygon>
                     </svg>
                 `;
-                this.currentPreviewButton.title = window.i18n.t('common.preview') || '预览';
+                this.currentPreviewButton.title = getTimerText('timer.preview', 'Preview');
             }
             this.currentPreviewButton = null;
         }
@@ -1666,7 +1843,7 @@ class TimerManager {
             
             // Update button to show pause icon
             if (previewButton.id === 'timer-sound-preview-btn') {
-                previewButton.textContent = window.i18n.t('common.stop') || '停止';
+                previewButton.textContent = getTimerText('common.stop', 'Stop');
             } else {
                 previewButton.innerHTML = `
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1674,7 +1851,7 @@ class TimerManager {
                         <rect x="14" y="4" width="4" height="16"></rect>
                     </svg>
                 `;
-                previewButton.title = window.i18n.t('common.stop') || '停止';
+                previewButton.title = getTimerText('common.stop', 'Stop');
             }
             
             // Reset button when audio ends
@@ -1684,7 +1861,7 @@ class TimerManager {
             
             // Play immediately
             this.previewAudio.play().catch(err => {
-                console.warn('无法播放音频预览:', err);
+                console.warn('Failed to play timer audio preview:', err);
                 this.stopPreviewAudio();
             });
         }
@@ -1706,7 +1883,7 @@ class TimerManager {
             
             // Update button to show pause icon
             if (previewButton.id === 'timer-sound-preview-btn') {
-                previewButton.textContent = window.i18n.t('common.stop') || '停止';
+                previewButton.textContent = getTimerText('common.stop', 'Stop');
             } else {
                 previewButton.innerHTML = `
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1714,7 +1891,7 @@ class TimerManager {
                         <rect x="14" y="4" width="4" height="16"></rect>
                     </svg>
                 `;
-                previewButton.title = window.i18n.t('common.stop') || '停止';
+                previewButton.title = getTimerText('common.stop', 'Stop');
             }
             
             // Reset button when audio ends
@@ -1723,7 +1900,7 @@ class TimerManager {
             });
             
             this.previewAudio.play().catch(err => {
-                console.warn('无法播放音频预览:', err);
+                console.warn('Failed to play timer audio preview:', err);
                 this.stopPreviewAudio();
             });
         }

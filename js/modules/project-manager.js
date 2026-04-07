@@ -12,6 +12,18 @@ class ProjectManager {
         this.drawingBoard = drawingBoard;
     }
 
+    t(key, fallback = '', replacements = null) {
+        const translated = window.i18n?.t?.(key) || fallback;
+        if (!replacements || typeof translated !== 'string') {
+            return translated;
+        }
+
+        return Object.entries(replacements).reduce(
+            (message, [name, value]) => message.replaceAll(`{${name}}`, String(value ?? '')),
+            translated
+        );
+    }
+
     async ensureZipLibrary() {
         if (typeof window !== 'undefined' && window.fflate) {
             return window.fflate;
@@ -20,7 +32,7 @@ class ProjectManager {
             return fflate;
         }
         if (!window.ScriptLoader?.load) {
-            throw new Error('ZIP library loader is not available');
+            throw new Error(this.t('projectPackage.zipLoaderUnavailable', 'ZIP library loader is not available.'));
         }
         await window.ScriptLoader.load(ZIP_LIBRARY_SCRIPT);
         if (typeof window !== 'undefined' && window.fflate) {
@@ -29,7 +41,7 @@ class ProjectManager {
         if (typeof fflate !== 'undefined') {
             return fflate;
         }
-        throw new Error('Failed to load ZIP library');
+        throw new Error(this.t('projectPackage.zipLoadFailed', 'Failed to load the ZIP library.'));
     }
 
     async ensureLegacyCompat() {
@@ -37,14 +49,14 @@ class ProjectManager {
             return window.AboardLegacyProjectCompat;
         }
         if (!this.drawingBoard.settingsManager?.legacyProjectImportEnabled) {
-            throw new Error('旧版 .aboard 导入兼容未启用');
+            throw new Error(this.t('projectPackage.legacyCompatibilityDisabled', 'Legacy .aboard import compatibility is disabled.'));
         }
         if (!window.ScriptLoader?.load) {
-            throw new Error('Legacy compatibility loader is not available');
+            throw new Error(this.t('projectPackage.legacyLoaderUnavailable', 'Legacy compatibility loader is not available.'));
         }
         await window.ScriptLoader.load(LEGACY_PROJECT_COMPAT_SCRIPT);
         if (!window.AboardLegacyProjectCompat) {
-            throw new Error('Failed to load legacy project compatibility module');
+            throw new Error(this.t('projectPackage.legacyModuleLoadFailed', 'Failed to load the legacy project compatibility module.'));
         }
         return window.AboardLegacyProjectCompat;
     }
@@ -315,7 +327,7 @@ class ProjectManager {
             } else if (typeof Buffer !== 'undefined') {
                 bytes = new Uint8Array(Buffer.from(payload, 'base64'));
             } else {
-                throw new Error('Base64 decoder is not available');
+                throw new Error(this.t('projectPackage.base64DecoderUnavailable', 'Base64 decoder is not available.'));
             }
         } else {
             const decoded = decodeURIComponent(payload);
@@ -338,7 +350,7 @@ class ProjectManager {
         if (typeof Buffer !== 'undefined') {
             return Buffer.from(bytes).toString('base64');
         }
-        throw new Error('Base64 encoder is not available');
+        throw new Error(this.t('projectPackage.base64EncoderUnavailable', 'Base64 encoder is not available.'));
     }
 
     bytesToDataUrl(bytes, mime = 'application/octet-stream') {
@@ -596,16 +608,28 @@ class ProjectManager {
             return true;
         } catch (error) {
             console.error('Export failed:', error);
-            window.appDialog?.showAlert?.('导出项目失败: ' + error.message, 'error');
+            window.appDialog?.showAlert?.(
+                this.t('projectPackage.exportFailed', 'Project export failed: {message}', { message: error.message }),
+                'error'
+            );
             return false;
         }
     }
 
     async confirmImportOverwrite() {
-        const confirmMessage = '导入项目将覆盖当前画布内容，是否继续？';
-        return typeof window.appDialog?.showConfirm === 'function'
-            ? window.appDialog.showConfirm(confirmMessage)
-            : Promise.resolve(window.confirm(confirmMessage));
+        const confirmMessage = this.t('projectPackage.overwriteConfirm', 'Importing a project will replace the current board content. Continue?');
+        if (typeof window.appDialog?.showConfirm === 'function') {
+            return window.appDialog.showConfirm({
+                title: window.i18n?.t('common.confirm') || 'Confirm',
+                message: confirmMessage,
+                footerText: this.t('projectPackage.overwriteDetail', 'The current whiteboard pages and assets will be replaced by the project package.'),
+                confirmText: window.i18n?.t('common.confirm') || 'Confirm',
+                cancelText: window.i18n?.t('common.cancel') || 'Cancel'
+            });
+        }
+
+        console.warn('DialogManager is unavailable for project import confirmation; cancelling the import.');
+        return false;
     }
 
     getImportKindFromName(fileName = '') {
@@ -646,7 +670,10 @@ class ProjectManager {
             const importKind = await this.detectImportKind(file);
             if (importKind === 'legacy') {
                 if (!this.drawingBoard.settingsManager?.legacyProjectImportEnabled) {
-                    throw new Error('旧版 .aboard 导入兼容未启用，请先在设置中开启旧版兼容导入');
+                    throw new Error(this.t(
+                        'projectPackage.legacyCompatibilityDisabled',
+                        'Legacy .aboard import compatibility is disabled. Enable it in Settings first.'
+                    ));
                 }
                 const legacyCompat = await this.ensureLegacyCompat();
                 return legacyCompat.importLegacyProject(this, file);
@@ -655,7 +682,10 @@ class ProjectManager {
             return this.importZipProject(file);
         } catch (error) {
             console.error('Import failed:', error);
-            window.appDialog?.showAlert?.('导入失败: ' + error.message, 'error');
+            window.appDialog?.showAlert?.(
+                this.t('projectPackage.importFailed', 'Project import failed: {message}', { message: error.message }),
+                'error'
+            );
             return false;
         }
     }
@@ -671,7 +701,7 @@ class ProjectManager {
         const archive = zipLib.unzipSync(bytes);
         const mimetype = archive.mimetype ? zipLib.strFromU8(archive.mimetype) : null;
         if (mimetype && mimetype !== PROJECT_PACKAGE_MIME) {
-            throw new Error('不是受支持的 Aboard 项目包');
+            throw new Error(this.t('projectPackage.unsupportedPackage', 'This is not a supported Aboard project package.'));
         }
 
         const manifestBytes = archive['manifest.json'];
@@ -680,12 +710,12 @@ class ProjectManager {
             : 'document.json';
         const documentBytes = archive[documentPath];
         if (!documentBytes) {
-            throw new Error('项目包缺少 document.json');
+            throw new Error(this.t('projectPackage.missingDocument', 'The project package is missing document.json.'));
         }
 
         const documentPayload = JSON.parse(zipLib.strFromU8(documentBytes));
         if (!Array.isArray(documentPayload.pages) || documentPayload.pages.length === 0) {
-            throw new Error('项目包缺少页面数据');
+            throw new Error(this.t('projectPackage.missingPages', 'The project package does not contain page data.'));
         }
 
         const assetCache = new Map();
@@ -698,7 +728,9 @@ class ProjectManager {
             }
             const assetBytes = archive[assetRef.path];
             if (!assetBytes) {
-                throw new Error(`项目包缺少资源文件: ${assetRef.path}`);
+                throw new Error(this.t('projectPackage.missingAsset', 'The project package is missing asset file: {path}', {
+                    path: assetRef.path
+                }));
             }
             const mime = assetRef.mime || this.getAssetMimeFromPath(assetRef.path);
             const dataUrl = this.bytesToDataUrl(assetBytes, mime);
@@ -713,7 +745,9 @@ class ProjectManager {
         for (const pageEntry of documentPayload.pages) {
             const pageBytes = archive[pageEntry.path];
             if (!pageBytes) {
-                throw new Error(`项目包缺少页面文件: ${pageEntry.path}`);
+                throw new Error(this.t('projectPackage.missingPageFile', 'The project package is missing page file: {path}', {
+                    path: pageEntry.path
+                }));
             }
             const pagePayload = JSON.parse(zipLib.strFromU8(pageBytes));
             const pageIndex = parseInt(pagePayload.index ?? pageEntry.index, 10) || (pageCount + 1);
@@ -737,7 +771,7 @@ class ProjectManager {
             pageCount
         });
 
-        window.appDialog?.showAlert?.('项目导入成功', 'success');
+        window.appDialog?.showAlert?.(this.t('projectPackage.importSuccess', 'Project imported successfully.'), 'success');
         return true;
     }
 

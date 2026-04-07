@@ -99,8 +99,11 @@ class SettingsManager {
     }
 
     getDefaultFontPreviewSettings() {
+        const previewSample = window.i18n?.t?.('settings.general.fontPreviewSample');
         return {
-            sampleText: '一个白板-Aboard-123',
+            sampleText: previewSample && previewSample !== 'settings.general.fontPreviewSample'
+                ? previewSample
+                : 'Font Preview ABC abc 123',
             fontSize: 48
         };
     }
@@ -870,6 +873,7 @@ class SettingsManager {
         document.querySelectorAll('.color-btn[data-theme-color]').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.themeColor === this.themeColor);
         });
+        window.i18n?.syncGenericColorControls?.();
         
         // Load global font
         this.applyGlobalFont();
@@ -922,6 +926,7 @@ class SettingsManager {
         this.themeColor = color;
         localStorage.setItem('themeColor', color);
         document.documentElement.style.setProperty('--theme-color', color);
+        window.i18n?.syncGenericColorControls?.();
     }
     
     applyThemeColor() {

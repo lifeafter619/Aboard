@@ -1,24 +1,58 @@
 // Export Module
 // Handles exporting canvas content to image files
 
+function getExportText(key, fallback) {
+    if (!window.i18n?.t) {
+        return fallback;
+    }
+
+    const translated = window.i18n.t(key);
+    return translated && translated !== key ? translated : fallback;
+}
+
 class ExportManager {
     constructor(canvas, bgCanvas, drawingBoard = null) {
         this.canvas = canvas;
         this.bgCanvas = bgCanvas;
         this.drawingBoard = drawingBoard;
         this.exportModal = null;
+        this.handleLocaleChanged = () => {
+            this.refreshTranslations();
+        };
         
         this.createExportModal();
         this.setupEventListeners();
+        window.addEventListener('localeChanged', this.handleLocaleChanged);
     }
     
     createExportModal() {
+        const title = getExportText('toolbar.export', 'Export Canvas');
+        const closeTitle = getExportText('common.close', 'Close');
+        const imageTab = getExportText('export.imageTab', 'Export Image');
+        const projectTab = getExportText('export.projectTab', 'Export Project (.zip)');
+        const scopeLabel = getExportText('export.scopeLabel', 'Export Scope');
+        const currentPage = getExportText('export.scopeCurrent', 'Current Page');
+        const allPages = getExportText('export.scopeAll', 'All Pages');
+        const specificPages = getExportText('export.scopeSpecific', 'Specific Pages');
+        const pageSelection = getExportText('export.pageSelectionLabel', 'Select Pages to Export');
+        const imageFormat = getExportText('export.imageFormatLabel', 'Image Format');
+        const imageQuality = getExportText('export.imageQualityLabel', 'Image Quality');
+        const projectHint = getExportText(
+            'export.projectHint',
+            'Export as a standard .zip project package including pages, backgrounds, and assets. After importing, you can continue editing page objects individually; legacy .aboard imports remain optional in Settings.'
+        );
+        const filenameLabel = getExportText('export.fileNameLabel', 'File Name');
+        const filenamePlaceholder = getExportText('export.fileNamePlaceholder', 'Enter file name');
+        const filenameHint = getExportText('export.fileNameHint', 'When exporting multiple pages, page numbers will be appended automatically.');
+        const cancelLabel = getExportText('common.cancel', 'Cancel');
+        const confirmLabel = getExportText('common.export', 'Export');
+
         const modalHTML = `
             <div id="export-modal" class="modal">
                 <div class="modal-content export-modal-content">
                     <div class="modal-header">
-                        <h2>导出 / Export</h2>
-                        <button id="export-close-btn" class="modal-close-btn" title="关闭">
+                        <h2 id="export-modal-title">${title}</h2>
+                        <button id="export-close-btn" class="modal-close-btn" data-i18n-title="common.close" title="${closeTitle}" aria-label="${closeTitle}">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -28,35 +62,35 @@ class ExportManager {
                     <div class="modal-body">
                         <!-- Tabs -->
                         <div class="export-tab-nav">
-                            <button class="export-tab-btn active" data-tab="image">导出图片</button>
-                            <button class="export-tab-btn" data-tab="project">导出项目 (.zip)</button>
+                            <button id="export-tab-image-btn" class="export-tab-btn active" data-tab="image">${imageTab}</button>
+                            <button id="export-tab-project-btn" class="export-tab-btn" data-tab="project">${projectTab}</button>
                         </div>
 
                         <!-- Image Export Tab -->
                         <div id="export-tab-image" class="export-tab-content active">
                             <div class="export-options">
                                 <div class="export-group">
-                                    <label>导出范围</label>
+                                    <label id="export-image-scope-label">${scopeLabel}</label>
                                     <div class="button-size-options button-size-options-3">
-                                        <button class="export-scope-btn active" data-scope="current">当前页</button>
-                                        <button class="export-scope-btn" data-scope="all">全部页面</button>
-                                        <button class="export-scope-btn" data-scope="specific">指定页面</button>
+                                        <button id="export-image-scope-current-btn" class="export-scope-btn active" data-scope="current">${currentPage}</button>
+                                        <button id="export-image-scope-all-btn" class="export-scope-btn" data-scope="all">${allPages}</button>
+                                        <button id="export-image-scope-specific-btn" class="export-scope-btn" data-scope="specific">${specificPages}</button>
                                     </div>
                                 </div>
                                 <div class="export-group page-selection-group" style="display: none;">
-                                    <label>选择要导出的页面</label>
+                                    <label id="export-image-page-selection-label">${pageSelection}</label>
                                     <div class="page-selection-buttons"></div>
                                 </div>
                                 <div class="export-group">
-                                    <label>图片格式</label>
+                                    <label id="export-image-format-label">${imageFormat}</label>
                                     <div class="button-size-options button-size-options-2">
                                         <button class="export-format-btn active" data-format="png">PNG</button>
                                         <button class="export-format-btn" data-format="jpeg">JPEG</button>
                                     </div>
                                 </div>
                                 <div class="export-group" id="jpeg-quality-group" style="display: none;">
-                                    <label>图片质量 <span id="export-quality-value">90</span>%</label>
-                                    <input type="range" id="export-quality-slider" min="1" max="100" value="90" class="slider">
+                                    <label><span id="export-image-quality-label">${imageQuality}</span> <span id="export-quality-value">90</span>%</label>
+                                    <input type="range" id="export-quality-slider" min="1" max="100" value="90" class="slider" aria-label="${imageQuality}">
                                 </div>
                             </div>
                         </div>
@@ -65,20 +99,20 @@ class ExportManager {
                         <div id="export-tab-project" class="export-tab-content">
                             <div class="export-options">
                                 <div class="export-group">
-                                    <label>导出范围</label>
+                                    <label id="export-project-scope-label">${scopeLabel}</label>
                                     <div class="button-size-options button-size-options-3">
-                                        <button class="export-project-scope-btn active" data-scope="current">当前页</button>
-                                        <button class="export-project-scope-btn" data-scope="all">全部页面</button>
-                                        <button class="export-project-scope-btn" data-scope="specific">指定页面</button>
+                                        <button id="export-project-scope-current-btn" class="export-project-scope-btn active" data-scope="current">${currentPage}</button>
+                                        <button id="export-project-scope-all-btn" class="export-project-scope-btn" data-scope="all">${allPages}</button>
+                                        <button id="export-project-scope-specific-btn" class="export-project-scope-btn" data-scope="specific">${specificPages}</button>
                                     </div>
                                 </div>
                                 <div class="export-group project-page-selection-group" style="display: none;">
-                                    <label>选择要导出的页面</label>
+                                    <label id="export-project-page-selection-label">${pageSelection}</label>
                                     <div class="project-page-selection-buttons page-selection-buttons"></div>
                                 </div>
                                 <div class="export-group">
-                                    <p class="export-hint">
-                                        导出为标准 .zip 项目包，包含页面场景、背景和资源库。导入后可继续逐页对象级编辑；旧版 .aboard 仅在设置中开启兼容后按需导入。
+                                    <p id="export-project-hint" class="export-hint">
+                                        ${projectHint}
                                     </p>
                                 </div>
                             </div>
@@ -87,19 +121,19 @@ class ExportManager {
                         <!-- Shared Filename & Actions -->
                         <div style="margin-top: 20px;">
                             <div class="export-group" id="filename-group">
-                                <label id="filename-label">文件名</label>
-                                <input type="text" id="export-filename" class="export-filename-input" value="aboard-export" placeholder="输入文件名">
-                                <p class="export-hint" id="export-filename-hint" style="display: none;">导出多个页面时，将自动在文件名后添加页码</p>
+                                <label id="filename-label">${filenameLabel}</label>
+                                <input type="text" id="export-filename" class="export-filename-input" value="aboard-export" placeholder="${filenamePlaceholder}" aria-label="${filenameLabel}">
+                                <p class="export-hint" id="export-filename-hint" style="display: none;">${filenameHint}</p>
                             </div>
                             <div class="export-actions">
-                                <button id="export-cancel-btn" class="button-secondary">取消</button>
+                                <button id="export-cancel-btn" class="button-secondary">${cancelLabel}</button>
                                 <button id="export-confirm-btn" class="button-primary">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 5px;">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                         <polyline points="7 10 12 15 17 10"></polyline>
                                         <line x1="12" y1="15" x2="12" y2="3"></line>
                                     </svg>
-                                    导出
+                                    <span id="export-confirm-btn-label">${confirmLabel}</span>
                                 </button>
                             </div>
                         </div>
@@ -110,6 +144,66 @@ class ExportManager {
         
         document.body.insertAdjacentHTML('beforeend', modalHTML);
         this.exportModal = document.getElementById('export-modal');
+        window.i18n?.applyTranslations?.();
+        this.refreshTranslations();
+    }
+
+    setElementText(selector, text) {
+        const element = this.exportModal?.querySelector(selector);
+        if (element) {
+            element.textContent = text;
+        }
+    }
+
+    refreshTranslations() {
+        if (!this.exportModal) {
+            return;
+        }
+
+        const closeTitle = getExportText('common.close', 'Close');
+        const closeBtn = document.getElementById('export-close-btn');
+        if (closeBtn) {
+            closeBtn.title = closeTitle;
+            closeBtn.setAttribute('aria-label', closeTitle);
+        }
+
+        this.setElementText('#export-modal-title', getExportText('toolbar.export', 'Export Canvas'));
+        this.setElementText('#export-tab-image-btn', getExportText('export.imageTab', 'Export Image'));
+        this.setElementText('#export-tab-project-btn', getExportText('export.projectTab', 'Export Project (.zip)'));
+        this.setElementText('#export-image-scope-label', getExportText('export.scopeLabel', 'Export Scope'));
+        this.setElementText('#export-project-scope-label', getExportText('export.scopeLabel', 'Export Scope'));
+        this.setElementText('#export-image-scope-current-btn', getExportText('export.scopeCurrent', 'Current Page'));
+        this.setElementText('#export-image-scope-all-btn', getExportText('export.scopeAll', 'All Pages'));
+        this.setElementText('#export-image-scope-specific-btn', getExportText('export.scopeSpecific', 'Specific Pages'));
+        this.setElementText('#export-project-scope-current-btn', getExportText('export.scopeCurrent', 'Current Page'));
+        this.setElementText('#export-project-scope-all-btn', getExportText('export.scopeAll', 'All Pages'));
+        this.setElementText('#export-project-scope-specific-btn', getExportText('export.scopeSpecific', 'Specific Pages'));
+        this.setElementText('#export-image-page-selection-label', getExportText('export.pageSelectionLabel', 'Select Pages to Export'));
+        this.setElementText('#export-project-page-selection-label', getExportText('export.pageSelectionLabel', 'Select Pages to Export'));
+        this.setElementText('#export-image-format-label', getExportText('export.imageFormatLabel', 'Image Format'));
+        this.setElementText('#export-image-quality-label', getExportText('export.imageQualityLabel', 'Image Quality'));
+        this.setElementText('#export-project-hint', getExportText(
+            'export.projectHint',
+            'Export as a standard .zip project package including pages, backgrounds, and assets. After importing, you can continue editing page objects individually; legacy .aboard imports remain optional in Settings.'
+        ));
+        this.setElementText('#export-filename-hint', getExportText(
+            'export.fileNameHint',
+            'When exporting multiple pages, page numbers will be appended automatically.'
+        ));
+        this.setElementText('#export-cancel-btn', getExportText('common.cancel', 'Cancel'));
+        this.setElementText('#export-confirm-btn-label', getExportText('common.export', 'Export'));
+
+        const filenameInput = document.getElementById('export-filename');
+        if (filenameInput) {
+            filenameInput.placeholder = getExportText('export.fileNamePlaceholder', 'Enter file name');
+        }
+
+        const activeTab = document.querySelector('.export-tab-btn.active')?.dataset.tab || 'image';
+        const activeScope = activeTab === 'project'
+            ? (document.querySelector('.export-project-scope-btn.active')?.dataset.scope || 'current')
+            : (document.querySelector('.export-scope-btn.active')?.dataset.scope || 'current');
+        this.updateUIForScope(activeScope, activeTab);
+        window.i18n?.applyTranslations?.();
     }
     
     setupEventListeners() {
@@ -125,6 +219,10 @@ class ExportManager {
                 // Show content
                 document.querySelectorAll('.export-tab-content').forEach(c => c.classList.remove('active'));
                 document.getElementById(`export-tab-${tab}`).classList.add('active');
+                const activeScope = tab === 'project'
+                    ? (document.querySelector('.export-project-scope-btn.active')?.dataset.scope || 'current')
+                    : (document.querySelector('.export-scope-btn.active')?.dataset.scope || 'current');
+                this.updateUIForScope(activeScope, tab);
             });
         });
 
@@ -222,10 +320,10 @@ class ExportManager {
         // For project export, it's always one file
         if (type === 'image' && (scope === 'all' || scope === 'specific')) {
             filenameHint.style.display = 'block';
-            filenameLabel.textContent = '文件名前缀';
+            filenameLabel.textContent = getExportText('export.fileNamePrefixLabel', 'File Name Prefix');
         } else {
             filenameHint.style.display = 'none';
-            filenameLabel.textContent = '文件名';
+            filenameLabel.textContent = getExportText('export.fileNameLabel', 'File Name');
         }
     }
     
@@ -272,7 +370,7 @@ class ExportManager {
         if (activeTab === 'image') {
             this.exportCanvas().catch(error => {
                 console.error('Export failed:', error);
-                const message = window.i18n?.t('export.failed') || '导出失败，请重试';
+                const message = getExportText('export.failed', 'Export failed. Please try again.');
                 window.appDialog?.showAlert?.(message, 'error');
             });
         } else {
@@ -288,7 +386,7 @@ class ExportManager {
         if (scope === 'specific') {
             const selectedButtons = document.querySelectorAll('.project-page-selection-buttons .page-selection-btn.selected');
             if (selectedButtons.length === 0) {
-                const msg = window.i18n?.t('export.selectAtLeastOnePage') || '请至少选择一个页面进行导出';
+                const msg = getExportText('export.selectAtLeastOnePage', 'Please select at least one page to export');
                 window.appDialog?.showAlert(msg, 'warning');
                 return;
             }
@@ -304,6 +402,8 @@ class ExportManager {
     }
     
     showModal() {
+        this.refreshTranslations();
+
         // Set default filename with timestamp in user's current timezone
         const now = new Date();
         const year = now.getFullYear();
@@ -520,7 +620,7 @@ class ExportManager {
         
         const selectedButtons = document.querySelectorAll('.page-selection-group .page-selection-buttons .page-selection-btn.selected');
         if (selectedButtons.length === 0) {
-            window.appDialog?.showAlert(window.i18n.t('export.selectAtLeastOnePage') || '请至少选择一个页面进行导出', 'warning');
+            window.appDialog?.showAlert(getExportText('export.selectAtLeastOnePage', 'Please select at least one page to export'), 'warning');
             return;
         }
         

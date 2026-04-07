@@ -18,18 +18,39 @@ window.translations = {
         no: 'いいえ',
         ok: 'OK',
         help: 'ヘルプ',
+        export: 'エクスポート',
         apply: '適用',
         reset: 'リセット',
         restoreSize: 'サイズを元に戻す',
         keepCentered: '中央を維持'
     },
 
+    errors: {
+        lazyLoadFailed: '{feature}の読み込みに失敗しました。ページを再読み込みしてもう一度お試しください。'
+    },
+
+    prompts: {
+        localeDownloadPrompt: '{locale} の言語パックを今すぐダウンロードしますか？',
+        preferredLocaleSuggestionPrompt: 'ブラウザーの優先言語が {locale} に近いことを検出しました。今すぐダウンロードして切り替えますか？'
+    },
+
+    browserCheck: {
+        title: 'ブラウザー互換性の確認',
+        message: '現在のブラウザーには次の必須機能がありません。',
+        updateHint: '快適に利用するには、Chrome、Edge、Firefox、Safari の最新バージョンへの更新をおすすめします。',
+        continueAnyway: 'このまま続行',
+        features: {
+            canvas: 'Canvas API',
+            es6: 'モダン JavaScript（ES6）'
+        }
+    },
     // Recovery dialog
     recovery: {
         title: '前回のコンテンツを復元',
         message: '前回のキャンバスコンテンツが検出されました。復元しますか？',
         restore: '復元',
-        discard: '破棄'
+        discard: '破棄',
+        restoreFailed: '前回の内容を復元できませんでした。もう一度お試しください。'
     },
 
     // App Title
@@ -54,6 +75,7 @@ window.translations = {
         teachingTools: '教具',
         more: 'もっと',
         settings: '設定',
+        importProject: 'プロジェクトをインポート',
         export: 'キャンバスをエクスポート',
         zoomOut: 'ズームアウト (-)',
         zoomIn: 'ズームイン (+)',
@@ -110,13 +132,14 @@ window.translations = {
             message: 'キャンバスをクリアしてもよろしいですか？この操作は元に戻せません。'
         },
         refresh: {
-            warning: '更新するとキャンバスの内容がすべてクリアされ、復元できません。更新してもよろしいですか？'
+            warning: '更新すると未保存の変更が中断される場合があります。保存済みのスナップショットが見つかると、更新後に復元できます。更新してもよろしいですか？'
         },
         lineStyle: {
             title: '線種',
             solid: '実線',
             dashed: '破線',
             dotted: '点線',
+            dashdot: '一点鎖線',
             wavy: '波線',
             double: '二重線',
             triple: '三重線',
@@ -136,6 +159,7 @@ window.translations = {
             placeholder: 'ここにテキストを入力',
             size: 'サイズ',
             color: '色',
+            colorPicker: 'カラーピッカー',
             font: 'フォント',
             style: 'スタイル',
             bold: '太字',
@@ -248,10 +272,18 @@ window.translations = {
         addPointHintLineOnly: '有効にするとキャンバスを順にクリックして座標点を追加し、折れ線だけを描画します',
         addPointHintAuto: '有効にするとキャンバスを順にクリックして座標点を追加し、自動で結びます',
         addPointHintSelected: '有効にするとキャンバスで座標点を追加できます。選択ツールに切り替えると、選択した点だけが結ばれます',
+        addPointHintSelectedInteractive: '有効にすると空白をクリックして点を追加できます。2点を順にクリックすると接続されます',
         clearPoints: '点を消去',
         clearPlots: 'グラフを消去',
         pointsCount: '点数',
         plotExpression: '式',
+        plotColor: '色',
+        plotLineStyle: '線種',
+        plotStrokeWidth: '太さ',
+        plotRangeTitle: '表示範囲',
+        plotRangeAxis: '軸',
+        plotRangeMin: '最小値',
+        plotRangeMax: '最大値',
         plot: '描画',
         inputPanel: '入力パネル',
         keypadNumbers: '数字',
@@ -262,17 +294,29 @@ window.translations = {
         plotHintPolar: '極座標： r = f(theta) を入力。theta はラジアン、deg は度数です',
         plotPlaceholderCartesian: '例：sin(x) + 2',
         plotPlaceholderPolar: '例：2 * sin(4 * theta)',
+        plotRangeMinPlaceholder: '最小値',
+        plotRangeMaxPlaceholder: '最大値',
+        plotAddRange: '範囲を追加',
+        plotCollapse: '折りたたむ',
+        plotSave: '保存',
+        plotRemoveRange: '範囲を削除',
+        plotNoRange: '表示範囲の制限はありません。既定では全体を表示します。',
         noPlots: 'まだ関数グラフはありません',
         coordinateStatusAddPoint: '点と線の描画モードを有効にしました',
         coordinateStatusAddPointLineOnly: '線のみモードを有効にしました。キャンバスをクリックして座標点を追加してください',
         coordinateStatusAddPointAuto: '自動連結モードを有効にしました。キャンバスをクリックして座標点を追加してください',
         coordinateStatusAddPointSelected: '選択連結モードを有効にしました。キャンバスをクリックして座標点を追加してください',
+        coordinateStatusAddPointSelectedInteractive: '選択連結モードを有効にしました。空白をクリックして点を追加し、その後2点をクリックして接続してください',
+        coordinateStatusSelectLineStartPoint: '最初の点を選択しました。接続する別の点をクリックしてください',
         coordinateStatusAddPointOff: '点と線の描画モードを無効にしました',
+        coordinateLineExists: 'この2点の間には既に線があります',
+        coordinateLineCreated: '線を接続しました',
         connectPointsEnabled: '点線表示を有効にしました',
         connectPointsDisabled: '点線表示を無効にしました',
         pointAdded: '座標点を追加しました',
         pointsCleared: '座標点を消去しました',
         plotAdded: '関数グラフを追加しました',
+        plotUpdated: '関数グラフを更新しました',
         plotError: '式が無効なため描画できません',
         plotsCleared: '関数グラフを消去しました'
     },
@@ -366,6 +410,16 @@ window.translations = {
             languageHint: '既定ではシステム言語を自動判定し、必要に応じていつでも手動で切り替えられます',
             globalFont: 'グローバルフォント',
             globalFontHint: 'アプリケーションで使用するフォントを選択',
+            fontManagementHint: 'フォント管理：並べ替え、表示切替、名前変更、プレビューに対応',
+            showFont: 'フォントを表示',
+            fontPreviewSample: '日本語フォントプレビュー ABC abc 123',
+            fontPreviewText: 'プレビュー文字',
+            fontPreviewSize: 'プレビューサイズ',
+            fontPreviewResetText: '文字を元に戻す',
+            renameFont: '名前を変更',
+            expandPreview: '拡大',
+            confirmDeleteFont: 'カスタムフォント「{font}」を削除してもよろしいですか？',
+            resetFontManagementConfirm: 'フォント管理を初期状態に戻すと、アップロード済みフォントが削除され、順序・名称・プレビュー設定もリセットされます。続行しますか？',
             downloadedLanguagePacks: 'ダウンロード済み言語パック',
             dismissedLanguageSuggestion: '言語提案の非表示状態',
             updatePreference: '更新方法',
@@ -614,7 +668,9 @@ window.translations = {
         rotate: '回転',
         resize: 'サイズ変更',
         delete: '削除',
-        drawAlongEdge: 'エッジに沿って描画'
+        drawAlongEdge: 'エッジに沿って描画',
+        increaseCount: '{tool} の数を増やす',
+        decreaseCount: '{tool} の数を減らす',
     },
 
     // Time Display
@@ -808,10 +864,55 @@ window.translations = {
     },
 
     export: {
+        imageTab: '画像を書き出す',
+        projectTab: 'プロジェクトを書き出す (.zip)',
+        scopeLabel: '書き出し範囲',
+        scopeCurrent: '現在のページ',
+        scopeAll: 'すべてのページ',
+        scopeSpecific: '指定したページ',
+        pageSelectionLabel: '書き出すページを選択',
+        imageFormatLabel: '画像形式',
+        imageQualityLabel: '画質',
+        projectHint: 'ページ、背景、アセットを含む標準 .zip プロジェクトパッケージとして書き出します。インポート後もページ単位でオブジェクト編集を続けられます。旧版 .aboard のインポートは設定で互換性を有効にした場合のみ利用できます。',
+        fileNameLabel: 'ファイル名',
+        fileNamePrefixLabel: 'ファイル名の接頭辞',
+        fileNamePlaceholder: 'ファイル名を入力',
+        fileNameHint: '複数ページを書き出す場合は、ファイル名の末尾にページ番号が自動で付きます。',
         failed: 'エクスポートに失敗しました。もう一度お試しください。'
     },
 
+    projectPackage: {
+        importSuccess: 'プロジェクトをインポートしました。',
+        legacyImportSuccess: '旧版プロジェクトをインポートしました。',
+        importFailed: 'プロジェクトのインポートに失敗しました: {message}',
+        exportFailed: 'プロジェクトのエクスポートに失敗しました: {message}',
+        overwriteConfirm: 'プロジェクトをインポートすると、現在のホワイトボード内容が上書きされます。続行しますか？',
+        overwriteDetail: '現在のホワイトボードのページとリソースは、プロジェクトパッケージ内の内容に置き換えられます。',
+        legacyCompatibilityDisabled: '旧版 .aboard インポート互換が無効です。先に設定で旧版互換インポートを有効にしてください。',
+        zipLoaderUnavailable: 'ZIP ライブラリのローダーを利用できません。',
+        zipLoadFailed: 'ZIP ライブラリの読み込みに失敗しました。',
+        legacyLoaderUnavailable: '旧版互換ローダーを利用できません。',
+        legacyModuleLoadFailed: '旧版プロジェクト互換モジュールの読み込みに失敗しました。',
+        base64DecoderUnavailable: 'Base64 デコーダーを利用できません。',
+        base64EncoderUnavailable: 'Base64 エンコーダーを利用できません。',
+        unsupportedPackage: 'サポートされている Aboard プロジェクトパッケージではありません。',
+        missingDocument: 'プロジェクトパッケージに document.json がありません。',
+        missingPages: 'プロジェクトパッケージにページデータがありません。',
+        missingAsset: 'プロジェクトパッケージにリソースファイルがありません: {path}',
+        missingPageFile: 'プロジェクトパッケージにページファイルがありません: {path}',
+        invalidLegacyFormat: '旧版プロジェクトファイルの形式が無効です。',
+        legacyMissingPages: '旧版プロジェクトファイルにページデータがありません。'
+    },
+
+    randomPicker: {
+        importColumnPlaceholder: '列名',
+        importLibraryLoadFailed: 'Excel インポートライブラリの読み込みに失敗しました。ページを再読み込みしてもう一度お試しください。'
+    },
+
     gif: {
-        loopCountPrompt: 'ループ回数を設定してください（0で無限）：'
+        settingsTitle: 'GIF設定',
+        loopCountLabel: '再生回数（0 は無限ループ）',
+        loopCountPrompt: 'ループ回数を設定してください（0で無限）：',
+        loopCountInvalid: '0 以上の整数を入力してください。'
     }
 };
