@@ -991,6 +991,7 @@ Enjoy using Aboard!`,
         yellow: 'Yellow',
         orange: 'Orange',
         purple: 'Purple',
+        pink: 'Pink',
         white: 'White',
         transparent: 'Transparent'
     },

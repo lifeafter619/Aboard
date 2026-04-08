@@ -989,6 +989,7 @@ window.translations = {
         yellow: '黄色',
         orange: '橙色',
         purple: '紫色',
+        pink: '粉色',
         white: '白色',
         transparent: '透明'
     },

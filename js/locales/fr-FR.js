@@ -845,6 +845,7 @@ Profitez de votre travail créatif !`,
         yellow: 'Jaune',
         orange: 'Orange',
         purple: 'Violet',
+        pink: 'Rose',
         white: 'Blanc',
         transparent: 'Transparent'
     },

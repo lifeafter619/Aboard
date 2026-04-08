@@ -840,6 +840,7 @@ window.translations = {
         yellow: '노란색',
         orange: '주황색',
         purple: '보라색',
+        pink: '분홍색',
         white: '흰색',
         transparent: '투명',
         lightGray: '밝은 회색',

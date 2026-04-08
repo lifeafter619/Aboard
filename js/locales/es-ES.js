@@ -845,6 +845,7 @@ Consejos de uso:
         yellow: 'Amarillo',
         orange: 'Naranja',
         purple: 'Morado',
+        pink: 'Rosa',
         white: 'Blanco',
         transparent: 'Transparente'
     },
