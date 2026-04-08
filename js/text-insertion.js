@@ -148,7 +148,7 @@ class TextInsertionManager {
         
         // Font size slider
         fontSizeSlider.addEventListener('input', (e) => {
-            currentFontSize = parseInt(e.target.value);
+            currentFontSize = parseInt(e.target.value, 10);
             fontSizeValue.textContent = currentFontSize;
         });
         

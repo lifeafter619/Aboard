@@ -101,8 +101,14 @@ class RichTextParser {
         // 3. Apply Custom Syntax
         result = result.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
         result = result.replace(/__(.*?)__/g, '<u>$1</u>');
-        result = result.replace(/\[color=([^\]]+)\](.*?)\[\/color\]/g, '<span style="color:$1">$2</span>');
-        result = result.replace(/\[size=([^\]]+)\](.*?)\[\/size\]/g, '<span style="font-size:$1">$2</span>');
+        result = result.replace(/\[color=([^\]]+)\](.*?)\[\/color\]/g, (_, color, text) => {
+            const sanitized = color.replace(/[^a-zA-Z0-9#(),.\s%-]/g, '');
+            return `<span style="color:${sanitized}">${text}</span>`;
+        });
+        result = result.replace(/\[size=([^\]]+)\](.*?)\[\/size\]/g, (_, size, text) => {
+            const sanitized = size.replace(/[^a-zA-Z0-9.%-]/g, '');
+            return `<span style="font-size:${sanitized}">${text}</span>`;
+        });
 
         // 4. Handle Newlines
         if (result.includes('\n')) {

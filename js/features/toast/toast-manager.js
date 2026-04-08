@@ -36,7 +36,10 @@ export class ToastManager {
         break;
     }
 
-    toast.innerHTML = `${iconSvg}<span>${message}</span>`;
+    toast.innerHTML = iconSvg;
+    const messageSpan = this.doc.createElement('span');
+    messageSpan.textContent = message;
+    toast.appendChild(messageSpan);
     this.container.appendChild(toast);
 
     const scheduleFrame = this.win.requestAnimationFrame || requestAnimationFrame;

@@ -555,10 +555,10 @@ function setupEventListeners() {
         const pageInput = document.getElementById('page-input');
         bindIfPresent(document.getElementById('prev-page-btn'), 'click', () => this.prevPage());
         bindIfPresent(document.getElementById('next-or-add-page-btn'), 'click', () => this.nextOrAddPage());
-        bindIfPresent(pageInput, 'change', (e) => this.goToPage(parseInt(e.target.value)));
+        bindIfPresent(pageInput, 'change', (e) => this.goToPage(parseInt(e.target.value, 10)));
         bindIfPresent(pageInput, 'keydown', (e) => {
             if (e.key === 'Enter') {
-                this.goToPage(parseInt(e.target.value));
+                this.goToPage(parseInt(e.target.value, 10));
             }
         });
         

@@ -20,9 +20,9 @@ class DrawingEngine {
         
         // Line style settings for pen
         this.penLineStyle = localStorage.getItem('penLineStyle') || 'solid';
-        this.penDashDensity = parseInt(localStorage.getItem('penDashDensity')) || 10;
-        this.penMultiLineCount = parseInt(localStorage.getItem('penMultiLineCount')) || 2;
-        this.penMultiLineSpacing = parseInt(localStorage.getItem('penMultiLineSpacing')) || 10;
+        this.penDashDensity = parseInt(localStorage.getItem('penDashDensity'), 10) || 10;
+        this.penMultiLineCount = parseInt(localStorage.getItem('penMultiLineCount'), 10) || 2;
+        this.penMultiLineSpacing = parseInt(localStorage.getItem('penMultiLineSpacing'), 10) || 10;
         
         // Accumulated distance for dashed line drawing
         this.accumulatedDistance = 0;

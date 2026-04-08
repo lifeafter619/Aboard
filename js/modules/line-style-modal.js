@@ -335,10 +335,10 @@ class LineStyleModal {
         
         // Get current settings
         const lineStyle = this.getCurrentLineStyle();
-        const dashDensity = parseInt(document.getElementById('modal-dash-density-slider').value);
-        const waveDensity = parseInt(document.getElementById('modal-wave-density-slider').value);
-        const lineCount = parseInt(document.getElementById('modal-line-count-slider').value);
-        const lineSpacing = parseInt(document.getElementById('modal-line-spacing-slider').value);
+        const dashDensity = parseInt(document.getElementById('modal-dash-density-slider').value, 10);
+        const waveDensity = parseInt(document.getElementById('modal-wave-density-slider').value, 10);
+        const lineCount = parseInt(document.getElementById('modal-line-count-slider').value, 10);
+        const lineSpacing = parseInt(document.getElementById('modal-line-spacing-slider').value, 10);
         
         // Get pen size from drawing engine - use exact size (1:1 matching with actual drawing)
         const penSize = this.currentMode === 'pen' 
@@ -467,10 +467,10 @@ class LineStyleModal {
     
     applySettings() {
         let lineStyle = this.getCurrentLineStyle();
-        const dashDensity = parseInt(document.getElementById('modal-dash-density-slider').value);
-        const waveDensity = parseInt(document.getElementById('modal-wave-density-slider').value);
-        const lineCount = parseInt(document.getElementById('modal-line-count-slider').value);
-        const lineSpacing = parseInt(document.getElementById('modal-line-spacing-slider').value);
+        const dashDensity = parseInt(document.getElementById('modal-dash-density-slider').value, 10);
+        const waveDensity = parseInt(document.getElementById('modal-wave-density-slider').value, 10);
+        const lineCount = parseInt(document.getElementById('modal-line-count-slider').value, 10);
+        const lineSpacing = parseInt(document.getElementById('modal-line-spacing-slider').value, 10);
         
         if (this.currentMode === 'pen') {
             // Apply to pen tool
@@ -641,10 +641,10 @@ class LineStyleModal {
         
         // Get current settings
         const lineStyle = this.getCurrentLineStyle();
-        const dashDensity = parseInt(document.getElementById('modal-dash-density-slider').value);
-        const waveDensity = parseInt(document.getElementById('modal-wave-density-slider').value);
-        const lineCount = parseInt(document.getElementById('modal-line-count-slider').value);
-        const lineSpacing = parseInt(document.getElementById('modal-line-spacing-slider').value);
+        const dashDensity = parseInt(document.getElementById('modal-dash-density-slider').value, 10);
+        const waveDensity = parseInt(document.getElementById('modal-wave-density-slider').value, 10);
+        const lineCount = parseInt(document.getElementById('modal-line-count-slider').value, 10);
+        const lineSpacing = parseInt(document.getElementById('modal-line-spacing-slider').value, 10);
         const penSize = this.currentMode === 'pen' 
             ? (this.drawingEngine.penSize || 5)
             : (this.shapeDrawingManager.drawingEngine.penSize || 5);

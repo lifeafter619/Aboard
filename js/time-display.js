@@ -178,9 +178,9 @@ class TimeDisplayManager {
                 // Format: "09:37:03 AM" or "09:37:03 PM"
                 const parts = timeStr.match(/(\d+):(\d+):(\d+)\s*(AM|PM)/i);
                 if (parts) {
-                    const hour12 = parseInt(parts[1]);
-                    const m = parseInt(parts[2]);
-                    const s = parseInt(parts[3]);
+                    const hour12 = parseInt(parts[1], 10);
+                    const m = parseInt(parts[2], 10);
+                    const s = parseInt(parts[3], 10);
                     const period = parts[4].toUpperCase();
                     
                     const amText = window.i18n ? window.i18n.t('timeDisplay.am') : 'AM';
@@ -192,7 +192,7 @@ class TimeDisplayManager {
                 // Format: "09:37:03"
                 const parts = timeStr.match(/(\d+):(\d+):(\d+)/);
                 if (parts) {
-                    return `${this.padZero(parseInt(parts[1]))}:${this.padZero(parseInt(parts[2]))}:${this.padZero(parseInt(parts[3]))}`;
+                    return `${this.padZero(parseInt(parts[1], 10))}:${this.padZero(parseInt(parts[2], 10))}:${this.padZero(parseInt(parts[3], 10))}`;
                 }
             }
         } catch (e) {
@@ -256,9 +256,9 @@ class TimeDisplayManager {
                 
                 let tzYear, tzMonth, tzDay;
                 parts.forEach(part => {
-                    if (part.type === 'year') tzYear = parseInt(part.value);
-                    if (part.type === 'month') tzMonth = parseInt(part.value);
-                    if (part.type === 'day') tzDay = parseInt(part.value);
+                    if (part.type === 'year') tzYear = parseInt(part.value, 10);
+                    if (part.type === 'month') tzMonth = parseInt(part.value, 10);
+                    if (part.type === 'day') tzDay = parseInt(part.value, 10);
                 });
                 
                 if (tzYear && tzMonth && tzDay) {

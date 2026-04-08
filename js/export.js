@@ -333,13 +333,13 @@ class ExportManager {
         container.innerHTML = '';
         
         if (!this.drawingBoard || !this.drawingBoard.pages) {
-            container.innerHTML = `<p class="export-hint">${window.i18n.t('export.paginationRequired')}</p>`;
+            container.innerHTML = `<p class="export-hint">${getExportText('export.paginationRequired', 'Pagination required')}</p>`;
             return;
         }
         
         const pageCount = this.drawingBoard.pages.length;
         if (pageCount === 0) {
-            container.innerHTML = `<p class="export-hint">${window.i18n.t('export.noPages')}</p>`;
+            container.innerHTML = `<p class="export-hint">${getExportText('export.noPages', 'No pages')}</p>`;
             return;
         }
         
@@ -394,7 +394,7 @@ class ExportManager {
                 window.appDialog?.showAlert(msg, 'warning');
                 return;
             }
-            selectedPages = Array.from(selectedButtons).map(btn => parseInt(btn.dataset.pageNum));
+            selectedPages = Array.from(selectedButtons).map(btn => parseInt(btn.dataset.pageNum, 10));
         }
 
         let projectManager = this.drawingBoard?.projectManager || null;
@@ -588,7 +588,7 @@ class ExportManager {
         const scope = document.querySelector('.export-scope-btn.active').dataset.scope;
         const format = document.querySelector('.export-format-btn.active').dataset.format;
         const filename = document.getElementById('export-filename').value || 'aboard-export';
-        const quality = parseInt(document.getElementById('export-quality-slider').value) / 100;
+        const quality = parseInt(document.getElementById('export-quality-slider').value, 10) / 100;
 
         this.closeModal();
 
@@ -648,7 +648,7 @@ class ExportManager {
             return;
         }
         
-        const selectedPages = Array.from(selectedButtons).map(btn => parseInt(btn.dataset.pageNum));
+        const selectedPages = Array.from(selectedButtons).map(btn => parseInt(btn.dataset.pageNum, 10));
         selectedPages.sort((a, b) => a - b);
         const currentPage = this.drawingBoard.currentPage;
 
