@@ -29,6 +29,15 @@ class TimeDisplaySettingsModal {
             }
         });
     }
+
+    getNumberOrDefault(value, fallback) {
+        return Number.isFinite(value) ? value : fallback;
+    }
+
+    getParsedIntegerValue(input, fallback) {
+        const parsedValue = parseInt(input?.value ?? '', 10);
+        return Number.isNaN(parsedValue) ? fallback : parsedValue;
+    }
     
     setupEventListeners() {
         // Open buttons
@@ -347,16 +356,17 @@ class TimeDisplaySettingsModal {
         const fontInput = document.getElementById('td-time-font-size-input');
         const fontValue = document.getElementById('td-time-font-size-value');
         if (fontSlider && fontInput) {
-            fontSlider.value = this.timeDisplayManager.fontSize || 16;
-            fontInput.value = this.timeDisplayManager.fontSize || 16;
-            if (fontValue) fontValue.textContent = this.timeDisplayManager.fontSize || 16;
+            const fontSize = this.getNumberOrDefault(this.timeDisplayManager.fontSize, 16);
+            fontSlider.value = fontSize;
+            fontInput.value = fontSize;
+            if (fontValue) fontValue.textContent = fontSize;
         }
         
         // Sync opacity
         const opacitySlider = document.getElementById('td-time-opacity-slider');
         const opacityInput = document.getElementById('td-time-opacity-input');
         const opacityValue = document.getElementById('td-time-opacity-value');
-        const opacity = this.timeDisplayManager.opacity || 100; // Already in 0-100 range, no need to multiply
+        const opacity = this.getNumberOrDefault(this.timeDisplayManager.opacity, 100); // Already in 0-100 range, no need to multiply
         if (opacitySlider && opacityInput) {
             opacitySlider.value = opacity;
             opacityInput.value = opacity;
@@ -426,9 +436,10 @@ class TimeDisplaySettingsModal {
         const fsFontInput = document.getElementById('td-time-fullscreen-font-size-input');
         const fsFontValue = document.getElementById('td-time-fullscreen-font-size-value');
         if (fsFontSlider && fsFontInput) {
-            fsFontSlider.value = this.timeDisplayManager.fullscreenFontSize || 15;
-            fsFontInput.value = this.timeDisplayManager.fullscreenFontSize || 15;
-            if (fsFontValue) fsFontValue.textContent = this.timeDisplayManager.fullscreenFontSize || 15;
+            const fullscreenFontSize = this.getNumberOrDefault(this.timeDisplayManager.fullscreenFontSize, 15);
+            fsFontSlider.value = fullscreenFontSize;
+            fsFontInput.value = fullscreenFontSize;
+            if (fsFontValue) fsFontValue.textContent = fullscreenFontSize;
         }
 
         // Sync fullscreen colors
@@ -475,7 +486,7 @@ class TimeDisplaySettingsModal {
         const fsOpacityInput = document.getElementById('td-fs-opacity-input');
         const fsOpacityValue = document.getElementById('td-fs-opacity-value');
         if (fsOpacitySlider && fsOpacityInput) {
-            const opacity = this.timeDisplayManager.fullscreenOpacity || 95;
+            const opacity = this.getNumberOrDefault(this.timeDisplayManager.fullscreenOpacity, 95);
             fsOpacitySlider.value = opacity;
             fsOpacityInput.value = opacity;
             if (fsOpacityValue) fsOpacityValue.textContent = opacity;
@@ -490,60 +501,70 @@ class TimeDisplaySettingsModal {
         // Get display type
         const activeDisplayBtn = document.querySelector('.display-option-btn[data-td-display-type].active');
         const displayType = activeDisplayBtn ? activeDisplayBtn.dataset.tdDisplayType : 'both';
-        this.timeDisplayManager.showDate = displayType === 'both' || displayType === 'date-only';
-        this.timeDisplayManager.showTime = displayType === 'both' || displayType === 'time-only';
+        this.timeDisplayManager.setShowDate(displayType === 'both' || displayType === 'date-only');
+        this.timeDisplayManager.setShowTime(displayType === 'both' || displayType === 'time-only');
         
         // Get timezone
         const tzSelect = document.getElementById('td-timezone-select');
-        if (tzSelect) this.timeDisplayManager.timezone = tzSelect.value;
+        if (tzSelect) this.timeDisplayManager.setTimezone(tzSelect.value);
         
         // Get time format
         const tfSelect = document.getElementById('td-time-format-select');
-        if (tfSelect) this.timeDisplayManager.timeFormat = tfSelect.value;
+        if (tfSelect) this.timeDisplayManager.setTimeFormat(tfSelect.value);
         
         // Get date format
         const dfSelect = document.getElementById('td-date-format-select');
-        if (dfSelect) this.timeDisplayManager.dateFormat = dfSelect.value;
+        if (dfSelect) this.timeDisplayManager.setDateFormat(dfSelect.value);
         
         // Get colors
         const activeColorBtn = document.querySelector('.color-btn[data-td-time-color].active');
         const customTimeColorPicker = document.getElementById('td-custom-time-color-picker');
         const customTimeColorPickerBtn = document.querySelector('label[for="td-custom-time-color-picker"]');
         
-        if (activeColorBtn) {
-            this.timeDisplayManager.timeColor = activeColorBtn.dataset.tdTimeColor;
-        } else if (customTimeColorPicker && customTimeColorPicker.dataset.selectedColor) {
-            // Use custom color if no preset is active
-            this.timeDisplayManager.timeColor = customTimeColorPicker.dataset.selectedColor;
-        }
+        const nextTimeColor = activeColorBtn
+            ? activeColorBtn.dataset.tdTimeColor
+            : (customTimeColorPicker?.dataset.selectedColor || this.timeDisplayManager.color);
+        this.timeDisplayManager.setColor(nextTimeColor);
         
         // For background color, check preset buttons first, then fallback to custom picker
         const activeBgColorBtn = document.querySelector('.color-btn[data-td-time-bg-color].active');
         const customBgColorPicker = document.getElementById('td-custom-bg-color-picker');
         const customBgColorPickerBtn = document.querySelector('label[for="td-custom-bg-color-picker"]');
         
-        if (activeBgColorBtn) {
-            this.timeDisplayManager.bgColor = activeBgColorBtn.dataset.tdTimeBgColor;
-        } else if (customBgColorPicker && customBgColorPickerBtn && customBgColorPickerBtn.classList.contains('active')) {
-            this.timeDisplayManager.bgColor = customBgColorPicker.dataset.selectedColor || customBgColorPicker.value;
-        }
-        // If neither is active, keep the current bgColor (do nothing), protecting it from overwrite
+        const nextBgColor = activeBgColorBtn
+            ? activeBgColorBtn.dataset.tdTimeBgColor
+            : (customBgColorPicker && customBgColorPickerBtn && customBgColorPickerBtn.classList.contains('active')
+                ? (customBgColorPicker.dataset.selectedColor || customBgColorPicker.value)
+                : this.timeDisplayManager.bgColor);
+        this.timeDisplayManager.setBgColor(nextBgColor);
         
         // Get font size
         const fontInput = document.getElementById('td-time-font-size-input');
-        if (fontInput) this.timeDisplayManager.fontSize = parseInt(fontInput.value);
+        if (fontInput) {
+            this.timeDisplayManager.setFontSize(
+                this.getParsedIntegerValue(fontInput, this.timeDisplayManager.fontSize)
+            );
+        }
         
         // Get opacity
         const opacityInput = document.getElementById('td-time-opacity-input');
-        if (opacityInput) this.timeDisplayManager.opacity = parseInt(opacityInput.value); // Store as 0-100, not 0-1
+        if (opacityInput) {
+            this.timeDisplayManager.setOpacity(
+                this.getParsedIntegerValue(opacityInput, this.timeDisplayManager.opacity)
+            );
+        }
         
         // Get fullscreen mode
         const activeFsBtn = document.querySelector('.fullscreen-mode-btn[data-td-mode].active');
-        if (activeFsBtn) this.timeDisplayManager.fullscreenMode = activeFsBtn.dataset.tdMode;
+        if (activeFsBtn) this.timeDisplayManager.setFullscreenMode(activeFsBtn.dataset.tdMode);
         
         // Get fullscreen font size
         const fsFontInput = document.getElementById('td-time-fullscreen-font-size-input');
-        if (fsFontInput) this.timeDisplayManager.fullscreenFontSize = parseInt(fsFontInput.value);
+        if (fsFontInput) {
+            this.timeDisplayManager.setFullscreenFontSize(
+                this.getParsedIntegerValue(fsFontInput, this.timeDisplayManager.fullscreenFontSize)
+            );
+        }
         
         // Get fullscreen colors/opacity
         const activeFsColorBtn = document.querySelector('.color-btn[data-td-fs-color].active');
@@ -568,13 +589,17 @@ class TimeDisplaySettingsModal {
 
         const fsOpacityInput = document.getElementById('td-fs-opacity-input');
         if (fsOpacityInput) {
-            this.timeDisplayManager.setFullscreenOpacity(parseInt(fsOpacityInput.value));
+            this.timeDisplayManager.setFullscreenOpacity(
+                this.getParsedIntegerValue(fsOpacityInput, this.timeDisplayManager.fullscreenOpacity)
+            );
         }
 
         // Apply changes to the time display
         this.timeDisplayManager.applySettings();
         this.timeDisplayManager.updateDisplay();
-        // Note: saveSettings() is called within applySettings() in time-display.js
+        if (this.timeDisplayManager.isFullscreen) {
+            this.timeDisplayManager.updateFullscreenDisplay();
+        }
     }
 }
 

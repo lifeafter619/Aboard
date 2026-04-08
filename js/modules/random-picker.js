@@ -845,8 +845,10 @@ class RandomPickerManager {
             const namesText = document.getElementById('rp-names-input').value;
             config.names = namesText.split('\n').map(s => s.trim()).filter(s => s);
         } else {
-            config.min = parseInt(document.getElementById('rp-min-input').value) || 1;
-            config.max = parseInt(document.getElementById('rp-max-input').value) || 50;
+            const parsedMin = parseInt(document.getElementById('rp-min-input').value, 10);
+            const parsedMax = parseInt(document.getElementById('rp-max-input').value, 10);
+            config.min = Number.isNaN(parsedMin) ? 1 : parsedMin;
+            config.max = Number.isNaN(parsedMax) ? 50 : parsedMax;
         }
 
         this.currentInstance.updateConfig(config);

@@ -27,19 +27,25 @@ class TimeDisplayManager {
             this.timeFormat = is12Hour ? '12h' : '24h';
         }
 
+        const storedFontSize = parseInt(localStorage.getItem('timeDisplayFontSize'), 10);
+        const storedOpacity = parseInt(localStorage.getItem('timeDisplayOpacity'), 10);
+        const storedFullscreenFontSize = parseInt(localStorage.getItem('timeDisplayFullscreenFontSize'), 10);
+        const storedFullscreenTitleFontSize = parseInt(localStorage.getItem('timeDisplayFullscreenTitleFontSize'), 10);
+        const storedFullscreenOpacity = parseInt(localStorage.getItem('timeDisplayFullscreenOpacity'), 10);
+
         this.dateFormat = localStorage.getItem('timeDisplayDateFormat') || 'auto'; // Default to auto
         this.color = localStorage.getItem('timeDisplayColor') || '#000000';
         this.bgColor = localStorage.getItem('timeDisplayBgColor') || '#FFFFFF';
-        this.fontSize = parseInt(localStorage.getItem('timeDisplayFontSize')) || 16;
-        this.opacity = parseInt(localStorage.getItem('timeDisplayOpacity')) || 100;
+        this.fontSize = Number.isNaN(storedFontSize) ? 16 : Math.max(12, Math.min(48, storedFontSize));
+        this.opacity = Number.isNaN(storedOpacity) ? 100 : Math.max(0, Math.min(100, storedOpacity));
         this.showDate = localStorage.getItem('timeDisplayShowDate') !== 'false'; // Default true
         this.showTime = localStorage.getItem('timeDisplayShowTime') !== 'false'; // Default true
         this.fullscreenMode = localStorage.getItem('timeDisplayFullscreenMode') || 'double'; // Default 'double' (disabled/single/double)
-        this.fullscreenFontSize = parseInt(localStorage.getItem('timeDisplayFullscreenFontSize')) || 15; // Default 15 (vmin percentage)
-        this.fullscreenTitleFontSize = parseInt(localStorage.getItem('timeDisplayFullscreenTitleFontSize')) || 5; // Default 5 (vmin percentage) for date
+        this.fullscreenFontSize = Number.isNaN(storedFullscreenFontSize) ? 15 : Math.max(10, Math.min(85, storedFullscreenFontSize)); // Default 15 (vmin percentage)
+        this.fullscreenTitleFontSize = Number.isNaN(storedFullscreenTitleFontSize) ? 5 : Math.max(2, Math.min(20, storedFullscreenTitleFontSize)); // Default 5 (vmin percentage) for date
         this.fullscreenColor = localStorage.getItem('timeDisplayFullscreenColor') || '#ffffff';
         this.fullscreenBgColor = localStorage.getItem('timeDisplayFullscreenBgColor') || '#000000';
-        this.fullscreenOpacity = parseInt(localStorage.getItem('timeDisplayFullscreenOpacity')) || 95;
+        this.fullscreenOpacity = Number.isNaN(storedFullscreenOpacity) ? 95 : Math.max(0, Math.min(100, storedFullscreenOpacity));
 
         // Get user's current timezone by default, or use saved value
         this.timezone = localStorage.getItem('timeDisplayTimezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;

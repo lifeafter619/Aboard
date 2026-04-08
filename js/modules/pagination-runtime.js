@@ -138,7 +138,7 @@ function savePageBackground(pageNumber) {
             imageSize: this.backgroundManager.imageSize,
             imageTransform: this.backgroundManager.imageTransform,
             gifLoopCount: this.backgroundManager.gifLoopCount,
-            backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder || 1
+            backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder
         };
         localStorage.setItem('pageBackgrounds', JSON.stringify(this.pageBackgrounds));
     

@@ -119,7 +119,9 @@ async function restoreSession() {
                 this.backgroundManager.setCoordinateOverlayState(settings.coordinateOverlayState, { persist: false, redraw: false });
                 if (typeof settings.imageSize !== 'undefined') this.backgroundManager.imageSize = settings.imageSize;
                 if (settings.backgroundImageData) this.backgroundManager.backgroundImageData = settings.backgroundImageData;
-                if (settings.backgroundOutsideLayerOrder) this.backgroundManager.backgroundOutsideLayerOrder = settings.backgroundOutsideLayerOrder;
+                if (typeof settings.backgroundOutsideLayerOrder !== 'undefined') {
+                    this.backgroundManager.backgroundOutsideLayerOrder = settings.backgroundOutsideLayerOrder;
+                }
 
                 if (settings.uploadedImages) {
                     this.uploadedImages = settings.uploadedImages;

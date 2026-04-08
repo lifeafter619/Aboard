@@ -9,18 +9,23 @@ class BackgroundManager {
         this.backgroundColor = localStorage.getItem('backgroundColor') || '#ffffff';
         this.backgroundPattern = localStorage.getItem('backgroundPattern') || 'blank';
         const savedBgOpacity = parseFloat(localStorage.getItem('bgOpacity'));
+        const savedPatternIntensity = parseFloat(localStorage.getItem('patternIntensity'));
+        const savedPatternDensity = parseFloat(localStorage.getItem('patternDensity'));
+        const savedImageSize = parseFloat(localStorage.getItem('imageSize'));
+        const savedCoordinateOriginX = parseFloat(localStorage.getItem('coordinateOriginX'));
+        const savedCoordinateOriginY = parseFloat(localStorage.getItem('coordinateOriginY'));
         this.bgOpacity = Number.isNaN(savedBgOpacity) ? 1.0 : savedBgOpacity;
-        this.patternIntensity = parseFloat(localStorage.getItem('patternIntensity')) || 0.5;
-        this.patternDensity = parseFloat(localStorage.getItem('patternDensity')) || 1.0;
+        this.patternIntensity = Number.isNaN(savedPatternIntensity) ? 0.5 : savedPatternIntensity;
+        this.patternDensity = Number.isNaN(savedPatternDensity) ? 1.0 : savedPatternDensity;
         this.backgroundImage = null;
         this.backgroundImageData = localStorage.getItem('backgroundImageData') || null;
-        this.imageSize = parseFloat(localStorage.getItem('imageSize')) || 1.0;
+        this.imageSize = Number.isNaN(savedImageSize) ? 1.0 : savedImageSize;
         this.isImagePaused = false; // State for GIF playback control
         this.imageStaticData = null; // Store static frame for paused GIF
         
         // Coordinate system origin offset
-        this.coordinateOriginX = parseFloat(localStorage.getItem('coordinateOriginX')) || 0;
-        this.coordinateOriginY = parseFloat(localStorage.getItem('coordinateOriginY')) || 0;
+        this.coordinateOriginX = Number.isNaN(savedCoordinateOriginX) ? 0 : savedCoordinateOriginX;
+        this.coordinateOriginY = Number.isNaN(savedCoordinateOriginY) ? 0 : savedCoordinateOriginY;
         
         this.imageTransform = {
             x: 0,

@@ -38,7 +38,7 @@ function buildSyncSnapshot() {
                     coordinateOverlayState: this.backgroundManager.getCoordinateOverlayState(),
                     imageSize: this.backgroundManager.imageSize,
                     backgroundImageData: this.backgroundManager.backgroundImageData,
-                    backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder || 1,
+                    backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder,
                     uploadedImages: this.uploadedImages
                 }
             };
@@ -95,7 +95,7 @@ async function saveSession() {
                 coordinateOverlayState: this.backgroundManager.getCoordinateOverlayState(),
                 imageSize: this.backgroundManager.imageSize,
                 backgroundImageData: this.backgroundManager.backgroundImageData,
-                backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder || 1,
+                backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder,
                 uploadedImages: this.uploadedImages,
                 pageScenes: this.getSerializedPageScenes?.() || {}
             };

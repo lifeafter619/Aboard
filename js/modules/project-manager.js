@@ -146,7 +146,7 @@ class ProjectManager {
             coordinateOverlayState: this.cloneSerializable(bm.getCoordinateOverlayState?.() || null),
             imageTransform: this.cloneSerializable(bm.imageTransform || null),
             gifLoopCount: bm.gifLoopCount,
-            backgroundOutsideLayerOrder: bm.backgroundOutsideLayerOrder || 1
+            backgroundOutsideLayerOrder: bm.backgroundOutsideLayerOrder
         };
     }
 
