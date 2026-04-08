@@ -828,13 +828,20 @@ class InsertTextManager {
 
         // When editing an existing text object, update it directly in-place
         // without showing the overlay (preserves position, scale, rotation)
-        const isEditing = this.editingTextIndex !== null;
+        const isEditingStampedText = this.editingTextIndex !== null;
+        const isEditingActiveOverlay = this.isActive && !isEditingStampedText;
         
         // Close modal (this resets editingTextIndex, so we check isEditing first)
         this.modal.classList.remove('show');
 
-        if (isEditing) {
+        if (isEditingStampedText) {
             this.stampText();
+            return;
+        }
+
+        if (isEditingActiveOverlay) {
+            this.updateOverlay();
+            window.drawingBoard?.syncVectorPreviewState?.();
             return;
         }
 

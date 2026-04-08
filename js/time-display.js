@@ -111,6 +111,10 @@ class TimeDisplayManager {
     startUpdating() {
         // Update immediately
         this.updateDisplay();
+
+        if (this.updateInterval) {
+            return;
+        }
         
         // Update every second
         this.updateInterval = setInterval(() => {
@@ -559,6 +563,10 @@ class TimeDisplayManager {
     startFullscreenUpdating() {
         // Update immediately
         this.updateFullscreenDisplay();
+
+        if (this.fullscreenUpdateInterval) {
+            return;
+        }
         
         // Update every second
         this.fullscreenUpdateInterval = setInterval(() => {

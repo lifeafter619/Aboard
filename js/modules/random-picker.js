@@ -41,6 +41,8 @@ class RandomPickerInstance {
         this.dragOffset = { x: 0, y: 0 };
         this.isDragging = false;
         this.localeChangeHandler = null;
+        this.dragMoveHandler = null;
+        this.dragEndHandler = null;
 
         this.createElement();
     }
@@ -192,15 +194,18 @@ class RandomPickerInstance {
         header.addEventListener('pointerdown', startDrag);
         header.addEventListener('touchstart', startDrag, { passive: false });
 
-        document.addEventListener('mousemove', doDrag);
-        document.addEventListener('pointermove', doDrag);
-        document.addEventListener('touchmove', doDrag, { passive: false });
+        this.dragMoveHandler = doDrag;
+        this.dragEndHandler = stopDrag;
 
-        document.addEventListener('mouseup', stopDrag);
-        document.addEventListener('pointerup', stopDrag);
-        document.addEventListener('touchend', stopDrag);
-        document.addEventListener('pointercancel', stopDrag);
-        document.addEventListener('touchcancel', stopDrag);
+        document.addEventListener('mousemove', this.dragMoveHandler);
+        document.addEventListener('pointermove', this.dragMoveHandler);
+        document.addEventListener('touchmove', this.dragMoveHandler, { passive: false });
+
+        document.addEventListener('mouseup', this.dragEndHandler);
+        document.addEventListener('pointerup', this.dragEndHandler);
+        document.addEventListener('touchend', this.dragEndHandler);
+        document.addEventListener('pointercancel', this.dragEndHandler);
+        document.addEventListener('touchcancel', this.dragEndHandler);
 
         // Buttons propagation
         const btns = [
@@ -488,9 +493,26 @@ class RandomPickerInstance {
 
     destroy() {
         clearInterval(this.animationInterval);
+        if (this.dragMoveHandler) {
+            document.removeEventListener('mousemove', this.dragMoveHandler);
+            document.removeEventListener('pointermove', this.dragMoveHandler);
+            document.removeEventListener('touchmove', this.dragMoveHandler);
+            this.dragMoveHandler = null;
+        }
+        if (this.dragEndHandler) {
+            document.removeEventListener('mouseup', this.dragEndHandler);
+            document.removeEventListener('pointerup', this.dragEndHandler);
+            document.removeEventListener('touchend', this.dragEndHandler);
+            document.removeEventListener('pointercancel', this.dragEndHandler);
+            document.removeEventListener('touchcancel', this.dragEndHandler);
+            this.dragEndHandler = null;
+        }
         if (this.localeChangeHandler) {
             window.removeEventListener('localeChanged', this.localeChangeHandler);
             this.localeChangeHandler = null;
+        }
+        if (this.manager.currentInstance === this) {
+            this.manager.currentInstance = null;
         }
         this.element.remove();
         this.manager.remove(this.id);

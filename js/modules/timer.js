@@ -102,12 +102,18 @@ class TimerInstance {
         if (this.fullscreenTitleFontSlider) {
             this.fullscreenTitleFontSlider.value = this.fullscreenTitleFontSizePercent;
         }
+
+        if (this.fullscreenModal.dataset.timerFullscreenBindingsInitialized === 'true') {
+            return;
+        }
+
+        this.fullscreenModal.dataset.timerFullscreenBindingsInitialized = 'true';
         
         // Setup close button
         const closeBtn = document.getElementById('timer-fullscreen-close-btn');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
-                this.exitFullscreen();
+                window.__activeTimerFullscreenInstance?.exitFullscreen?.();
             });
         }
         
@@ -123,26 +129,35 @@ class TimerInstance {
         
         // Setup font size slider
         this.fullscreenFontSlider.addEventListener('input', (e) => {
-            this.fullscreenFontSizePercent = parseFloat(e.target.value);
-            if (this.isFullscreen) {
-                this.updateFullscreenDisplay();
+            const activeTimer = window.__activeTimerFullscreenInstance;
+            if (!activeTimer) {
+                return;
+            }
+            activeTimer.fullscreenFontSizePercent = parseFloat(e.target.value);
+            if (activeTimer.isFullscreen) {
+                activeTimer.updateFullscreenDisplay();
             }
         });
         
         // Setup title font size slider
         if (this.fullscreenTitleFontSlider) {
             this.fullscreenTitleFontSlider.addEventListener('input', (e) => {
-                this.fullscreenTitleFontSizePercent = parseFloat(e.target.value);
-                if (this.isFullscreen) {
-                    this.updateFullscreenDisplay();
+                const activeTimer = window.__activeTimerFullscreenInstance;
+                if (!activeTimer) {
+                    return;
+                }
+                activeTimer.fullscreenTitleFontSizePercent = parseFloat(e.target.value);
+                if (activeTimer.isFullscreen) {
+                    activeTimer.updateFullscreenDisplay();
                 }
             });
         }
         
         // ESC key to exit fullscreen
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isFullscreen) {
-                this.exitFullscreen();
+            const activeTimer = window.__activeTimerFullscreenInstance;
+            if (e.key === 'Escape' && activeTimer?.isFullscreen) {
+                activeTimer.exitFullscreen();
             }
         });
     }
@@ -745,6 +760,18 @@ class TimerInstance {
             console.warn('Timer fullscreen modal not available');
             return;
         }
+
+        if (window.__activeTimerFullscreenInstance && window.__activeTimerFullscreenInstance !== this) {
+            window.__activeTimerFullscreenInstance.exitFullscreen();
+        }
+
+        window.__activeTimerFullscreenInstance = this;
+        if (this.fullscreenFontSlider) {
+            this.fullscreenFontSlider.value = this.fullscreenFontSizePercent;
+        }
+        if (this.fullscreenTitleFontSlider) {
+            this.fullscreenTitleFontSlider.value = this.fullscreenTitleFontSizePercent;
+        }
         
         this.isFullscreen = true;
         this.fullscreenModal.classList.add('show');
@@ -757,6 +784,9 @@ class TimerInstance {
         }
         
         this.isFullscreen = false;
+        if (window.__activeTimerFullscreenInstance === this) {
+            window.__activeTimerFullscreenInstance = null;
+        }
         this.fullscreenModal.classList.remove('show');
         this.stopFullscreenUpdating();
     }
@@ -764,6 +794,10 @@ class TimerInstance {
     startFullscreenUpdating() {
         // Update immediately
         this.updateFullscreenDisplay();
+
+        if (this.fullscreenUpdateInterval) {
+            return;
+        }
         
         // Update every 100ms for smooth countdown
         this.fullscreenUpdateInterval = setInterval(() => {
@@ -865,12 +899,21 @@ class TimerInstance {
         // Remove event listeners
         if (this.mouseMoveHandler) {
             document.removeEventListener('mousemove', this.mouseMoveHandler);
+            document.removeEventListener('pointermove', this.mouseMoveHandler);
             document.removeEventListener('touchmove', this.mouseMoveHandler);
+            this.mouseMoveHandler = null;
         }
         if (this.mouseUpHandler) {
             document.removeEventListener('mouseup', this.mouseUpHandler);
+            document.removeEventListener('pointerup', this.mouseUpHandler);
             document.removeEventListener('touchend', this.mouseUpHandler);
             document.removeEventListener('touchcancel', this.mouseUpHandler);
+            document.removeEventListener('pointercancel', this.mouseUpHandler);
+            this.mouseUpHandler = null;
+        }
+
+        if (this.manager.adjustingTimer === this) {
+            this.manager.adjustingTimer = null;
         }
         
         // Remove from DOM
@@ -1528,6 +1571,7 @@ class TimerManager {
             document.getElementById('timer-hours').value = '0';
             document.getElementById('timer-minutes').value = '0';
             document.getElementById('timer-seconds').value = '0';
+            document.getElementById('timer-title-input').value = '';
             
             // Reset sound settings
             document.getElementById('timer-sound-checkbox').checked = false;
@@ -1603,6 +1647,7 @@ class TimerManager {
             document.getElementById('timer-hours').value = hours;
             document.getElementById('timer-minutes').value = minutes;
             document.getElementById('timer-seconds').value = seconds;
+            document.getElementById('timer-title-input').value = timer.title || '';
             
             // Set sound settings
             document.getElementById('timer-sound-checkbox').checked = timer.playSound;
@@ -1636,6 +1681,24 @@ class TimerManager {
 
             const intervalInput = document.getElementById('timer-loop-interval');
             if (intervalInput) intervalInput.value = timer.loopInterval || 0;
+
+            const colorCheckbox = document.getElementById('timer-color-checkbox');
+            const colorSettings = document.getElementById('timer-color-settings');
+            const hasCustomColors = (
+                timer.textColor && timer.textColor !== '#333333'
+            ) || (
+                timer.bgColor && timer.bgColor !== '#FFFFFF'
+            ) || (
+                timer.fullscreenTextColor && timer.fullscreenTextColor !== '#FFFFFF'
+            ) || (
+                timer.fullscreenBgColor && timer.fullscreenBgColor !== '#000000'
+            );
+            if (colorCheckbox) {
+                colorCheckbox.checked = hasCustomColors;
+            }
+            if (colorSettings) {
+                colorSettings.style.display = hasCustomColors ? 'block' : 'none';
+            }
 
             // Update More Settings State
             const moreSettingsBtn = document.getElementById('timer-more-settings-btn');

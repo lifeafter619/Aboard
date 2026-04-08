@@ -374,11 +374,15 @@ class ExportManager {
                 window.appDialog?.showAlert?.(message, 'error');
             });
         } else {
-            this.exportProject();
+            this.exportProject().catch(error => {
+                console.error('Project export failed:', error);
+                const message = getExportText('export.failed', 'Export failed. Please try again.');
+                window.appDialog?.showAlert?.(message, 'error');
+            });
         }
     }
 
-    exportProject() {
+    async exportProject() {
         const scope = document.querySelector('.export-project-scope-btn.active').dataset.scope;
         const filename = document.getElementById('export-filename').value || 'aboard-project';
 
@@ -393,12 +397,32 @@ class ExportManager {
             selectedPages = Array.from(selectedButtons).map(btn => parseInt(btn.dataset.pageNum));
         }
 
-        if (this.drawingBoard.projectManager) {
-            this.drawingBoard.projectManager.exportProject(scope, filename, selectedPages);
-            this.closeModal();
-        } else {
-            console.error('ProjectManager not found');
+        let projectManager = this.drawingBoard?.projectManager || null;
+
+        if (!projectManager && typeof this.drawingBoard?.getProjectManager === 'function') {
+            try {
+                projectManager = await this.drawingBoard.getProjectManager();
+            } catch (error) {
+                console.error('Failed to load ProjectManager:', error);
+                const message = getExportText('export.failed', 'Export failed. Please try again.');
+                window.appDialog?.showAlert?.(message, 'error');
+                return;
+            }
         }
+
+        if (!projectManager) {
+            console.error('ProjectManager not found');
+            const message = getExportText('export.failed', 'Export failed. Please try again.');
+            window.appDialog?.showAlert?.(message, 'error');
+            return;
+        }
+
+        const exportSucceeded = await projectManager.exportProject(scope, filename, selectedPages);
+        if (exportSucceeded === false) {
+            return;
+        }
+
+        this.closeModal();
     }
     
     showModal() {

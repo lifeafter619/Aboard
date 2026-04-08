@@ -1473,9 +1473,17 @@ class TeachingToolsManager {
         if (this._boundHandlers) {
             document.removeEventListener('mousemove', this._boundHandlers.mouseMove);
             document.removeEventListener('mouseup', this._boundHandlers.mouseUp);
+            document.removeEventListener('pointermove', this._boundHandlers.pointerMove);
+            document.removeEventListener('pointerup', this._boundHandlers.pointerUp);
+            document.removeEventListener('pointercancel', this._boundHandlers.pointerUp);
             document.removeEventListener('touchmove', this._boundHandlers.touchMove);
             document.removeEventListener('touchend', this._boundHandlers.touchEnd);
+            document.removeEventListener('touchcancel', this._boundHandlers.touchEnd);
             document.removeEventListener('click', this._boundHandlers.click);
+        }
+        if (this.localeChangeHandler) {
+            window.removeEventListener('localeChanged', this.localeChangeHandler);
+            this.localeChangeHandler = null;
         }
         
         // Remove all tool overlays
