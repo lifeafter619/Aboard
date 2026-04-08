@@ -1,3 +1,4 @@
+(() => {
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
@@ -106,3 +107,4 @@ window.AboardCanvasViewRuntime = {
         return resizeCanvas.call(board);
     }
 };
+})();

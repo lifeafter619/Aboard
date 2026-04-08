@@ -878,8 +878,8 @@ class I18n {
             '#ff9500': 'colors.orange',
             '#8800ff': 'colors.purple',
             '#af52de': 'colors.purple',
-            '#ff2d55': 'settings.display.themeColors.pink',
-            '#5ac8fa': 'settings.display.themeColors.cyan'
+            '#ff2d55': 'settings.display.colorOptions.pink',
+            '#5ac8fa': 'settings.display.colorOptions.cyan'
         };
 
         const translationKey = colorKeyMap[normalizedValue];
