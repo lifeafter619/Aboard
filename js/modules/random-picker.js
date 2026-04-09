@@ -530,6 +530,61 @@ class RandomPickerManager {
         window.addEventListener('localeChanged', this.localeChangeHandler);
     }
 
+    getSettingsModal() {
+        const modal = document.getElementById('random-picker-settings-modal');
+        if (!modal) {
+            console.warn('Random picker settings modal is unavailable');
+            return null;
+        }
+        return modal;
+    }
+
+    getSettingsElements(ids = []) {
+        const elements = {};
+        const missing = [];
+
+        ids.forEach((id) => {
+            const element = document.getElementById(id);
+            if (element) {
+                elements[id] = element;
+            } else {
+                missing.push(id);
+            }
+        });
+
+        if (missing.length > 0) {
+            console.warn(`Random picker settings controls are unavailable: ${missing.join(', ')}`);
+        }
+
+        return elements;
+    }
+
+    updateSettingsModeVisibility(mode) {
+        const {
+            'rp-name-settings': nameSettings,
+            'rp-number-settings': numberSettings
+        } = this.getSettingsElements([
+            'rp-name-settings',
+            'rp-number-settings'
+        ]);
+
+        if (nameSettings) {
+            nameSettings.style.display = mode === 'name' ? 'block' : 'none';
+        }
+        if (numberSettings) {
+            numberSettings.style.display = mode === 'number' ? 'block' : 'none';
+        }
+    }
+
+    getActiveSettingsMode(modal, fallbackMode = 'name') {
+        const activeModeButton = modal?.querySelector('.random-picker-mode-btn.active');
+        if (!activeModeButton) {
+            console.warn(`Random picker mode button is unavailable, falling back to: ${fallbackMode}`);
+            return fallbackMode;
+        }
+        return activeModeButton.dataset.mode || fallbackMode;
+    }
+
     createSettingsModal() {
         const closeLabel = getRandomPickerText('common.close', 'Close');
         const modal = document.createElement('div');
@@ -612,13 +667,7 @@ class RandomPickerManager {
                 btn.classList.add('active');
 
                 const mode = btn.dataset.mode;
-                if (mode === 'name') {
-                    document.getElementById('rp-name-settings').style.display = 'block';
-                    document.getElementById('rp-number-settings').style.display = 'none';
-                } else {
-                    document.getElementById('rp-name-settings').style.display = 'none';
-                    document.getElementById('rp-number-settings').style.display = 'block';
-                }
+                this.updateSettingsModeVisibility(mode);
             });
         });
 
@@ -770,7 +819,9 @@ class RandomPickerManager {
                 const worksheet = workbook.Sheets[firstSheetName];
                 const json = XLSX.utils.sheet_to_json(worksheet);
 
-                const colName = document.getElementById('rp-import-col').value.trim();
+                const importColumnInput = document.getElementById('rp-import-col');
+                const defaultColumnName = getRandomPickerText('randomPicker.defaultColumnName', 'Name');
+                const colName = importColumnInput?.value?.trim() || defaultColumnName;
 
                 const names = [];
                 json.forEach(row => {
@@ -788,7 +839,11 @@ class RandomPickerManager {
 
                 if (names.length > 0) {
                     const textarea = document.getElementById('rp-names-input');
-                    textarea.value = names.join('\n');
+                    if (textarea) {
+                        textarea.value = names.join('\n');
+                    } else {
+                        console.warn('Random picker names input is unavailable');
+                    }
                     window.appDialog?.showAlert(window.i18n.t('randomPicker.importSuccess').replace('{count}', names.length), 'success');
                 } else {
                     window.appDialog?.showAlert(window.i18n.t('randomPicker.importNoData'), 'warning');
@@ -821,7 +876,24 @@ class RandomPickerManager {
 
     showSettings(instance) {
         this.currentInstance = instance;
-        const modal = document.getElementById('random-picker-settings-modal');
+        const modal = this.getSettingsModal();
+        if (!modal) {
+            return false;
+        }
+
+        const {
+            'rp-title-input': titleInput,
+            'rp-names-input': namesInput,
+            'rp-allow-repeats': allowRepeatsInput,
+            'rp-min-input': minInput,
+            'rp-max-input': maxInput
+        } = this.getSettingsElements([
+            'rp-title-input',
+            'rp-names-input',
+            'rp-allow-repeats',
+            'rp-min-input',
+            'rp-max-input'
+        ]);
         this.refreshSettingsModalText();
 
         // Populate form
@@ -834,41 +906,71 @@ class RandomPickerManager {
                 b.click(); // This also handles display toggling
             }
         });
+        this.updateSettingsModeVisibility(config.mode);
 
         // Title
-        document.getElementById('rp-title-input').value = config.title || '';
+        if (titleInput) {
+            titleInput.value = config.title || '';
+        }
 
         // Names
-        document.getElementById('rp-names-input').value = (config.names || []).join('\n');
-        document.getElementById('rp-allow-repeats').checked = config.allowRepeats;
+        if (namesInput) {
+            namesInput.value = (config.names || []).join('\n');
+        }
+        if (allowRepeatsInput) {
+            allowRepeatsInput.checked = config.allowRepeats;
+        }
 
         // Numbers
-        document.getElementById('rp-min-input').value = config.min;
-        document.getElementById('rp-max-input').value = config.max;
+        if (minInput) {
+            minInput.value = config.min;
+        }
+        if (maxInput) {
+            maxInput.value = config.max;
+        }
 
         modal.classList.add('show');
+        return true;
     }
 
     saveSettings() {
         if (!this.currentInstance) return;
 
-        const modal = document.getElementById('random-picker-settings-modal');
-        const mode = modal.querySelector('.random-picker-mode-btn.active').dataset.mode;
-        const title = document.getElementById('rp-title-input').value;
+        const modal = this.getSettingsModal();
+        if (!modal) {
+            return false;
+        }
+
+        const {
+            'rp-title-input': titleInput,
+            'rp-allow-repeats': allowRepeatsInput,
+            'rp-names-input': namesInput,
+            'rp-min-input': minInput,
+            'rp-max-input': maxInput
+        } = this.getSettingsElements([
+            'rp-title-input',
+            'rp-allow-repeats',
+            'rp-names-input',
+            'rp-min-input',
+            'rp-max-input'
+        ]);
+
+        const mode = this.getActiveSettingsMode(modal, this.currentInstance.config?.mode || 'name');
+        const title = titleInput?.value || '';
 
         const config = {
             mode,
             title
         };
 
-        config.allowRepeats = document.getElementById('rp-allow-repeats').checked;
+        config.allowRepeats = allowRepeatsInput?.checked === true;
 
         if (mode === 'name') {
-            const namesText = document.getElementById('rp-names-input').value;
+            const namesText = namesInput?.value || '';
             config.names = namesText.split('\n').map(s => s.trim()).filter(s => s);
         } else {
-            const parsedMin = parseInt(document.getElementById('rp-min-input').value, 10);
-            const parsedMax = parseInt(document.getElementById('rp-max-input').value, 10);
+            const parsedMin = parseInt(minInput?.value, 10);
+            const parsedMax = parseInt(maxInput?.value, 10);
             config.min = Number.isNaN(parsedMin) ? 1 : parsedMin;
             config.max = Number.isNaN(parsedMax) ? 50 : parsedMax;
         }
@@ -876,6 +978,7 @@ class RandomPickerManager {
         this.currentInstance.updateConfig(config);
         modal.classList.remove('show');
         this.currentInstance = null;
+        return true;
     }
 }
 

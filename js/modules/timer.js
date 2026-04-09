@@ -1550,31 +1550,96 @@ class TimerManager {
             }
         }
     }
+
+    getTimerSettingsModal() {
+        const modal = document.getElementById('timer-settings-modal');
+        if (!modal) {
+            console.warn('Timer settings modal is unavailable');
+            return null;
+        }
+        return modal;
+    }
+
+    getTimerSettingsElements(ids = []) {
+        const elements = {};
+        const missing = [];
+
+        ids.forEach((id) => {
+            const element = document.getElementById(id);
+            if (element) {
+                elements[id] = element;
+            } else {
+                missing.push(id);
+            }
+        });
+
+        if (missing.length > 0) {
+            console.warn(`Timer settings controls are unavailable: ${missing.join(', ')}`);
+        }
+
+        return elements;
+    }
+
+    setActiveTimerMode(mode) {
+        document.querySelectorAll('.timer-mode-btn').forEach(b => b.classList.remove('active'));
+
+        const modeButton = document.querySelector(`.timer-mode-btn[data-mode="${mode}"]`);
+        if (!modeButton) {
+            console.warn(`Timer mode button is unavailable: ${mode}`);
+            return false;
+        }
+
+        modeButton.classList.add('active');
+        return true;
+    }
     
     showSettingsModal() {
         this.adjustingTimer = null; // Not adjusting, creating new timer
         
-        const modal = document.getElementById('timer-settings-modal');
+        const modal = this.getTimerSettingsModal();
         if (modal) {
+            const {
+                'timer-hours': hoursInput,
+                'timer-minutes': minutesInput,
+                'timer-seconds': secondsInput,
+                'timer-title-input': titleInput,
+                'timer-sound-checkbox': soundCheckbox,
+                'timer-loop-count': loopCountInput,
+                'timer-playback-speed': playbackSpeedInput,
+                'timer-playback-speed-value': playbackSpeedValue,
+                'timer-loop-interval': loopIntervalInput
+            } = this.getTimerSettingsElements([
+                'timer-hours',
+                'timer-minutes',
+                'timer-seconds',
+                'timer-title-input',
+                'timer-sound-checkbox',
+                'timer-loop-count',
+                'timer-playback-speed',
+                'timer-playback-speed-value',
+                'timer-loop-interval'
+            ]);
+
             window.drawingBoard?.syncResizableModalState?.('timer-settings-modal');
             modal.classList.add('show');
             
             // Reset to defaults
             const mode = 'stopwatch';
-            document.querySelectorAll('.timer-mode-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector('.timer-mode-btn[data-mode="stopwatch"]').classList.add('active');
+            this.setActiveTimerMode(mode);
             
             this.updateSoundGroupVisibility(mode);
             this.updateTimerLabel(mode);
             
             // Clear time inputs
-            document.getElementById('timer-hours').value = '0';
-            document.getElementById('timer-minutes').value = '0';
-            document.getElementById('timer-seconds').value = '0';
-            document.getElementById('timer-title-input').value = '';
+            if (hoursInput) hoursInput.value = '0';
+            if (minutesInput) minutesInput.value = '0';
+            if (secondsInput) secondsInput.value = '0';
+            if (titleInput) titleInput.value = '';
             
             // Reset sound settings
-            document.getElementById('timer-sound-checkbox').checked = false;
+            if (soundCheckbox) {
+                soundCheckbox.checked = false;
+            }
             const soundSettingsContent = document.getElementById('sound-settings-content');
             if (soundSettingsContent) {
                 soundSettingsContent.style.display = 'none';
@@ -1594,12 +1659,20 @@ class TimerManager {
             if (loopCountGroup) {
                 loopCountGroup.style.display = 'none';
             }
-            document.getElementById('timer-loop-count').value = '3';
+            if (loopCountInput) {
+                loopCountInput.value = '3';
+            }
 
             // Reset new settings
-            document.getElementById('timer-playback-speed').value = '1.0';
-            document.getElementById('timer-playback-speed-value').textContent = '1.0x';
-            document.getElementById('timer-loop-interval').value = '1';
+            if (playbackSpeedInput) {
+                playbackSpeedInput.value = '1.0';
+            }
+            if (playbackSpeedValue) {
+                playbackSpeedValue.textContent = '1.0x';
+            }
+            if (loopIntervalInput) {
+                loopIntervalInput.value = '1';
+            }
 
             const colorCheckbox = document.getElementById('timer-color-checkbox');
             const colorSettings = document.getElementById('timer-color-settings');
@@ -1621,19 +1694,42 @@ class TimerManager {
             this.updateMainPreviewButtonState();
             this.updateMoreSettingsState();
         }
+
+        return !!modal;
     }
     
     showSettingsModalForTimer(timer) {
-        this.adjustingTimer = timer;
-        
-        const modal = document.getElementById('timer-settings-modal');
+        const modal = this.getTimerSettingsModal();
         if (modal) {
+            this.adjustingTimer = timer;
+
+            const {
+                'timer-hours': hoursInput,
+                'timer-minutes': minutesInput,
+                'timer-seconds': secondsInput,
+                'timer-title-input': titleInput,
+                'timer-sound-checkbox': soundCheckbox,
+                'timer-loop-count': loopCountInput,
+                'timer-playback-speed': speedSlider,
+                'timer-playback-speed-value': speedValue,
+                'timer-loop-interval': intervalInput
+            } = this.getTimerSettingsElements([
+                'timer-hours',
+                'timer-minutes',
+                'timer-seconds',
+                'timer-title-input',
+                'timer-sound-checkbox',
+                'timer-loop-count',
+                'timer-playback-speed',
+                'timer-playback-speed-value',
+                'timer-loop-interval'
+            ]);
+
             window.drawingBoard?.syncResizableModalState?.('timer-settings-modal');
             modal.classList.add('show');
             
             // Set mode based on timer
-            document.querySelectorAll('.timer-mode-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector(`.timer-mode-btn[data-mode="${timer.mode}"]`).classList.add('active');
+            this.setActiveTimerMode(timer.mode);
             
             this.updateSoundGroupVisibility(timer.mode);
             this.updateTimerLabel(timer.mode);
@@ -1644,13 +1740,15 @@ class TimerManager {
             const minutes = Math.floor((totalSeconds % 3600) / 60);
             const seconds = totalSeconds % 60;
             
-            document.getElementById('timer-hours').value = hours;
-            document.getElementById('timer-minutes').value = minutes;
-            document.getElementById('timer-seconds').value = seconds;
-            document.getElementById('timer-title-input').value = timer.title || '';
+            if (hoursInput) hoursInput.value = hours;
+            if (minutesInput) minutesInput.value = minutes;
+            if (secondsInput) secondsInput.value = seconds;
+            if (titleInput) titleInput.value = timer.title || '';
             
             // Set sound settings
-            document.getElementById('timer-sound-checkbox').checked = timer.playSound;
+            if (soundCheckbox) {
+                soundCheckbox.checked = timer.playSound;
+            }
             const soundSettingsContent = document.getElementById('sound-settings-content');
             if (soundSettingsContent) {
                 soundSettingsContent.style.display = timer.playSound ? 'block' : 'none';
@@ -1668,18 +1766,14 @@ class TimerManager {
                 }
             }
             
-            const loopCountInput = document.getElementById('timer-loop-count');
             if (loopCountInput) {
                 loopCountInput.value = timer.loopCount;
             }
             
             // Set new settings
-            const speedSlider = document.getElementById('timer-playback-speed');
-            const speedValue = document.getElementById('timer-playback-speed-value');
             if (speedSlider) speedSlider.value = timer.playbackSpeed || 1.0;
             if (speedValue) speedValue.textContent = `${timer.playbackSpeed || 1.0}x`;
 
-            const intervalInput = document.getElementById('timer-loop-interval');
             if (intervalInput) intervalInput.value = timer.loopInterval || 0;
 
             const colorCheckbox = document.getElementById('timer-color-checkbox');
@@ -1732,6 +1826,8 @@ class TimerManager {
 
             this.updateMainPreviewButtonState();
         }
+
+        return !!modal;
     }
     
     hideSettingsModal() {
@@ -1743,20 +1839,42 @@ class TimerManager {
     }
     
     startTimer() {
+        const {
+            'timer-hours': hoursInput,
+            'timer-minutes': minutesInput,
+            'timer-seconds': secondsInput,
+            'timer-title-input': titleInput,
+            'timer-sound-checkbox': soundCheckbox,
+            'timer-loop-checkbox': loopCheckbox,
+            'timer-loop-count': loopCountInput,
+            'timer-loop-interval': loopIntervalInput,
+            'timer-playback-speed': playbackSpeedInput
+        } = this.getTimerSettingsElements([
+            'timer-hours',
+            'timer-minutes',
+            'timer-seconds',
+            'timer-title-input',
+            'timer-sound-checkbox',
+            'timer-loop-checkbox',
+            'timer-loop-count',
+            'timer-loop-interval',
+            'timer-playback-speed'
+        ]);
+
         // Get time input values
-        const hours = parseInt(document.getElementById('timer-hours').value) || 0;
-        const minutes = parseInt(document.getElementById('timer-minutes').value) || 0;
-        const seconds = parseInt(document.getElementById('timer-seconds').value) || 0;
+        const hours = parseInt(hoursInput?.value, 10) || 0;
+        const minutes = parseInt(minutesInput?.value, 10) || 0;
+        const seconds = parseInt(secondsInput?.value, 10) || 0;
         
         // Get title
-        const title = document.getElementById('timer-title-input').value.trim();
+        const title = titleInput?.value?.trim() || '';
         
         // Get mode
         const activeMode = document.querySelector('.timer-mode-btn.active');
         const mode = activeMode ? activeMode.dataset.mode : 'stopwatch';
         
         // Get sound settings
-        const playSound = document.getElementById('timer-sound-checkbox').checked;
+        const playSound = soundCheckbox?.checked === true;
         const activeSoundBtn = document.querySelector('.sound-preset-btn.active');
         const selectedSound = activeSoundBtn ? activeSoundBtn.dataset.sound : 'class-bell';
         
@@ -1767,10 +1885,10 @@ class TimerManager {
         }
         
         // Get loop settings
-        const loopSound = document.getElementById('timer-loop-checkbox').checked;
-        const loopCount = parseInt(document.getElementById('timer-loop-count').value) || 3;
-        const loopInterval = parseInt(document.getElementById('timer-loop-interval').value) || 0;
-        const playbackSpeed = parseFloat(document.getElementById('timer-playback-speed').value) || 1.0;
+        const loopSound = loopCheckbox?.checked === true;
+        const loopCount = parseInt(loopCountInput?.value, 10) || 3;
+        const loopInterval = parseInt(loopIntervalInput?.value, 10) || 0;
+        const playbackSpeed = parseFloat(playbackSpeedInput?.value) || 1.0;
         
         // Get color settings - check custom pickers first, then preset buttons
         let textColor = '#333333';
@@ -1858,6 +1976,7 @@ class TimerManager {
         }
         
         this.hideSettingsModal();
+        return true;
     }
     
     removeTimer(id) {

@@ -579,8 +579,15 @@ class SettingsManager {
             content.classList.remove('active');
         });
         
-        document.querySelector(`.settings-tab-icon[data-tab="${tabName}"]`).classList.add('active');
-        document.getElementById(`${tabName}-settings`).classList.add('active');
+        const nextTab = document.querySelector(`.settings-tab-icon[data-tab="${tabName}"]`);
+        const nextPanel = document.getElementById(`${tabName}-settings`);
+        if (!nextTab || !nextPanel) {
+            console.warn(`Settings tab is unavailable: ${tabName}`);
+            return false;
+        }
+        nextTab.classList.add('active');
+        nextPanel.classList.add('active');
+        return true;
     }
     
     updateToolbarSize() {

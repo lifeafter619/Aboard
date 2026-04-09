@@ -43,6 +43,18 @@ async function withTimeout(promise, timeoutMs, fallbackValue = null) {
     
 }
 
+function getServiceWorkerReadyPromise() {
+        if (!('serviceWorker' in navigator)) {
+            return null;
+        }
+        const readyPromise = navigator.serviceWorker?.ready;
+        if (!readyPromise || typeof readyPromise.then !== 'function') {
+            return null;
+        }
+        return readyPromise;
+    
+}
+
 async function waitForServiceWorkerCacheReady(timeoutMs = 2000) {
         if (!('serviceWorker' in navigator)) {
             return false;
@@ -50,9 +62,13 @@ async function waitForServiceWorkerCacheReady(timeoutMs = 2000) {
         if (navigator.serviceWorker.controller) {
             return true;
         }
+        const readyPromise = getServiceWorkerReadyPromise();
+        if (!readyPromise) {
+            return false;
+        }
         try {
             const readyResult = await this.withTimeout(
-                navigator.serviceWorker.ready.then(() => true).catch(() => false),
+                Promise.resolve(readyPromise).then(() => true).catch(() => false),
                 timeoutMs,
                 false
             );
@@ -69,8 +85,14 @@ function scheduleCacheSizeRetryWhenReady() {
             return;
         }
 
+        const readyPromise = getServiceWorkerReadyPromise();
+        if (!readyPromise) {
+            this.cacheSizeRetryScheduled = false;
+            return;
+        }
+
         this.cacheSizeRetryScheduled = true;
-        navigator.serviceWorker.ready
+        Promise.resolve(readyPromise)
             .then(() => {
                 this.cacheSizeRetryScheduled = false;
                 const settingsModal = document.getElementById('settings-modal');

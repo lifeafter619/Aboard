@@ -78,6 +78,21 @@ function comparePreReleaseSegments(segmentsA = [], segmentsB = []) {
     return 0;
 }
 
+function getServiceWorkerApi() {
+    if (!('serviceWorker' in navigator)) {
+        return null;
+    }
+
+    const serviceWorkerApi = navigator.serviceWorker;
+    return serviceWorkerApi && typeof serviceWorkerApi === 'object'
+        ? serviceWorkerApi
+        : null;
+}
+
+function hasServiceWorkerMethod(serviceWorkerApi, methodName) {
+    return Boolean(serviceWorkerApi && typeof serviceWorkerApi[methodName] === 'function');
+}
+
 class PWAManager {
     constructor() {
         this.deferredPrompt = null;
@@ -599,7 +614,8 @@ class PWAManager {
     }
 
     async getServiceWorkerRegistration() {
-        if (!('serviceWorker' in navigator)) {
+        const serviceWorkerApi = getServiceWorkerApi();
+        if (!serviceWorkerApi) {
             return null;
         }
 
@@ -618,8 +634,12 @@ class PWAManager {
             }
         }
 
+        if (!hasServiceWorkerMethod(serviceWorkerApi, 'getRegistration')) {
+            return null;
+        }
+
         try {
-            const registration = await navigator.serviceWorker.getRegistration();
+            const registration = await serviceWorkerApi.getRegistration();
             return this.trackServiceWorkerRegistration(registration);
         } catch (error) {
             console.warn('Failed to get service worker registration:', error);
@@ -628,8 +648,13 @@ class PWAManager {
     }
 
     async registerServiceWorkerNow() {
+        const serviceWorkerApi = getServiceWorkerApi();
+        if (!hasServiceWorkerMethod(serviceWorkerApi, 'register')) {
+            return null;
+        }
+
         try {
-            const registration = await navigator.serviceWorker.register('./sw.js');
+            const registration = await serviceWorkerApi.register('./sw.js');
             console.log('ServiceWorker registration successful with scope: ', registration.scope);
             return this.trackServiceWorkerRegistration(registration);
         } catch (error) {
@@ -650,9 +675,11 @@ class PWAManager {
 
         if (!this.observedRegistrations.has(registration)) {
             this.observedRegistrations.add(registration);
-            registration.addEventListener('updatefound', () => {
-                this.observeInstallingWorker(registration.installing);
-            });
+            if (typeof registration.addEventListener === 'function') {
+                registration.addEventListener('updatefound', () => {
+                    this.observeInstallingWorker(registration.installing);
+                });
+            }
         }
 
         if (registration.installing) {
@@ -663,7 +690,7 @@ class PWAManager {
     }
 
     observeInstallingWorker(worker) {
-        if (!worker || this.observedWorkers.has(worker)) {
+        if (!worker || this.observedWorkers.has(worker) || typeof worker.addEventListener !== 'function') {
             return;
         }
 
@@ -752,13 +779,14 @@ class PWAManager {
     }
 
     bindControllerChangeListener() {
-        if (this.controllerChangeListenerRegistered || !('serviceWorker' in navigator)) {
+        const serviceWorkerApi = getServiceWorkerApi();
+        if (this.controllerChangeListenerRegistered || !hasServiceWorkerMethod(serviceWorkerApi, 'addEventListener')) {
             return;
         }
 
         this.controllerChangeListenerRegistered = true;
         let refreshing = false;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
+        serviceWorkerApi.addEventListener('controllerchange', () => {
             if (!refreshing && this.shouldReloadOnControllerChange) {
                 refreshing = true;
                 if (this.autoActivateResetTimer) {
@@ -1000,11 +1028,16 @@ class PWAManager {
     }
 
     registerServiceWorker() {
-        if (!('serviceWorker' in navigator)) {
+        const serviceWorkerApi = getServiceWorkerApi();
+        if (!serviceWorkerApi) {
             return;
         }
 
         this.bindControllerChangeListener();
+
+        if (!hasServiceWorkerMethod(serviceWorkerApi, 'register')) {
+            return;
+        }
 
         if (document.readyState === 'complete') {
             if (!this.serviceWorkerRegistrationPromise) {
