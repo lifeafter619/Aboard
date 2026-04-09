@@ -94,8 +94,11 @@ function applyZoom(updateConfigScale = true) {
     }
 
     this.scheduleRenderQualityUpdate();
-    this.teachingToolsManager.canvasScaleFactor = finalScale;
-    this.teachingToolsManager.redrawTools();
+
+    if (this.teachingToolsManager) {
+        this.teachingToolsManager.canvasScaleFactor = finalScale;
+        this.teachingToolsManager.redrawTools();
+    }
 
     if (updateConfigScale) {
         this.updateConfigAreaScale();

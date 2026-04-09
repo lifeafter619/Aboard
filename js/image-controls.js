@@ -118,14 +118,19 @@ class ImageControls {
             if (e.type !== 'mousemove') {
                 e.preventDefault?.();
             }
-            if (e.target === this.controlBox || e.target.closest('.image-controls-box') === this.controlBox) {
-                if (!e.target.classList.contains('resize-handle') && 
-                    !e.target.classList.contains('rotate-handle') &&
-                    !e.target.classList.contains('flip-handle') &&
-                    !e.target.closest('.resize-handle') &&
-                    !e.target.closest('.rotate-handle') &&
-                    !e.target.closest('.flip-handle') &&
-                    !e.target.closest('.image-controls-toolbar')) {
+            const target = e.target;
+            const closest = typeof target?.closest === 'function'
+                ? target.closest.bind(target)
+                : () => null;
+            const hasClass = (className) => Boolean(target?.classList?.contains?.(className));
+            if (target === this.controlBox || closest('.image-controls-box') === this.controlBox) {
+                if (!hasClass('resize-handle') && 
+                    !hasClass('rotate-handle') &&
+                    !hasClass('flip-handle') &&
+                    !closest('.resize-handle') &&
+                    !closest('.rotate-handle') &&
+                    !closest('.flip-handle') &&
+                    !closest('.image-controls-toolbar')) {
                     this.startDrag(e);
                 }
             }
@@ -587,11 +592,13 @@ class ImageControls {
         const rect = canvas.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
         const logicalWidth = canvas.width / dpr;
+        const logicalHeight = canvas.height / dpr;
         const scaleX = rect.width / logicalWidth;
+        const scaleY = rect.height / logicalHeight;
         
         const pos = this.getClientPos(e);
         const deltaX = (pos.x - this.dragStartPos.x) / scaleX;
-        const deltaY = (pos.y - this.dragStartPos.y) / scaleX; // Use same scale for both axes
+        const deltaY = (pos.y - this.dragStartPos.y) / scaleY;
         
         this.imagePosition.x = this.dragStartImagePos.x + deltaX;
         this.imagePosition.y = this.dragStartImagePos.y + deltaY;
@@ -620,11 +627,13 @@ class ImageControls {
         const rect = canvas.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
         const logicalWidth = canvas.width / dpr;
+        const logicalHeight = canvas.height / dpr;
         const scaleX = rect.width / logicalWidth;
+        const scaleY = rect.height / logicalHeight;
         
         const pos = this.getClientPos(e);
         const deltaX = (pos.x - this.resizeStartPos.x) / scaleX;
-        const deltaY = (pos.y - this.resizeStartPos.y) / scaleX; // Use same scale for both axes
+        const deltaY = (pos.y - this.resizeStartPos.y) / scaleY;
         
         const aspectRatio = this.resizeStartSize.width / this.resizeStartSize.height;
         
@@ -737,6 +746,11 @@ class ImageControls {
     fitToCanvas() {
         const canvas = this.backgroundManager.bgCanvas;
         const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        const logicalWidth = canvas.width / dpr;
+        const logicalHeight = canvas.height / dpr;
+        const scaleX = rect.width / logicalWidth;
+        const scaleY = rect.height / logicalHeight;
         
         // Get the actual visible canvas size (accounting for zoom and transforms)
         const computedStyle = window.getComputedStyle(canvas);
@@ -752,17 +766,21 @@ class ImageControls {
         
         if (imageAspect > canvasAspect) {
             // Image is wider - fit to width
-            this.imageSize.width = actualWidth * 0.9;
-            this.imageSize.height = this.imageSize.width / imageAspect;
+            const fittedScreenWidth = actualWidth * 0.9;
+            const fittedScreenHeight = fittedScreenWidth / imageAspect;
+            this.imageSize.width = fittedScreenWidth / scaleX;
+            this.imageSize.height = fittedScreenHeight / scaleY;
         } else {
             // Image is taller - fit to height
-            this.imageSize.height = actualHeight * 0.9;
-            this.imageSize.width = this.imageSize.height * imageAspect;
+            const fittedScreenHeight = actualHeight * 0.9;
+            const fittedScreenWidth = fittedScreenHeight * imageAspect;
+            this.imageSize.height = fittedScreenHeight / scaleY;
+            this.imageSize.width = fittedScreenWidth / scaleX;
         }
         
-        // Center the image in the visible canvas area
-        this.imagePosition.x = (actualWidth - this.imageSize.width) / 2;
-        this.imagePosition.y = (actualHeight - this.imageSize.height) / 2;
+        // Center the image in logical canvas coordinates
+        this.imagePosition.x = (logicalWidth - this.imageSize.width) / 2;
+        this.imagePosition.y = (logicalHeight - this.imageSize.height) / 2;
         this.imageRotation = 0;
         this.imageScale = 1.0;
         

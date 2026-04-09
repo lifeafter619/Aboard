@@ -12,6 +12,23 @@ function getRandomPickerText(key, fallback, params = {}) {
     return translated && translated !== key ? translated : fallback;
 }
 
+function normalizeRandomPickerNumberRange(minValue, maxValue) {
+    let min = parseInt(minValue, 10);
+    let max = parseInt(maxValue, 10);
+
+    if (Number.isNaN(min)) {
+        min = 1;
+    }
+    if (Number.isNaN(max)) {
+        max = 50;
+    }
+    if (min > max) {
+        [min, max] = [max, min];
+    }
+
+    return { min, max };
+}
+
 class RandomPickerInstance {
     constructor(id, manager, config = {}) {
         this.id = id;
@@ -122,7 +139,10 @@ class RandomPickerInstance {
 
         const startDrag = (e) => {
             if (typeof e.button === 'number' && e.button !== 0) return;
-            if (e.target.closest('.random-picker-close-btn')) return;
+            const closest = typeof e.target?.closest === 'function'
+                ? e.target.closest.bind(e.target)
+                : () => null;
+            if (closest('.random-picker-close-btn')) return;
             // Stop propagation to prevent drawing
             e.stopPropagation();
 
@@ -875,11 +895,11 @@ class RandomPickerManager {
     }
 
     showSettings(instance) {
-        this.currentInstance = instance;
         const modal = this.getSettingsModal();
         if (!modal) {
             return false;
         }
+        this.currentInstance = instance;
 
         const {
             'rp-title-input': titleInput,
@@ -969,10 +989,9 @@ class RandomPickerManager {
             const namesText = namesInput?.value || '';
             config.names = namesText.split('\n').map(s => s.trim()).filter(s => s);
         } else {
-            const parsedMin = parseInt(minInput?.value, 10);
-            const parsedMax = parseInt(maxInput?.value, 10);
-            config.min = Number.isNaN(parsedMin) ? 1 : parsedMin;
-            config.max = Number.isNaN(parsedMax) ? 50 : parsedMax;
+            const normalizedRange = normalizeRandomPickerNumberRange(minInput?.value, maxInput?.value);
+            config.min = normalizedRange.min;
+            config.max = normalizedRange.max;
         }
 
         this.currentInstance.updateConfig(config);

@@ -155,9 +155,10 @@ class TextInsertionManager {
         // Color buttons
         document.querySelectorAll('.color-btn[data-text-color]').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                currentColor = e.target.dataset.textColor;
+                const targetButton = e.currentTarget;
+                currentColor = targetButton.dataset.textColor;
                 document.querySelectorAll('.color-btn[data-text-color]').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+                targetButton.classList.add('active');
             });
         });
         

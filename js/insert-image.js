@@ -141,14 +141,20 @@ class InsertImageManager {
             e.stopPropagation();
             e.preventDefault?.();
 
-            if (e.target === this.controlBox || e.target.closest('.image-controls-box') === this.controlBox) {
-                if (!e.target.classList.contains('resize-handle') &&
-                    !e.target.classList.contains('rotate-handle') &&
-                    !e.target.classList.contains('flip-handle') &&
-                    !e.target.closest('.resize-handle') &&
-                    !e.target.closest('.rotate-handle') &&
-                    !e.target.closest('.flip-handle') &&
-                    !e.target.closest('.image-controls-toolbar')) {
+            const target = e.target;
+            const closest = typeof target?.closest === 'function'
+                ? target.closest.bind(target)
+                : () => null;
+            const hasClass = (className) => Boolean(target?.classList?.contains?.(className));
+
+            if (target === this.controlBox || closest('.image-controls-box') === this.controlBox) {
+                if (!hasClass('resize-handle') &&
+                    !hasClass('rotate-handle') &&
+                    !hasClass('flip-handle') &&
+                    !closest('.resize-handle') &&
+                    !closest('.rotate-handle') &&
+                    !closest('.flip-handle') &&
+                    !closest('.image-controls-toolbar')) {
                     this.startDrag(e);
                 }
             }
@@ -666,10 +672,15 @@ class InsertImageManager {
         return { x: e.clientX, y: e.clientY };
     }
 
-    getCanvasScale() {
+    getCanvasScales() {
         const rect = this.canvas.getBoundingClientRect();
-        const logicalWidth = this.canvas.width / window.devicePixelRatio;
-        return rect.width / logicalWidth;
+        const dpr = window.devicePixelRatio || 1;
+        const logicalWidth = this.canvas.width / dpr;
+        const logicalHeight = this.canvas.height / dpr;
+        return {
+            scaleX: rect.width / logicalWidth,
+            scaleY: rect.height / logicalHeight
+        };
     }
 
     startDrag(e) {
@@ -680,10 +691,10 @@ class InsertImageManager {
 
     drag(e) {
         const pos = this.getClientPos(e);
-        const scale = this.getCanvasScale();
+        const { scaleX, scaleY } = this.getCanvasScales();
 
-        const dx = (pos.x - this.dragStartPos.x) / scale;
-        const dy = (pos.y - this.dragStartPos.y) / scale;
+        const dx = (pos.x - this.dragStartPos.x) / scaleX;
+        const dy = (pos.y - this.dragStartPos.y) / scaleY;
 
         this.imagePosition.x = this.dragStartImagePos.x + dx;
         this.imagePosition.y = this.dragStartImagePos.y + dy;
@@ -705,11 +716,11 @@ class InsertImageManager {
 
     resize(e) {
         const pos = this.getClientPos(e);
-        const scale = this.getCanvasScale();
+        const { scaleX, scaleY } = this.getCanvasScales();
 
         // Calculate delta in logical units
-        const dxScreen = (pos.x - this.resizeStartPos.x) / scale;
-        const dyScreen = (pos.y - this.resizeStartPos.y) / scale;
+        const dxScreen = (pos.x - this.resizeStartPos.x) / scaleX;
+        const dyScreen = (pos.y - this.resizeStartPos.y) / scaleY;
 
         // Rotate delta by -rotation to align with local unrotated axes
         const rad = -this.imageRotation * Math.PI / 180;
@@ -733,15 +744,7 @@ class InsertImageManager {
         // Calculate the dominant change based on handle direction
         let change = 0;
 
-        if (this.resizeHandle.includes('right')) {
-            change = dx;
-        } else if (this.resizeHandle.includes('left')) {
-            change = -dx;
-        } else if (this.resizeHandle.includes('bottom')) {
-            change = dy;
-        } else if (this.resizeHandle.includes('top')) {
-            change = -dy;
-        } else if (this.resizeHandle === 'top-right') {
+        if (this.resizeHandle === 'top-right') {
             change = (dx - dy) / 2; // Average projection
         } else if (this.resizeHandle === 'bottom-right') {
             change = (dx + dy) / 2;
@@ -749,6 +752,14 @@ class InsertImageManager {
             change = (-dx + dy) / 2;
         } else if (this.resizeHandle === 'top-left') {
             change = (-dx - dy) / 2;
+        } else if (this.resizeHandle.includes('right')) {
+            change = dx;
+        } else if (this.resizeHandle.includes('left')) {
+            change = -dx;
+        } else if (this.resizeHandle.includes('bottom')) {
+            change = dy;
+        } else if (this.resizeHandle.includes('top')) {
+            change = -dy;
         }
 
         // Apply uniform scaling

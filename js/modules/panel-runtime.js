@@ -180,8 +180,11 @@ function setupDraggablePanels(board) {
             return;
         }
 
-        const isDragHandle = event.target.closest('.panel-drag-handle');
-        if (!isDragHandle && (event.target.closest('button') || event.target.closest('input'))) {
+        const closest = typeof event.target?.closest === 'function'
+            ? event.target.closest.bind(event.target)
+            : () => null;
+        const isDragHandle = closest('.panel-drag-handle');
+        if (!isDragHandle && (closest('button') || closest('input'))) {
             return;
         }
 

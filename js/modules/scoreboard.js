@@ -362,7 +362,10 @@ class ScoreboardInstance {
 
         const startDrag = (e) => {
             if (typeof e.button === 'number' && e.button !== 0) return;
-            if (e.target.closest('button')) return;
+            const closest = typeof e.target?.closest === 'function'
+                ? e.target.closest.bind(e.target)
+                : () => null;
+            if (closest('button')) return;
             // Stop propagation to prevent drawing
             e.stopPropagation();
 

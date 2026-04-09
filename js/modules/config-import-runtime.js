@@ -4,6 +4,10 @@
 function showConfigDiffModal(diff, newSettings) {
         const modal = document.getElementById('config-diff-modal');
         const list = document.getElementById('config-diff-list');
+        const okBtn = document.getElementById('config-diff-ok-btn');
+        if (!modal || !list || !okBtn || !okBtn.parentNode) {
+            return false;
+        }
         list.innerHTML = '';
 
         if (diff.length === 0) {
@@ -109,7 +113,6 @@ function showConfigDiffModal(diff, newSettings) {
             });
         }
 
-        const okBtn = document.getElementById('config-diff-ok-btn');
         // Remove old listener to avoid multiple bindings
         const newOkBtn = okBtn.cloneNode(true);
         okBtn.parentNode.replaceChild(newOkBtn, okBtn);
@@ -191,6 +194,7 @@ function showConfigDiffModal(diff, newSettings) {
         });
 
         modal.classList.add('show');
+        return true;
     
 }
 

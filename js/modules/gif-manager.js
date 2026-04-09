@@ -442,7 +442,11 @@ class GifManager {
         let startX, startY, initialLeft, initialTop;
 
         const onDown = (e) => {
-            if (e.target.closest('button') || e.target.classList.contains('gif-resize-handle')) return;
+            const closest = typeof e.target?.closest === 'function'
+                ? e.target.closest.bind(e.target)
+                : () => null;
+            const hasClass = (className) => Boolean(e.target?.classList?.contains?.(className));
+            if (closest('button') || hasClass('gif-resize-handle')) return;
             isDragging = true;
 
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;

@@ -10,6 +10,22 @@ function getExportText(key, fallback) {
     return translated && translated !== key ? translated : fallback;
 }
 
+function getActiveExportTab() {
+    return document.querySelector('.export-tab-btn.active')?.dataset.tab || 'image';
+}
+
+function getActiveProjectExportScope() {
+    return document.querySelector('.export-project-scope-btn.active')?.dataset.scope || 'current';
+}
+
+function getActiveImageExportScope() {
+    return document.querySelector('.export-scope-btn.active')?.dataset.scope || 'current';
+}
+
+function getActiveExportFormat() {
+    return document.querySelector('.export-format-btn.active')?.dataset.format || 'png';
+}
+
 class ExportManager {
     constructor(canvas, bgCanvas, drawingBoard = null) {
         this.canvas = canvas;
@@ -198,10 +214,10 @@ class ExportManager {
             filenameInput.placeholder = getExportText('export.fileNamePlaceholder', 'Enter file name');
         }
 
-        const activeTab = document.querySelector('.export-tab-btn.active')?.dataset.tab || 'image';
+        const activeTab = getActiveExportTab();
         const activeScope = activeTab === 'project'
-            ? (document.querySelector('.export-project-scope-btn.active')?.dataset.scope || 'current')
-            : (document.querySelector('.export-scope-btn.active')?.dataset.scope || 'current');
+            ? getActiveProjectExportScope()
+            : getActiveImageExportScope();
         this.updateUIForScope(activeScope, activeTab);
         window.i18n?.applyTranslations?.();
     }
@@ -210,18 +226,19 @@ class ExportManager {
         // Tab Switching
         document.querySelectorAll('.export-tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const tab = e.target.dataset.tab;
+                const targetButton = e.currentTarget;
+                const tab = targetButton.dataset.tab;
 
                 // Update active tab button
                 document.querySelectorAll('.export-tab-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+                targetButton.classList.add('active');
 
                 // Show content
                 document.querySelectorAll('.export-tab-content').forEach(c => c.classList.remove('active'));
                 document.getElementById(`export-tab-${tab}`).classList.add('active');
                 const activeScope = tab === 'project'
-                    ? (document.querySelector('.export-project-scope-btn.active')?.dataset.scope || 'current')
-                    : (document.querySelector('.export-scope-btn.active')?.dataset.scope || 'current');
+                    ? getActiveProjectExportScope()
+                    : getActiveImageExportScope();
                 this.updateUIForScope(activeScope, tab);
             });
         });
@@ -229,10 +246,11 @@ class ExportManager {
         // Image Export Scope
         document.querySelectorAll('.export-scope-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                const targetButton = e.currentTarget;
                 document.querySelectorAll('.export-scope-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+                targetButton.classList.add('active');
                 
-                const scope = e.target.dataset.scope;
+                const scope = targetButton.dataset.scope;
                 this.updateUIForScope(scope, 'image');
             });
         });
@@ -240,10 +258,11 @@ class ExportManager {
         // Project Export Scope
         document.querySelectorAll('.export-project-scope-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                const targetButton = e.currentTarget;
                 document.querySelectorAll('.export-project-scope-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+                targetButton.classList.add('active');
 
-                const scope = e.target.dataset.scope;
+                const scope = targetButton.dataset.scope;
                 this.updateUIForScope(scope, 'project');
             });
         });
@@ -251,11 +270,12 @@ class ExportManager {
         // Format buttons
         document.querySelectorAll('.export-format-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                const targetButton = e.currentTarget;
                 document.querySelectorAll('.export-format-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+                targetButton.classList.add('active');
                 
                 // Show/hide quality slider for JPEG
-                const format = e.target.dataset.format;
+                const format = targetButton.dataset.format;
                 const qualityGroup = document.getElementById('jpeg-quality-group');
                 if (format === 'jpeg') {
                     qualityGroup.style.display = 'block';
@@ -365,7 +385,7 @@ class ExportManager {
     }
 
     handleExportConfirm() {
-        const activeTab = document.querySelector('.export-tab-btn.active').dataset.tab;
+        const activeTab = getActiveExportTab();
 
         if (activeTab === 'image') {
             this.exportCanvas().catch(error => {
@@ -383,7 +403,7 @@ class ExportManager {
     }
 
     async exportProject() {
-        const scope = document.querySelector('.export-project-scope-btn.active').dataset.scope;
+        const scope = getActiveProjectExportScope();
         const filename = document.getElementById('export-filename').value || 'aboard-project';
 
         let selectedPages = [];
@@ -585,8 +605,8 @@ class ExportManager {
     }
     
     async exportCanvas() {
-        const scope = document.querySelector('.export-scope-btn.active').dataset.scope;
-        const format = document.querySelector('.export-format-btn.active').dataset.format;
+        const scope = getActiveImageExportScope();
+        const format = getActiveExportFormat();
         const filename = document.getElementById('export-filename').value || 'aboard-export';
         const quality = parseInt(document.getElementById('export-quality-slider').value, 10) / 100;
 

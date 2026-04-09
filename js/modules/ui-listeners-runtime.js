@@ -44,13 +44,14 @@ function setupToolConfigListeners() {
         // Color picker
         document.querySelectorAll('.color-btn[data-color]').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.drawingEngine.setColor(e.target.dataset.color);
+                const targetButton = e.currentTarget;
+                this.drawingEngine.setColor(targetButton.dataset.color);
                 document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+                targetButton.classList.add('active');
                 // Sync shape color picker value
                 const shapeColorPicker = document.getElementById('shape-custom-color-picker');
                 if (shapeColorPicker) {
-                    shapeColorPicker.value = e.target.dataset.color;
+                    shapeColorPicker.value = targetButton.dataset.color;
                 }
                 syncGenericColorAccessibility();
             });
@@ -255,10 +256,11 @@ function setupShapeToolConfigListeners() {
         document.querySelectorAll('.shape-type-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.shapeType === this.shapeDrawingManager.currentShape);
             btn.addEventListener('click', (e) => {
-                const shapeType = e.target.closest('.shape-type-btn').dataset.shapeType;
+                const targetButton = e.currentTarget;
+                const shapeType = targetButton.dataset.shapeType;
                 this.shapeDrawingManager.setShape(shapeType);
                 document.querySelectorAll('.shape-type-btn').forEach(b => b.classList.remove('active'));
-                e.target.closest('.shape-type-btn').classList.add('active');
+                targetButton.classList.add('active');
 
                 if (arrowSizeGroup) {
                     arrowSizeGroup.style.display = (shapeType === 'arrow' || shapeType === 'doubleArrow') ? '' : 'none';
@@ -388,9 +390,10 @@ function setupBackgroundToolConfigListeners() {
         // Background color picker
         document.querySelectorAll('.color-btn[data-bg-color]').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.backgroundManager.setBackgroundColor(e.target.dataset.bgColor);
+                const targetButton = e.currentTarget;
+                this.backgroundManager.setBackgroundColor(targetButton.dataset.bgColor);
                 document.querySelectorAll('.color-btn[data-bg-color]').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+                targetButton.classList.add('active');
                 // Save page background in paginated mode
                 if (!this.settingsManager.infiniteCanvas) {
                     this.savePageBackground(this.currentPage);
@@ -798,7 +801,10 @@ function setupBackgroundToolConfigListeners() {
         const coordinateKeypadPanel = document.getElementById('coordinate-keypad-panel');
         if (coordinateKeypadPanel) {
             coordinateKeypadPanel.addEventListener('click', (e) => {
-                const button = e.target.closest('[data-coordinate-action], [data-coordinate-insert], [data-coordinate-variable-btn]');
+                const closest = typeof e.target?.closest === 'function'
+                    ? e.target.closest.bind(e.target)
+                    : () => null;
+                const button = closest('[data-coordinate-action], [data-coordinate-insert], [data-coordinate-variable-btn]');
                 if (!button) return;
 
                 if (button.dataset.coordinateAction) {
@@ -918,7 +924,8 @@ function setupSettingsListeners() {
         
         document.querySelectorAll('.position-option-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.settingsManager.setControlPosition(e.target.dataset.position, this.timeDisplayManager);
+                const targetButton = e.currentTarget;
+                this.settingsManager.setControlPosition(targetButton.dataset.position, this.timeDisplayManager);
             });
         });
         
@@ -984,10 +991,11 @@ function setupSettingsListeners() {
         // Canvas preset buttons
         document.querySelectorAll('.canvas-preset-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const preset = e.target.dataset.preset;
+                const targetButton = e.currentTarget;
+                const preset = targetButton.dataset.preset;
                 this.settingsManager.setCanvasPreset(preset);
                 document.querySelectorAll('.canvas-preset-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+                targetButton.classList.add('active');
                 this.applyCanvasSize();
             });
         });
@@ -1087,9 +1095,10 @@ function setupSettingsListeners() {
         // Theme color buttons
         document.querySelectorAll('.color-btn[data-theme-color]').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.settingsManager.setThemeColor(e.target.dataset.themeColor);
+                const targetButton = e.currentTarget;
+                this.settingsManager.setThemeColor(targetButton.dataset.themeColor);
                 document.querySelectorAll('.color-btn[data-theme-color]').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+                targetButton.classList.add('active');
                 window.i18n?.syncGenericColorControls?.();
             });
         });

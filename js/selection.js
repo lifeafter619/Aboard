@@ -511,15 +511,33 @@ class SelectionManager {
     }
     
     setupEventListeners() {
+        const getEventTargetHelpers = (target) => {
+            const closest = typeof target?.closest === 'function'
+                ? target.closest.bind(target)
+                : () => null;
+            const hasClass = (className) => Boolean(target?.classList?.contains?.(className));
+            const safeContains = (element) => {
+                try {
+                    return Boolean(element?.contains?.(target));
+                } catch (error) {
+                    return false;
+                }
+            };
+
+            return { closest, hasClass, safeContains };
+        };
+
         // Drag selection box
         this.controlBox.addEventListener('mousedown', (e) => {
             e.stopPropagation();
-            if (e.target === this.controlBox || e.target.closest('.image-controls-box') === this.controlBox) {
-                if (!e.target.classList.contains('resize-handle') && 
-                    !e.target.closest('.resize-handle') &&
-                    !e.target.closest('.rotate-handle') &&
-                    !e.target.closest('.selection-transform-handle') &&
-                    !e.target.closest('.image-controls-toolbar')) {
+            const target = e.target;
+            const { closest, hasClass } = getEventTargetHelpers(target);
+            if (target === this.controlBox || closest('.image-controls-box') === this.controlBox) {
+                if (!hasClass('resize-handle') && 
+                    !closest('.resize-handle') &&
+                    !closest('.rotate-handle') &&
+                    !closest('.selection-transform-handle') &&
+                    !closest('.image-controls-toolbar')) {
                     this.startDrag(e);
                 }
             }
@@ -527,12 +545,14 @@ class SelectionManager {
         
         this.controlBox.addEventListener('pointerdown', (e) => {
             e.stopPropagation();
-            if (e.target === this.controlBox || e.target.closest('.image-controls-box') === this.controlBox) {
-                if (!e.target.classList.contains('resize-handle') && 
-                    !e.target.closest('.resize-handle') &&
-                    !e.target.closest('.rotate-handle') &&
-                    !e.target.closest('.selection-transform-handle') &&
-                    !e.target.closest('.image-controls-toolbar')) {
+            const target = e.target;
+            const { closest, hasClass } = getEventTargetHelpers(target);
+            if (target === this.controlBox || closest('.image-controls-box') === this.controlBox) {
+                if (!hasClass('resize-handle') && 
+                    !closest('.resize-handle') &&
+                    !closest('.rotate-handle') &&
+                    !closest('.selection-transform-handle') &&
+                    !closest('.image-controls-toolbar')) {
                     this.startDrag(e);
                 }
             }
@@ -540,12 +560,14 @@ class SelectionManager {
         
         this.controlBox.addEventListener('touchstart', (e) => {
             e.stopPropagation();
-            if (e.target === this.controlBox || e.target.closest('.image-controls-box') === this.controlBox) {
-                if (!e.target.classList.contains('resize-handle') && 
-                    !e.target.closest('.resize-handle') &&
-                    !e.target.closest('.rotate-handle') &&
-                    !e.target.closest('.selection-transform-handle') &&
-                    !e.target.closest('.image-controls-toolbar')) {
+            const target = e.target;
+            const { closest, hasClass } = getEventTargetHelpers(target);
+            if (target === this.controlBox || closest('.image-controls-box') === this.controlBox) {
+                if (!hasClass('resize-handle') && 
+                    !closest('.resize-handle') &&
+                    !closest('.rotate-handle') &&
+                    !closest('.selection-transform-handle') &&
+                    !closest('.image-controls-toolbar')) {
                     this.startDrag(e);
                 }
             }
@@ -838,7 +860,8 @@ class SelectionManager {
         if (!this.layerMenuOutsideListener) {
             this.layerMenuOutsideListener = (e) => {
                 if (!this.layerMenuVisible || !this.layerMenu || !this.layerButton) return;
-                if (this.layerMenu.contains(e.target) || this.layerButton.contains(e.target)) return;
+                const { safeContains } = getEventTargetHelpers(e.target);
+                if (safeContains(this.layerMenu) || safeContains(this.layerButton)) return;
                 this.hideLayerMenu();
             };
         }
@@ -852,7 +875,8 @@ class SelectionManager {
         if (!this.selectionColorPopoverOutsideListener) {
             this.selectionColorPopoverOutsideListener = (e) => {
                 if (!this.selectionColorPopoverVisible || !this.colorWrapper) return;
-                if (this.colorWrapper.contains(e.target)) return;
+                const { safeContains } = getEventTargetHelpers(e.target);
+                if (safeContains(this.colorWrapper)) return;
                 this.hideSelectionColorPopover();
             };
         }
@@ -991,10 +1015,12 @@ class SelectionManager {
         return { x: e.clientX, y: e.clientY };
     }
     
-    getCanvasScale() {
-        const computedStyle = window.getComputedStyle(this.canvas);
-        const matrix = new DOMMatrix(computedStyle.transform);
-        return matrix.a || 1;
+    getCanvasScales() {
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+            scaleX: rect.width / (this.canvas.offsetWidth || rect.width || 1),
+            scaleY: rect.height / (this.canvas.offsetHeight || rect.height || 1)
+        };
     }
     
     getCanvasCoordinates(e) {
@@ -1791,14 +1817,13 @@ class SelectionManager {
     startResize(e, handle) {
         if (this.isCoordinateSelection()) return;
         if (!this.isCompoundSelection() && this.selectionType !== 'background' && this.selectedIndex === null) return;
-        
-        this.isResizing = true;
-        this.resizeHandle = handle;
-        this.resizeStartPos = this.getClientPos(e);
-        
+
+        const resizeStartPos = this.getClientPos(e);
+        let resizeStartBounds = null;
+
         if (this.selectionType === 'stroke') {
             const stroke = this.drawingEngine.strokes[this.selectedIndex];
-            this.resizeStartBounds = this.drawingEngine.getStrokeBounds(stroke);
+            resizeStartBounds = this.drawingEngine.getStrokeBounds(stroke);
             for (let point of stroke.points) {
                 point.originalX = point.x;
                 point.originalY = point.y;
@@ -1810,7 +1835,7 @@ class SelectionManager {
             }
             const bounds = this.getTextObjectBounds(this.selectedIndex);
             if (!bounds) return;
-            this.resizeStartBounds = {
+            resizeStartBounds = {
                 x: bounds.x,
                 y: bounds.y,
                 width: bounds.width,
@@ -1819,21 +1844,19 @@ class SelectionManager {
             };
         } else if (this.selectionType === 'image') {
             const img = this.drawingEngine.stampedImages[this.selectedIndex];
-            this.resizeStartBounds = { x: img.x, y: img.y, width: img.width, height: img.height };
+            resizeStartBounds = { x: img.x, y: img.y, width: img.width, height: img.height };
         } else if (this.selectionType === 'background') {
             const transform = this.backgroundManager?.getBackgroundImageTransform?.();
-            if (!transform) {
-                this.isResizing = false;
-                return;
-            }
-            this.resizeStartBounds = {
+            if (!transform) return;
+            resizeStartBounds = {
                 x: transform.x,
                 y: transform.y,
                 width: transform.width,
                 height: transform.height
             };
         } else if (this.isCompoundSelection()) {
-            this.resizeStartBounds = this.getMultiBounds();
+            resizeStartBounds = this.getMultiBounds();
+            if (!resizeStartBounds) return;
             for (const idx of this.selectedStrokes) {
                 const stroke = this.drawingEngine.strokes[idx];
                 if (stroke) {
@@ -1859,11 +1882,17 @@ class SelectionManager {
                             this.textManager.normalizeTextObjectScale(textObj);
                         }
                         const bounds = this.getTextObjectBounds(idx);
+                        if (!bounds) continue;
                         this.multiTextResizeStart.push({ idx, x: textObj.x, y: textObj.y, width: bounds.width, height: bounds.height, fontSize: textObj.fontSize });
                     }
                 }
             }
         }
+
+        this.isResizing = true;
+        this.resizeHandle = handle;
+        this.resizeStartPos = resizeStartPos;
+        this.resizeStartBounds = resizeStartBounds;
     }
     
     resize(e) {
@@ -1871,9 +1900,9 @@ class SelectionManager {
         if (!this.isCompoundSelection() && this.selectionType !== 'background' && this.selectedIndex === null) return;
         
         const pos = this.getClientPos(e);
-        const canvasScale = this.getCanvasScale();
-        const deltaX = (pos.x - this.resizeStartPos.x) / canvasScale;
-        const deltaY = (pos.y - this.resizeStartPos.y) / canvasScale;
+        const { scaleX, scaleY } = this.getCanvasScales();
+        const deltaX = (pos.x - this.resizeStartPos.x) / scaleX;
+        const deltaY = (pos.y - this.resizeStartPos.y) / scaleY;
         
         const startBounds = this.resizeStartBounds;
         let newBounds = { ...startBounds };
@@ -2077,9 +2106,12 @@ class SelectionManager {
     startRotate(e) {
         if (this.isCoordinateSelection()) return;
         if (!this.isCompoundSelection() && this.selectionType !== 'background' && this.selectedIndex === null) return;
-        
+
+        const center = this.getControlBoxScreenCenter();
+        if (!center) return;
+
         this.isRotating = true;
-        
+
         if (this.selectionType === 'stroke') {
             const stroke = this.drawingEngine.strokes[this.selectedIndex];
             this.rotateStartRotation = stroke.rotation || 0;
@@ -2130,10 +2162,7 @@ class SelectionManager {
                 }
             }
         }
-        
-        const center = this.getControlBoxScreenCenter();
-        if (!center) return;
-        
+
         const pos = this.getClientPos(e);
         this.rotateStartAngle = Math.atan2(pos.y - center.y, pos.x - center.x) * 180 / Math.PI;
     }

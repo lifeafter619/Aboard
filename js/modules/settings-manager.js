@@ -571,6 +571,13 @@ class SettingsManager {
     }
     
     switchTab(tabName) {
+        const nextTab = document.querySelector(`.settings-tab-icon[data-tab="${tabName}"]`);
+        const nextPanel = document.getElementById(`${tabName}-settings`);
+        if (!nextTab || !nextPanel) {
+            console.warn(`Settings tab is unavailable: ${tabName}`);
+            return false;
+        }
+
         document.querySelectorAll('.settings-tab-icon').forEach(tab => {
             tab.classList.remove('active');
         });
@@ -578,13 +585,6 @@ class SettingsManager {
         document.querySelectorAll('.settings-tab-content').forEach(content => {
             content.classList.remove('active');
         });
-        
-        const nextTab = document.querySelector(`.settings-tab-icon[data-tab="${tabName}"]`);
-        const nextPanel = document.getElementById(`${tabName}-settings`);
-        if (!nextTab || !nextPanel) {
-            console.warn(`Settings tab is unavailable: ${tabName}`);
-            return false;
-        }
         nextTab.classList.add('active');
         nextPanel.classList.add('active');
         return true;

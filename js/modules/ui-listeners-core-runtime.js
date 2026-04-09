@@ -29,12 +29,13 @@ function setupToolConfigListeners() {
         
         document.querySelectorAll('.color-btn[data-color]').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.drawingEngine.setColor(e.target.dataset.color);
+                const targetButton = e.currentTarget;
+                this.drawingEngine.setColor(targetButton.dataset.color);
                 document.querySelectorAll('.color-btn[data-color]').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+                targetButton.classList.add('active');
                 const shapeColorPicker = document.getElementById('shape-custom-color-picker');
                 if (shapeColorPicker) {
-                    shapeColorPicker.value = e.target.dataset.color;
+                    shapeColorPicker.value = targetButton.dataset.color;
                 }
                 syncGenericColorAccessibility();
             });

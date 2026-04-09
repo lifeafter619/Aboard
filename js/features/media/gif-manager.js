@@ -426,7 +426,10 @@ export class GifManager {
     let startTop;
 
     const onDown = (e) => {
-      if (e.target.closest('.gif-controls') || e.target.closest('.gif-resize-handle')) return;
+      const closest = typeof e.target?.closest === 'function'
+        ? e.target.closest.bind(e.target)
+        : () => null;
+      if (closest('.gif-controls') || closest('.gif-resize-handle')) return;
       isDragging = true;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;

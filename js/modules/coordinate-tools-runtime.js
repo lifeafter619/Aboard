@@ -111,6 +111,7 @@ function createCoordinatePlotRangeRowMarkup(segment = {}, coordinateType = this.
 }
 
 function handleCoordinatePlotListClick(e) {
+    if (typeof e.target?.closest !== 'function') return;
     const actionButton = e.target.closest('[data-plot-toggle-edit], [data-plot-save], [data-plot-cancel], [data-plot-remove], [data-plot-add-segment], [data-plot-range-remove]');
     if (!actionButton) return;
 

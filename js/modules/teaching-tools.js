@@ -667,8 +667,12 @@ class TeachingToolsManager {
             touchMove: (e) => this.handleTouchMove(e),
             touchEnd: (e) => this.handleTouchEnd(e),
             click: (e) => {
-                if (!e.target.closest('#teaching-tools-modal') &&
-                    !e.target.closest('.teaching-tool-overlay')) {
+                const target = e.target;
+                const closest = typeof target?.closest === 'function'
+                    ? target.closest.bind(target)
+                    : () => null;
+                if (!closest('#teaching-tools-modal') &&
+                    !closest('.teaching-tool-overlay')) {
                     this.deselectTool();
                 }
             }
@@ -1088,6 +1092,10 @@ class TeachingToolsManager {
     }
     
     setupToolOverlayEvents(tool, overlay) {
+        const getEventTargetClosest = (target) => typeof target?.closest === 'function'
+            ? target.closest.bind(target)
+            : () => null;
+
         // Prevent default touch behavior
         overlay.addEventListener('touchstart', (e) => {
             // For set squares, check if touch is in the free-drawing area (bottom-right)
@@ -1123,9 +1131,10 @@ class TeachingToolsManager {
                 };
             } else if (e.touches.length === 1) {
                 // Single finger - only drag, don't select for editing
-                if (!e.target.closest('.teaching-tool-resize-handle') &&
-                    !e.target.closest('.teaching-tool-rotate-handle') &&
-                    !e.target.closest('.teaching-tool-delete-btn')) {
+                const closest = getEventTargetClosest(e.target);
+                if (!closest('.teaching-tool-resize-handle') &&
+                    !closest('.teaching-tool-rotate-handle') &&
+                    !closest('.teaching-tool-delete-btn')) {
                     
                     this.isDragging = true;
                     this.isInteracting = true;
@@ -1159,9 +1168,10 @@ class TeachingToolsManager {
             }
             
             // If clicking on control handles, only allow if tool is selected
-            if (e.target.closest('.teaching-tool-resize-handle') ||
-                e.target.closest('.teaching-tool-rotate-handle') ||
-                e.target.closest('.teaching-tool-delete-btn')) {
+            const closest = getEventTargetClosest(e.target);
+            if (closest('.teaching-tool-resize-handle') ||
+                closest('.teaching-tool-rotate-handle') ||
+                closest('.teaching-tool-delete-btn')) {
                 // Only allow if this tool is already selected
                 if (this.selectedTool !== tool) {
                     e.preventDefault();

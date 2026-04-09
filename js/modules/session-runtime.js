@@ -261,7 +261,17 @@ function syncSettingsUI(settings) {
 async function clearSessionData() {
         try {
             await this.storageManager.clearSession();
+        } catch (e) {
+            console.warn('Failed to clear persistent session:', e);
+        }
+
+        try {
             this.storageManager.clearSessionSizeEstimate();
+        } catch (e) {
+            console.warn('Failed to clear session size estimate:', e);
+        }
+
+        try {
             // Also clear legacy localStorage data to be clean
             localStorage.removeItem('savedCanvasData');
             localStorage.removeItem('savedBgCanvasData');
@@ -270,7 +280,7 @@ async function clearSessionData() {
             localStorage.removeItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot');
             localStorage.removeItem(SESSION_RUNTIME_PLANNED_UPDATE_RELOAD_KEY);
         } catch (e) {
-            console.warn('Failed to clear session:', e);
+            console.warn('Failed to clear local session snapshot:', e);
         }
     
 }

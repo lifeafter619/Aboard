@@ -987,14 +987,14 @@ class PWAManager {
             return Promise.resolve(UPDATE_USER_CHOICES.IDLE);
         }
 
+        if (this.updateModalPromise) {
+            return this.updateModalPromise;
+        }
+
         this.ensureUpdateModal();
         this.updateModalContext = { reason, currentVersion, latestVersion };
         this.refreshUpdateModalContent();
         this.updateModal.classList.add('show');
-
-        if (this.updateModalPromise) {
-            return this.updateModalPromise;
-        }
 
         this.updateModalPromise = new Promise((resolve) => {
             this.updateModalResolver = (choice) => {

@@ -601,12 +601,13 @@ class InsertTextManager {
         // Color Picking
         document.querySelectorAll('#insert-text-modal .color-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const color = e.target.dataset.textColor;
+                const targetButton = e.currentTarget;
+                const color = targetButton.dataset.textColor;
                 this.updateColor(color);
 
                 // Update active state
                 document.querySelectorAll('#insert-text-modal .color-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+                targetButton.classList.add('active');
 
                 // Deactivate custom picker visual
                 const customLabel = document.querySelector('label[for="insert-text-custom-color"]');
@@ -635,11 +636,18 @@ class InsertTextManager {
         // Overlay Events
         const handleDragStart = (e) => {
             e.stopPropagation();
-            if (e.target === this.controlBox || e.target.closest('#insert-text-box') === this.controlBox) {
+            const target = e.target;
+            const closest = typeof target?.closest === 'function'
+                ? target.closest.bind(target)
+                : () => null;
+            const hasClass = (className) => Boolean(target?.classList?.contains?.(className));
+            if (target === this.controlBox || closest('#insert-text-box') === this.controlBox) {
                 // Ignore touches on handles or toolbar buttons
-                if (!e.target.classList.contains('resize-handle') &&
-                    !e.target.classList.contains('rotate-handle') &&
-                    !e.target.closest('.text-controls-toolbar')) {
+                if (!hasClass('resize-handle') &&
+                    !hasClass('rotate-handle') &&
+                    !closest('.resize-handle') &&
+                    !closest('.rotate-handle') &&
+                    !closest('.text-controls-toolbar')) {
                     this.startDrag(e);
                 }
             }
@@ -752,7 +760,10 @@ class InsertTextManager {
 
         // Reset active color to black
         document.querySelectorAll('#insert-text-modal .color-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector('.color-btn[data-text-color="#000000"]').classList.add('active');
+        const defaultColorBtn = document.querySelector('#insert-text-modal .color-btn[data-text-color="#000000"]');
+        if (defaultColorBtn) {
+            defaultColorBtn.classList.add('active');
+        }
         const customLabel = document.querySelector('label[for="insert-text-custom-color"]');
         if (customLabel) customLabel.classList.remove('active');
         this.updateTextColorButtonLabels();
@@ -1347,10 +1358,15 @@ class InsertTextManager {
         return { x: e.clientX, y: e.clientY };
     }
 
-    getCanvasScale() {
+    getCanvasScales() {
         const rect = this.canvas.getBoundingClientRect();
-        const logicalWidth = this.canvas.width / window.devicePixelRatio;
-        return rect.width / logicalWidth;
+        const dpr = window.devicePixelRatio || 1;
+        const logicalWidth = this.canvas.width / dpr;
+        const logicalHeight = this.canvas.height / dpr;
+        return {
+            scaleX: rect.width / logicalWidth,
+            scaleY: rect.height / logicalHeight
+        };
     }
 
     clamp(value, min, max) {
@@ -1452,10 +1468,10 @@ class InsertTextManager {
 
     drag(e) {
         const pos = this.getClientPos(e);
-        const scale = this.getCanvasScale();
+        const { scaleX, scaleY } = this.getCanvasScales();
 
-        const dx = (pos.x - this.dragStartPos.x) / scale;
-        const dy = (pos.y - this.dragStartPos.y) / scale;
+        const dx = (pos.x - this.dragStartPos.x) / scaleX;
+        const dy = (pos.y - this.dragStartPos.y) / scaleY;
 
         this.textPosition.x = this.dragStartTextPos.x + dx;
         this.textPosition.y = this.dragStartTextPos.y + dy;
@@ -1477,10 +1493,10 @@ class InsertTextManager {
 
     resize(e) {
         const pos = this.getClientPos(e);
-        const scale = this.getCanvasScale(); // Screen pixels per Logical unit
+        const { scaleX, scaleY } = this.getCanvasScales(); // Screen pixels per Logical unit
 
-        const dy = (pos.y - this.resizeStartPos.y) / scale;
-        const dx = (pos.x - this.resizeStartPos.x) / scale;
+        const dy = (pos.y - this.resizeStartPos.y) / scaleY;
+        const dx = (pos.x - this.resizeStartPos.x) / scaleX;
 
         let change = 0;
         if (this.resizeHandle.includes('right') || this.resizeHandle.includes('bottom')) {

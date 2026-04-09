@@ -20,6 +20,8 @@ verification_*.png
 # Test artifacts
 test-results/
 *.test.gif
+.edge-profile/
+.playwright-browsers/
 
 # OS files
 .DS_Store

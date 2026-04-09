@@ -332,7 +332,10 @@ class TimerInstance {
         const handleStart = (e) => {
             if (typeof e.button === 'number' && e.button !== 0) return;
             // Don't start dragging if clicking on interactive elements
-            if (e.target.closest('button') || e.target.closest('input')) return;
+            const closest = typeof e.target?.closest === 'function'
+                ? e.target.closest.bind(e.target)
+                : () => null;
+            if (closest('button') || closest('input')) return;
             
             e.stopPropagation(); // Prevent drawing on canvas
 
@@ -1189,12 +1192,16 @@ class TimerManager {
             
             // Add click handler for selecting
             btn.addEventListener('click', (e) => {
-                if (e.target.closest('.sound-preview-btn') || e.target.closest('.sound-delete-btn')) {
+                const closest = typeof e.target?.closest === 'function'
+                    ? e.target.closest.bind(e.target)
+                    : () => null;
+                if (closest('.sound-preview-btn') || closest('.sound-delete-btn')) {
                     return;
                 }
                 
                 document.querySelectorAll('.sound-preset-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
+                this.updateMainPreviewButtonState();
             });
             
             // Add preview button handler
@@ -1213,6 +1220,8 @@ class TimerManager {
             
             container.appendChild(btn);
         });
+
+        this.updateMainPreviewButtonState();
     }
     
     setupEventListeners() {
@@ -1264,8 +1273,12 @@ class TimerManager {
         // Sound preset buttons
         document.querySelectorAll('.sound-preset-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                if (e.target.classList.contains('sound-preview-btn') || 
-                    e.target.closest('.sound-preview-btn')) {
+                const closest = typeof e.target?.closest === 'function'
+                    ? e.target.closest.bind(e.target)
+                    : () => null;
+                const hasClass = (className) => Boolean(e.target?.classList?.contains?.(className));
+                if (hasClass('sound-preview-btn') || 
+                    closest('.sound-preview-btn')) {
                     return; // Let the preview button handle it
                 }
                 
@@ -1581,14 +1594,13 @@ class TimerManager {
     }
 
     setActiveTimerMode(mode) {
-        document.querySelectorAll('.timer-mode-btn').forEach(b => b.classList.remove('active'));
-
         const modeButton = document.querySelector(`.timer-mode-btn[data-mode="${mode}"]`);
         if (!modeButton) {
             console.warn(`Timer mode button is unavailable: ${mode}`);
             return false;
         }
 
+        document.querySelectorAll('.timer-mode-btn').forEach(b => b.classList.remove('active'));
         modeButton.classList.add('active');
         return true;
     }

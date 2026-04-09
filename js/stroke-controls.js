@@ -83,11 +83,16 @@ class StrokeControls {
         const handleDragStart = (e) => {
             e.stopPropagation();
             e.preventDefault?.();
-            if (e.target === this.controlBox || e.target.closest('.image-controls-box') === this.controlBox) {
-                if (!e.target.classList.contains('resize-handle') && 
-                    !e.target.closest('.resize-handle') &&
-                    !e.target.closest('.rotate-handle') &&
-                    !e.target.closest('.image-controls-toolbar')) {
+            const target = e.target;
+            const closest = typeof target?.closest === 'function'
+                ? target.closest.bind(target)
+                : () => null;
+            const hasClass = (className) => Boolean(target?.classList?.contains?.(className));
+            if (target === this.controlBox || closest('.image-controls-box') === this.controlBox) {
+                if (!hasClass('resize-handle') && 
+                    !closest('.resize-handle') &&
+                    !closest('.rotate-handle') &&
+                    !closest('.image-controls-toolbar')) {
                     this.startDrag(e);
                 }
             }
@@ -256,13 +261,13 @@ class StrokeControls {
         if (!bounds) return;
         
         const rect = this.canvas.getBoundingClientRect();
-        const canvasScale = this.getCanvasScale();
+        const { scaleX, scaleY } = this.getCanvasScales();
         
         // Calculate actual position and size accounting for canvas transform
-        const actualX = rect.left + (bounds.x * canvasScale);
-        const actualY = rect.top + (bounds.y * canvasScale);
-        const actualWidth = bounds.width * canvasScale;
-        const actualHeight = bounds.height * canvasScale;
+        const actualX = rect.left + (bounds.x * scaleX);
+        const actualY = rect.top + (bounds.y * scaleY);
+        const actualWidth = bounds.width * scaleX;
+        const actualHeight = bounds.height * scaleY;
         
         this.controlBox.style.left = `${actualX}px`;
         this.controlBox.style.top = `${actualY}px`;
@@ -273,15 +278,24 @@ class StrokeControls {
 
         this.updateAdaptiveControlsLayout(actualWidth, actualHeight);
     }
+
+    getClientPos(e) {
+        if (e.touches && e.touches.length > 0) {
+            return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+        return { x: e.clientX, y: e.clientY };
+    }
     
     startDrag(e) {
         if (this.currentStrokeIndex === null) return;
+
+        const stroke = this.drawingEngine.strokes[this.currentStrokeIndex];
+        if (!stroke) return;
+        const bounds = this.drawingEngine.getStrokeBounds(stroke);
+        if (!bounds) return;
         
         this.isDragging = true;
-        this.dragStartPos = { x: e.clientX, y: e.clientY };
-        
-        const stroke = this.drawingEngine.strokes[this.currentStrokeIndex];
-        const bounds = this.drawingEngine.getStrokeBounds(stroke);
+        this.dragStartPos = this.getClientPos(e);
         this.dragStartStrokePos = { x: bounds.x, y: bounds.y };
         
         this.controlBox.style.cursor = 'grabbing';
@@ -293,13 +307,14 @@ class StrokeControls {
         const stroke = this.drawingEngine.strokes[this.currentStrokeIndex];
         if (!stroke) return;
         
-        const canvasScale = this.getCanvasScale();
-        const deltaX = (e.clientX - this.dragStartPos.x) / canvasScale;
-        const deltaY = (e.clientY - this.dragStartPos.y) / canvasScale;
+        const { scaleX, scaleY } = this.getCanvasScales();
+        const pos = this.getClientPos(e);
+        const deltaX = (pos.x - this.dragStartPos.x) / scaleX;
+        const deltaY = (pos.y - this.dragStartPos.y) / scaleY;
         
         // Move all points in the stroke
         for (let point of stroke.points) {
-            if (!point.originalX) {
+            if (point.originalX === undefined || point.originalY === undefined) {
                 point.originalX = point.x;
                 point.originalY = point.y;
             }
@@ -331,13 +346,16 @@ class StrokeControls {
     
     startResize(e, handle) {
         if (this.currentStrokeIndex === null) return;
+
+        const stroke = this.drawingEngine.strokes[this.currentStrokeIndex];
+        if (!stroke) return;
+        const resizeStartBounds = this.drawingEngine.getStrokeBounds(stroke);
+        if (!resizeStartBounds) return;
         
         this.isResizing = true;
         this.resizeHandle = handle;
-        this.resizeStartPos = { x: e.clientX, y: e.clientY };
-        
-        const stroke = this.drawingEngine.strokes[this.currentStrokeIndex];
-        this.resizeStartBounds = this.drawingEngine.getStrokeBounds(stroke);
+        this.resizeStartPos = this.getClientPos(e);
+        this.resizeStartBounds = resizeStartBounds;
         
         // Store original positions
         for (let point of stroke.points) {
@@ -352,9 +370,10 @@ class StrokeControls {
         const stroke = this.drawingEngine.strokes[this.currentStrokeIndex];
         if (!stroke || !this.resizeStartBounds) return;
         
-        const canvasScale = this.getCanvasScale();
-        const deltaX = (e.clientX - this.resizeStartPos.x) / canvasScale;
-        const deltaY = (e.clientY - this.resizeStartPos.y) / canvasScale;
+        const { scaleX: screenScaleX, scaleY: screenScaleY } = this.getCanvasScales();
+        const pos = this.getClientPos(e);
+        const deltaX = (pos.x - this.resizeStartPos.x) / screenScaleX;
+        const deltaY = (pos.y - this.resizeStartPos.y) / screenScaleY;
         
         const startBounds = this.resizeStartBounds;
         let newBounds = { ...startBounds };
@@ -397,10 +416,6 @@ class StrokeControls {
                 break;
         }
         
-        // Scale all points in the stroke
-        const scaleX = newBounds.width / startBounds.width;
-        const scaleY = newBounds.height / startBounds.height;
-        
         for (let point of stroke.points) {
             if (point.originalX !== undefined && point.originalY !== undefined) {
                 const relX = (point.originalX - startBounds.x) / startBounds.width;
@@ -436,27 +451,30 @@ class StrokeControls {
     // 旋转相关方法
     startRotate(e) {
         if (this.currentStrokeIndex === null) return;
-        
-        this.isRotating = true;
+
         const stroke = this.drawingEngine.strokes[this.currentStrokeIndex];
-        if (stroke) {
-            const rect = this.controlBox.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            
-            this.rotateStartAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
-            this.rotateStartRotation = stroke.rotation || 0;
-            
-            // Store original bounds at start of rotation to preserve dimensions
-            if (!stroke.originalBounds) {
-                stroke.originalBounds = this.drawingEngine.getStrokeBounds(stroke);
-            }
-            
-            // Store original positions for all points
-            for (let point of stroke.points) {
-                point.originalX = point.x;
-                point.originalY = point.y;
-            }
+        if (!stroke) return;
+        const bounds = this.drawingEngine.getStrokeBounds(stroke);
+        if (!bounds) return;
+
+        this.isRotating = true;
+        const rect = this.controlBox.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const pos = this.getClientPos(e);
+        
+        this.rotateStartAngle = Math.atan2(pos.y - centerY, pos.x - centerX) * 180 / Math.PI;
+        this.rotateStartRotation = stroke.rotation || 0;
+        
+        // Store original bounds at start of rotation to preserve dimensions
+        if (!stroke.originalBounds) {
+            stroke.originalBounds = bounds;
+        }
+        
+        // Store original positions for all points
+        for (let point of stroke.points) {
+            point.originalX = point.x;
+            point.originalY = point.y;
         }
     }
     
@@ -469,8 +487,9 @@ class StrokeControls {
         const rect = this.controlBox.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
+        const pos = this.getClientPos(e);
         
-        const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+        const currentAngle = Math.atan2(pos.y - centerY, pos.x - centerX) * 180 / Math.PI;
         const angleDelta = currentAngle - this.rotateStartAngle;
         
         // Update rotation angle only - do not modify width/height
@@ -524,11 +543,12 @@ class StrokeControls {
         }
     }
     
-    getCanvasScale() {
-        // Helper method to get canvas transform scale
-        const computedStyle = window.getComputedStyle(this.canvas);
-        const matrix = new DOMMatrix(computedStyle.transform);
-        return matrix.a || 1;
+    getCanvasScales() {
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+            scaleX: rect.width / (this.canvas.offsetWidth || rect.width || 1),
+            scaleY: rect.height / (this.canvas.offsetHeight || rect.height || 1)
+        };
     }
     
     redrawCanvas() {

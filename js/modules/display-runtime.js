@@ -53,7 +53,6 @@ function toggleFullscreen() {
             Promise.resolve(rootElement.requestFullscreen()).catch(err => {
                 console.error(`Error attempting to enable fullscreen: ${err.message}`);
             });
-            updateFullscreenButtonState(this, true);
             return true;
         }
         if (typeof document.exitFullscreen !== 'function') {
@@ -63,7 +62,6 @@ function toggleFullscreen() {
         Promise.resolve(document.exitFullscreen()).catch(err => {
             console.error(`Error attempting to exit fullscreen: ${err.message}`);
         });
-        updateFullscreenButtonState(this, false);
         return true;
     
 }

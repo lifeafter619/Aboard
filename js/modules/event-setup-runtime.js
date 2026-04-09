@@ -14,6 +14,12 @@ function getLazyFeatureLabel(key, fallback) {
         return translated && translated !== key ? translated : fallback;
 }
 
+function getEventTargetClosest(target) {
+        return typeof target?.closest === 'function'
+            ? target.closest.bind(target)
+            : () => null;
+}
+
 function setupEventListeners() {
         // Canvas drawing events - use Pointer Events for unified Mouse/Touch/Pen support
         // Track all pointers for multi-touch gesture detection (pinch zoom)
@@ -38,45 +44,45 @@ function setupEventListeners() {
             // If pinching, don't start drawing
             if (this.isPinching) return;
 
+            const closest = getEventTargetClosest(e.target);
+
             // Skip if clicking on UI elements (except canvas)
-            if (e.target && e.target.closest) {
             // 如果正在编辑笔迹，点击工具栏或属性栏时自动保存
                 if (this.strokeControls.isActive && 
-                    (e.target.closest('#toolbar') || e.target.closest('#config-area'))) {
+                    (closest('#toolbar') || closest('#config-area'))) {
                     this.strokeControls.hideControls();
                     if (this.historyManager) {
                         this.historyManager.saveState();
                     }
                 }
                 
-                if (e.target.closest('#toolbar') || 
-                    e.target.closest('#config-area') || 
-                    e.target.closest('#history-controls') || 
-                    e.target.closest('#pagination-controls') ||
-                    e.target.closest('#time-display-area') ||
-                    e.target.closest('#time-display') ||
-                    e.target.closest('#feature-area') ||
-                    e.target.closest('.modal') ||
-                    e.target.closest('.timer-display-widget') ||
-                    e.target.closest('.random-picker-widget') ||
-                    e.target.closest('.scoreboard-widget') ||
-                    e.target.closest('.feature-widget') ||
-                    e.target.closest('.canvas-image-selection') ||
-                    e.target.closest('.time-fullscreen-modal') ||
-                    e.target.closest('.timer-fullscreen-modal') ||
-                    e.target.closest('#time-display-settings-modal') ||
-                    e.target.closest('#timer-settings-modal') ||
-                    e.target.closest('#selection-controls-overlay') ||
-                    e.target.closest('#insert-image-overlay') ||
-                    e.target.closest('#image-controls-overlay') ||
-                    e.target.closest('input[type="range"]')) {
+                if (closest('#toolbar') || 
+                    closest('#config-area') || 
+                    closest('#history-controls') || 
+                    closest('#pagination-controls') ||
+                    closest('#time-display-area') ||
+                    closest('#time-display') ||
+                    closest('#feature-area') ||
+                    closest('.modal') ||
+                    closest('.timer-display-widget') ||
+                    closest('.random-picker-widget') ||
+                    closest('.scoreboard-widget') ||
+                    closest('.feature-widget') ||
+                    closest('.canvas-image-selection') ||
+                    closest('.time-fullscreen-modal') ||
+                    closest('.timer-fullscreen-modal') ||
+                    closest('#time-display-settings-modal') ||
+                    closest('#timer-settings-modal') ||
+                    closest('#selection-controls-overlay') ||
+                    closest('#insert-image-overlay') ||
+                    closest('#image-controls-overlay') ||
+                    closest('input[type="range"]')) {
                     return;
                 }
-            }
             
             // 如果正在使用选择工具并且点击在选择控件内，不要触发新的选择
             if (this.selectionManager && this.selectionManager.hasSelection()) {
-                if (e.target.closest('#selection-controls-overlay')) {
+                if (closest('#selection-controls-overlay')) {
                     return;
                 }
             }
@@ -88,7 +94,7 @@ function setupEventListeners() {
                 const y = e.clientY - rect.top;
                 
                 // Check if clicking inside the stroke controls overlay
-                if (!e.target.closest('#stroke-controls-overlay')) {
+                if (!closest('#stroke-controls-overlay')) {
                     // Clicking outside the stroke controls, save and switch to pen
                     this.strokeControls.hideControls();
                     if (this.historyManager) {
@@ -215,7 +221,8 @@ function setupEventListeners() {
             }
 
             // Explicitly check if target is a feature widget part (double protection)
-            if (e.target.closest('.feature-widget') || e.target.closest('#feature-area')) {
+            const closest = getEventTargetClosest(e.target);
+            if (closest('.feature-widget') || closest('#feature-area')) {
                 return;
             }
             
