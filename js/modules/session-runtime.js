@@ -12,13 +12,47 @@ function showRecoveryModal() {
         if (!modal) return;
         const restoreBtn = document.getElementById('recovery-restore-btn');
         const discardBtn = document.getElementById('recovery-discard-btn');
+        const scheduleFrame = typeof window.requestAnimationFrame === 'function'
+            ? window.requestAnimationFrame.bind(window)
+            : (callback) => callback();
+        const restoreFocusTarget = document.activeElement && document.activeElement !== document.body
+            ? document.activeElement
+            : null;
+        let isClosed = false;
+
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-labelledby', 'recovery-title');
+        modal.setAttribute('aria-describedby', 'recovery-message');
+        modal.tabIndex = -1;
 
         const setPendingState = (isPending) => {
             if (restoreBtn) restoreBtn.disabled = isPending;
             if (discardBtn) discardBtn.disabled = isPending;
         };
+
+        const closeModal = () => {
+            if (isClosed) {
+                return;
+            }
+            isClosed = true;
+            modal.classList.remove('show');
+            scheduleFrame(() => {
+                restoreFocusTarget?.focus?.();
+            });
+        };
         
         modal.classList.add('show');
+        scheduleFrame(() => {
+            (restoreBtn || discardBtn || modal)?.focus?.();
+        });
+
+        modal.onkeydown = (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeModal();
+            }
+        };
 
         if (restoreBtn) {
             restoreBtn.onclick = async () => {
@@ -26,7 +60,7 @@ function showRecoveryModal() {
                 const restored = await this.restoreSession();
                 setPendingState(false);
                 if (restored) {
-                    modal.classList.remove('show');
+                    closeModal();
                     return;
                 }
                 window.appDialog?.showAlert?.(getRecoveryFailureMessage(), 'error');
@@ -38,7 +72,7 @@ function showRecoveryModal() {
                 setPendingState(true);
                 await this.clearSessionData();
                 setPendingState(false);
-                modal.classList.remove('show');
+                closeModal();
             };
         }
     

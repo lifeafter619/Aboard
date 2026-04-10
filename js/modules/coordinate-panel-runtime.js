@@ -1,11 +1,56 @@
+function scheduleCoordinatePanelFrame(callback) {
+    if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(callback);
+        return;
+    }
+    callback();
+}
+
+function getCoordinateFocusTarget() {
+    return document.activeElement && document.activeElement !== document.body
+        ? document.activeElement
+        : null;
+}
+
+function restoreCoordinateFocus(board, propertyName) {
+    const restoreFocusTarget = board[propertyName];
+    board[propertyName] = null;
+    scheduleCoordinatePanelFrame(() => {
+        restoreFocusTarget?.focus?.();
+    });
+}
+
+function ensureCoordinateModalAccessibility(modal, labelledBy, describedBy) {
+    if (!modal) {
+        return;
+    }
+
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', labelledBy);
+    if (describedBy) {
+        modal.setAttribute('aria-describedby', describedBy);
+    } else {
+        modal.removeAttribute('aria-describedby');
+    }
+    modal.tabIndex = -1;
+}
+
 function toggleCoordinateSettingsPanel(board, force) {
     const supportsCoordinateTools = board.backgroundManager.supportsMovableOrigin(board.backgroundManager.backgroundPattern);
+    const wasVisible = !!board.isCoordinateSettingsExpanded;
     board.isCoordinateSettingsExpanded = supportsCoordinateTools && (typeof force === 'boolean'
         ? force
         : !board.isCoordinateSettingsExpanded);
 
     const modal = document.getElementById('coordinate-tools-modal');
     const toggleBtn = document.getElementById('coordinate-settings-toggle-btn');
+    const closeBtn = document.getElementById('coordinate-tools-modal-close-btn');
+    const firstToggle = document.getElementById('coordinate-show-ticks');
+    ensureCoordinateModalAccessibility(modal, 'coordinate-tools-title', 'coordinate-tools-group');
+    if (board.isCoordinateSettingsExpanded && !wasVisible) {
+        board.coordinateSettingsPreviouslyFocusedElement = getCoordinateFocusTarget();
+    }
     if (modal) {
         modal.classList.toggle('show', board.isCoordinateSettingsExpanded);
     }
@@ -18,17 +63,32 @@ function toggleCoordinateSettingsPanel(board, force) {
         toggleCoordinateInputPanel(board, false);
     }
 
+    if (board.isCoordinateSettingsExpanded) {
+        scheduleCoordinatePanelFrame(() => {
+            (closeBtn || firstToggle || modal)?.focus?.();
+        });
+    } else if (wasVisible) {
+        restoreCoordinateFocus(board, 'coordinateSettingsPreviouslyFocusedElement');
+    }
+
     board.updateBackgroundUI();
 }
 
 function toggleCoordinatePointPanel(board, force) {
     const supportsCoordinateTools = board.backgroundManager.supportsMovableOrigin(board.backgroundManager.backgroundPattern);
+    const wasVisible = !!board.isCoordinatePointPanelVisible;
     board.isCoordinatePointPanelVisible = supportsCoordinateTools && (typeof force === 'boolean'
         ? force
         : !board.isCoordinatePointPanelVisible);
 
     const modal = document.getElementById('coordinate-point-modal');
     const toggleBtn = document.getElementById('coordinate-point-toggle-btn');
+    const closeBtn = document.getElementById('coordinate-point-modal-close-btn');
+    const primaryBtn = document.getElementById('coordinate-add-point-btn');
+    ensureCoordinateModalAccessibility(modal, 'coordinate-point-title');
+    if (board.isCoordinatePointPanelVisible && !wasVisible) {
+        board.coordinatePointPreviouslyFocusedElement = getCoordinateFocusTarget();
+    }
     if (modal) {
         modal.classList.toggle('show', board.isCoordinatePointPanelVisible);
     }
@@ -38,11 +98,18 @@ function toggleCoordinatePointPanel(board, force) {
     }
 
     if (board.isCoordinatePointPanelVisible) {
-        requestAnimationFrame(() => board.positionCoordinatePointPanel());
+        scheduleCoordinatePanelFrame(() => {
+            board.positionCoordinatePointPanel?.();
+            (primaryBtn || closeBtn || modal)?.focus?.();
+        });
     }
 
     if (!board.isCoordinatePointPanelVisible) {
         toggleCoordinateInputPanel(board, false);
+    }
+
+    if (!board.isCoordinatePointPanelVisible && wasVisible) {
+        restoreCoordinateFocus(board, 'coordinatePointPreviouslyFocusedElement');
     }
 
     board.updateBackgroundUI();
@@ -50,12 +117,19 @@ function toggleCoordinatePointPanel(board, force) {
 
 function toggleCoordinateInputPanel(board, force) {
     const supportsCoordinateTools = board.backgroundManager.supportsMovableOrigin(board.backgroundManager.backgroundPattern);
+    const wasVisible = !!board.isCoordinateInputPanelVisible;
     board.isCoordinateInputPanelVisible = supportsCoordinateTools && board.isCoordinatePointPanelVisible && (typeof force === 'boolean'
         ? force
         : !board.isCoordinateInputPanelVisible);
 
     const keypadModal = document.getElementById('coordinate-keypad-modal');
     const keypadToggleBtn = document.getElementById('coordinate-keypad-toggle-btn');
+    const closeBtn = document.getElementById('coordinate-keypad-modal-close-btn');
+    const firstActionBtn = keypadModal?.querySelector('.coordinate-keypad-btn');
+    ensureCoordinateModalAccessibility(keypadModal, 'coordinate-keypad-title', 'coordinate-keypad-expression-display');
+    if (board.isCoordinateInputPanelVisible && !wasVisible) {
+        board.coordinateKeypadPreviouslyFocusedElement = getCoordinateFocusTarget();
+    }
 
     if (keypadModal) {
         keypadModal.classList.toggle('show', board.isCoordinateInputPanelVisible);
@@ -69,6 +143,16 @@ function toggleCoordinateInputPanel(board, force) {
     if (board.isCoordinateInputPanelVisible) {
         syncCoordinateInputPanelButtons(board);
         board.syncCoordinateExpressionDisplay();
+        scheduleCoordinatePanelFrame(() => {
+            (firstActionBtn || closeBtn || keypadModal)?.focus?.();
+        });
+    } else if (wasVisible) {
+        if (board.coordinateKeypadSuppressFocusRestore) {
+            board.coordinateKeypadSuppressFocusRestore = false;
+            board.coordinateKeypadPreviouslyFocusedElement = null;
+        } else {
+            restoreCoordinateFocus(board, 'coordinateKeypadPreviouslyFocusedElement');
+        }
     }
 }
 

@@ -129,9 +129,11 @@ class PWAManager {
         this.updateModalResolver = null;
         this.updateModalPromise = null;
         this.updateModalContext = null;
+        this.updateModalPreviouslyFocusedElement = null;
         this.version = null;
         this.latestAvailableVersion = null;
         this.announcementVersionRow = null;
+        this.checkUpdateBtn = null;
 
         // Local Translations
         this.translations = {
@@ -893,6 +895,7 @@ class PWAManager {
         const modal = document.createElement('div');
         modal.id = 'pwa-update-modal';
         modal.className = 'modal';
+        modal.tabIndex = -1;
 
         const content = document.createElement('div');
         content.className = 'modal-content confirm-modal-content';
@@ -913,12 +916,14 @@ class PWAManager {
         footer.className = 'confirm-buttons';
 
         const laterBtn = document.createElement('button');
+        laterBtn.type = 'button';
         laterBtn.className = 'confirm-btn cancel-btn';
         laterBtn.addEventListener('click', () => {
             this.resolveUpdateModalChoice(UPDATE_USER_CHOICES.IDLE);
         });
 
         const updateBtn = document.createElement('button');
+        updateBtn.type = 'button';
         updateBtn.className = 'confirm-btn ok-btn';
         updateBtn.addEventListener('click', () => {
             this.resolveUpdateModalChoice(UPDATE_USER_CHOICES.IMMEDIATE);
@@ -933,6 +938,12 @@ class PWAManager {
         modal.appendChild(content);
         modal.addEventListener('click', (event) => {
             if (event.target === modal) {
+                this.resolveUpdateModalChoice(UPDATE_USER_CHOICES.IDLE);
+            }
+        });
+        modal.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
                 this.resolveUpdateModalChoice(UPDATE_USER_CHOICES.IDLE);
             }
         });
@@ -968,10 +979,10 @@ class PWAManager {
             this.updateModalMessage.textContent = message;
         }
         if (this.updateModalUpdateBtn) {
-            this.updateModalUpdateBtn.textContent = this.getTranslation('update');
+            this.syncButtonText(this.updateModalUpdateBtn, this.getTranslation('update'));
         }
         if (this.updateModalLaterBtn) {
-            this.updateModalLaterBtn.textContent = this.getTranslation('updateLater');
+            this.syncButtonText(this.updateModalLaterBtn, this.getTranslation('updateLater'));
         }
         const preferredChoice = this.getPreferredUpdateChoice();
         if (this.updateModalUpdateBtn && this.updateModalLaterBtn) {
@@ -992,9 +1003,24 @@ class PWAManager {
         }
 
         this.ensureUpdateModal();
+        this.updateModalPreviouslyFocusedElement = document.activeElement && document.activeElement !== document.body
+            ? document.activeElement
+            : null;
         this.updateModalContext = { reason, currentVersion, latestVersion };
         this.refreshUpdateModalContent();
         this.updateModal.classList.add('show');
+        const focusPreferredButton = () => {
+            const preferredChoice = this.getPreferredUpdateChoice();
+            const preferredButton = preferredChoice === UPDATE_USER_CHOICES.IMMEDIATE
+                ? this.updateModalUpdateBtn
+                : this.updateModalLaterBtn;
+            preferredButton?.focus?.();
+        };
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(focusPreferredButton);
+        } else {
+            focusPreferredButton();
+        }
 
         this.updateModalPromise = new Promise((resolve) => {
             this.updateModalResolver = (choice) => {
@@ -1017,6 +1043,16 @@ class PWAManager {
 
         this.updateModal?.classList.remove('show');
         this.updateModalContext = null;
+        const restoreFocusTarget = this.updateModalPreviouslyFocusedElement;
+        this.updateModalPreviouslyFocusedElement = null;
+        const restoreFocus = () => {
+            restoreFocusTarget?.focus?.();
+        };
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(restoreFocus);
+        } else {
+            restoreFocus();
+        }
 
         const resolver = this.updateModalResolver;
         this.updateModalResolver = null;
@@ -1137,6 +1173,7 @@ class PWAManager {
             this.statusIndicator = statusIndicator;
             this.statusText = statusText;
             this.installBtn = installBtn;
+            this.checkUpdateBtn = checkUpdateBtn;
 
             this.updateOnlineStatus();
         }
@@ -1217,10 +1254,31 @@ class PWAManager {
         element.style.flexShrink = '0';
     }
 
+    syncButtonText(button, text) {
+        if (!button) {
+            return;
+        }
+        button.textContent = text;
+        button.title = text;
+        button.setAttribute('aria-label', text);
+    }
+
+    setActionButtonBusy(button, isBusy, text) {
+        if (!button) {
+            return;
+        }
+        button.disabled = Boolean(isBusy);
+        button.setAttribute('aria-disabled', String(Boolean(isBusy)));
+        button.setAttribute('aria-busy', String(Boolean(isBusy)));
+        button.style.opacity = isBusy ? '0.7' : '1';
+        button.style.cursor = isBusy ? 'wait' : 'pointer';
+        this.syncButtonText(button, text);
+    }
+
     createButton(id, text, onClick) {
         const btn = document.createElement('button');
         btn.id = id;
-        btn.textContent = text;
+        btn.type = 'button';
         btn.style.padding = '6px 12px';
         btn.style.backgroundColor = 'var(--theme-color, #007AFF)';
         btn.style.color = 'white';
@@ -1229,6 +1287,7 @@ class PWAManager {
         btn.style.cursor = 'pointer';
         btn.style.fontSize = '13px';
 
+        this.syncButtonText(btn, text);
         btn.addEventListener('click', onClick);
         return btn;
     }
@@ -1280,9 +1339,8 @@ class PWAManager {
         // Update Settings UI
         if (this.statusText) this.statusText.textContent = statusState;
 
-        if (this.installBtn) this.installBtn.textContent = this.getTranslation('install');
-        const checkUpdateBtn = document.getElementById('pwa-check-update-btn');
-        if (checkUpdateBtn) checkUpdateBtn.textContent = this.getTranslation('checkUpdate');
+        this.syncButtonText(this.installBtn, this.getTranslation('install'));
+        this.syncButtonText(this.checkUpdateBtn || document.getElementById('pwa-check-update-btn'), this.getTranslation('checkUpdate'));
 
         const statusTitle = document.querySelector('[data-pwa-status-title="true"]');
         if (statusTitle) {
@@ -1291,7 +1349,7 @@ class PWAManager {
 
         // Update Announcement UI
         if (this.announcementStatusText) this.announcementStatusText.textContent = statusText;
-        if (this.announcementInstallBtn) this.announcementInstallBtn.textContent = this.getTranslation('install');
+        this.syncButtonText(this.announcementInstallBtn, this.getTranslation('install'));
 
         this.updateVersionDisplays();
 
@@ -1331,16 +1389,14 @@ class PWAManager {
     }
 
     async checkForUpdates(manual = false) {
-        const checkUpdateBtn = document.getElementById('pwa-check-update-btn');
+        const checkUpdateBtn = this.checkUpdateBtn || document.getElementById('pwa-check-update-btn');
         if (manual && checkUpdateBtn) {
-            checkUpdateBtn.disabled = true;
-            checkUpdateBtn.textContent = this.getTranslation('checking');
+            this.setActionButtonBusy(checkUpdateBtn, true, this.getTranslation('checking'));
         }
 
         const finishCheck = () => {
             if (checkUpdateBtn) {
-                checkUpdateBtn.disabled = false;
-                checkUpdateBtn.textContent = this.getTranslation('checkUpdate');
+                this.setActionButtonBusy(checkUpdateBtn, false, this.getTranslation('checkUpdate'));
             }
         };
         const toastManager = window.drawingBoard?.settingsManager?.toastManager || null;

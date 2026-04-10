@@ -32,6 +32,7 @@ class ExportManager {
         this.bgCanvas = bgCanvas;
         this.drawingBoard = drawingBoard;
         this.exportModal = null;
+        this.previouslyFocusedElement = null;
         this.handleLocaleChanged = () => {
             this.refreshTranslations();
         };
@@ -64,11 +65,11 @@ class ExportManager {
         const confirmLabel = getExportText('common.export', 'Export');
 
         const modalHTML = `
-            <div id="export-modal" class="modal">
+            <div id="export-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="export-modal-title" tabindex="-1">
                 <div class="modal-content export-modal-content">
                     <div class="modal-header">
                         <h2 id="export-modal-title">${title}</h2>
-                        <button id="export-close-btn" class="modal-close-btn" data-i18n-title="common.close" title="${closeTitle}" aria-label="${closeTitle}">
+                        <button id="export-close-btn" type="button" class="modal-close-btn" data-i18n-title="common.close" title="${closeTitle}" aria-label="${closeTitle}">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -78,8 +79,8 @@ class ExportManager {
                     <div class="modal-body">
                         <!-- Tabs -->
                         <div class="export-tab-nav">
-                            <button id="export-tab-image-btn" class="export-tab-btn active" data-tab="image">${imageTab}</button>
-                            <button id="export-tab-project-btn" class="export-tab-btn" data-tab="project">${projectTab}</button>
+                            <button id="export-tab-image-btn" type="button" class="export-tab-btn active" data-tab="image">${imageTab}</button>
+                            <button id="export-tab-project-btn" type="button" class="export-tab-btn" data-tab="project">${projectTab}</button>
                         </div>
 
                         <!-- Image Export Tab -->
@@ -88,9 +89,9 @@ class ExportManager {
                                 <div class="export-group">
                                     <label id="export-image-scope-label">${scopeLabel}</label>
                                     <div class="button-size-options button-size-options-3">
-                                        <button id="export-image-scope-current-btn" class="export-scope-btn active" data-scope="current">${currentPage}</button>
-                                        <button id="export-image-scope-all-btn" class="export-scope-btn" data-scope="all">${allPages}</button>
-                                        <button id="export-image-scope-specific-btn" class="export-scope-btn" data-scope="specific">${specificPages}</button>
+                                        <button id="export-image-scope-current-btn" type="button" class="export-scope-btn active" data-scope="current">${currentPage}</button>
+                                        <button id="export-image-scope-all-btn" type="button" class="export-scope-btn" data-scope="all">${allPages}</button>
+                                        <button id="export-image-scope-specific-btn" type="button" class="export-scope-btn" data-scope="specific">${specificPages}</button>
                                     </div>
                                 </div>
                                 <div class="export-group page-selection-group" style="display: none;">
@@ -100,8 +101,8 @@ class ExportManager {
                                 <div class="export-group">
                                     <label id="export-image-format-label">${imageFormat}</label>
                                     <div class="button-size-options button-size-options-2">
-                                        <button class="export-format-btn active" data-format="png">PNG</button>
-                                        <button class="export-format-btn" data-format="jpeg">JPEG</button>
+                                        <button type="button" class="export-format-btn active" data-format="png">PNG</button>
+                                        <button type="button" class="export-format-btn" data-format="jpeg">JPEG</button>
                                     </div>
                                 </div>
                                 <div class="export-group" id="jpeg-quality-group" style="display: none;">
@@ -117,9 +118,9 @@ class ExportManager {
                                 <div class="export-group">
                                     <label id="export-project-scope-label">${scopeLabel}</label>
                                     <div class="button-size-options button-size-options-3">
-                                        <button id="export-project-scope-current-btn" class="export-project-scope-btn active" data-scope="current">${currentPage}</button>
-                                        <button id="export-project-scope-all-btn" class="export-project-scope-btn" data-scope="all">${allPages}</button>
-                                        <button id="export-project-scope-specific-btn" class="export-project-scope-btn" data-scope="specific">${specificPages}</button>
+                                        <button id="export-project-scope-current-btn" type="button" class="export-project-scope-btn active" data-scope="current">${currentPage}</button>
+                                        <button id="export-project-scope-all-btn" type="button" class="export-project-scope-btn" data-scope="all">${allPages}</button>
+                                        <button id="export-project-scope-specific-btn" type="button" class="export-project-scope-btn" data-scope="specific">${specificPages}</button>
                                     </div>
                                 </div>
                                 <div class="export-group project-page-selection-group" style="display: none;">
@@ -142,8 +143,8 @@ class ExportManager {
                                 <p class="export-hint" id="export-filename-hint" style="display: none;">${filenameHint}</p>
                             </div>
                             <div class="export-actions">
-                                <button id="export-cancel-btn" class="button-secondary">${cancelLabel}</button>
-                                <button id="export-confirm-btn" class="button-primary">
+                                <button id="export-cancel-btn" type="button" class="button-secondary">${cancelLabel}</button>
+                                <button id="export-confirm-btn" type="button" class="button-primary">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 5px;">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                         <polyline points="7 10 12 15 17 10"></polyline>
@@ -312,6 +313,13 @@ class ExportManager {
                 this.closeModal();
             }
         });
+
+        this.exportModal.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                this.closeModal();
+            }
+        });
     }
     
     updateUIForScope(scope, type) {
@@ -367,6 +375,7 @@ class ExportManager {
         for (let i = 0; i < pageCount; i++) {
             const pageNum = i + 1;
             const button = document.createElement('button');
+            button.type = 'button';
             button.className = 'page-selection-btn';
             button.dataset.pageNum = pageNum;
             button.textContent = pageNum;
@@ -447,6 +456,9 @@ class ExportManager {
     
     showModal() {
         this.refreshTranslations();
+        this.previouslyFocusedElement = document.activeElement && document.activeElement !== document.body
+            ? document.activeElement
+            : null;
 
         // Set default filename with timestamp in user's current timezone
         const now = new Date();
@@ -484,10 +496,28 @@ class ExportManager {
         this.updateUIForScope('current', 'project');
         
         this.exportModal.classList.add('show');
+        const focusCloseButton = () => {
+            document.getElementById('export-close-btn')?.focus?.();
+        };
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(focusCloseButton);
+        } else {
+            focusCloseButton();
+        }
     }
     
     closeModal() {
         this.exportModal.classList.remove('show');
+        const restoreFocusTarget = this.previouslyFocusedElement;
+        this.previouslyFocusedElement = null;
+        const restoreFocus = () => {
+            restoreFocusTarget?.focus?.();
+        };
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(restoreFocus);
+        } else {
+            restoreFocus();
+        }
     }
 
     sleep(ms) {
@@ -609,6 +639,13 @@ class ExportManager {
         const format = getActiveExportFormat();
         const filename = document.getElementById('export-filename').value || 'aboard-export';
         const quality = parseInt(document.getElementById('export-quality-slider').value, 10) / 100;
+        if (scope === 'specific') {
+            const selectedButtons = document.querySelectorAll('.page-selection-group .page-selection-buttons .page-selection-btn.selected');
+            if (selectedButtons.length === 0) {
+                window.appDialog?.showAlert(getExportText('export.selectAtLeastOnePage', 'Please select at least one page to export'), 'warning');
+                return;
+            }
+        }
 
         this.closeModal();
 

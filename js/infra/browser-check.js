@@ -39,6 +39,12 @@ export class BrowserCheck {
     if (doc.getElementById('browser-check-overlay')) {
       return;
     }
+    const restoreFocusTarget = doc.activeElement && doc.activeElement !== doc.body
+      ? doc.activeElement
+      : null;
+    const scheduleFrame = typeof win.requestAnimationFrame === 'function'
+      ? win.requestAnimationFrame.bind(win)
+      : (callback) => callback();
 
     const overlay = doc.createElement('div');
     overlay.id = 'browser-check-overlay';
@@ -91,9 +97,14 @@ export class BrowserCheck {
     dismissButton.dataset.browserCheckDismiss = 'true';
     dismissButton.style.cssText = 'padding:10px 20px;cursor:pointer;background:#007AFF;border:none;border-radius:5px;color:white;font-weight:bold;';
     dismissButton.textContent = this.getText(win, 'browserCheck.continueAnyway', 'Continue anyway');
+    dismissButton.title = dismissButton.textContent;
+    dismissButton.setAttribute('aria-label', dismissButton.textContent);
 
     const close = () => {
       overlay.remove();
+      scheduleFrame(() => {
+        restoreFocusTarget?.focus?.();
+      });
     };
 
     dismissButton.addEventListener('click', close);
@@ -111,7 +122,7 @@ export class BrowserCheck {
     panel.appendChild(dismissButton);
     overlay.appendChild(panel);
     doc.body.appendChild(overlay);
-    win.requestAnimationFrame?.(() => {
+    scheduleFrame(() => {
       dismissButton.focus();
     });
   }

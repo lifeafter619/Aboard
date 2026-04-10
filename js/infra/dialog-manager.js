@@ -3,6 +3,7 @@ export class DialogManager {
     this.win = win;
     this.doc = doc;
     this.confirmModal = null;
+    this.confirmModalKeydownHandler = null;
   }
 
   getText(key, fallback) {
@@ -130,15 +131,41 @@ export class DialogManager {
     modal.querySelector('#app-confirm-ok-btn').setAttribute('aria-label', okText);
 
     return new Promise((resolve) => {
+      const restoreFocusTarget = this.doc.activeElement && this.doc.activeElement !== this.doc.body
+        ? this.doc.activeElement
+        : null;
+      let isClosed = false;
+      const cancelledResult = config.returnDetails
+        ? { confirmed: false, selectedValues: [], inputValue: null }
+        : false;
       const close = (result) => {
+        if (isClosed) {
+          return;
+        }
+        isClosed = true;
         modal.classList.remove('show');
         modal.querySelector('#app-confirm-cancel-btn').onclick = null;
         modal.querySelector('#app-confirm-ok-btn').onclick = null;
         modal.onclick = null;
+        if (this.confirmModalKeydownHandler) {
+          modal.removeEventListener('keydown', this.confirmModalKeydownHandler);
+          this.confirmModalKeydownHandler = null;
+        }
+        if (inputElement) {
+          inputElement.onkeydown = null;
+        }
+        const restoreFocus = () => {
+          restoreFocusTarget?.focus?.();
+        };
+        if (typeof this.win.requestAnimationFrame === 'function') {
+          this.win.requestAnimationFrame(restoreFocus);
+        } else {
+          restoreFocus();
+        }
         resolve(result);
       };
       modal.querySelector('#app-confirm-cancel-btn').onclick = () => {
-        close(config.returnDetails ? { confirmed: false, selectedValues: [], inputValue: null } : false);
+        close(cancelledResult);
       };
       modal.querySelector('#app-confirm-ok-btn').onclick = () => {
         const selectedValues = Array.from(optionsContainer.querySelectorAll('input[type="checkbox"]:checked'))
@@ -179,9 +206,16 @@ export class DialogManager {
       };
       modal.onclick = (e) => {
         if (e.target === modal) {
-          close(config.returnDetails ? { confirmed: false, selectedValues: [], inputValue: null } : false);
+          close(cancelledResult);
         }
       };
+      this.confirmModalKeydownHandler = (event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          close(cancelledResult);
+        }
+      };
+      modal.addEventListener('keydown', this.confirmModalKeydownHandler);
       modal.classList.add('show');
       if (inputElement) {
         inputElement.onkeydown = (event) => {
@@ -190,10 +224,24 @@ export class DialogManager {
             modal.querySelector('#app-confirm-ok-btn')?.click();
           }
         };
-        this.win.requestAnimationFrame?.(() => {
+        const focusInput = () => {
           inputElement?.focus();
           inputElement?.select?.();
-        });
+        };
+        if (typeof this.win.requestAnimationFrame === 'function') {
+          this.win.requestAnimationFrame(focusInput);
+        } else {
+          focusInput();
+        }
+      } else {
+        const focusCancelButton = () => {
+          modal.querySelector('#app-confirm-cancel-btn')?.focus?.();
+        };
+        if (typeof this.win.requestAnimationFrame === 'function') {
+          this.win.requestAnimationFrame(focusCancelButton);
+        } else {
+          focusCancelButton();
+        }
       }
     });
   }

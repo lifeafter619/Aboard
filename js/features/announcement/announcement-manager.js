@@ -7,6 +7,7 @@ export class AnnouncementManager {
     this.contentElement = this.doc.getElementById('announcement-content');
     this.okButton = this.doc.getElementById('announcement-ok-btn');
     this.noShowButton = this.doc.getElementById('announcement-no-show-btn');
+    this.previouslyFocusedElement = null;
 
     this.setupEventListeners();
 
@@ -26,6 +27,14 @@ export class AnnouncementManager {
   }
 
   setupEventListeners() {
+    if (this.modal) {
+      this.modal.setAttribute('role', 'dialog');
+      this.modal.setAttribute('aria-modal', 'true');
+      this.modal.setAttribute('aria-labelledby', 'announcement-title');
+      this.modal.setAttribute('aria-describedby', 'announcement-content');
+      this.modal.tabIndex = -1;
+    }
+
     this.okButton?.addEventListener('click', () => {
       this.closeModal();
     });
@@ -37,6 +46,13 @@ export class AnnouncementManager {
 
     this.modal?.addEventListener('click', (e) => {
       if (e.target === this.modal) {
+        this.closeModal();
+      }
+    });
+
+    this.modal?.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
         this.closeModal();
       }
     });
@@ -52,6 +68,10 @@ export class AnnouncementManager {
 
   showModal() {
     if (!this.win.i18n || !this.modal || !this.titleElement || !this.contentElement) return;
+
+    this.previouslyFocusedElement = this.doc.activeElement && this.doc.activeElement !== this.doc.body
+      ? this.doc.activeElement
+      : null;
 
     if (this.win.drawingBoard?.syncResizableModalState) {
       this.win.drawingBoard.syncResizableModalState('announcement-modal');
@@ -76,10 +96,23 @@ export class AnnouncementManager {
     }
 
     this.modal.classList.add('show');
+    const focusTarget = this.okButton || this.modal;
+    if (typeof this.win.requestAnimationFrame === 'function') {
+      this.win.requestAnimationFrame(() => focusTarget?.focus?.());
+    } else {
+      focusTarget?.focus?.();
+    }
   }
 
   closeModal() {
+    const restoreFocusTarget = this.previouslyFocusedElement;
+    this.previouslyFocusedElement = null;
     this.modal?.classList?.remove('show');
+    if (typeof this.win.requestAnimationFrame === 'function') {
+      this.win.requestAnimationFrame(() => restoreFocusTarget?.focus?.());
+    } else {
+      restoreFocusTarget?.focus?.();
+    }
   }
 
   updateSettingsContent() {

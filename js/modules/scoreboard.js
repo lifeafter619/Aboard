@@ -16,6 +16,35 @@ function getActiveScoreboardInstance() {
     return window.__activeScoreboardModalInstance || null;
 }
 
+function scheduleScoreboardFrame(win = window) {
+    return typeof win.requestAnimationFrame === 'function'
+        ? win.requestAnimationFrame.bind(win)
+        : (callback) => callback();
+}
+
+function getScoreboardFocusableElement(doc = document) {
+    return doc.activeElement && doc.activeElement !== doc.body
+        ? doc.activeElement
+        : null;
+}
+
+function showScoreboardDialog(instance, modal, focusTarget) {
+    instance.scoreboardModalPreviouslyFocusedElement = getScoreboardFocusableElement();
+    modal.classList.add('show');
+    scheduleScoreboardFrame()(() => {
+        focusTarget?.focus?.();
+    });
+}
+
+function closeScoreboardDialog(instance, modal) {
+    modal.classList.remove('show');
+    const restoreFocusTarget = instance.scoreboardModalPreviouslyFocusedElement;
+    instance.scoreboardModalPreviouslyFocusedElement = null;
+    scheduleScoreboardFrame()(() => {
+        restoreFocusTarget?.focus?.();
+    });
+}
+
 class ScoreboardInstance {
     constructor(id, manager, config = {}) {
         this.id = id;
@@ -57,6 +86,7 @@ class ScoreboardInstance {
         this.localeChangeHandler = null;
         this.dragMoveHandler = null;
         this.dragEndHandler = null;
+        this.scoreboardModalPreviouslyFocusedElement = null;
 
         this.createElement();
     }
@@ -492,16 +522,21 @@ class ScoreboardInstance {
             modal = document.createElement('div');
             modal.id = modalId;
             modal.className = 'modal';
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
+            modal.setAttribute('aria-labelledby', 'scoreboard-reset-title');
+            modal.setAttribute('aria-describedby', 'scoreboard-reset-message');
+            modal.tabIndex = -1;
             modal.innerHTML = `
                 <div class="modal-content confirm-modal-content">
                     <div class="modal-header">
-                        <h2>${window.i18n.t('scoreboard.title')}</h2>
+                        <h2 id="scoreboard-reset-title">${window.i18n.t('scoreboard.title')}</h2>
                     </div>
                     <div class="modal-body">
-                        <p class="confirm-message">${window.i18n.t('scoreboard.confirmReset')}</p>
+                        <p id="scoreboard-reset-message" class="confirm-message">${window.i18n.t('scoreboard.confirmReset')}</p>
                         <div class="confirm-buttons">
-                            <button class="confirm-btn cancel-btn">${window.i18n.t('common.cancel')}</button>
-                            <button class="confirm-btn ok-btn">${window.i18n.t('common.confirm')}</button>
+                            <button type="button" class="confirm-btn cancel-btn">${window.i18n.t('common.cancel')}</button>
+                            <button type="button" class="confirm-btn ok-btn">${window.i18n.t('common.confirm')}</button>
                         </div>
                     </div>
                 </div>
@@ -513,17 +548,23 @@ class ScoreboardInstance {
             const okBtn = modal.querySelector('.ok-btn');
 
             cancelBtn.addEventListener('click', () => {
-                modal.classList.remove('show');
+                closeScoreboardDialog(getActiveScoreboardInstance() || this, modal);
             });
 
             okBtn.addEventListener('click', () => {
                 getActiveScoreboardInstance()?.resetScores?.();
-                modal.classList.remove('show');
+                closeScoreboardDialog(getActiveScoreboardInstance() || this, modal);
             });
 
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
-                    modal.classList.remove('show');
+                    closeScoreboardDialog(getActiveScoreboardInstance() || this, modal);
+                }
+            });
+            modal.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeScoreboardDialog(getActiveScoreboardInstance() || this, modal);
                 }
             });
         } else {
@@ -536,7 +577,7 @@ class ScoreboardInstance {
 
         window.__activeScoreboardModalInstance = this;
 
-        modal.classList.add('show');
+        showScoreboardDialog(this, modal, modal.querySelector('.cancel-btn') || modal);
     }
 
     showRemoveTeamConfirmation(index) {
@@ -551,16 +592,21 @@ class ScoreboardInstance {
             modal = document.createElement('div');
             modal.id = modalId;
             modal.className = 'modal';
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
+            modal.setAttribute('aria-labelledby', 'scoreboard-remove-title');
+            modal.setAttribute('aria-describedby', 'scoreboard-remove-message');
+            modal.tabIndex = -1;
             modal.innerHTML = `
                 <div class="modal-content confirm-modal-content">
                     <div class="modal-header">
-                        <h2>${window.i18n.t('scoreboard.title')}</h2>
+                        <h2 id="scoreboard-remove-title">${window.i18n.t('scoreboard.title')}</h2>
                     </div>
                     <div class="modal-body">
-                        <p class="confirm-message">${window.i18n.t('scoreboard.confirmRemoveTeam')}</p>
+                        <p id="scoreboard-remove-message" class="confirm-message">${window.i18n.t('scoreboard.confirmRemoveTeam')}</p>
                         <div class="confirm-buttons">
-                            <button class="confirm-btn cancel-btn">${window.i18n.t('common.cancel')}</button>
-                            <button class="confirm-btn ok-btn">${window.i18n.t('common.confirm')}</button>
+                            <button type="button" class="confirm-btn cancel-btn">${window.i18n.t('common.cancel')}</button>
+                            <button type="button" class="confirm-btn ok-btn">${window.i18n.t('common.confirm')}</button>
                         </div>
                     </div>
                 </div>
@@ -571,7 +617,7 @@ class ScoreboardInstance {
             const okBtn = modal.querySelector('.ok-btn');
 
             cancelBtn.addEventListener('click', () => {
-                modal.classList.remove('show');
+                closeScoreboardDialog(getActiveScoreboardInstance() || this, modal);
             });
 
             // Store the listener function so we can remove it if we wanted to be perfectly clean,
@@ -583,12 +629,18 @@ class ScoreboardInstance {
                 if (activeInstance && !isNaN(pendingIndex)) {
                     activeInstance.removeTeam(pendingIndex);
                 }
-                modal.classList.remove('show');
+                closeScoreboardDialog(getActiveScoreboardInstance() || this, modal);
             });
 
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
-                    modal.classList.remove('show');
+                    closeScoreboardDialog(getActiveScoreboardInstance() || this, modal);
+                }
+            });
+            modal.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeScoreboardDialog(getActiveScoreboardInstance() || this, modal);
                 }
             });
         } else {
@@ -601,7 +653,7 @@ class ScoreboardInstance {
 
         window.__activeScoreboardModalInstance = this;
         modal.dataset.pendingIndex = index;
-        modal.classList.add('show');
+        showScoreboardDialog(this, modal, modal.querySelector('.cancel-btn') || modal);
     }
 
     destroy() {

@@ -542,38 +542,78 @@ function setupBackgroundToolConfigListeners() {
         // Background GIF settings button
         const gifSettingsBtn = document.getElementById('bg-gif-settings-btn');
         const gifSettingsModal = document.getElementById('gif-settings-modal');
+        const gifSettingsInput = document.getElementById('gif-loop-count-input');
+        const gifSettingsCloseBtn = document.getElementById('gif-settings-close-btn');
+        const gifSettingsCancelBtn = document.getElementById('gif-settings-cancel-btn');
+        const scheduleModalFrame = typeof window.requestAnimationFrame === 'function'
+            ? window.requestAnimationFrame.bind(window)
+            : (callback) => callback();
+        const closeGifSettingsModal = () => {
+            if (!gifSettingsModal) {
+                return;
+            }
+            gifSettingsModal.classList.remove('show');
+            const restoreFocusTarget = this.gifSettingsPreviouslyFocusedElement;
+            this.gifSettingsPreviouslyFocusedElement = null;
+            scheduleModalFrame(() => {
+                restoreFocusTarget?.focus?.();
+            });
+        };
+        if (gifSettingsModal) {
+            gifSettingsModal.setAttribute('role', 'dialog');
+            gifSettingsModal.setAttribute('aria-modal', 'true');
+            gifSettingsModal.setAttribute('aria-labelledby', 'gif-settings-title');
+            gifSettingsModal.setAttribute('aria-describedby', 'gif-loop-count-input');
+            gifSettingsModal.tabIndex = -1;
+            if (gifSettingsModal.dataset.keyboardBindingsInitialized !== 'true') {
+                gifSettingsModal.dataset.keyboardBindingsInitialized = 'true';
+                gifSettingsModal.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        closeGifSettingsModal();
+                    }
+                });
+                gifSettingsModal.addEventListener('click', (event) => {
+                    if (event.target === gifSettingsModal) {
+                        closeGifSettingsModal();
+                    }
+                });
+            }
+        }
         if (gifSettingsBtn && gifSettingsModal) {
             gifSettingsBtn.addEventListener('click', () => {
-                const input = document.getElementById('gif-loop-count-input');
-                if (input) {
-                    input.value = this.backgroundManager.gifLoopCount;
+                this.gifSettingsPreviouslyFocusedElement = document.activeElement && document.activeElement !== document.body
+                    ? document.activeElement
+                    : null;
+                if (gifSettingsInput) {
+                    gifSettingsInput.value = this.backgroundManager.gifLoopCount;
                 }
                 gifSettingsModal.classList.add('show');
+                scheduleModalFrame(() => {
+                    (gifSettingsInput || gifSettingsCloseBtn || gifSettingsModal)?.focus?.();
+                });
             });
         }
 
-        const gifSettingsCancelBtn = document.getElementById('gif-settings-cancel-btn');
         if (gifSettingsCancelBtn && gifSettingsModal) {
             gifSettingsCancelBtn.addEventListener('click', () => {
-                gifSettingsModal.classList.remove('show');
+                closeGifSettingsModal();
             });
         }
 
         const gifSettingsOkBtn = document.getElementById('gif-settings-ok-btn');
         if (gifSettingsOkBtn && gifSettingsModal) {
             gifSettingsOkBtn.addEventListener('click', () => {
-                const input = document.getElementById('gif-loop-count-input');
-                if (input) {
-                    this.backgroundManager.setGifLoopCount(parseInt(input.value));
+                if (gifSettingsInput) {
+                    this.backgroundManager.setGifLoopCount(parseInt(gifSettingsInput.value));
                 }
-                gifSettingsModal.classList.remove('show');
+                closeGifSettingsModal();
             });
         }
 
-        const gifSettingsCloseBtn = document.getElementById('gif-settings-close-btn');
         if (gifSettingsCloseBtn && gifSettingsModal) {
             gifSettingsCloseBtn.addEventListener('click', () => {
-                gifSettingsModal.classList.remove('show');
+                closeGifSettingsModal();
             });
         }
 
@@ -654,11 +694,25 @@ function setupBackgroundToolConfigListeners() {
         const coordinateToolsModalCloseBtn = document.getElementById('coordinate-tools-modal-close-btn');
         const coordinateToolsModalOkBtn = document.getElementById('coordinate-tools-modal-ok-btn');
         if (coordinateToolsModal) {
-            coordinateToolsModal.addEventListener('click', (e) => {
-                if (e.target === coordinateToolsModal) {
-                    this.toggleCoordinateSettingsPanel(false);
-                }
-            });
+            coordinateToolsModal.setAttribute('role', 'dialog');
+            coordinateToolsModal.setAttribute('aria-modal', 'true');
+            coordinateToolsModal.setAttribute('aria-labelledby', 'coordinate-tools-title');
+            coordinateToolsModal.setAttribute('aria-describedby', 'coordinate-tools-group');
+            coordinateToolsModal.tabIndex = -1;
+            if (coordinateToolsModal.dataset.keyboardBindingsInitialized !== 'true') {
+                coordinateToolsModal.dataset.keyboardBindingsInitialized = 'true';
+                coordinateToolsModal.addEventListener('click', (e) => {
+                    if (e.target === coordinateToolsModal) {
+                        this.toggleCoordinateSettingsPanel(false);
+                    }
+                });
+                coordinateToolsModal.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        this.toggleCoordinateSettingsPanel(false);
+                    }
+                });
+            }
         }
         if (coordinateToolsModalCloseBtn) {
             coordinateToolsModalCloseBtn.addEventListener('click', () => {
@@ -675,11 +729,24 @@ function setupBackgroundToolConfigListeners() {
         const coordinatePointModalCloseBtn = document.getElementById('coordinate-point-modal-close-btn');
         const coordinatePointModalOkBtn = document.getElementById('coordinate-point-modal-ok-btn');
         if (coordinatePointModal) {
-            coordinatePointModal.addEventListener('click', (e) => {
-                if (e.target === coordinatePointModal) {
-                    this.toggleCoordinatePointPanel(false);
-                }
-            });
+            coordinatePointModal.setAttribute('role', 'dialog');
+            coordinatePointModal.setAttribute('aria-modal', 'true');
+            coordinatePointModal.setAttribute('aria-labelledby', 'coordinate-point-title');
+            coordinatePointModal.tabIndex = -1;
+            if (coordinatePointModal.dataset.keyboardBindingsInitialized !== 'true') {
+                coordinatePointModal.dataset.keyboardBindingsInitialized = 'true';
+                coordinatePointModal.addEventListener('click', (e) => {
+                    if (e.target === coordinatePointModal) {
+                        this.toggleCoordinatePointPanel(false);
+                    }
+                });
+                coordinatePointModal.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        this.toggleCoordinatePointPanel(false);
+                    }
+                });
+            }
         }
         if (coordinatePointModalCloseBtn) {
             coordinatePointModalCloseBtn.addEventListener('click', () => {
@@ -779,11 +846,25 @@ function setupBackgroundToolConfigListeners() {
         const coordinateKeypadModalCloseBtn = document.getElementById('coordinate-keypad-modal-close-btn');
         const coordinateKeypadConfirmBtn = document.getElementById('coordinate-keypad-confirm-btn');
         if (coordinateKeypadModal) {
-            coordinateKeypadModal.addEventListener('click', (e) => {
-                if (e.target === coordinateKeypadModal) {
-                    this.toggleCoordinateInputPanel(false);
-                }
-            });
+            coordinateKeypadModal.setAttribute('role', 'dialog');
+            coordinateKeypadModal.setAttribute('aria-modal', 'true');
+            coordinateKeypadModal.setAttribute('aria-labelledby', 'coordinate-keypad-title');
+            coordinateKeypadModal.setAttribute('aria-describedby', 'coordinate-keypad-expression-display');
+            coordinateKeypadModal.tabIndex = -1;
+            if (coordinateKeypadModal.dataset.keyboardBindingsInitialized !== 'true') {
+                coordinateKeypadModal.dataset.keyboardBindingsInitialized = 'true';
+                coordinateKeypadModal.addEventListener('click', (e) => {
+                    if (e.target === coordinateKeypadModal) {
+                        this.toggleCoordinateInputPanel(false);
+                    }
+                });
+                coordinateKeypadModal.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        this.toggleCoordinateInputPanel(false);
+                    }
+                });
+            }
         }
         if (coordinateKeypadModalCloseBtn) {
             coordinateKeypadModalCloseBtn.addEventListener('click', () => {
@@ -793,8 +874,13 @@ function setupBackgroundToolConfigListeners() {
         if (coordinateKeypadConfirmBtn) {
             coordinateKeypadConfirmBtn.addEventListener('click', () => {
                 this.syncCoordinateExpressionDisplay();
+                this.coordinateKeypadSuppressFocusRestore = true;
                 this.toggleCoordinateInputPanel(false);
-                coordinateExpressionInput?.focus();
+                if (typeof window.requestAnimationFrame === 'function') {
+                    window.requestAnimationFrame(() => coordinateExpressionInput?.focus?.());
+                } else {
+                    coordinateExpressionInput?.focus?.();
+                }
             });
         }
 
@@ -835,6 +921,23 @@ function setupBackgroundToolConfigListeners() {
 }
 
 function setupSettingsListeners() {
+        const settingsModal = document.getElementById('settings-modal');
+        if (settingsModal) {
+            settingsModal.setAttribute('role', 'dialog');
+            settingsModal.setAttribute('aria-modal', 'true');
+            settingsModal.setAttribute('aria-labelledby', 'settings-modal-title');
+            settingsModal.tabIndex = -1;
+            if (settingsModal.dataset.keyboardBindingsInitialized !== 'true') {
+                settingsModal.dataset.keyboardBindingsInitialized = 'true';
+                settingsModal.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        this.closeSettings();
+                    }
+                });
+            }
+        }
+
         bindIfPresent(document.getElementById('settings-close-btn'), 'click', () => this.closeSettings());
         
         document.querySelectorAll('.settings-tab-icon').forEach(tab => {
@@ -1246,18 +1349,48 @@ function setupSettingsListeners() {
         
         // Confirm modal
         const confirmModal = document.getElementById('confirm-modal');
+        const scheduleUiModalFrame = typeof window.requestAnimationFrame === 'function'
+            ? window.requestAnimationFrame.bind(window)
+            : (callback) => callback();
+        const closeConfirmModal = () => {
+            if (!confirmModal) {
+                return;
+            }
+            confirmModal.classList.remove('show');
+            const restoreFocusTarget = this.confirmModalPreviouslyFocusedElement;
+            this.confirmModalPreviouslyFocusedElement = null;
+            scheduleUiModalFrame(() => {
+                restoreFocusTarget?.focus?.();
+            });
+        };
+        if (confirmModal) {
+            confirmModal.setAttribute('role', 'dialog');
+            confirmModal.setAttribute('aria-modal', 'true');
+            confirmModal.setAttribute('aria-labelledby', 'confirm-modal-title');
+            confirmModal.setAttribute('aria-describedby', 'confirm-modal-message');
+            confirmModal.tabIndex = -1;
+            if (confirmModal.dataset.keyboardBindingsInitialized !== 'true') {
+                confirmModal.dataset.keyboardBindingsInitialized = 'true';
+                confirmModal.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        closeConfirmModal();
+                    }
+                });
+            }
+        }
         bindIfPresent(document.getElementById('confirm-cancel-btn'), 'click', () => {
-            confirmModal?.classList.remove('show');
+            closeConfirmModal();
         });
         
         bindIfPresent(document.getElementById('confirm-ok-btn'), 'click', () => {
-            confirmModal?.classList.remove('show');
+            closeConfirmModal();
             this.clearCanvas(true);
         });
         
         bindIfPresent(confirmModal, 'click', (e) => {
             if (e.target.id === 'confirm-modal') {
-                confirmModal.classList.remove('show');
+                closeConfirmModal();
             }
         });
 

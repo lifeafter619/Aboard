@@ -1,6 +1,24 @@
 // Time Display Module
 // Handles the time and date display feature
 
+function scheduleTimeDisplayFrame(win = window) {
+    return typeof win.requestAnimationFrame === 'function'
+        ? win.requestAnimationFrame.bind(win)
+        : (callback) => callback();
+}
+
+function getTimeDisplayFocusableElement(doc = document) {
+    return doc.activeElement && doc.activeElement !== doc.body
+        ? doc.activeElement
+        : null;
+}
+
+function focusTimeDisplayElement(element, win = window) {
+    scheduleTimeDisplayFrame(win)(() => {
+        element?.focus?.();
+    });
+}
+
 class TimeDisplayManager {
     constructor(settingsManager) {
         this.settingsManager = settingsManager;
@@ -54,6 +72,7 @@ class TimeDisplayManager {
         this.clickTimeout = null;
         this.clickCount = 0;
         this.doubleClickDelay = 500; // Relaxed double click delay
+        this.fullscreenPreviouslyFocusedElement = null;
         
         this.applySettings();
         this.setupFullscreenListeners();
@@ -458,6 +477,16 @@ class TimeDisplayManager {
     }
     
     setupFullscreenListeners() {
+        if (this.timeFullscreenModal) {
+            this.timeFullscreenModal.setAttribute('role', 'dialog');
+            this.timeFullscreenModal.setAttribute('aria-modal', 'true');
+            this.timeFullscreenModal.tabIndex = -1;
+            this.timeFullscreenModal.setAttribute(
+                'aria-label',
+                window.i18n?.t?.('timeDisplay.fullscreenDisplay') || 'Fullscreen Time Display'
+            );
+        }
+
         // Click listener with support for single/double click modes
         if (this.timeDisplayElement) {
             this.timeDisplayElement.addEventListener('click', (e) => {
@@ -526,6 +555,7 @@ class TimeDisplayManager {
         // ESC key to exit
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.isFullscreen) {
+                e.preventDefault();
                 this.exitFullscreen();
             }
         });
@@ -544,20 +574,38 @@ class TimeDisplayManager {
             return;
         }
 
+        this.fullscreenPreviouslyFocusedElement = getTimeDisplayFocusableElement();
+        const settingsPanel = document.getElementById('time-fullscreen-settings-panel');
+        const settingsBtn = document.getElementById('time-fullscreen-settings-btn');
+        if (settingsPanel) {
+            settingsPanel.style.display = 'none';
+        }
+        settingsBtn?.classList.remove('active');
         this.isFullscreen = true;
         this.timeFullscreenModal.classList.add('show');
         this.startFullscreenUpdating();
+        focusTimeDisplayElement(document.getElementById('time-fullscreen-close-btn') || this.timeFullscreenModal);
     }
     
     exitFullscreen() {
+        const restoreFocusTarget = this.fullscreenPreviouslyFocusedElement;
+        this.fullscreenPreviouslyFocusedElement = null;
         if (!this.timeFullscreenModal) {
             this.isFullscreen = false;
+            focusTimeDisplayElement(restoreFocusTarget);
             return;
         }
 
         this.isFullscreen = false;
         this.timeFullscreenModal.classList.remove('show');
+        const settingsPanel = document.getElementById('time-fullscreen-settings-panel');
+        const settingsBtn = document.getElementById('time-fullscreen-settings-btn');
+        if (settingsPanel) {
+            settingsPanel.style.display = 'none';
+        }
+        settingsBtn?.classList.remove('active');
         this.stopFullscreenUpdating();
+        focusTimeDisplayElement(restoreFocusTarget);
     }
     
     startFullscreenUpdating() {

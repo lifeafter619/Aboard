@@ -5,9 +5,34 @@ function showConfigDiffModal(diff, newSettings) {
         const modal = document.getElementById('config-diff-modal');
         const list = document.getElementById('config-diff-list');
         const okBtn = document.getElementById('config-diff-ok-btn');
-        if (!modal || !list || !okBtn || !okBtn.parentNode) {
+        const cancelBtn = document.getElementById('config-diff-cancel-btn');
+        if (!modal || !list || !okBtn || !okBtn.parentNode || !cancelBtn) {
             return false;
         }
+        const scheduleFrame = typeof window.requestAnimationFrame === 'function'
+            ? window.requestAnimationFrame.bind(window)
+            : (callback) => callback();
+        const restoreFocusTarget = document.activeElement && document.activeElement !== document.body
+            ? document.activeElement
+            : null;
+        let isClosed = false;
+
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-labelledby', 'config-diff-title');
+        modal.setAttribute('aria-describedby', 'config-diff-description');
+        modal.tabIndex = -1;
+
+        const closeModal = () => {
+            if (isClosed) {
+                return;
+            }
+            isClosed = true;
+            modal.classList.remove('show');
+            scheduleFrame(() => {
+                restoreFocusTarget?.focus?.();
+            });
+        };
         list.innerHTML = '';
 
         if (diff.length === 0) {
@@ -190,10 +215,28 @@ function showConfigDiffModal(diff, newSettings) {
                     window.appDialog?.showAlert(successMsg, 'success');
                 }
             }
-            modal.classList.remove('show');
+            closeModal();
         });
 
+        cancelBtn.onclick = () => {
+            closeModal();
+        };
+        modal.onclick = (event) => {
+            if (event.target === modal) {
+                closeModal();
+            }
+        };
+        modal.onkeydown = (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeModal();
+            }
+        };
+
         modal.classList.add('show');
+        scheduleFrame(() => {
+            (cancelBtn || modal)?.focus?.();
+        });
         return true;
     
 }

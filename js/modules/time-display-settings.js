@@ -5,6 +5,7 @@ class TimeDisplaySettingsModal {
     constructor(timeDisplayManager) {
         this.timeDisplayManager = timeDisplayManager;
         this.modal = document.getElementById('time-display-settings-modal');
+        this.previouslyFocusedElement = null;
         this.setupEventListeners();
         this.setupSettingsControls();
         this.updateColorControlAccessibility();
@@ -42,6 +43,17 @@ class TimeDisplaySettingsModal {
     setupEventListeners() {
         // Open buttons
         const areaSettingsBtn = document.getElementById('time-display-area-settings-btn');
+        const closeBtn = document.getElementById('time-display-settings-close-btn');
+        const scheduleFrame = typeof window.requestAnimationFrame === 'function'
+            ? window.requestAnimationFrame.bind(window)
+            : (callback) => callback();
+
+        if (this.modal) {
+            this.modal.setAttribute('role', 'dialog');
+            this.modal.setAttribute('aria-modal', 'true');
+            this.modal.setAttribute('aria-labelledby', 'time-display-settings-title');
+            this.modal.tabIndex = -1;
+        }
         
         if (areaSettingsBtn) {
             areaSettingsBtn.addEventListener('click', (e) => {
@@ -51,7 +63,6 @@ class TimeDisplaySettingsModal {
         }
         
         // Close button
-        const closeBtn = document.getElementById('time-display-settings-close-btn');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => this.hide());
         }
@@ -61,6 +72,17 @@ class TimeDisplaySettingsModal {
             this.modal.addEventListener('click', (e) => {
                 if (e.target === this.modal) {
                     this.hide();
+                }
+            });
+            this.modal.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    this.hide();
+                }
+            });
+            scheduleFrame(() => {
+                if (this.modal.classList.contains('show')) {
+                    (closeBtn || this.modal)?.focus?.();
                 }
             });
         }
@@ -317,15 +339,32 @@ class TimeDisplaySettingsModal {
     
     show() {
         if (this.modal) {
+            this.previouslyFocusedElement = document.activeElement && document.activeElement !== document.body
+                ? document.activeElement
+                : null;
             window.drawingBoard?.syncResizableModalState?.('time-display-settings-modal');
             this.modal.classList.add('show');
             this.syncSettings();
+            const closeBtn = document.getElementById('time-display-settings-close-btn');
+            const focusTarget = closeBtn || this.modal;
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(() => focusTarget?.focus?.());
+            } else {
+                focusTarget?.focus?.();
+            }
         }
     }
     
     hide() {
+        const restoreFocusTarget = this.previouslyFocusedElement;
+        this.previouslyFocusedElement = null;
         if (this.modal) {
             this.modal.classList.remove('show');
+        }
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => restoreFocusTarget?.focus?.());
+        } else {
+            restoreFocusTarget?.focus?.();
         }
     }
     

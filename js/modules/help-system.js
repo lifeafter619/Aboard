@@ -22,6 +22,7 @@ class HelpSystem {
             'insert-text-modal': 'help.features.insertText',
             'line-style-modal': 'help.tools.lineStyle'
         };
+        this.helpModalPreviouslyFocusedElement = null;
 
     }
 
@@ -335,24 +336,43 @@ class HelpSystem {
         const content = window.i18n.t(key);
         const modalId = 'help-modal';
         let modal = document.getElementById(modalId);
+        const scheduleFrame = typeof window.requestAnimationFrame === 'function'
+            ? window.requestAnimationFrame.bind(window)
+            : (callback) => callback();
+        const closeModal = () => {
+            if (!modal) {
+                return;
+            }
+            modal.classList.remove('show');
+            const restoreFocusTarget = this.helpModalPreviouslyFocusedElement;
+            this.helpModalPreviouslyFocusedElement = null;
+            scheduleFrame(() => {
+                restoreFocusTarget?.focus?.();
+            });
+        };
 
         if (!modal) {
             modal = document.createElement('div');
             modal.id = modalId;
             modal.className = 'modal';
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
+            modal.setAttribute('aria-labelledby', 'help-modal-title');
+            modal.setAttribute('aria-describedby', 'help-modal-content');
+            modal.tabIndex = -1;
             // Set highest z-index to ensure help modal is always on top
             const closeLabel = window.i18n?.t('common.close') || 'Close';
             modal.style.zIndex = '99999';
             modal.innerHTML = `
                 <div class="modal-content help-modal-content">
                     <div class="modal-header">
-                        <h2>${window.i18n.t('common.help')}</h2>
+                        <h2 id="help-modal-title">${window.i18n.t('common.help')}</h2>
                         <button class="modal-close-btn" type="button" data-i18n-title="common.close" aria-label="${closeLabel}" title="${closeLabel}">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
                     <div class="modal-body">
-                        <div class="help-content"></div>
+                        <div id="help-modal-content" class="help-content"></div>
                     </div>
                 </div>
             `;
@@ -367,16 +387,29 @@ class HelpSystem {
             window.drawingBoard?.syncResizableModalState?.(modalId);
 
             modal.querySelector('.modal-close-btn').addEventListener('click', () => {
-                modal.classList.remove('show');
+                closeModal();
             });
 
             modal.addEventListener('click', (e) => {
-                if(e.target === modal) modal.classList.remove('show');
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+
+            modal.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    closeModal();
+                }
             });
         }
 
+        this.helpModalPreviouslyFocusedElement = document.activeElement && document.activeElement !== document.body
+            ? document.activeElement
+            : null;
+
         // Update title in case language changed
-        modal.querySelector('h2').textContent = window.i18n.t('common.help');
+        modal.querySelector('#help-modal-title').textContent = window.i18n.t('common.help');
         const closeBtn = modal.querySelector('.modal-close-btn');
         const closeLabel = window.i18n?.t('common.close') || 'Close';
         if (closeBtn) {
@@ -390,6 +423,9 @@ class HelpSystem {
         helpContentElement.innerHTML = formattedContent;
         helpContentElement.scrollTop = 0;
         modal.classList.add('show');
+        scheduleFrame(() => {
+            closeBtn?.focus?.();
+        });
     }
 }
 

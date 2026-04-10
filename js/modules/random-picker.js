@@ -543,6 +543,7 @@ class RandomPickerManager {
     constructor() {
         this.instances = new Map();
         this.nextId = 1;
+        this.settingsModalPreviouslyFocusedElement = null;
         this.localeChangeHandler = () => {
             this.refreshSettingsModalText();
         };
@@ -605,16 +606,42 @@ class RandomPickerManager {
         return activeModeButton.dataset.mode || fallbackMode;
     }
 
+    closeSettingsModal(clearCurrentInstance = true) {
+        const modal = this.getSettingsModal();
+        if (!modal) {
+            return false;
+        }
+
+        modal.classList.remove('show');
+        if (clearCurrentInstance) {
+            this.currentInstance = null;
+        }
+
+        const restoreFocusTarget = this.settingsModalPreviouslyFocusedElement;
+        this.settingsModalPreviouslyFocusedElement = null;
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => restoreFocusTarget?.focus?.());
+        } else {
+            restoreFocusTarget?.focus?.();
+        }
+        return true;
+    }
+
     createSettingsModal() {
         const closeLabel = getRandomPickerText('common.close', 'Close');
         const modal = document.createElement('div');
         modal.id = 'random-picker-settings-modal';
         modal.className = 'modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-labelledby', 'random-picker-settings-title');
+        modal.setAttribute('aria-describedby', 'rp-title-input');
+        modal.tabIndex = -1;
         modal.innerHTML = `
             <div class="modal-content random-picker-modal-content settings-panel-modal-content">
                 <div class="modal-header">
                     <h2 id="random-picker-settings-title">${window.i18n.t('randomPicker.settingsTitle')}</h2>
-                    <button class="modal-close-btn" title="${closeLabel}" aria-label="${closeLabel}">
+                    <button type="button" class="modal-close-btn" title="${closeLabel}" aria-label="${closeLabel}">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -623,8 +650,8 @@ class RandomPickerManager {
                 </div>
                 <div class="modal-body">
                     <div class="random-picker-mode-switch">
-                        <button class="random-picker-mode-btn active" data-mode="name">${window.i18n.t('randomPicker.modeName')}</button>
-                        <button class="random-picker-mode-btn" data-mode="number">${window.i18n.t('randomPicker.modeNumber')}</button>
+                        <button type="button" class="random-picker-mode-btn active" data-mode="name">${window.i18n.t('randomPicker.modeName')}</button>
+                        <button type="button" class="random-picker-mode-btn" data-mode="number">${window.i18n.t('randomPicker.modeNumber')}</button>
                     </div>
 
                     <div class="random-picker-input-group">
@@ -643,7 +670,7 @@ class RandomPickerManager {
                             <div style="display:flex; gap:8px; margin-bottom:5px;">
                                 <input type="text" id="rp-import-col" value="${window.i18n.t('randomPicker.defaultColumnName')}" style="width:80px;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:12px;" placeholder="${window.i18n.t('randomPicker.importColumnPlaceholder')}" aria-label="${window.i18n.t('randomPicker.importColumnPlaceholder')}">
                                 <input type="file" id="rp-import-file" accept=".xlsx, .xls, .csv" style="display:none">
-                                <button id="rp-import-btn" class="button-secondary" style="flex:1;padding:6px;font-size:12px;">${window.i18n.t('randomPicker.importBtn')}</button>
+                                <button type="button" id="rp-import-btn" class="button-secondary" style="flex:1;padding:6px;font-size:12px;">${window.i18n.t('randomPicker.importBtn')}</button>
                             </div>
                             <div class="settings-hint rp-import-hint">${window.i18n.t('randomPicker.importHint')}</div>
                         </div>
@@ -668,7 +695,7 @@ class RandomPickerManager {
                     </div>
 
                     <div class="confirm-buttons">
-                        <button class="confirm-btn ok-btn" id="rp-save-btn">${window.i18n.t('common.confirm')}</button>
+                        <button type="button" class="confirm-btn ok-btn" id="rp-save-btn">${window.i18n.t('common.confirm')}</button>
                     </div>
                 </div>
             </div>
@@ -677,7 +704,18 @@ class RandomPickerManager {
 
         // Events
         modal.querySelector('.modal-close-btn').addEventListener('click', () => {
-            modal.classList.remove('show');
+            this.closeSettingsModal();
+        });
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                this.closeSettingsModal();
+            }
+        });
+        modal.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                this.closeSettingsModal();
+            }
         });
 
         const modeBtns = modal.querySelectorAll('.random-picker-mode-btn');
@@ -949,7 +987,16 @@ class RandomPickerManager {
             maxInput.value = config.max;
         }
 
+        this.settingsModalPreviouslyFocusedElement = document.activeElement && document.activeElement !== document.body
+            ? document.activeElement
+            : null;
         modal.classList.add('show');
+        const focusTarget = titleInput || modal.querySelector('.modal-close-btn') || modal;
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => focusTarget?.focus?.());
+        } else {
+            focusTarget?.focus?.();
+        }
         return true;
     }
 
@@ -995,8 +1042,7 @@ class RandomPickerManager {
         }
 
         this.currentInstance.updateConfig(config);
-        modal.classList.remove('show');
-        this.currentInstance = null;
+        this.closeSettingsModal();
         return true;
     }
 }

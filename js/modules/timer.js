@@ -10,6 +10,24 @@ function getTimerText(key, fallback) {
     return translated && translated !== key ? translated : fallback;
 }
 
+function scheduleTimerFrame(win = window) {
+    return typeof win.requestAnimationFrame === 'function'
+        ? win.requestAnimationFrame.bind(win)
+        : (callback) => callback();
+}
+
+function getTimerFocusableElement(doc = document) {
+    return doc.activeElement && doc.activeElement !== doc.body
+        ? doc.activeElement
+        : null;
+}
+
+function focusTimerElement(element, win = window) {
+    scheduleTimerFrame(win)(() => {
+        element?.focus?.();
+    });
+}
+
 // Single Timer Instance Class
 class TimerInstance {
     constructor(options) {
@@ -73,6 +91,7 @@ class TimerInstance {
         this.isMinimal = false;
         this.fullscreenTitleFontSizePercent = 5; // percentage of viewport for title in fullscreen
         this.localeChangeHandler = null;
+        this.fullscreenPreviouslyFocusedElement = null;
 
         this.createDisplayElement();
         this.setupFullscreenModal();
@@ -96,6 +115,14 @@ class TimerInstance {
             console.warn('Timer fullscreen modal elements not found');
             return;
         }
+
+        this.fullscreenModal.setAttribute('role', 'dialog');
+        this.fullscreenModal.setAttribute('aria-modal', 'true');
+        this.fullscreenModal.tabIndex = -1;
+        this.fullscreenModal.setAttribute(
+            'aria-label',
+            getTimerText('timeDisplay.fullscreenDisplay', 'Fullscreen Display')
+        );
         
         // Set initial slider value
         this.fullscreenFontSlider.value = this.fullscreenFontSizePercent;
@@ -157,6 +184,7 @@ class TimerInstance {
         document.addEventListener('keydown', (e) => {
             const activeTimer = window.__activeTimerFullscreenInstance;
             if (e.key === 'Escape' && activeTimer?.isFullscreen) {
+                e.preventDefault();
                 activeTimer.exitFullscreen();
             }
         });
@@ -764,6 +792,7 @@ class TimerInstance {
             return;
         }
 
+        this.fullscreenPreviouslyFocusedElement = getTimerFocusableElement();
         if (window.__activeTimerFullscreenInstance && window.__activeTimerFullscreenInstance !== this) {
             window.__activeTimerFullscreenInstance.exitFullscreen();
         }
@@ -775,23 +804,41 @@ class TimerInstance {
         if (this.fullscreenTitleFontSlider) {
             this.fullscreenTitleFontSlider.value = this.fullscreenTitleFontSizePercent;
         }
+        if (this.fullscreenSettingsPanel) {
+            this.fullscreenSettingsPanel.style.display = 'none';
+        }
+        document.getElementById('timer-fullscreen-settings-btn')?.classList.remove('active');
         
         this.isFullscreen = true;
+        this.fullscreenModal.setAttribute(
+            'aria-label',
+            this.title
+                ? `${getTimerText('timeDisplay.fullscreenDisplay', 'Fullscreen Display')} · ${this.title}`
+                : getTimerText('timeDisplay.fullscreenDisplay', 'Fullscreen Display')
+        );
         this.fullscreenModal.classList.add('show');
         this.startFullscreenUpdating();
+        focusTimerElement(document.getElementById('timer-fullscreen-close-btn') || this.fullscreenModal);
     }
     
     exitFullscreen() {
         if (!this.fullscreenModal) {
             return;
         }
+        const restoreFocusTarget = this.fullscreenPreviouslyFocusedElement;
+        this.fullscreenPreviouslyFocusedElement = null;
         
         this.isFullscreen = false;
         if (window.__activeTimerFullscreenInstance === this) {
             window.__activeTimerFullscreenInstance = null;
         }
         this.fullscreenModal.classList.remove('show');
+        if (this.fullscreenSettingsPanel) {
+            this.fullscreenSettingsPanel.style.display = 'none';
+        }
+        document.getElementById('timer-fullscreen-settings-btn')?.classList.remove('active');
         this.stopFullscreenUpdating();
+        focusTimerElement(restoreFocusTarget);
     }
     
     startFullscreenUpdating() {
@@ -1013,6 +1060,8 @@ class TimerManager {
         
         // Current timer being adjusted (for adjust functionality)
         this.adjustingTimer = null;
+        this.timerSettingsPreviouslyFocusedElement = null;
+        this.timerAlertPreviouslyFocusedElement = null;
         
         // Audio preview state
         this.previewAudio = null;
@@ -1494,6 +1543,22 @@ class TimerManager {
         }
         
         // Timer settings modal close button
+        const timerSettingsModal = this.getTimerSettingsModal();
+        if (timerSettingsModal) {
+            timerSettingsModal.setAttribute('role', 'dialog');
+            timerSettingsModal.setAttribute('aria-modal', 'true');
+            timerSettingsModal.setAttribute('aria-labelledby', 'timer-settings-title');
+            timerSettingsModal.tabIndex = -1;
+            if (timerSettingsModal.dataset.keyboardBindingsInitialized !== 'true') {
+                timerSettingsModal.dataset.keyboardBindingsInitialized = 'true';
+                timerSettingsModal.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        this.hideSettingsModal();
+                    }
+                });
+            }
+        }
         const timerSettingsCloseBtn = document.getElementById('timer-settings-close-btn');
         if (timerSettingsCloseBtn) {
             timerSettingsCloseBtn.addEventListener('click', (e) => {
@@ -1503,6 +1568,23 @@ class TimerManager {
         }
         
         // Timer alert modal OK button
+        const timerAlertModal = document.getElementById('timer-alert-modal');
+        if (timerAlertModal) {
+            timerAlertModal.setAttribute('role', 'dialog');
+            timerAlertModal.setAttribute('aria-modal', 'true');
+            timerAlertModal.setAttribute('aria-labelledby', 'timer-alert-title');
+            timerAlertModal.setAttribute('aria-describedby', 'timer-alert-message');
+            timerAlertModal.tabIndex = -1;
+            if (timerAlertModal.dataset.keyboardBindingsInitialized !== 'true') {
+                timerAlertModal.dataset.keyboardBindingsInitialized = 'true';
+                timerAlertModal.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        this.hideAlertModal();
+                    }
+                });
+            }
+        }
         const timerAlertOkBtn = document.getElementById('timer-alert-ok-btn');
         if (timerAlertOkBtn) {
             timerAlertOkBtn.addEventListener('click', (e) => {
@@ -1516,16 +1598,21 @@ class TimerManager {
         const modal = document.getElementById('timer-alert-modal');
         const messageEl = document.getElementById('timer-alert-message');
         if (modal && messageEl) {
+            this.timerAlertPreviouslyFocusedElement = getTimerFocusableElement();
             messageEl.textContent = message;
             modal.classList.add('show');
+            focusTimerElement(document.getElementById('timer-alert-ok-btn') || modal);
         }
     }
     
     hideAlertModal() {
         const modal = document.getElementById('timer-alert-modal');
+        const restoreFocusTarget = this.timerAlertPreviouslyFocusedElement;
+        this.timerAlertPreviouslyFocusedElement = null;
         if (modal) {
             modal.classList.remove('show');
         }
+        focusTimerElement(restoreFocusTarget);
     }
     
     updateSoundGroupVisibility(mode) {
@@ -1632,6 +1719,7 @@ class TimerManager {
                 'timer-loop-interval'
             ]);
 
+            this.timerSettingsPreviouslyFocusedElement = getTimerFocusableElement();
             window.drawingBoard?.syncResizableModalState?.('timer-settings-modal');
             modal.classList.add('show');
             
@@ -1705,6 +1793,7 @@ class TimerManager {
 
             this.updateMainPreviewButtonState();
             this.updateMoreSettingsState();
+            focusTimerElement(hoursInput || titleInput || document.getElementById('timer-settings-close-btn') || modal);
         }
 
         return !!modal;
@@ -1737,6 +1826,7 @@ class TimerManager {
                 'timer-loop-interval'
             ]);
 
+            this.timerSettingsPreviouslyFocusedElement = getTimerFocusableElement();
             window.drawingBoard?.syncResizableModalState?.('timer-settings-modal');
             modal.classList.add('show');
             
@@ -1837,6 +1927,7 @@ class TimerManager {
             });
 
             this.updateMainPreviewButtonState();
+            focusTimerElement(hoursInput || titleInput || document.getElementById('timer-settings-close-btn') || modal);
         }
 
         return !!modal;
@@ -1844,10 +1935,13 @@ class TimerManager {
     
     hideSettingsModal() {
         const modal = document.getElementById('timer-settings-modal');
+        const restoreFocusTarget = this.timerSettingsPreviouslyFocusedElement;
+        this.timerSettingsPreviouslyFocusedElement = null;
         if (modal) {
             modal.classList.remove('show');
         }
         this.adjustingTimer = null;
+        focusTimerElement(restoreFocusTarget);
     }
     
     startTimer() {

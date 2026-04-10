@@ -31,8 +31,37 @@ function discardCurrentStroke() {
     }
 }
 
+function scheduleDrawingActionFrame(callback) {
+    if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(callback);
+        return;
+    }
+    callback();
+}
+
 function confirmClear() {
-    document.getElementById('confirm-modal')?.classList.add('show');
+    const modal = document.getElementById('confirm-modal');
+    const cancelBtn = document.getElementById('confirm-cancel-btn');
+    const okBtn = document.getElementById('confirm-ok-btn');
+
+    if (!modal) {
+        return;
+    }
+
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'confirm-modal-title');
+    modal.setAttribute('aria-describedby', 'confirm-modal-message');
+    modal.tabIndex = -1;
+
+    this.confirmModalPreviouslyFocusedElement = document.activeElement && document.activeElement !== document.body
+        ? document.activeElement
+        : null;
+
+    modal.classList.add('show');
+    scheduleDrawingActionFrame(() => {
+        (cancelBtn || okBtn || modal)?.focus?.();
+    });
 }
 
 function clearCanvas(saveToHistory = true) {

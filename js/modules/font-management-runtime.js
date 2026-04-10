@@ -186,8 +186,25 @@ function initFontPreviewModal() {
 
         if (!modal) return;
 
+        const scheduleFrame = typeof window.requestAnimationFrame === 'function'
+            ? window.requestAnimationFrame.bind(window)
+            : (callback) => callback();
+
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-labelledby', 'font-preview-modal-title');
+        modal.setAttribute('aria-describedby', 'font-preview-modal-sample');
+        modal.tabIndex = -1;
+
         modal.addEventListener('click', (event) => {
             if (event.target === modal) {
+                this.closeFontPreviewModal();
+            }
+        });
+
+        modal.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
                 this.closeFontPreviewModal();
             }
         });
@@ -212,22 +229,47 @@ function initFontPreviewModal() {
         textResetBtn?.addEventListener('click', () => {
             this.resetSharedFontPreviewSettings({ text: true, size: false });
         });
+
+        scheduleFrame(() => {
+            if (modal.classList.contains('show')) {
+                (textInput || closeBtn || modal)?.focus?.();
+            }
+        });
     
 }
 
 function openFontPreviewModal(fontValue) {
         const modal = document.getElementById('font-preview-modal');
+        const textInput = document.getElementById('font-preview-modal-text-input');
+        const closeBtn = document.getElementById('font-preview-modal-close-btn');
         if (!modal) return;
+        const scheduleFrame = typeof window.requestAnimationFrame === 'function'
+            ? window.requestAnimationFrame.bind(window)
+            : (callback) => callback();
+        this.fontPreviewModalPreviouslyFocusedElement = document.activeElement && document.activeElement !== document.body
+            ? document.activeElement
+            : null;
         this.activeFontPreviewFont = fontValue;
         modal.classList.add('show');
         this.syncFontPreviewModal();
+        scheduleFrame(() => {
+            (textInput || closeBtn || modal)?.focus?.();
+        });
     
 }
 
 function closeFontPreviewModal() {
         const modal = document.getElementById('font-preview-modal');
         if (!modal) return;
+        const scheduleFrame = typeof window.requestAnimationFrame === 'function'
+            ? window.requestAnimationFrame.bind(window)
+            : (callback) => callback();
+        const restoreFocusTarget = this.fontPreviewModalPreviouslyFocusedElement;
+        this.fontPreviewModalPreviouslyFocusedElement = null;
         modal.classList.remove('show');
+        scheduleFrame(() => {
+            restoreFocusTarget?.focus?.();
+        });
     
 }
 
