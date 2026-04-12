@@ -1,6 +1,23 @@
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+function coerceConfigImportInputValue(input, type, fallbackValue) {
+        if (!input) {
+            return fallbackValue;
+        }
+
+        if (input.type === 'checkbox') {
+            return input.checked;
+        }
+
+        if (type === 'number') {
+            const parsedValue = parseFloat(input.value);
+            return Number.isFinite(parsedValue) ? parsedValue : fallbackValue;
+        }
+
+        return input.value;
+}
+
 function showConfigDiffModal(diff, newSettings) {
         const modal = document.getElementById('config-diff-modal');
         const list = document.getElementById('config-diff-list');
@@ -133,6 +150,9 @@ function showConfigDiffModal(diff, newSettings) {
 
                 input.dataset.key = item.key;
                 input.dataset.type = typeof item.new;
+                input.dataset.fallbackValue = typeof item.new === 'number'
+                    ? String(item.new)
+                    : '';
 
                 list.appendChild(div);
             });
@@ -159,15 +179,13 @@ function showConfigDiffModal(diff, newSettings) {
                 inputs.forEach(input => {
                     const key = input.dataset.key;
                     const type = input.dataset.type;
-                    let value;
-
-                    if (input.type === 'checkbox') {
-                        value = input.checked;
-                    } else if (type === 'number') {
-                        value = parseFloat(input.value);
-                    } else {
-                        value = input.value;
-                    }
+                    const numericFallback = type === 'number'
+                        ? parseFloat(input.dataset.fallbackValue)
+                        : undefined;
+                    const fallbackValue = type === 'number' && Number.isFinite(numericFallback)
+                        ? numericFallback
+                        : input.value;
+                    const value = coerceConfigImportInputValue(input, type, fallbackValue);
 
                     // Set deep value
                     const parts = key.split('.');
@@ -242,6 +260,7 @@ function showConfigDiffModal(diff, newSettings) {
 }
 
 window.AboardConfigImportRuntime = {
+    coerceConfigImportInputValue,
     showConfigDiffModal(board, diff, newSettings) {
         return showConfigDiffModal.call(board, diff, newSettings);
     }

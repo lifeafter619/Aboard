@@ -23,6 +23,15 @@ function getFontPreviewSettings() {
 
 }
 
+function normalizeFontPreviewSizeInput(value, fallbackValue) {
+        const parsedValue = parseInt(value, 10);
+        if (Number.isNaN(parsedValue)) {
+            return fallbackValue;
+        }
+
+        return Math.max(16, Math.min(160, parsedValue));
+}
+
 function updateSharedFontPreviewSettings(partialSettings = {}) {
         this.settingsManager?.setFontPreviewSettings?.(partialSettings);
         this.syncFontPreviewDisplays();
@@ -128,7 +137,7 @@ function buildFontPreviewPanel(font) {
         });
 
         const handlePreviewSizeUpdate = (value) => {
-            const nextValue = Math.max(16, Math.min(160, parseInt(value, 10) || settings.fontSize));
+            const nextValue = normalizeFontPreviewSizeInput(value, settings.fontSize);
             this.updateSharedFontPreviewSettings({ fontSize: nextValue });
         };
         sizeRange.addEventListener('input', (event) => handlePreviewSizeUpdate(event.target.value));
@@ -215,7 +224,7 @@ function initFontPreviewModal() {
         });
 
         const handleModalSizeChange = (value) => {
-            const nextValue = Math.max(16, Math.min(160, parseInt(value, 10) || this.getFontPreviewSettings().fontSize));
+            const nextValue = normalizeFontPreviewSizeInput(value, this.getFontPreviewSettings().fontSize);
             this.updateSharedFontPreviewSettings({ fontSize: nextValue });
         };
         sizeRange?.addEventListener('input', (event) => handleModalSizeChange(event.target.value));
@@ -546,6 +555,7 @@ function saveFontOrderFromList() {
 }
 
 window.AboardFontManagementRuntime = {
+    normalizeFontPreviewSizeInput,
     getTextWithFallback(board, key, fallback) {
         return getTextWithFallback.call(board, key, fallback);
     },

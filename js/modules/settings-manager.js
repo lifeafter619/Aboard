@@ -2,6 +2,19 @@
 // Handles application settings and preferences
 const largeScreenWidth = 1920;
 const highDpiRatio = 1.5;
+const defaultCanvasWidth = 1920;
+const defaultCanvasHeight = 1080;
+const minCanvasDimension = 300;
+const maxCanvasDimension = 4000;
+
+function normalizeCanvasDimension(value, fallbackValue) {
+    const parsedValue = typeof value === 'number' ? value : parseInt(value, 10);
+    if (!Number.isFinite(parsedValue)) {
+        return fallbackValue;
+    }
+
+    return Math.max(minCanvasDimension, Math.min(maxCanvasDimension, Math.round(parsedValue)));
+}
 
 class SettingsManager {
     constructor() {
@@ -25,8 +38,8 @@ class SettingsManager {
         this.showToolbarText = localStorage.getItem('showToolbarText') !== 'false'; // Default true
         this.keepMorePanelOpen = localStorage.getItem('keepMorePanelOpen') !== 'false';
         this.patternPreferences = this.loadPatternPreferences();
-        this.canvasWidth = parseInt(localStorage.getItem('canvasWidth')) || 1920;
-        this.canvasHeight = parseInt(localStorage.getItem('canvasHeight')) || 1080;
+        this.canvasWidth = normalizeCanvasDimension(localStorage.getItem('canvasWidth'), defaultCanvasWidth);
+        this.canvasHeight = normalizeCanvasDimension(localStorage.getItem('canvasHeight'), defaultCanvasHeight);
         this.canvasPreset = localStorage.getItem('canvasPreset') || 'custom';
         this.themeColor = localStorage.getItem('themeColor') || '#007AFF';
         this.globalFont = localStorage.getItem('globalFont') || 'system';
@@ -923,10 +936,14 @@ class SettingsManager {
     }
     
     setCanvasSize(width, height) {
-        this.canvasWidth = width;
-        this.canvasHeight = height;
-        localStorage.setItem('canvasWidth', width);
-        localStorage.setItem('canvasHeight', height);
+        const currentWidth = normalizeCanvasDimension(this.canvasWidth, defaultCanvasWidth);
+        const currentHeight = normalizeCanvasDimension(this.canvasHeight, defaultCanvasHeight);
+        const normalizedWidth = normalizeCanvasDimension(width, currentWidth);
+        const normalizedHeight = normalizeCanvasDimension(height, currentHeight);
+        this.canvasWidth = normalizedWidth;
+        this.canvasHeight = normalizedHeight;
+        localStorage.setItem('canvasWidth', normalizedWidth);
+        localStorage.setItem('canvasHeight', normalizedHeight);
     }
     
     setThemeColor(color) {

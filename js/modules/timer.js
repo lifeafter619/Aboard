@@ -28,6 +28,19 @@ function focusTimerElement(element, win = window) {
     });
 }
 
+function normalizeTimerNumberInputValue(rawValue, {
+    min,
+    max,
+    fallbackValue
+} = {}) {
+    const parsedValue = parseInt(rawValue, 10);
+    if (Number.isNaN(parsedValue)) {
+        return fallbackValue;
+    }
+
+    return Math.max(min, Math.min(max, parsedValue));
+}
+
 // Single Timer Instance Class
 class TimerInstance {
     constructor(options) {
@@ -66,8 +79,16 @@ class TimerInstance {
         this.selectedSound = options.selectedSound;
         this.customSoundUrl = options.customSoundUrl;
         this.loopSound = options.loopSound;
-        this.loopCount = options.loopCount;
-        this.loopInterval = options.loopInterval || 0;
+        this.loopCount = normalizeTimerNumberInputValue(options.loopCount, {
+            min: 1,
+            max: 100,
+            fallbackValue: 3
+        });
+        this.loopInterval = normalizeTimerNumberInputValue(options.loopInterval, {
+            min: 0,
+            max: 60,
+            fallbackValue: 0
+        });
         this.playbackSpeed = options.playbackSpeed || 1.0;
         this.currentAudio = null; // Track the current audio element
         this.currentLoopIteration = 0; // Track current loop iteration
@@ -988,8 +1009,16 @@ class TimerInstance {
         this.selectedSound = selectedSound;
         this.customSoundUrl = customSoundUrl;
         this.loopSound = loopSound;
-        this.loopCount = loopCount;
-        this.loopInterval = loopInterval;
+        this.loopCount = normalizeTimerNumberInputValue(loopCount, {
+            min: 1,
+            max: 100,
+            fallbackValue: 3
+        });
+        this.loopInterval = normalizeTimerNumberInputValue(loopInterval, {
+            min: 0,
+            max: 60,
+            fallbackValue: 0
+        });
         this.playbackSpeed = playbackSpeed;
         this.title = title;
         
@@ -1968,9 +1997,24 @@ class TimerManager {
         ]);
 
         // Get time input values
-        const hours = parseInt(hoursInput?.value, 10) || 0;
-        const minutes = parseInt(minutesInput?.value, 10) || 0;
-        const seconds = parseInt(secondsInput?.value, 10) || 0;
+        const hours = normalizeTimerNumberInputValue(hoursInput?.value, {
+            min: 0,
+            max: 23,
+            fallbackValue: 0
+        });
+        const minutes = normalizeTimerNumberInputValue(minutesInput?.value, {
+            min: 0,
+            max: 59,
+            fallbackValue: 0
+        });
+        const seconds = normalizeTimerNumberInputValue(secondsInput?.value, {
+            min: 0,
+            max: 59,
+            fallbackValue: 0
+        });
+        if (hoursInput) hoursInput.value = hours;
+        if (minutesInput) minutesInput.value = minutes;
+        if (secondsInput) secondsInput.value = seconds;
         
         // Get title
         const title = titleInput?.value?.trim() || '';
@@ -1992,8 +2036,18 @@ class TimerManager {
         
         // Get loop settings
         const loopSound = loopCheckbox?.checked === true;
-        const loopCount = parseInt(loopCountInput?.value, 10) || 3;
-        const loopInterval = parseInt(loopIntervalInput?.value, 10) || 0;
+        const loopCount = normalizeTimerNumberInputValue(loopCountInput?.value, {
+            min: 1,
+            max: 100,
+            fallbackValue: 3
+        });
+        const loopInterval = normalizeTimerNumberInputValue(loopIntervalInput?.value, {
+            min: 0,
+            max: 60,
+            fallbackValue: 0
+        });
+        if (loopCountInput) loopCountInput.value = loopCount;
+        if (loopIntervalInput) loopIntervalInput.value = loopInterval;
         const playbackSpeed = parseFloat(playbackSpeedInput?.value) || 1.0;
         
         // Get color settings - check custom pickers first, then preset buttons
@@ -2196,5 +2250,8 @@ class TimerManager {
 }
 
 if (typeof window !== 'undefined') {
+    window.AboardTimerRuntime = {
+        normalizeTimerNumberInputValue
+    };
     window.TimerManager = TimerManager;
 }

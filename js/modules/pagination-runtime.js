@@ -1,6 +1,11 @@
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+function normalizePageNumber(pageNumber, fallback = 1) {
+        const normalizedPage = parseInt(pageNumber, 10);
+        return Number.isInteger(normalizedPage) && normalizedPage > 0 ? normalizedPage : fallback;
+}
+
 function saveCurrentPageSnapshot() {
         if (this.currentPage > 0 && this.currentPage <= this.pages.length) {
             this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
@@ -82,7 +87,8 @@ function nextOrAddPage() {
 }
 
 function goToPage(pageNumber) {
-        if (pageNumber < 1 || pageNumber === this.currentPage) {
+        const normalizedPage = normalizePageNumber(pageNumber, this.currentPage);
+        if (normalizedPage === this.currentPage) {
             this.updatePaginationUI();
             return;
         }
@@ -91,11 +97,11 @@ function goToPage(pageNumber) {
         saveCurrentPageSnapshot.call(this);
         
         // Create new pages if needed
-        while (pageNumber > this.pages.length) {
+        while (normalizedPage > this.pages.length) {
             this.pages.push(null);
         }
         
-        this.currentPage = pageNumber;
+        this.currentPage = normalizedPage;
         this.loadPage(this.currentPage);
         this.updatePaginationUI();
     
@@ -237,6 +243,7 @@ function updatePaginationUI() {
 }
 
 window.AboardPaginationRuntime = {
+    normalizePageNumber,
     addPage(board) {
         return addPage.call(board);
     },

@@ -5,6 +5,32 @@ function bindIfPresent(element, eventName, handler, options) {
         element?.addEventListener?.(eventName, handler, options);
 }
 
+function normalizeSettingsNumberInputValue(rawValue, {
+        min,
+        max,
+        fallbackValue
+} = {}) {
+        const parsedValue = parseInt(rawValue, 10);
+        if (Number.isNaN(parsedValue)) {
+            return fallbackValue;
+        }
+
+        return Math.max(min, Math.min(max, parsedValue));
+}
+
+function normalizeCanvasDimensionValue(rawValue, {
+        min = 300,
+        max = 4000,
+        fallbackValue
+} = {}) {
+        const parsedValue = parseInt(rawValue, 10);
+        if (Number.isNaN(parsedValue)) {
+            return fallbackValue;
+        }
+
+        return Math.max(min, Math.min(max, parsedValue));
+}
+
 function getLazyFeatureLabel(key, fallback) {
         if (!window.i18n?.t) {
             return fallback;
@@ -958,7 +984,11 @@ function setupSettingsListeners() {
                 this.settingsManager.updateToolbarSize();
             });
             toolbarSizeInput.addEventListener('input', (e) => {
-                const value = Math.max(30, Math.min(100, parseInt(e.target.value) || 40));
+                const value = normalizeSettingsNumberInputValue(e.target.value, {
+                    min: 30,
+                    max: 100,
+                    fallbackValue: 40
+                });
                 e.target.value = value;
                 toolbarSizeSlider.value = value;
                 this.settingsManager.toolbarSize = value;
@@ -978,7 +1008,11 @@ function setupSettingsListeners() {
                 this.settingsManager.updateConfigScale();
             });
             configScaleInput.addEventListener('input', (e) => {
-                const value = Math.max(50, Math.min(150, parseInt(e.target.value) || 100));
+                const value = normalizeSettingsNumberInputValue(e.target.value, {
+                    min: 50,
+                    max: 150,
+                    fallbackValue: 100
+                });
                 e.target.value = value;
                 configScaleSlider.value = value;
                 this.settingsManager.configScale = value / 100;
@@ -1017,7 +1051,11 @@ function setupSettingsListeners() {
                 patternIntensityInput.value = e.target.value;
             });
             patternIntensityInput.addEventListener('input', (e) => {
-                const value = Math.max(10, Math.min(200, parseInt(e.target.value) || 50));
+                const value = normalizeSettingsNumberInputValue(e.target.value, {
+                    min: 10,
+                    max: 200,
+                    fallbackValue: 50
+                });
                 e.target.value = value;
                 patternIntensitySlider.value = value;
                 this.backgroundManager.setPatternIntensity(value / 100);
@@ -1105,9 +1143,17 @@ function setupSettingsListeners() {
         
         // Canvas size inputs
         bindIfPresent(document.getElementById('canvas-width-input'), 'change', (e) => {
-            const width = parseInt(e.target.value);
+            const width = normalizeCanvasDimensionValue(e.target.value, {
+                fallbackValue: this.settingsManager.canvasWidth
+            });
             const heightInput = document.getElementById('canvas-height-input');
-            const height = parseInt(heightInput?.value);
+            const height = normalizeCanvasDimensionValue(heightInput?.value, {
+                fallbackValue: this.settingsManager.canvasHeight
+            });
+            e.target.value = width;
+            if (heightInput) {
+                heightInput.value = height;
+            }
             this.settingsManager.setCanvasSize(width, height);
             // Set to custom when manually changing size
             document.querySelectorAll('.canvas-preset-btn').forEach(b => b.classList.remove('active'));
@@ -1116,9 +1162,17 @@ function setupSettingsListeners() {
         });
         
         bindIfPresent(document.getElementById('canvas-height-input'), 'change', (e) => {
-            const height = parseInt(e.target.value);
+            const height = normalizeCanvasDimensionValue(e.target.value, {
+                fallbackValue: this.settingsManager.canvasHeight
+            });
             const widthInput = document.getElementById('canvas-width-input');
-            const width = parseInt(widthInput?.value);
+            const width = normalizeCanvasDimensionValue(widthInput?.value, {
+                fallbackValue: this.settingsManager.canvasWidth
+            });
+            e.target.value = height;
+            if (widthInput) {
+                widthInput.value = width;
+            }
             this.settingsManager.setCanvasSize(width, height);
             // Set to custom when manually changing size
             document.querySelectorAll('.canvas-preset-btn').forEach(b => b.classList.remove('active'));
@@ -1131,7 +1185,9 @@ function setupSettingsListeners() {
             const ratio = e.target.value;
             if (ratio !== 'custom') {
                 const widthInput = document.getElementById('canvas-width-input');
-                const width = parseInt(widthInput?.value);
+                const width = normalizeCanvasDimensionValue(widthInput?.value, {
+                    fallbackValue: this.settingsManager.canvasWidth
+                });
                 let height;
                 
                 switch(ratio) {
@@ -1151,12 +1207,20 @@ function setupSettingsListeners() {
                         height = Math.round(width * 16 / 9);
                         break;
                 }
+
+                const normalizedHeight = normalizeCanvasDimensionValue(height, {
+                    fallbackValue: this.settingsManager.canvasHeight
+                });
+                if (widthInput) {
+                    widthInput.value = width;
+                }
                 
                 const canvasHeightInput = document.getElementById('canvas-height-input');
                 if (canvasHeightInput) {
-                    canvasHeightInput.value = height;
+                    canvasHeightInput.value = normalizedHeight;
                 }
-                this.settingsManager.setCanvasSize(width, height);
+                this.settingsManager.setCanvasSize(width, normalizedHeight);
+                this.applyCanvasSize();
             }
         });
         
@@ -1407,6 +1471,8 @@ function setupSettingsListeners() {
 }
 
 window.AboardUiListenersRuntime = {
+    normalizeSettingsNumberInputValue,
+    normalizeCanvasDimensionValue,
     setupToolConfigListeners(board) {
         return setupToolConfigListeners.call(board);
     },

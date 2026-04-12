@@ -1,5 +1,7 @@
 node_modules/
 dist/
+output/
+scripts/
 .npm-cache/
 .playwright-cli/
 docs/
