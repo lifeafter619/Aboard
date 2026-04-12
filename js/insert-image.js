@@ -240,6 +240,9 @@ class InsertImageManager {
                 this.currentImage = img;
                 this.showOverlay();
             };
+            img.onerror = () => {
+                console.warn('Failed to load inserted image');
+            };
             img.src = event.target.result;
         };
         reader.readAsDataURL(file);

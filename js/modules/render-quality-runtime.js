@@ -155,7 +155,14 @@ function applyCanvasSize() {
     this.bgCtx.scale(dpr, dpr);
 
     if (imageData) {
-        this.ctx.putImageData(imageData, 0, 0);
+        const tmp = document.createElement('canvas');
+        tmp.width = oldWidth;
+        tmp.height = oldHeight;
+        tmp.getContext('2d').putImageData(imageData, 0, 0);
+        this.ctx.save();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.drawImage(tmp, 0, 0, oldWidth, oldHeight, 0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.restore();
     }
 
     this.backgroundManager.drawBackground();

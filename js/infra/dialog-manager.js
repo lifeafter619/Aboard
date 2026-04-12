@@ -70,9 +70,14 @@ export class DialogManager {
     const inputContainer = modal.querySelector('#app-confirm-input-container');
     const footerElement = modal.querySelector('#app-confirm-footer');
     const messageElement = modal.querySelector('#app-confirm-message');
+    const titleElement = modal.querySelector('#app-confirm-title');
 
-    modal.querySelector('#app-confirm-title').textContent = localeTitle;
-    messageElement.textContent = message;
+    if (titleElement) {
+        titleElement.textContent = localeTitle;
+    }
+    if (messageElement) {
+        messageElement.textContent = message;
+    }
     messageElement.classList.toggle('compact', selectableItems.length > 0 || Boolean(footerText) || Boolean(inputConfig));
     optionsContainer.innerHTML = '';
     optionsContainer.classList.toggle('show', selectableItems.length > 0);
@@ -125,10 +130,17 @@ export class DialogManager {
       inputContainer.appendChild(inputWrapper);
     }
 
-    modal.querySelector('#app-confirm-cancel-btn').textContent = cancelText;
-    modal.querySelector('#app-confirm-cancel-btn').setAttribute('aria-label', cancelText);
-    modal.querySelector('#app-confirm-ok-btn').textContent = okText;
-    modal.querySelector('#app-confirm-ok-btn').setAttribute('aria-label', okText);
+    const cancelBtn = modal.querySelector('#app-confirm-cancel-btn');
+    const okBtn = modal.querySelector('#app-confirm-ok-btn');
+
+    if (cancelBtn) {
+        cancelBtn.textContent = cancelText;
+        cancelBtn.setAttribute('aria-label', cancelText);
+    }
+    if (okBtn) {
+        okBtn.textContent = okText;
+        okBtn.setAttribute('aria-label', okText);
+    }
 
     return new Promise((resolve) => {
       const restoreFocusTarget = this.doc.activeElement && this.doc.activeElement !== this.doc.body

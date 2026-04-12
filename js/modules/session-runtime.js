@@ -137,10 +137,10 @@ async function restoreSession() {
 
                 // Restore View
                 if (settings.canvasScale) this.drawingEngine.canvasScale = settings.canvasScale;
-                if (settings.panOffset) this.drawingEngine.panOffset = settings.panOffset;
+                if (settings.panOffset) this.drawingEngine.panOffset = { ...settings.panOffset };
 
                 // Restore Backgrounds
-                if (settings.pageBackgrounds) this.pageBackgrounds = settings.pageBackgrounds;
+                if (settings.pageBackgrounds) this.pageBackgrounds = JSON.parse(JSON.stringify(settings.pageBackgrounds));
                 if (settings.backgroundColor) this.backgroundManager.backgroundColor = settings.backgroundColor;
                 if (settings.backgroundPattern) this.backgroundManager.backgroundPattern = settings.backgroundPattern;
                 if (typeof settings.bgOpacity !== 'undefined') this.backgroundManager.bgOpacity = settings.bgOpacity;

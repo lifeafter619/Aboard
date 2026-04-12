@@ -404,17 +404,21 @@ function clampFloatingPanelToViewport(panel, edgeSpacing = 12) {
 
     if (dx !== 0) {
         if (panel.style.left && panel.style.left !== 'auto') {
-            panel.style.left = `${parseFloat(panel.style.left) + dx}px`;
+            const left = parseFloat(panel.style.left) || 0;
+            panel.style.left = `${left + dx}px`;
         } else if (panel.style.right && panel.style.right !== 'auto') {
-            panel.style.right = `${parseFloat(panel.style.right) - dx}px`;
+            const right = parseFloat(panel.style.right) || 0;
+            panel.style.right = `${right - dx}px`;
         }
     }
 
     if (dy !== 0) {
         if (panel.style.top && panel.style.top !== 'auto') {
-            panel.style.top = `${parseFloat(panel.style.top) + dy}px`;
+            const top = parseFloat(panel.style.top) || 0;
+            panel.style.top = `${top + dy}px`;
         } else if (panel.style.bottom && panel.style.bottom !== 'auto') {
-            panel.style.bottom = `${parseFloat(panel.style.bottom) - dy}px`;
+            const bottom = parseFloat(panel.style.bottom) || 0;
+            panel.style.bottom = `${bottom - dy}px`;
         }
     }
 }

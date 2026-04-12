@@ -43,6 +43,7 @@ class BackgroundManager {
         // Load saved transform if exists
         const savedTransform = localStorage.getItem('imageTransform');
         if (savedTransform) {
+            try {
             this.imageTransform = JSON.parse(savedTransform);
             if (this.imageTransform.scale &&
                 this.imageTransform.scale !== 1 &&
@@ -56,6 +57,9 @@ class BackgroundManager {
                 this.imageTransform.width = newWidth;
                 this.imageTransform.height = newHeight;
                 this.imageTransform.scale = 1;
+            }
+            } catch (e) {
+                console.warn('Failed to parse saved imageTransform, using defaults:', e);
             }
         }
         
@@ -2641,7 +2645,11 @@ class BackgroundManager {
         this.isImagePaused = false;
         this.imageStaticData = null;
         this.currentGifLoop = 0;
-        localStorage.setItem('backgroundImageData', imageData);
+        try {
+            localStorage.setItem('backgroundImageData', imageData);
+        } catch (e) {
+            console.warn('Failed to save background image to localStorage (quota exceeded?):', e);
+        }
         const preserveTransform = this.imageTransform.width > 0 && this.imageTransform.height > 0;
         const existingTransform = preserveTransform ? { ...this.imageTransform } : null;
         
@@ -2673,6 +2681,12 @@ class BackgroundManager {
                 }
 
                 this.backgroundPattern = 'image';
+                this.drawBackground();
+                this.emitBackgroundUiState();
+                resolve();
+            };
+            img.onerror = () => {
+                console.warn('Failed to load background image');
                 this.drawBackground();
                 this.emitBackgroundUiState();
                 resolve();

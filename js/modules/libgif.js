@@ -752,11 +752,7 @@
                 var offset;
                 i = parseInt(i, 10);
 
-                if (i > frames.length - 1){
-                    i = 0;
-                }
-
-                if (i < 0){
+                if (!frames.length || i >= frames.length || i < 0){
                     i = 0;
                 }
 

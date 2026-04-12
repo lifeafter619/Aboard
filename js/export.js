@@ -236,7 +236,10 @@ class ExportManager {
 
                 // Show content
                 document.querySelectorAll('.export-tab-content').forEach(c => c.classList.remove('active'));
-                document.getElementById(`export-tab-${tab}`).classList.add('active');
+                const tabContent = document.getElementById(`export-tab-${tab}`);
+                if (tabContent) {
+                    tabContent.classList.add('active');
+                }
                 const activeScope = tab === 'project'
                     ? getActiveProjectExportScope()
                     : getActiveImageExportScope();

@@ -2337,11 +2337,11 @@ class SelectionManager {
                 <div class="selection-coordinate-position-fields">
                     <label>
                         <span>X</span>
-                        <input type="number" step="0.1" data-point-id="${point.id}" data-axis="x" value="${point.x}" aria-label="X">
+                        <input type="number" step="0.1" data-point-id="${this.escapeHtml(point.id)}" data-axis="x" value="${point.x}" aria-label="X">
                     </label>
                     <label>
                         <span>Y</span>
-                        <input type="number" step="0.1" data-point-id="${point.id}" data-axis="y" value="${point.y}" aria-label="Y">
+                        <input type="number" step="0.1" data-point-id="${this.escapeHtml(point.id)}" data-axis="y" value="${point.y}" aria-label="Y">
                     </label>
                 </div>
             </div>

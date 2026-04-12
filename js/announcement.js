@@ -96,12 +96,25 @@ class AnnouncementManager {
         } else {
             // Fallback if RichTextParser is not loaded
             if (Array.isArray(content)) {
-                // Convert links to HTML anchor tags
-                const htmlContent = content.map(line => {
-                    // Match URLs in the text
-                    return line.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
-                }).join('<br>');
-                this.contentElement.innerHTML = htmlContent;
+                // Use textContent for each line, create links via DOM for safety
+                this.contentElement.innerHTML = '';
+                content.forEach((line, i) => {
+                    if (i > 0) this.contentElement.appendChild(document.createElement('br'));
+                    // Split line by URLs and create text/link nodes
+                    const parts = line.split(/(https?:\/\/[^\s]+)/g);
+                    parts.forEach(part => {
+                        if (/^https?:\/\//.test(part)) {
+                            const a = document.createElement('a');
+                            a.href = part;
+                            a.target = '_blank';
+                            a.rel = 'noopener noreferrer';
+                            a.textContent = part;
+                            this.contentElement.appendChild(a);
+                        } else {
+                            this.contentElement.appendChild(document.createTextNode(part));
+                        }
+                    });
+                });
             } else {
                 this.contentElement.textContent = content;
             }
@@ -138,12 +151,24 @@ class AnnouncementManager {
                 settingsContent.innerHTML = window.RichTextParser.parse(content);
             } else {
                 if (Array.isArray(content)) {
-                    // Convert links to HTML anchor tags
-                    const htmlContent = content.map(line => {
-                        // Match URLs in the text
-                        return line.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #007AFF; text-decoration: none;">$1</a>');
-                    }).join('<br>');
-                    settingsContent.innerHTML = htmlContent;
+                    settingsContent.innerHTML = '';
+                    content.forEach((line, i) => {
+                        if (i > 0) settingsContent.appendChild(document.createElement('br'));
+                        const parts = line.split(/(https?:\/\/[^\s]+)/g);
+                        parts.forEach(part => {
+                            if (/^https?:\/\//.test(part)) {
+                                const a = document.createElement('a');
+                                a.href = part;
+                                a.target = '_blank';
+                                a.rel = 'noopener noreferrer';
+                                a.style.cssText = 'color: #007AFF; text-decoration: none;';
+                                a.textContent = part;
+                                settingsContent.appendChild(a);
+                            } else {
+                                settingsContent.appendChild(document.createTextNode(part));
+                            }
+                        });
+                    });
                 } else {
                     settingsContent.textContent = content;
                 }

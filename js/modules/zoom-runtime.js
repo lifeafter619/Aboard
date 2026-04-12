@@ -23,13 +23,13 @@ function setupCanvasZoom() {
                 const oldPanX = this.drawingEngine.panOffset.x;
                 const oldPanY = this.drawingEngine.panOffset.y;
                 
-                // Calculate new scale
+                // Calculate new scale (proportional stepping)
                 const delta = e.deltaY;
                 let newScale;
                 if (delta < 0) {
-                    newScale = Math.min(oldScale + 0.1, this.MAX_CANVAS_SCALE);
+                    newScale = Math.min(oldScale * 1.1, this.MAX_CANVAS_SCALE);
                 } else {
-                    newScale = Math.max(oldScale - 0.1, this.MIN_CANVAS_SCALE);
+                    newScale = Math.max(oldScale / 1.1, this.MIN_CANVAS_SCALE);
                 }
                 
                 // Calculate scale ratio

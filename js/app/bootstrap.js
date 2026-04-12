@@ -18,7 +18,8 @@ const BOOTSTRAP_FAILURE_MESSAGES = {
 
 function normalizeLocale(locale) {
   const normalizedLocale = String(locale || '').toLowerCase();
-  const family = normalizedLocale.split('-')[0];
+  const parts = normalizedLocale.split('-');
+  const family = parts.length > 0 ? parts[0] : '';
   switch (family) {
     case 'zh':
       return normalizedLocale.includes('tw') || normalizedLocale.includes('hk') || normalizedLocale.includes('hant')

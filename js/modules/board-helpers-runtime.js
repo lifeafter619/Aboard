@@ -31,12 +31,26 @@ function setupKeyboardShortcuts() {
             if (key === 'z' && !e.shiftKey) {
                 e.preventDefault();
                 if (this.historyManager.undo()) {
+                    this.drawingEngine.clearStrokes();
+                    this.drawingEngine.stampedImages = [];
+                    this.drawingEngine.objectGroups = [];
+                    this.insertTextManager?.clearTextObjects?.();
+                    this.drawingEngine.clearVectorScene();
+                    this.drawingEngine.setVectorPreviewVisible(false);
                     this.updateUI();
+                    this.saveSessionDebounced();
                 }
             } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
                 e.preventDefault();
                 if (this.historyManager.redo()) {
+                    this.drawingEngine.clearStrokes();
+                    this.drawingEngine.stampedImages = [];
+                    this.drawingEngine.objectGroups = [];
+                    this.insertTextManager?.clearTextObjects?.();
+                    this.drawingEngine.clearVectorScene();
+                    this.drawingEngine.setVectorPreviewVisible(false);
                     this.updateUI();
+                    this.saveSessionDebounced();
                 }
             } else if (!isEditableTarget && key === 'c' && this.selectionManager?.hasSelection()) {
                 e.preventDefault();

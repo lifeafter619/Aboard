@@ -84,7 +84,7 @@ class RandomPickerInstance {
 
         div.innerHTML = `
             <div class="random-picker-header">
-                <span class="random-picker-title">${title}</span>
+                <span class="random-picker-title"></span>
                 <div style="display:flex; gap:6px;">
                     <button class="random-picker-help-btn" title="${helpLabel}" aria-label="${helpLabel}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -124,6 +124,12 @@ class RandomPickerInstance {
         document.body.appendChild(div);
         this.element = div;
         this.resultElement = div.querySelector('.random-picker-result');
+
+        // Set title via textContent to prevent XSS from user-supplied titles
+        const titleEl = div.querySelector('.random-picker-title');
+        if (titleEl) {
+            titleEl.textContent = title;
+        }
 
         this.setupEvents();
         this.localeChangeHandler = () => {
@@ -494,7 +500,7 @@ class RandomPickerInstance {
     resetRemainingNumbers() {
         const min = parseInt(this.config.min);
         const max = parseInt(this.config.max);
-        if (isNaN(min) || isNaN(max) || min > max) {
+        if (Number.isNaN(min) || Number.isNaN(max) || min > max) {
             this.remainingNumbers = [];
             return;
         }

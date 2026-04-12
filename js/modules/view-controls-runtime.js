@@ -50,7 +50,7 @@ function zoomToPoint(clientX, clientY, newScale, animate = false) {
 
 function zoomIn() {
     const currentScale = this.drawingEngine.canvasScale;
-    const newScale = Math.min(currentScale + 0.1, this.MAX_CANVAS_SCALE);
+    const newScale = Math.min(currentScale * 1.1, this.MAX_CANVAS_SCALE);
     this.drawingEngine.canvasScale = newScale;
     this.updateZoomUI();
     this.applyZoom(false);
@@ -59,7 +59,7 @@ function zoomIn() {
 
 function zoomOut() {
     const currentScale = this.drawingEngine.canvasScale;
-    const newScale = Math.max(currentScale - 0.1, 0.5);
+    const newScale = Math.max(currentScale / 1.1, 0.5);
     this.drawingEngine.canvasScale = newScale;
     this.updateZoomUI();
     this.applyZoom(false);

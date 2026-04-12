@@ -228,7 +228,7 @@ class ScoreboardInstance {
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
                 </button>
-                <div class="score-team-name" contenteditable="true">${team.name}</div>
+                <div class="score-team-name" contenteditable="true"></div>
                 <div class="score-value">${team.score}</div>
                 <div class="score-controls">
                     <button class="score-btn minus" title="Decrease score" aria-label="Decrease score">
@@ -247,6 +247,7 @@ class ScoreboardInstance {
 
             // Name edit
             const nameEl = col.querySelector('.score-team-name');
+            nameEl.textContent = team.name;
             nameEl.addEventListener('blur', (e) => {
                 this.config.teams[index].name = e.target.textContent;
                 this.refreshLocalizedUI();

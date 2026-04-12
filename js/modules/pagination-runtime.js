@@ -142,12 +142,16 @@ function savePageBackground(pageNumber) {
             coordinateOverlayState: this.backgroundManager.getCoordinateOverlayState(),
             backgroundImageData: this.backgroundManager.backgroundImageData,
             imageSize: this.backgroundManager.imageSize,
-            imageTransform: this.backgroundManager.imageTransform,
+            imageTransform: JSON.parse(JSON.stringify(this.backgroundManager.imageTransform)),
             gifLoopCount: this.backgroundManager.gifLoopCount,
             backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder
         };
-        localStorage.setItem('pageBackgrounds', JSON.stringify(this.pageBackgrounds));
-    
+        try {
+            localStorage.setItem('pageBackgrounds', JSON.stringify(this.pageBackgrounds));
+        } catch (e) {
+            console.warn('Failed to save page backgrounds to localStorage (quota exceeded?):', e);
+        }
+
 }
 
 function restorePageBackground(pageNumber) {
@@ -168,7 +172,7 @@ function restorePageBackground(pageNumber) {
                 this.backgroundManager.coordinateOriginY = bg.coordinateOriginY;
             }
             this.backgroundManager.setCoordinateOverlayState(bg.coordinateOverlayState, { persist: false, redraw: false });
-            if (bg.imageTransform) this.backgroundManager.imageTransform = bg.imageTransform;
+            if (bg.imageTransform) this.backgroundManager.imageTransform = JSON.parse(JSON.stringify(bg.imageTransform));
             if (typeof bg.gifLoopCount !== 'undefined') this.backgroundManager.gifLoopCount = bg.gifLoopCount;
             if (typeof bg.backgroundOutsideLayerOrder !== 'undefined') {
                 this.backgroundManager.backgroundOutsideLayerOrder = bg.backgroundOutsideLayerOrder;
@@ -179,6 +183,10 @@ function restorePageBackground(pageNumber) {
                 const img = new Image();
                 img.onload = () => {
                     this.backgroundManager.backgroundImage = img;
+                    this.backgroundManager.drawBackground();
+                };
+                img.onerror = () => {
+                    console.warn('Failed to load page background image');
                     this.backgroundManager.drawBackground();
                 };
                 img.src = bg.backgroundImageData;

@@ -61,36 +61,46 @@ function resizeCanvas() {
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
         const dpr = this.getRenderPixelRatio();
-        
+
         const oldWidth = this.canvas.width;
         const oldHeight = this.canvas.height;
-        const imageData = this.historyManager.historyStep >= 0 ? 
+        const imageData = this.historyManager.historyStep >= 0 ?
             this.ctx.getImageData(0, 0, oldWidth, oldHeight) : null;
-        
+
         // Set canvas size to fill entire window
         this.canvas.width = windowWidth * dpr;
         this.canvas.height = windowHeight * dpr;
         this.canvas.style.width = windowWidth + 'px';
         this.canvas.style.height = windowHeight + 'px';
-        
+
         this.bgCanvas.width = windowWidth * dpr;
         this.bgCanvas.height = windowHeight * dpr;
         this.bgCanvas.style.width = windowWidth + 'px';
         this.bgCanvas.style.height = windowHeight + 'px';
-        
+
         this.ctx.scale(dpr, dpr);
         this.bgCtx.scale(dpr, dpr);
-        
+
         if (imageData) {
-            this.ctx.putImageData(imageData, 0, 0);
+            // Use a temporary canvas + drawImage so the content is properly
+            // composited under the current DPR transform instead of raw
+            // putImageData which ignores canvas transforms and clips on shrink.
+            const tmp = document.createElement('canvas');
+            tmp.width = oldWidth;
+            tmp.height = oldHeight;
+            tmp.getContext('2d').putImageData(imageData, 0, 0);
+            this.ctx.save();
+            this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+            this.ctx.drawImage(tmp, 0, 0, oldWidth, oldHeight, 0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.restore();
         }
-        
+
         this.backgroundManager.drawBackground();
-        
+
         // Recalculate fit scale and re-center the canvas
         this.recalculateAndRecenterCanvas();
         this.syncInteractiveOverlays();
-    
+
 }
 
 window.AboardCanvasViewRuntime = {

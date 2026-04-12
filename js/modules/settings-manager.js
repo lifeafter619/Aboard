@@ -1211,7 +1211,9 @@ class SettingsManager {
             try {
                 const parsed2 = JSON.parse(obj2);
                 return this.deepCompare(obj1, parsed2, path);
-            } catch (e) {}
+            } catch (e) {
+                // Not valid JSON, fall through to primitive comparison
+            }
         }
 
         // Handle primitives
@@ -1284,7 +1286,8 @@ class SettingsManager {
         }
 
         if (key.startsWith('toolbarVisibility.')) {
-            const tool = key.split('.')[1];
+            const parts = key.split('.');
+            const tool = parts.length > 1 ? parts[1] : '';
             // tool might be 'pen', 'eraser' etc.
             // mapping: settings.general.toolbarTools.pen
             return `${i18n.t('settings.general.toolbarCustomization')} - ${i18n.t(`settings.general.toolbarTools.${tool}`) || tool}`;
@@ -1299,7 +1302,8 @@ class SettingsManager {
         }
 
         if (key.startsWith('modalSizePreferences.')) {
-            const modalKey = key.split('.')[1];
+            const parts = key.split('.');
+            const modalKey = parts.length > 1 ? parts[1] : '';
             const sizeLabelKey = 'settings.display.windowScale';
             const translatedSizeLabel = i18n.t(sizeLabelKey);
             const modalNames = {
@@ -1315,7 +1319,8 @@ class SettingsManager {
         }
 
         if (key.startsWith('modalCenterPreferences.')) {
-            const modalKey = key.split('.')[1];
+            const parts = key.split('.');
+            const modalKey = parts.length > 1 ? parts[1] : '';
             const modalNames = {
                 settingsModal: i18n.t('settings.title'),
                 timerSettingsModal: i18n.t('timer.settingsTitle'),

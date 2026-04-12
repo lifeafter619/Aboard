@@ -309,7 +309,7 @@ class PWAManager {
         const locale = window.i18n ? window.i18n.getCurrentLocale() : navigator.language;
         // Try exact match, then language family (e.g. 'zh'), then default
         let dict = this.translations[locale] ||
-                   this.translations[locale.split('-')[0]] ||
+                   this.translations[locale.split('-')[0] || ''] ||
                    (locale.startsWith('zh') ? this.translations['zh-CN'] : this.translations[this.defaultLocale]);
 
         return dict[key] || key;

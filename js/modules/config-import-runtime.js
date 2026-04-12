@@ -170,7 +170,9 @@ function showConfigDiffModal(diff, newSettings) {
                     if (typeof pendingSettings[key] === 'string') {
                         try {
                             pendingSettings[key] = JSON.parse(pendingSettings[key]);
-                        } catch (e) {}
+                        } catch (e) {
+                            console.warn(`Failed to parse ${key} setting:`, e);
+                        }
                     }
                 });
 

@@ -10,6 +10,15 @@ function getTextInsertionText(key, fallback) {
     return translated && translated !== key ? translated : fallback;
 }
 
+function escapeTextInsertionHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 class TextInsertionManager {
     constructor(canvas, ctx, historyManager) {
         this.canvas = canvas;
@@ -82,8 +91,8 @@ class TextInsertionManager {
         modal.innerHTML = `
             <div class="modal-content text-input-modal-content">
                 <div class="modal-header">
-                    <h2>${title}</h2>
-                    <button id="text-input-close-btn" class="modal-close-btn" data-i18n-title="common.close" title="${closeTitle}" aria-label="${closeTitle}">
+                    <h2>${escapeTextInsertionHtml(title)}</h2>
+                    <button id="text-input-close-btn" class="modal-close-btn" data-i18n-title="common.close" title="${escapeTextInsertionHtml(closeTitle)}" aria-label="${escapeTextInsertionHtml(closeTitle)}">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -91,20 +100,20 @@ class TextInsertionManager {
                     </button>
                 </div>
                 <div class="modal-body">
-                    <textarea id="text-input-area" class="text-input-area" placeholder="${placeholder}" aria-label="${placeholder}" autofocus></textarea>
+                    <textarea id="text-input-area" class="text-input-area" placeholder="${escapeTextInsertionHtml(placeholder)}" aria-label="${escapeTextInsertionHtml(placeholder)}" autofocus></textarea>
                     <div class="text-input-controls">
                         <div class="text-control-group">
-                            <label>${sizeLabel} <span id="text-font-size-value">${this.defaultFontSize}</span>px</label>
-                            <input type="range" id="text-font-size-slider" min="12" max="72" value="${this.defaultFontSize}" class="slider" aria-label="${sizeLabel}">
+                            <label>${escapeTextInsertionHtml(sizeLabel)} <span id="text-font-size-value">${this.defaultFontSize}</span>px</label>
+                            <input type="range" id="text-font-size-slider" min="12" max="72" value="${this.defaultFontSize}" class="slider" aria-label="${escapeTextInsertionHtml(sizeLabel)}">
                         </div>
                         <div class="text-control-group">
-                            <label>${colorLabel}</label>
+                            <label>${escapeTextInsertionHtml(colorLabel)}</label>
                             <div class="color-picker-row">
-                                <button class="color-btn active" data-text-color="#000000" style="background-color: #000000;" title="${blackTitle}" aria-label="${blackTitle}"></button>
-                                <button class="color-btn" data-text-color="#FF0000" style="background-color: #FF0000;" title="${redTitle}" aria-label="${redTitle}"></button>
-                                <button class="color-btn" data-text-color="#0000FF" style="background-color: #0000FF;" title="${blueTitle}" aria-label="${blueTitle}"></button>
-                                <button class="color-btn" data-text-color="#00FF00" style="background-color: #00FF00;" title="${greenTitle}" aria-label="${greenTitle}"></button>
-                                <label class="color-picker-icon-btn" for="text-custom-color-picker" title="${colorPickerTitle}" aria-label="${colorPickerTitle}" role="button" tabindex="0">
+                                <button class="color-btn active" data-text-color="#000000" style="background-color: #000000;" title="${escapeTextInsertionHtml(blackTitle)}" aria-label="${escapeTextInsertionHtml(blackTitle)}"></button>
+                                <button class="color-btn" data-text-color="#FF0000" style="background-color: #FF0000;" title="${escapeTextInsertionHtml(redTitle)}" aria-label="${escapeTextInsertionHtml(redTitle)}"></button>
+                                <button class="color-btn" data-text-color="#0000FF" style="background-color: #0000FF;" title="${escapeTextInsertionHtml(blueTitle)}" aria-label="${escapeTextInsertionHtml(blueTitle)}"></button>
+                                <button class="color-btn" data-text-color="#00FF00" style="background-color: #00FF00;" title="${escapeTextInsertionHtml(greenTitle)}" aria-label="${escapeTextInsertionHtml(greenTitle)}"></button>
+                                <label class="color-picker-icon-btn" for="text-custom-color-picker" title="${escapeTextInsertionHtml(colorPickerTitle)}" aria-label="${escapeTextInsertionHtml(colorPickerTitle)}" role="button" tabindex="0">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
                                         <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
@@ -115,8 +124,8 @@ class TextInsertionManager {
                         </div>
                     </div>
                     <div class="text-input-buttons">
-                        <button id="text-input-cancel-btn" class="confirm-btn cancel-btn">${cancelLabel}</button>
-                        <button id="text-input-ok-btn" class="confirm-btn ok-btn">${confirmLabel}</button>
+                        <button id="text-input-cancel-btn" class="confirm-btn cancel-btn">${escapeTextInsertionHtml(cancelLabel)}</button>
+                        <button id="text-input-ok-btn" class="confirm-btn ok-btn">${escapeTextInsertionHtml(confirmLabel)}</button>
                     </div>
                 </div>
             </div>
@@ -130,7 +139,10 @@ class TextInsertionManager {
         
         // Focus on textarea
         setTimeout(() => {
-            document.getElementById('text-input-area').focus();
+            const textarea = document.getElementById('text-input-area');
+            if (textarea) {
+                textarea.focus();
+            }
         }, 100);
     }
     

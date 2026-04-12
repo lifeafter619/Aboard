@@ -430,16 +430,27 @@ function setupEventListeners() {
                         if (this.maxTouchesInGesture === 2) {
                             // 2-finger tap: Undo
                             if (this.historyManager.undo()) {
-                                this.updateUI();
-                                // Clear stroke selection as strokes are no longer valid
                                 this.drawingEngine.clearStrokes();
+                                this.drawingEngine.stampedImages = [];
+                                this.drawingEngine.objectGroups = [];
+                                this.insertTextManager?.clearTextObjects?.();
+                                this.drawingEngine.clearVectorScene();
+                                this.drawingEngine.setVectorPreviewVisible(false);
+                                this.updateUI();
+                                this.saveSessionDebounced();
                             }
                             e.preventDefault();
                         } else if (this.maxTouchesInGesture === 3) {
                             // 3-finger tap: Redo
                             if (this.historyManager.redo()) {
-                                this.updateUI();
                                 this.drawingEngine.clearStrokes();
+                                this.drawingEngine.stampedImages = [];
+                                this.drawingEngine.objectGroups = [];
+                                this.insertTextManager?.clearTextObjects?.();
+                                this.drawingEngine.clearVectorScene();
+                                this.drawingEngine.setVectorPreviewVisible(false);
+                                this.updateUI();
+                                this.saveSessionDebounced();
                             }
                             e.preventDefault();
                         }

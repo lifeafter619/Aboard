@@ -87,10 +87,23 @@ export class AnnouncementManager {
     if (this.win.RichTextParser) {
       this.contentElement.innerHTML = this.win.RichTextParser.parse(content);
     } else if (Array.isArray(content)) {
-      const htmlContent = content
-        .map((line) => line.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'))
-        .join('<br>');
-      this.contentElement.innerHTML = htmlContent;
+      this.contentElement.innerHTML = '';
+      content.forEach((line, i) => {
+        if (i > 0) this.contentElement.appendChild(this.doc.createElement('br'));
+        const parts = line.split(/(https?:\/\/[^\s]+)/g);
+        parts.forEach(part => {
+          if (/^https?:\/\//.test(part)) {
+            const a = this.doc.createElement('a');
+            a.href = part;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.textContent = part;
+            this.contentElement.appendChild(a);
+          } else {
+            this.contentElement.appendChild(this.doc.createTextNode(part));
+          }
+        });
+      });
     } else {
       this.contentElement.textContent = content;
     }
@@ -125,10 +138,24 @@ export class AnnouncementManager {
     if (this.win.RichTextParser) {
       settingsContent.innerHTML = this.win.RichTextParser.parse(content);
     } else if (Array.isArray(content)) {
-      const htmlContent = content
-        .map((line) => line.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #007AFF; text-decoration: none;">$1</a>'))
-        .join('<br>');
-      settingsContent.innerHTML = htmlContent;
+      settingsContent.innerHTML = '';
+      content.forEach((line, i) => {
+        if (i > 0) settingsContent.appendChild(this.doc.createElement('br'));
+        const parts = line.split(/(https?:\/\/[^\s]+)/g);
+        parts.forEach(part => {
+          if (/^https?:\/\//.test(part)) {
+            const a = this.doc.createElement('a');
+            a.href = part;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.style.cssText = 'color: #007AFF; text-decoration: none;';
+            a.textContent = part;
+            settingsContent.appendChild(a);
+          } else {
+            settingsContent.appendChild(this.doc.createTextNode(part));
+          }
+        });
+      });
     } else {
       settingsContent.textContent = content;
     }

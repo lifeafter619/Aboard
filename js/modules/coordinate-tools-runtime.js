@@ -90,8 +90,10 @@ function getCoordinatePlotAxisOptions(coordinateType = this.backgroundManager?.b
 }
 
 function createCoordinatePlotRangeRowMarkup(segment = {}, coordinateType = this.backgroundManager?.backgroundPattern) {
-    const axisOptions = this.getCoordinatePlotAxisOptions(coordinateType)
-        .map(option => `<option value="${option.value}"${option.value === (segment.axis || this.getCoordinatePlotAxisOptions(coordinateType)[0].value) ? ' selected' : ''}>${this.escapeHtml(option.label)}</option>`)
+    const axisOptions = this.getCoordinatePlotAxisOptions(coordinateType);
+    const defaultAxisValue = axisOptions.length > 0 ? axisOptions[0].value : '';
+    const axisOptionsMarkup = axisOptions
+        .map(option => `<option value="${option.value}"${option.value === (segment.axis || defaultAxisValue) ? ' selected' : ''}>${this.escapeHtml(option.label)}</option>`)
         .join('');
     const minValue = segment.min ?? '';
     const maxValue = segment.max ?? '';
