@@ -61,14 +61,64 @@ class I18n {
      * Get saved locale from localStorage
      */
     getSavedLocale() {
-        return localStorage.getItem('locale');
+        return this.normalizeSupportedLocale(localStorage.getItem('locale'));
     }
 
     /**
      * Save locale to localStorage
      */
     saveLocale(locale) {
-        localStorage.setItem('locale', locale);
+        const normalizedLocale = this.normalizeSupportedLocale(locale);
+        if (normalizedLocale) {
+            localStorage.setItem('locale', normalizedLocale);
+        } else {
+            localStorage.removeItem('locale');
+        }
+    }
+
+    normalizeSupportedLocale(locale) {
+        if (locale == null) {
+            return null;
+        }
+
+        const trimmedLocale = String(locale).trim();
+        if (!trimmedLocale) {
+            return null;
+        }
+
+        if (this.availableLocales[trimmedLocale]) {
+            return trimmedLocale;
+        }
+
+        const normalizedLocale = trimmedLocale.toLowerCase();
+        const exactMatch = Object.keys(this.availableLocales).find(
+            availableLocale => availableLocale.toLowerCase() === normalizedLocale
+        );
+        if (exactMatch) {
+            return exactMatch;
+        }
+
+        const langFamily = normalizedLocale.split('-')[0];
+        switch (langFamily) {
+            case 'zh':
+                return normalizedLocale.includes('tw') || normalizedLocale.includes('hk') || normalizedLocale.includes('hant')
+                    ? 'zh-TW'
+                    : 'zh-CN';
+            case 'en':
+                return 'en-US';
+            case 'ja':
+                return 'ja-JP';
+            case 'ko':
+                return 'ko-KR';
+            case 'fr':
+                return 'fr-FR';
+            case 'de':
+                return 'de-DE';
+            case 'es':
+                return 'es-ES';
+            default:
+                return null;
+        }
     }
 
     isAriaSyncTarget(el) {
@@ -94,7 +144,8 @@ class I18n {
     }
 
     isCoreLocale(locale) {
-        return this.coreLocales.includes(locale);
+        const normalizedLocale = this.normalizeSupportedLocale(locale);
+        return normalizedLocale ? this.coreLocales.includes(normalizedLocale) : false;
     }
 
     getDownloadedLocales() {
@@ -110,7 +161,9 @@ class I18n {
             }
 
             return Array.from(new Set(
-                parsed.filter(locale => this.availableLocales[locale] && !this.isCoreLocale(locale))
+                parsed
+                    .map(locale => this.normalizeSupportedLocale(locale))
+                    .filter(locale => locale && !this.isCoreLocale(locale))
             ));
         } catch (error) {
             console.warn('Failed to parse downloaded locales, ignoring cache:', error);
@@ -121,29 +174,32 @@ class I18n {
     saveDownloadedLocales(locales) {
         const normalizedLocales = Array.from(new Set(
             (Array.isArray(locales) ? locales : [])
-                .filter(locale => this.availableLocales[locale] && !this.isCoreLocale(locale))
+                .map(locale => this.normalizeSupportedLocale(locale))
+                .filter(locale => locale && !this.isCoreLocale(locale))
         ));
         localStorage.setItem(this.downloadedLocalesStorageKey, JSON.stringify(normalizedLocales));
     }
 
     markLocaleDownloaded(locale) {
-        if (!this.availableLocales[locale] || this.isCoreLocale(locale)) {
+        const normalizedLocale = this.normalizeSupportedLocale(locale);
+        if (!normalizedLocale || !this.availableLocales[normalizedLocale] || this.isCoreLocale(normalizedLocale)) {
             return;
         }
 
         const downloadedLocales = this.getDownloadedLocales();
-        if (!downloadedLocales.includes(locale)) {
-            downloadedLocales.push(locale);
+        if (!downloadedLocales.includes(normalizedLocale)) {
+            downloadedLocales.push(normalizedLocale);
             this.saveDownloadedLocales(downloadedLocales);
         }
     }
 
     canUseLocaleImmediately(locale) {
-        if (!locale || !this.availableLocales[locale]) {
+        const normalizedLocale = this.normalizeSupportedLocale(locale);
+        if (!normalizedLocale || !this.availableLocales[normalizedLocale]) {
             return false;
         }
 
-        return this.isCoreLocale(locale) || this.getDownloadedLocales().includes(locale);
+        return this.isCoreLocale(normalizedLocale) || this.getDownloadedLocales().includes(normalizedLocale);
     }
 
     resolveInitialLocale() {
@@ -179,12 +235,14 @@ class I18n {
     }
 
     getLocaleDownloadPrompt(locale) {
-        const localeName = this.availableLocales[locale] || locale;
+        const normalizedLocale = this.normalizeSupportedLocale(locale);
+        const localeName = this.availableLocales[normalizedLocale] || locale;
         return this.t('prompts.localeDownloadPrompt', { locale: localeName });
     }
 
     getPreferredLocaleSuggestionPrompt(locale) {
-        const localeName = this.availableLocales[locale] || locale;
+        const normalizedLocale = this.normalizeSupportedLocale(locale);
+        const localeName = this.availableLocales[normalizedLocale] || locale;
         return this.t('prompts.preferredLocaleSuggestionPrompt', { locale: localeName });
     }
 
@@ -232,36 +290,7 @@ class I18n {
     }
 
     normalizeBrowserLocale(locale) {
-        if (!locale) {
-            return null;
-        }
-
-        if (this.availableLocales[locale]) {
-            return locale;
-        }
-
-        const normalizedLocale = String(locale).toLowerCase();
-        const langFamily = normalizedLocale.split('-')[0];
-        switch (langFamily) {
-            case 'zh':
-                return normalizedLocale.includes('tw') || normalizedLocale.includes('hk') || normalizedLocale.includes('hant')
-                    ? 'zh-TW'
-                    : 'zh-CN';
-            case 'en':
-                return 'en-US';
-            case 'ja':
-                return 'ja-JP';
-            case 'ko':
-                return 'ko-KR';
-            case 'fr':
-                return 'fr-FR';
-            case 'de':
-                return 'de-DE';
-            case 'es':
-                return 'es-ES';
-            default:
-                return null;
-        }
+        return this.normalizeSupportedLocale(locale);
     }
 
     resolveBrowserPreferredLocale() {
@@ -286,17 +315,20 @@ class I18n {
     }
 
     getDismissedPreferredLocaleSuggestion() {
-        const dismissedLocale = localStorage.getItem(this.localeSuggestionDismissStorageKey);
+        const dismissedLocale = this.normalizeSupportedLocale(
+            localStorage.getItem(this.localeSuggestionDismissStorageKey)
+        );
         return this.availableLocales[dismissedLocale] ? dismissedLocale : null;
     }
 
     setDismissedPreferredLocaleSuggestion(locale) {
-        if (!locale || !this.availableLocales[locale]) {
+        const normalizedLocale = this.normalizeSupportedLocale(locale);
+        if (!normalizedLocale || !this.availableLocales[normalizedLocale]) {
             localStorage.removeItem(this.localeSuggestionDismissStorageKey);
             return;
         }
 
-        localStorage.setItem(this.localeSuggestionDismissStorageKey, locale);
+        localStorage.setItem(this.localeSuggestionDismissStorageKey, normalizedLocale);
     }
 
     getDeferredPreferredLocaleCandidate() {
@@ -1970,18 +2002,19 @@ class I18n {
      * Change language
      */
     async changeLocale(newLocale, options = {}) {
-        if (!this.availableLocales[newLocale]) {
+        const normalizedLocale = this.normalizeSupportedLocale(newLocale);
+        if (!normalizedLocale || !this.availableLocales[normalizedLocale]) {
             console.error(`Locale ${newLocale} not supported`);
             return false;
         }
 
-        if (newLocale === this.currentLocale) {
+        if (normalizedLocale === this.currentLocale) {
             return true;
         }
 
-        if (!options.skipDownloadPrompt && !this.canUseLocaleImmediately(newLocale)) {
+        if (!options.skipDownloadPrompt && !this.canUseLocaleImmediately(normalizedLocale)) {
             const shouldDownload = await this.showLocaleConfirm(
-                this.getLocaleDownloadPrompt(newLocale)
+                this.getLocaleDownloadPrompt(normalizedLocale)
             );
             if (!shouldDownload) {
                 return false;
@@ -1989,11 +2022,11 @@ class I18n {
         }
 
         const oldLocale = this.currentLocale;
-        this.currentLocale = newLocale;
+        this.currentLocale = normalizedLocale;
 
         await this.loadTranslations();
 
-        if (this.currentLocale !== newLocale) {
+        if (this.currentLocale !== normalizedLocale) {
             this.currentLocale = oldLocale;
             await this.loadTranslations();
             this.applyTranslations();
@@ -2001,9 +2034,9 @@ class I18n {
             return false;
         }
 
-        this.saveLocale(newLocale);
+        this.saveLocale(normalizedLocale);
         this.saveLocalePreferenceMode(options.preferenceMode === 'auto' ? 'auto' : 'manual');
-        this.markLocaleDownloaded(newLocale);
+        this.markLocaleDownloaded(normalizedLocale);
         this.setDismissedPreferredLocaleSuggestion(null);
         this.applyTranslations();
         

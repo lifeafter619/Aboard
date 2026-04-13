@@ -307,12 +307,21 @@ class PWAManager {
 
     getTranslation(key) {
         const locale = window.i18n ? window.i18n.getCurrentLocale() : navigator.language;
-        // Try exact match, then language family (e.g. 'zh'), then default
-        let dict = this.translations[locale] ||
-                   this.translations[locale.split('-')[0] || ''] ||
-                   (locale.startsWith('zh') ? this.translations['zh-CN'] : this.translations[this.defaultLocale]);
+        const normalizedLocale = String(locale || '').trim();
+        // Try exact match, then first locale matching the language family, then default
+        const langFamily = normalizedLocale.split('-')[0] || '';
+        let dict = this.translations[normalizedLocale];
+        if (!dict && langFamily) {
+            const familyMatch = Object.keys(this.translations).find(k => k.split('-')[0] === langFamily);
+            if (familyMatch) {
+                dict = this.translations[familyMatch];
+            }
+        }
+        if (!dict) {
+            dict = this.translations[this.defaultLocale];
+        }
 
-        return dict[key] || key;
+        return (dict && dict[key]) || key;
     }
 
     getVersionText(withPrefix = false) {

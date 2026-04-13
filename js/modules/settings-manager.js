@@ -1069,6 +1069,19 @@ class SettingsManager {
         }
     }
 
+    normalizeLocaleStateValue(locale) {
+        if (typeof window.i18n?.normalizeSupportedLocale === 'function') {
+            return window.i18n.normalizeSupportedLocale(locale);
+        }
+
+        if (locale == null) {
+            return null;
+        }
+
+        const trimmedLocale = String(locale).trim();
+        return trimmedLocale || null;
+    }
+
     getLocaleSettingsState() {
         const downloadedLocalesRaw = localStorage.getItem('aboardDownloadedLocales');
         let downloadedLocales = [];
@@ -1077,17 +1090,24 @@ class SettingsManager {
         } else if (downloadedLocalesRaw) {
             try {
                 const parsed = JSON.parse(downloadedLocalesRaw);
-                downloadedLocales = Array.isArray(parsed) ? parsed : [];
+                downloadedLocales = Array.isArray(parsed)
+                    ? parsed
+                        .map(locale => this.normalizeLocaleStateValue(locale))
+                        .filter(Boolean)
+                    : [];
             } catch (error) {
                 console.warn('Failed to parse exported downloaded locales:', error);
             }
         }
 
         return {
-            locale: localStorage.getItem('locale') || window.i18n?.getCurrentLocale?.() || 'zh-CN',
+            locale: window.i18n?.getCurrentLocale?.()
+                || this.normalizeLocaleStateValue(localStorage.getItem('locale'))
+                || 'zh-CN',
             preferenceMode: window.i18n?.getLocalePreferenceMode?.() || localStorage.getItem('aboardLocalePreferenceMode') || 'auto',
             downloadedLocales,
-            dismissedPreferredLocaleSuggestion: localStorage.getItem('aboardDeferredLocaleSuggestionDismissed')
+            dismissedPreferredLocaleSuggestion: window.i18n?.getDismissedPreferredLocaleSuggestion?.()
+                || this.normalizeLocaleStateValue(localStorage.getItem('aboardDeferredLocaleSuggestionDismissed'))
         };
     }
 
@@ -1097,11 +1117,15 @@ class SettingsManager {
         }
 
         if (Array.isArray(localeSettings.downloadedLocales)) {
-            localStorage.setItem('aboardDownloadedLocales', JSON.stringify(localeSettings.downloadedLocales));
+            const normalizedDownloadedLocales = localeSettings.downloadedLocales
+                .map(locale => this.normalizeLocaleStateValue(locale))
+                .filter(Boolean);
+            localStorage.setItem('aboardDownloadedLocales', JSON.stringify(normalizedDownloadedLocales));
         }
 
-        if (typeof localeSettings.dismissedPreferredLocaleSuggestion === 'string' && localeSettings.dismissedPreferredLocaleSuggestion) {
-            localStorage.setItem('aboardDeferredLocaleSuggestionDismissed', localeSettings.dismissedPreferredLocaleSuggestion);
+        const normalizedDismissedLocale = this.normalizeLocaleStateValue(localeSettings.dismissedPreferredLocaleSuggestion);
+        if (normalizedDismissedLocale) {
+            localStorage.setItem('aboardDeferredLocaleSuggestionDismissed', normalizedDismissedLocale);
         } else if (localeSettings.dismissedPreferredLocaleSuggestion === null) {
             localStorage.removeItem('aboardDeferredLocaleSuggestionDismissed');
         }
@@ -1110,13 +1134,18 @@ class SettingsManager {
         localStorage.setItem('aboardLocalePreferenceMode', localePreferenceMode);
 
         if (typeof localeSettings.locale === 'string' && localeSettings.locale) {
+            const normalizedLocale = this.normalizeLocaleStateValue(localeSettings.locale);
             if (window.i18n?.changeLocale) {
-                await window.i18n.changeLocale(localeSettings.locale, {
+                await window.i18n.changeLocale(normalizedLocale || localeSettings.locale, {
                     skipDownloadPrompt: true,
                     preferenceMode: localePreferenceMode
                 });
             } else {
-                localStorage.setItem('locale', localeSettings.locale);
+                if (normalizedLocale) {
+                    localStorage.setItem('locale', normalizedLocale);
+                } else {
+                    localStorage.removeItem('locale');
+                }
             }
         }
     }
