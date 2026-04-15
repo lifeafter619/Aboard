@@ -6,7 +6,8 @@
       "Bash(find js/libs -name \"*.js\" -type f -exec wc -c {} +)",
       "Bash(du -sh css/*.css)",
       "mcp__filesystem__directory_tree",
-      "Bash(wc -l /d/Project/Aboard/js/modules/*.js /d/Project/Aboard/js/*.js /d/Project/Aboard/js/app/*.js /d/Project/Aboard/js/features/**/*.js /d/Project/Aboard/js/infra/*.js /d/Project/Aboard/js/legacy/*.js /d/Project/Aboard/sw.js)"
+      "Bash(wc -l /d/Project/Aboard/js/modules/*.js /d/Project/Aboard/js/*.js /d/Project/Aboard/js/app/*.js /d/Project/Aboard/js/features/**/*.js /d/Project/Aboard/js/infra/*.js /d/Project/Aboard/js/legacy/*.js /d/Project/Aboard/sw.js)",
+      "Bash(npm test:*)"
     ]
   }
 }

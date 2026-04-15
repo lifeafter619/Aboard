@@ -25,6 +25,11 @@ window.translations = {
         keepCentered: 'Zentriert halten'
     },
 
+    // Gestures
+    gestures: {
+        pinchZoom: 'Zum Zoomen kneifen'
+    },
+
     errors: {
         lazyLoadFailed: '{feature} konnte nicht geladen werden. Bitte laden Sie die Seite neu und versuchen Sie es erneut.'
     },

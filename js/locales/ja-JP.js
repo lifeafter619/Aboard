@@ -25,6 +25,11 @@ window.translations = {
         keepCentered: '中央を維持'
     },
 
+    // Gestures
+    gestures: {
+        pinchZoom: 'ピンチでズーム'
+    },
+
     errors: {
         lazyLoadFailed: '{feature}の読み込みに失敗しました。ページを再読み込みしてもう一度お試しください。'
     },

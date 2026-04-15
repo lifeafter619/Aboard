@@ -36,14 +36,20 @@ function hideEraserCursor() {
 function handlePinchStart(e) {
         if (e.touches.length < 2) return;
         if (!this.settingsManager.touchZoomEnabled) return;
-        
+
         this.isPinching = true;
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
         this.lastPinchDistance = this.getPinchDistance(touch1, touch2);
         this.lastPinchCenter = this.getPinchCenter(touch1, touch2);
         this.scheduleRenderQualityUpdate();
-    
+
+        // Show pinch zoom indicator
+        const indicator = document.getElementById('pinch-zoom-indicator');
+        if (indicator) {
+            indicator.classList.add('show');
+        }
+
 }
 
 function handlePinchMove(e) {
@@ -121,11 +127,17 @@ function handlePinchEnd() {
         this.lastPinchCenter = null;
         this.scheduleRenderQualityUpdate();
 
+        // Hide pinch zoom indicator
+        const indicator = document.getElementById('pinch-zoom-indicator');
+        if (indicator) {
+            indicator.classList.remove('show');
+        }
+
         // Save state after pinch ends
         localStorage.setItem('canvasScale', this.drawingEngine.canvasScale);
         localStorage.setItem('panOffsetX', this.drawingEngine.panOffset.x);
         localStorage.setItem('panOffsetY', this.drawingEngine.panOffset.y);
-    
+
 }
 
 function getPinchDistance(touch1, touch2) {
@@ -145,31 +157,37 @@ function getPinchCenter(touch1, touch2) {
 
 function handlePointerPinchStart() {
         if (!this.settingsManager.touchZoomEnabled) return;
-        
+
         // Get the first two pointers
         const pointers = Array.from(this.activePointers.values());
         if (pointers.length < 2) return;
-        
+
         this.isPinching = true;
         this.hasTwoFingers = true;
-        
+
         // If we were drawing, stop and discard the current stroke
         if (this.drawingEngine.isDrawing) {
             this.discardCurrentStroke();
         }
-        
+
         // If we were panning, stop it
         if (this.drawingEngine.isPanning) {
             this.drawingEngine.stopPanning();
         }
-        
+
         // Calculate initial pinch distance and center
         const p1 = pointers[0];
         const p2 = pointers[1];
         this.lastPinchDistance = this.getPointerDistance(p1, p2);
         this.lastPinchCenter = this.getPointerCenter(p1, p2);
         this.scheduleRenderQualityUpdate();
-    
+
+        // Show pinch zoom indicator
+        const indicator = document.getElementById('pinch-zoom-indicator');
+        if (indicator) {
+            indicator.classList.add('show');
+        }
+
 }
 
 function handlePointerPinchMove() {
@@ -233,12 +251,18 @@ function handlePointerPinchEnd() {
         this.lastPinchDistance = 0;
         this.lastPinchCenter = null;
         this.scheduleRenderQualityUpdate();
-        
+
+        // Hide pinch zoom indicator
+        const indicator = document.getElementById('pinch-zoom-indicator');
+        if (indicator) {
+            indicator.classList.remove('show');
+        }
+
         // Save state after pinch ends
         localStorage.setItem('canvasScale', this.drawingEngine.canvasScale);
         localStorage.setItem('panOffsetX', this.drawingEngine.panOffset.x);
         localStorage.setItem('panOffsetY', this.drawingEngine.panOffset.y);
-    
+
 }
 
 function getPointerDistance(p1, p2) {

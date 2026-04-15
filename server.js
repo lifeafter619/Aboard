@@ -111,7 +111,7 @@ function serveStatic(reqPath, res, rawPath = reqPath) {
 
     fs.readFile(filePath, (err, data) => {
         if (err) {
-            if (err.code === 'ENOENT') {
+            if (err.code === 'ENOENT' || err.code === 'EISDIR') {
                 sendJson(res, 404, { error: 'Not Found' });
                 return;
             }

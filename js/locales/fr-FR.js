@@ -25,6 +25,11 @@ window.translations = {
         keepCentered: 'Garder centré'
     },
 
+    // Gestures
+    gestures: {
+        pinchZoom: 'Pincer pour zoomer'
+    },
+
     errors: {
         lazyLoadFailed: 'Impossible de charger {feature}. Actualisez la page puis réessayez.'
     },

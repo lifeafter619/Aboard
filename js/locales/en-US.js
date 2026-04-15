@@ -31,6 +31,11 @@ window.translations = {
         keepCentered: 'Keep Centered'
     },
 
+    // Gestures
+    gestures: {
+        pinchZoom: 'Pinch to Zoom'
+    },
+
     errors: {
         lazyLoadFailed: 'Failed to load {feature}. Please refresh and try again.'
     },

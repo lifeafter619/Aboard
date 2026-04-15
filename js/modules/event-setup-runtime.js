@@ -21,6 +21,9 @@ function getEventTargetClosest(target) {
 }
 
 function setupEventListeners() {
+        const shouldUsePointerPinch = () => this.isPointerPinching
+            || Array.from(this.activePointers.values()).some(pointer => pointer.pointerType === 'pen');
+
         // Canvas drawing events - use Pointer Events for unified Mouse/Touch/Pen support
         // Track all pointers for multi-touch gesture detection (pinch zoom)
         document.addEventListener('pointerdown', (e) => {
@@ -33,7 +36,8 @@ function setupEventListeners() {
                 });
                 
                 // Check for multi-touch pinch gesture (2+ pointers)
-                if (this.activePointers.size >= 2) {
+                if (this.activePointers.size >= 2 && shouldUsePointerPinch()) {
+                    this.isPointerPinching = true;
                     this.handlePointerPinchStart();
                 }
             }
@@ -203,7 +207,7 @@ function setupEventListeners() {
                 });
                 
                 // Handle pinch gesture if we have 2+ pointers
-                if (this.isPinching && this.activePointers.size >= 2) {
+                if (this.isPointerPinching && this.activePointers.size >= 2) {
                     this.handlePointerPinchMove();
                     return; // Don't continue with normal drawing during pinch
                 }
@@ -247,20 +251,27 @@ function setupEventListeners() {
                 } else {
                     this.drawingEngine.draw(e);
                 }
-                this.updateEraserCursor(e);
-            } else {
-                this.updateEraserCursor(e);
             }
+
+            // Update eraser cursor for all cases
+            this.updateEraserCursor(e);
         });
         
         document.addEventListener('pointerup', (e) => {
             // Remove pointer from tracking
             if (e.pointerType === 'touch' || e.pointerType === 'pen') {
                 this.activePointers.delete(e.pointerId);
-                
+
                 // End pinch if we no longer have 2+ pointers
-                if (this.isPinching && this.activePointers.size < 2) {
+                if (this.isPointerPinching && this.activePointers.size < 2) {
                     this.handlePointerPinchEnd();
+                    this.isPointerPinching = false;
+                }
+
+                // Clear map when empty to prevent memory leak
+                if (this.activePointers.size === 0) {
+                    this.activePointers.clear();
+                    this.isPointerPinching = false;
                 }
             }
             
@@ -285,10 +296,17 @@ function setupEventListeners() {
             // Remove pointer from tracking on cancel
             if (e.pointerType === 'touch' || e.pointerType === 'pen') {
                 this.activePointers.delete(e.pointerId);
-                
+
                 // End pinch if we no longer have 2+ pointers
-                if (this.isPinching && this.activePointers.size < 2) {
+                if (this.isPointerPinching && this.activePointers.size < 2) {
                     this.handlePointerPinchEnd();
+                    this.isPointerPinching = false;
+                }
+
+                // Clear map when empty to prevent memory leak
+                if (this.activePointers.size === 0) {
+                    this.activePointers.clear();
+                    this.isPointerPinching = false;
                 }
             }
             this.scheduleRenderQualityUpdate();
@@ -329,6 +347,19 @@ function setupEventListeners() {
         
         // Touch events - Only for gestures (Pinch Zoom)
         // Drawing is now handled by Pointer Events
+        const resetTouchGestureState = () => {
+            this.isPotentialTap = false;
+            this.isPotentialGesture = false;
+            this.maxTouchesInGesture = 0;
+        };
+
+        const endTouchPinchGesture = () => {
+            if (this.isPinching || this.hasTwoFingers) {
+                this.handlePinchEnd();
+            }
+            this.hasTwoFingers = false;
+        };
+
         this.canvas.addEventListener('touchstart', (e) => {
             // Don't start drawing if interacting with teaching tools
             if (this.teachingToolsManager && this.teachingToolsManager.isInteracting) {
@@ -459,9 +490,7 @@ function setupEventListeners() {
             }
 
             if (e.touches.length === 0) {
-                this.isPotentialTap = false;
-                this.isPotentialGesture = false;
-                this.maxTouchesInGesture = 0;
+                resetTouchGestureState();
             }
 
             // If we still have enough fingers to pinch, re-anchor to prevent jumps
@@ -470,9 +499,17 @@ function setupEventListeners() {
             }
 
             if (e.touches.length < 2) {
-                this.handlePinchEnd();
-                this.hasTwoFingers = false;
+                endTouchPinchGesture();
             }
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchcancel', () => {
+            if (this.teachingToolsManager && this.teachingToolsManager.isInteracting) {
+                return;
+            }
+
+            resetTouchGestureState();
+            endTouchPinchGesture();
         }, { passive: false });
         
         // Toolbar buttons

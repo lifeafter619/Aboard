@@ -25,6 +25,11 @@ window.translations = {
         keepCentered: '가운데 유지'
     },
 
+    // Gestures
+    gestures: {
+        pinchZoom: '핀치 줌'
+    },
+
     errors: {
         lazyLoadFailed: '{feature} 기능을 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.'
     },

@@ -27,6 +27,11 @@ window.translations = {
         keepCentered: '保持置中'
     },
 
+    // Gestures
+    gestures: {
+        pinchZoom: '捏合縮放'
+    },
+
     errors: {
         lazyLoadFailed: '載入{feature}失敗，請重新整理頁面後再試。'
     },

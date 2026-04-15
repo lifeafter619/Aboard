@@ -31,6 +31,11 @@ window.translations = {
         keepCentered: '\u4fdd\u6301\u5c45\u4e2d'
     },
 
+    // Gestures
+    gestures: {
+        pinchZoom: '捏合缩放'
+    },
+
     errors: {
         lazyLoadFailed: '加载{feature}失败，请刷新页面后重试。'
     },
