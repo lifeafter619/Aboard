@@ -14,6 +14,60 @@ function getLazyFeatureLabel(key, fallback) {
         return translated && translated !== key ? translated : fallback;
 }
 
+function openAttachedFilePicker({
+        accept = '',
+        doc = document,
+        win = window,
+        onFilesSelected
+}) {
+        const input = doc.createElement('input');
+        input.type = 'file';
+        input.accept = accept;
+        input.style.position = 'fixed';
+        input.style.left = '-9999px';
+        input.style.width = '1px';
+        input.style.height = '1px';
+        input.style.opacity = '0';
+        input.style.pointerEvents = 'none';
+
+        const parent = doc.body || doc.documentElement;
+        let cleanedUp = false;
+
+        const cleanup = () => {
+            if (cleanedUp) {
+                return;
+            }
+            cleanedUp = true;
+            input.removeEventListener?.('cancel', cleanup);
+            win.removeEventListener?.('focus', handleWindowFocus);
+            input.remove?.();
+        };
+
+        const handleWindowFocus = () => {
+            win.setTimeout(() => {
+                if (!input.files?.length) {
+                    cleanup();
+                }
+            }, 0);
+        };
+
+        input.addEventListener('cancel', cleanup, { once: true });
+        input.addEventListener('change', async (event) => {
+            try {
+                if (event.target.files?.length) {
+                    await onFilesSelected?.(event.target.files, event);
+                }
+            } finally {
+                cleanup();
+            }
+        }, { once: true });
+
+        parent?.appendChild?.(input);
+        win.addEventListener?.('focus', handleWindowFocus, { once: true });
+        input.click();
+        return input;
+}
+
 function getEventTargetClosest(target) {
         return typeof target?.closest === 'function'
             ? target.closest.bind(target)
@@ -587,23 +641,19 @@ function setupEventListeners() {
 
         // Import Project Button
         bindIfPresent(document.getElementById('import-project-btn'), 'click', async () => {
-            // Create a hidden file input
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = this.settingsManager?.legacyProjectImportEnabled
-                ? '.zip,.aboard,.json'
-                : '.zip';
-            input.onchange = async (e) => {
-                if (e.target.files.length > 0) {
+            openAttachedFilePicker({
+                accept: this.settingsManager?.legacyProjectImportEnabled
+                    ? '.zip,.aboard,.json'
+                    : '.zip',
+                onFilesSelected: async (files) => {
                     try {
                         const projectManager = await this.getProjectManager();
-                        await projectManager.importProject(e.target.files[0]);
+                        await projectManager.importProject(files[0]);
                     } catch (error) {
                         this.showLazyLoadError(getLazyFeatureLabel('settings.more.compatibilityLabel', 'Project Import'), error);
                     }
                 }
-            };
-            input.click();
+            });
         });
 
         // Pagination controls - merged next and add button

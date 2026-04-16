@@ -40,6 +40,60 @@ function getLazyFeatureLabel(key, fallback) {
         return translated && translated !== key ? translated : fallback;
 }
 
+function openAttachedFilePicker({
+        accept = '',
+        doc = document,
+        win = window,
+        onFilesSelected
+}) {
+        const input = doc.createElement('input');
+        input.type = 'file';
+        input.accept = accept;
+        input.style.position = 'fixed';
+        input.style.left = '-9999px';
+        input.style.width = '1px';
+        input.style.height = '1px';
+        input.style.opacity = '0';
+        input.style.pointerEvents = 'none';
+
+        const parent = doc.body || doc.documentElement;
+        let cleanedUp = false;
+
+        const cleanup = () => {
+            if (cleanedUp) {
+                return;
+            }
+            cleanedUp = true;
+            input.removeEventListener?.('cancel', cleanup);
+            win.removeEventListener?.('focus', handleWindowFocus);
+            input.remove?.();
+        };
+
+        const handleWindowFocus = () => {
+            win.setTimeout(() => {
+                if (!input.files?.length) {
+                    cleanup();
+                }
+            }, 0);
+        };
+
+        input.addEventListener('cancel', cleanup, { once: true });
+        input.addEventListener('change', async (event) => {
+            try {
+                if (event.target.files?.length) {
+                    await onFilesSelected?.(event.target.files, event);
+                }
+            } finally {
+                cleanup();
+            }
+        }, { once: true });
+
+        parent?.appendChild?.(input);
+        win.addEventListener?.('focus', handleWindowFocus, { once: true });
+        input.click();
+        return input;
+}
+
 function setupToolConfigListeners() {
         const customColorPicker = document.getElementById('custom-color-picker');
         const customColorPickerBtn = document.querySelector('label[for="custom-color-picker"]');
@@ -1308,12 +1362,10 @@ function setupSettingsListeners() {
 
         // Import Config
         bindIfPresent(document.getElementById('import-config-btn'), 'click', () => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            input.onchange = async (e) => {
-                if (e.target.files.length > 0) {
-                    const file = e.target.files[0];
+            openAttachedFilePicker({
+                accept: '.json',
+                onFilesSelected: async (files) => {
+                    const file = files[0];
                     const text = await file.text();
                     try {
                         const newSettings = JSON.parse(text);
@@ -1328,8 +1380,7 @@ function setupSettingsListeners() {
                         }
                     }
                 }
-            };
-            input.click();
+            });
         });
 
         const clearLocalCacheBtn = document.getElementById('clear-local-cache-btn');
