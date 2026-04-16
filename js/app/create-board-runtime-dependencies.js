@@ -26,7 +26,8 @@ export function createBoardRuntimeDependencies({ win = window, doc = document, b
 
   const ctx = getCanvasContext(canvas, {
     desynchronized: true,
-    alpha: true
+    alpha: true,
+    willReadFrequently: true
   });
   const bgCtx = getCanvasContext(bgCanvas);
 

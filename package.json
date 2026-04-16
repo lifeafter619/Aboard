@@ -5,7 +5,7 @@
   "scripts": {
     "build": "node scripts/build-static.js",
     "start": "node server.js",
-    "test": "node tests/pwa-locale-guard.test.js && node tests/i18n-locale-normalization.test.js && node tests/settings-manager-locale-state.test.js && node tests/locale-files.test.js && node tests/lazy-manager-runtime.test.js && node tests/event-setup-touchcancel.test.js && node tests/server-static-paths.test.js",
+    "test": "node tests/pwa-locale-guard.test.js && node tests/i18n-locale-normalization.test.js && node tests/settings-manager-locale-state.test.js && node tests/locale-files.test.js && node tests/lazy-manager-runtime.test.js && node tests/event-setup-touchcancel.test.js && node tests/canvas-context-options.test.js && node tests/server-static-paths.test.js",
     "sync:version-badge": "node scripts/update-version-badge.js"
   },
   "devDependencies": {

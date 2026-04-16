@@ -153,9 +153,19 @@ function testFallsBackToDefaultLocaleWhenLocaleIsMissing() {
   assert.equal(manager.getTranslation('install'), 'Install App');
 }
 
-function testFallsBackToChineseWhenLocaleFamilyIsChinese() {
+function testFallsBackToTraditionalChineseForHongKongLocale() {
   const PWAManager = loadPWAManager({
     locale: 'zh-HK',
+    navigatorLanguage: undefined
+  });
+  const manager = new PWAManager();
+
+  assert.equal(manager.getTranslation('install'), '安裝應用');
+}
+
+function testFallsBackToSimplifiedChineseForSingaporeLocale() {
+  const PWAManager = loadPWAManager({
+    locale: 'zh-SG',
     navigatorLanguage: undefined
   });
   const manager = new PWAManager();
@@ -165,7 +175,8 @@ function testFallsBackToChineseWhenLocaleFamilyIsChinese() {
 
 function run() {
   testFallsBackToDefaultLocaleWhenLocaleIsMissing();
-  testFallsBackToChineseWhenLocaleFamilyIsChinese();
+  testFallsBackToTraditionalChineseForHongKongLocale();
+  testFallsBackToSimplifiedChineseForSingaporeLocale();
   console.log('pwa-locale-guard.test: all assertions passed');
 }
 

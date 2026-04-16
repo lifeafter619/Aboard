@@ -53,7 +53,8 @@ class DrawingBoard {
         this.canvas = options.canvas || document.getElementById('canvas');
         this.ctx = options.ctx || this.canvas.getContext('2d', { 
             desynchronized: true,
-            alpha: true
+            alpha: true,
+            willReadFrequently: true
         });
         
         this.bgCanvas = options.bgCanvas || document.getElementById('background-canvas');

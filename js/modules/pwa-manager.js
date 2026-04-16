@@ -93,6 +93,50 @@ function hasServiceWorkerMethod(serviceWorkerApi, methodName) {
     return Boolean(serviceWorkerApi && typeof serviceWorkerApi[methodName] === 'function');
 }
 
+function normalizeTranslationLocale(locale, translations, fallbackLocale = 'en-US') {
+    const trimmedLocale = String(locale || '').trim();
+    if (!trimmedLocale) {
+        return fallbackLocale;
+    }
+
+    if (translations[trimmedLocale]) {
+        return trimmedLocale;
+    }
+
+    const normalizedLocale = trimmedLocale.toLowerCase();
+    const exactMatch = Object.keys(translations).find(
+        (availableLocale) => availableLocale.toLowerCase() === normalizedLocale
+    );
+    if (exactMatch) {
+        return exactMatch;
+    }
+
+    const langFamily = normalizedLocale.split('-')[0] || '';
+    switch (langFamily) {
+        case 'zh':
+            return normalizedLocale.includes('tw')
+                || normalizedLocale.includes('hk')
+                || normalizedLocale.includes('mo')
+                || normalizedLocale.includes('hant')
+                ? 'zh-TW'
+                : 'zh-CN';
+        case 'en':
+            return 'en-US';
+        case 'ja':
+            return 'ja-JP';
+        case 'ko':
+            return 'ko-KR';
+        case 'fr':
+            return 'fr-FR';
+        case 'de':
+            return 'de-DE';
+        case 'es':
+            return 'es-ES';
+        default:
+            return fallbackLocale;
+    }
+}
+
 class PWAManager {
     constructor() {
         this.deferredPrompt = null;
@@ -307,19 +351,8 @@ class PWAManager {
 
     getTranslation(key) {
         const locale = window.i18n ? window.i18n.getCurrentLocale() : navigator.language;
-        const normalizedLocale = String(locale || '').trim();
-        // Try exact match, then first locale matching the language family, then default
-        const langFamily = normalizedLocale.split('-')[0] || '';
-        let dict = this.translations[normalizedLocale];
-        if (!dict && langFamily) {
-            const familyMatch = Object.keys(this.translations).find(k => k.split('-')[0] === langFamily);
-            if (familyMatch) {
-                dict = this.translations[familyMatch];
-            }
-        }
-        if (!dict) {
-            dict = this.translations[this.defaultLocale];
-        }
+        const resolvedLocale = normalizeTranslationLocale(locale, this.translations, this.defaultLocale);
+        const dict = this.translations[resolvedLocale] || this.translations[this.defaultLocale];
 
         return (dict && dict[key]) || key;
     }
