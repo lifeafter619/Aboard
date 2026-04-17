@@ -792,6 +792,7 @@ window.translations = {
         pause: 'Pause',
         reset: 'Réinitialiser',
         stop: 'Arrêter',
+        audioFallback: 'Minuteur terminé (son indisponible)',
         alertSetTime: 'Veuillez régler le compte à rebours',
         alertTitle: 'Alerte'
     },

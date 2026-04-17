@@ -1276,7 +1276,10 @@ class BackgroundManager {
     }
 
     getCoordinateOverlayState() {
-        return JSON.parse(JSON.stringify(this.coordinateOverlayState));
+        const clone = typeof window.safeDeepClone === 'function'
+            ? window.safeDeepClone
+            : (value) => JSON.parse(JSON.stringify(value));
+        return clone(this.coordinateOverlayState);
     }
 
     setCoordinateOverlayState(state, options = {}) {
@@ -1877,7 +1880,7 @@ class BackgroundManager {
     }
 
     isPlotNumberToken(token) {
-        return /^(?:\d+\.\d*|\.\d+|\d+)$/.test(token);
+        return /^(?:\d+\.\d*|\.\d+|\d+)(?:e[+-]?\d+)?$/i.test(token);
     }
 
     isPlotNamedValueToken(token) {
@@ -1912,7 +1915,7 @@ class BackgroundManager {
         const compactExpression = String(expression || '').replace(/\s+/g, '');
         if (!compactExpression) return [];
 
-        const tokenPattern = /\d+\.\d*|\.\d+|\d+|PI|E|theta|deg|x|[A-Za-z_][A-Za-z0-9_]*|\*\*|[()+\-*/^,]/gi;
+        const tokenPattern = /(?:\d+\.\d*|\.\d+|\d+)(?:e[+-]?\d+)?|PI|E|theta|deg|x|[A-Za-z_][A-Za-z0-9_]*|\*\*|[()+\-*/^,]/gi;
         const tokens = [];
         let currentIndex = 0;
 
@@ -1970,11 +1973,223 @@ class BackgroundManager {
         return preparedTokens.join('');
     }
 
+    buildSafePlotEvaluator(preparedExpression) {
+        const tokens = this.tokenizePlotExpression(preparedExpression);
+        if (tokens.length === 0) {
+            throw new Error('invalid-expression');
+        }
+        const rpn = this.convertPlotTokensToRpn(tokens);
+        return (x, theta, deg, PI, E) => this.evaluatePlotRpn(rpn, {
+            x,
+            theta,
+            deg,
+            PI: PI ?? Math.PI,
+            E: E ?? Math.E
+        });
+    }
+
+    convertPlotTokensToRpn(tokens) {
+        // Function allowlist: everything the old `with (Math) { return ... }` path
+        // exposed, minus mutating/irrelevant members (random, eval-adjacent, etc).
+        // Keep in sync with evaluatePlotRpn. Function nodes carry `argCount`
+        // so variadic Math helpers preserve their original call boundaries.
+        const functionArity = BackgroundManager.PLOT_FUNCTION_ARITY;
+        const precedence = { '+': 1, '-': 1, '*': 2, '/': 2, '**': 3, 'u+': 4, 'u-': 4 };
+        const rightAssoc = new Set(['**', 'u+', 'u-']);
+        const binaryOps = new Set(['+', '-', '*', '/', '**']);
+
+        const output = [];
+        const stack = [];
+        let previousToken = null;
+
+        const isValueToken = (token) => {
+            if (token === null) return false;
+            if (/^(?:\d+\.\d*|\.\d+|\d+)(?:e[+-]?\d+)?$/i.test(token)) return true;
+            if (token === 'x' || token === 'theta' || token === 'deg' || token === 'PI' || token === 'E') return true;
+            if (token === ')') return true;
+            return false;
+        };
+
+        const isFunctionName = (token) => Object.prototype.hasOwnProperty.call(functionArity, token);
+
+        for (let index = 0; index < tokens.length; index++) {
+            const token = tokens[index];
+
+            if (/^(?:\d+\.\d*|\.\d+|\d+)(?:e[+-]?\d+)?$/i.test(token)) {
+                output.push({ kind: 'number', value: Number(token) });
+                previousToken = token;
+                continue;
+            }
+
+            if (token === 'x' || token === 'theta' || token === 'deg' || token === 'PI' || token === 'E') {
+                output.push({ kind: 'variable', name: token });
+                previousToken = token;
+                continue;
+            }
+
+            if (isFunctionName(token)) {
+                stack.push({ kind: 'function', name: token });
+                previousToken = token;
+                continue;
+            }
+
+            if (token === ',') {
+                while (stack.length > 0 && stack[stack.length - 1].kind !== 'paren') {
+                    output.push(stack.pop());
+                }
+                if (stack.length === 0) {
+                    throw new Error('invalid-expression');
+                }
+                const callFrame = stack[stack.length - 1];
+                if (!callFrame.call || !isValueToken(previousToken)) {
+                    throw new Error('invalid-expression');
+                }
+                callFrame.argumentCount += 1;
+                previousToken = token;
+                continue;
+            }
+
+            if (binaryOps.has(token)) {
+                const isUnary = !isValueToken(previousToken) && (token === '+' || token === '-');
+                const opName = isUnary ? (token === '-' ? 'u-' : 'u+') : token;
+                const opPrecedence = precedence[opName];
+                while (stack.length > 0) {
+                    const top = stack[stack.length - 1];
+                    if (top.kind !== 'operator' && top.kind !== 'function') break;
+                    if (top.kind === 'function') {
+                        output.push(stack.pop());
+                        continue;
+                    }
+                    const topPrecedence = precedence[top.name];
+                    const shouldPop = rightAssoc.has(opName)
+                        ? topPrecedence > opPrecedence
+                        : topPrecedence >= opPrecedence;
+                    if (!shouldPop) break;
+                    output.push(stack.pop());
+                }
+                stack.push({ kind: 'operator', name: opName });
+                previousToken = token;
+                continue;
+            }
+
+            if (token === '(') {
+                stack.push({
+                    kind: 'paren',
+                    call: isFunctionName(previousToken),
+                    argumentCount: 0
+                });
+                previousToken = token;
+                continue;
+            }
+
+            if (token === ')') {
+                while (stack.length > 0 && stack[stack.length - 1].kind !== 'paren') {
+                    output.push(stack.pop());
+                }
+                if (stack.length === 0) {
+                    throw new Error('invalid-expression');
+                }
+                const paren = stack.pop();
+                if (paren.call) {
+                    const argCount = isValueToken(previousToken) ? paren.argumentCount + 1 : 0;
+                    if (stack.length === 0 || stack[stack.length - 1].kind !== 'function') {
+                        throw new Error('invalid-expression');
+                    }
+                    output.push({
+                        ...stack.pop(),
+                        argCount
+                    });
+                }
+                previousToken = token;
+                continue;
+            }
+
+            // Any identifier that is not in the function allowlist (and not one of
+            // the known variables) is rejected — this is how we keep the
+            // evaluator's attack surface bounded.
+            throw new Error('invalid-expression');
+        }
+
+        while (stack.length > 0) {
+            const top = stack.pop();
+            if (top.kind === 'paren') {
+                throw new Error('invalid-expression');
+            }
+            output.push(top);
+        }
+
+        return output;
+    }
+
+    evaluatePlotRpn(rpn, variables) {
+        const functionArity = BackgroundManager.PLOT_FUNCTION_ARITY;
+        const stack = [];
+        for (let index = 0; index < rpn.length; index++) {
+            const node = rpn[index];
+            if (node.kind === 'number') {
+                stack.push(node.value);
+                continue;
+            }
+            if (node.kind === 'variable') {
+                stack.push(variables[node.name]);
+                continue;
+            }
+            if (node.kind === 'operator') {
+                if (node.name === 'u-' || node.name === 'u+') {
+                    if (stack.length < 1) throw new Error('invalid-expression');
+                    const arg = stack.pop();
+                    stack.push(node.name === 'u-' ? -arg : +arg);
+                    continue;
+                }
+                if (stack.length < 2) throw new Error('invalid-expression');
+                const right = stack.pop();
+                const left = stack.pop();
+                switch (node.name) {
+                    case '+': stack.push(left + right); break;
+                    case '-': stack.push(left - right); break;
+                    case '*': stack.push(left * right); break;
+                    case '/': stack.push(left / right); break;
+                    case '**': stack.push(Math.pow(left, right)); break;
+                    default: throw new Error('invalid-expression');
+                }
+                continue;
+            }
+            if (node.kind === 'function') {
+                const arity = functionArity[node.name];
+                const fn = Math[node.name];
+                if (typeof fn !== 'function') {
+                    throw new Error('invalid-expression');
+                }
+                const argCount = Number.isInteger(node.argCount) ? node.argCount : arity.max;
+                if (argCount < arity.min || argCount > arity.max) {
+                    throw new Error('invalid-expression');
+                }
+                if (stack.length < argCount) {
+                    throw new Error('invalid-expression');
+                }
+                const args = stack.splice(stack.length - argCount, argCount);
+                stack.push(fn.apply(null, args));
+                continue;
+            }
+            throw new Error('invalid-expression');
+        }
+        if (stack.length !== 1) {
+            throw new Error('invalid-expression');
+        }
+        return stack[0];
+    }
+
     createPlotEvaluator(expression, coordinateType = this.backgroundPattern) {
         const normalized = this.preparePlotExpression(expression, coordinateType);
 
         try {
-            return new Function('x', 'theta', 'deg', 'PI', 'E', `with (Math) { return (${normalized}); }`);
+            // Previously this compiled the expression with `new Function(..., "with(Math){ return (...) }")`.
+            // That works, but it means any coordinate expression — including ones imported
+            // from an untrusted project `.zip` — is executed as real JavaScript. The
+            // safe evaluator below tokenises, converts to RPN via shunting-yard, and
+            // walks the RPN with a whitelist of Math helpers, so arbitrary code in an
+            // imported board cannot run in the current user's origin.
+            return this.buildSafePlotEvaluator(normalized);
         } catch (error) {
             throw new Error('invalid-expression');
         }
@@ -2829,3 +3044,41 @@ class BackgroundManager {
 
 window.BackgroundManager = BackgroundManager;
 window.AboardBackgroundManager = BackgroundManager;
+
+// Allowlist for the safe coordinate-plot evaluator. Every function here must be
+// a well-known pure member of `Math`. `max = Infinity` marks variadic
+// functions whose argument count is preserved by the RPN parser.
+BackgroundManager.PLOT_FUNCTION_ARITY = Object.freeze({
+    sin: { min: 1, max: 1 },
+    cos: { min: 1, max: 1 },
+    tan: { min: 1, max: 1 },
+    asin: { min: 1, max: 1 },
+    acos: { min: 1, max: 1 },
+    atan: { min: 1, max: 1 },
+    atan2: { min: 2, max: 2 },
+    sinh: { min: 1, max: 1 },
+    cosh: { min: 1, max: 1 },
+    tanh: { min: 1, max: 1 },
+    asinh: { min: 1, max: 1 },
+    acosh: { min: 1, max: 1 },
+    atanh: { min: 1, max: 1 },
+    log: { min: 1, max: 1 },
+    log2: { min: 1, max: 1 },
+    log10: { min: 1, max: 1 },
+    log1p: { min: 1, max: 1 },
+    exp: { min: 1, max: 1 },
+    expm1: { min: 1, max: 1 },
+    pow: { min: 2, max: 2 },
+    sqrt: { min: 1, max: 1 },
+    cbrt: { min: 1, max: 1 },
+    abs: { min: 1, max: 1 },
+    floor: { min: 1, max: 1 },
+    ceil: { min: 1, max: 1 },
+    round: { min: 1, max: 1 },
+    trunc: { min: 1, max: 1 },
+    sign: { min: 1, max: 1 },
+    fround: { min: 1, max: 1 },
+    max: { min: 0, max: Infinity },
+    min: { min: 0, max: Infinity },
+    hypot: { min: 0, max: Infinity }
+});

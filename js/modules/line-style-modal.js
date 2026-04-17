@@ -562,8 +562,8 @@ class LineStyleModal {
         const lineCountEl = document.getElementById('modal-line-count-slider');
         const lineSpacingEl = document.getElementById('modal-line-spacing-slider');
 
-        const lineCount = lineCountEl ? parseInt(lineCountEl.value) : 2;
-        const lineSpacing = lineSpacingEl ? parseInt(lineSpacingEl.value) : 10;
+        const lineCount = lineCountEl ? parseInt(lineCountEl.value, 10) : 2;
+        const lineSpacing = lineSpacingEl ? parseInt(lineSpacingEl.value, 10) : 10;
 
         const penSize = this.currentMode === 'pen' 
             ? (this.drawingEngine.penSize || 5)

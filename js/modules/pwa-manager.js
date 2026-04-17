@@ -515,6 +515,28 @@ class PWAManager {
 
     async preparePlannedUpdateReload(intent) {
         const board = this.getDrawingBoard();
+        if (board?.recoveryCheckPromise) {
+            try {
+                await board.recoveryCheckPromise;
+            } catch (error) {
+                console.warn('Failed to await recovery check before planned update reload:', error);
+            }
+        }
+
+        const recoveryModal = document.getElementById('recovery-modal');
+        const hasBlockingRecoveryPrompt = Boolean(
+            board?.hasUnresolvedRecoveryData
+            || board?.recoveryPromptOpen
+            || recoveryModal?.classList?.contains?.('show')
+        );
+        if (hasBlockingRecoveryPrompt) {
+            return {
+                canReload: false,
+                intent,
+                persistResult: null
+            };
+        }
+
         if (!board?.persistSessionForUpdateReload) {
             return {
                 canReload: false,
@@ -886,11 +908,10 @@ class PWAManager {
             return false;
         }
 
-        this.shouldReloadOnControllerChange = true;
-        this.pendingUpdateWorker = targetWorker;
-
         try {
             targetWorker.postMessage({ type: 'SKIP_WAITING' });
+            this.shouldReloadOnControllerChange = true;
+            this.pendingUpdateWorker = targetWorker;
             return true;
         } catch (error) {
             console.warn('Failed to activate waiting worker:', error);
@@ -1040,38 +1061,66 @@ class PWAManager {
             return Promise.resolve(UPDATE_USER_CHOICES.IDLE);
         }
 
-        if (this.updateModalPromise) {
-            return this.updateModalPromise;
-        }
+        const showPrompt = () => {
+            if (this.updateModalPromise) {
+                return this.updateModalPromise;
+            }
 
-        this.ensureUpdateModal();
-        this.updateModalPreviouslyFocusedElement = document.activeElement && document.activeElement !== document.body
-            ? document.activeElement
-            : null;
-        this.updateModalContext = { reason, currentVersion, latestVersion };
-        this.refreshUpdateModalContent();
-        this.updateModal.classList.add('show');
-        const focusPreferredButton = () => {
-            const preferredChoice = this.getPreferredUpdateChoice();
-            const preferredButton = preferredChoice === UPDATE_USER_CHOICES.IMMEDIATE
-                ? this.updateModalUpdateBtn
-                : this.updateModalLaterBtn;
-            preferredButton?.focus?.();
-        };
-        if (typeof window.requestAnimationFrame === 'function') {
-            window.requestAnimationFrame(focusPreferredButton);
-        } else {
-            focusPreferredButton();
-        }
-
-        this.updateModalPromise = new Promise((resolve) => {
-            this.updateModalResolver = (choice) => {
-                this.updateModalPromise = null;
-                resolve(choice);
+            this.ensureUpdateModal();
+            this.updateModalPreviouslyFocusedElement = document.activeElement && document.activeElement !== document.body
+                ? document.activeElement
+                : null;
+            this.updateModalContext = { reason, currentVersion, latestVersion };
+            this.refreshUpdateModalContent();
+            this.updateModal.classList.add('show');
+            const focusPreferredButton = () => {
+                const preferredChoice = this.getPreferredUpdateChoice();
+                const preferredButton = preferredChoice === UPDATE_USER_CHOICES.IMMEDIATE
+                    ? this.updateModalUpdateBtn
+                    : this.updateModalLaterBtn;
+                preferredButton?.focus?.();
             };
-        });
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(focusPreferredButton);
+            } else {
+                focusPreferredButton();
+            }
 
-        return this.updateModalPromise;
+            this.updateModalPromise = new Promise((resolve) => {
+                this.updateModalResolver = (choice) => {
+                    this.updateModalPromise = null;
+                    resolve(choice);
+                };
+            });
+
+            return this.updateModalPromise;
+        };
+
+        if (reason !== 'manual') {
+            const board = this.getDrawingBoard();
+            const waitForRecovery = board?.recoveryCheckPromise
+                ? Promise.resolve(board.recoveryCheckPromise).catch((error) => {
+                    console.warn('Failed to await recovery check before showing update prompt:', error);
+                    return false;
+                })
+                : Promise.resolve(false);
+
+            return waitForRecovery.then(() => {
+                const recoveryModal = document.getElementById('recovery-modal');
+                const hasBlockingRecoveryPrompt = Boolean(
+                    board?.hasUnresolvedRecoveryData
+                    || board?.recoveryPromptOpen
+                    || recoveryModal?.classList?.contains?.('show')
+                );
+                if (hasBlockingRecoveryPrompt) {
+                    return UPDATE_USER_CHOICES.IDLE;
+                }
+
+                return showPrompt();
+            });
+        }
+
+        return showPrompt();
     }
 
     resolveUpdateModalChoice(choice) {

@@ -481,14 +481,19 @@ class TimerInstance {
         this.isRunning = true;
         this.isPaused = false;
         this.startTime = Date.now();
-        
+
         // For stopwatch mode, if there's an initial duration, it means we start from that time
         // For countdown mode, we already have remainingTime set
-        
+
+        // Defensive: ensure any previous interval is cleared so reentry cannot leak it.
+        if (this.intervalId) {
+            clearInterval(this.intervalId);
+            this.intervalId = null;
+        }
         this.intervalId = setInterval(() => {
             this.updateTimer();
         }, 100);
-        
+
         this.updatePlayPauseButton();
         this.updateTimerDisplayClass();
     }
@@ -535,6 +540,10 @@ class TimerInstance {
             // Resume
             this.isPaused = false;
             this.startTime = Date.now();
+            if (this.intervalId) {
+                clearInterval(this.intervalId);
+                this.intervalId = null;
+            }
             this.intervalId = setInterval(() => {
                 this.updateTimer();
             }, 100);
@@ -707,17 +716,41 @@ class TimerInstance {
             clearInterval(this.intervalId);
             this.intervalId = null;
         }
-        
+
         this.isRunning = false;
-        
+        this.hasFinishedUnnotified = true;
+
         const timeDisplay = this.displayElement.querySelector('.timer-display-time');
         if (timeDisplay) {
             timeDisplay.classList.add('finished');
         }
-        
+
         // Play sound if enabled
         if (this.playSound) {
             this.playFinishSound();
+        }
+    }
+
+    // Called by TimerManager when the tab becomes visible again. setInterval is
+    // throttled to ~1Hz in backgrounded tabs, so until this runs the visible UI
+    // may be several seconds stale; for countdown timers that crossed zero we
+    // surface the finished state that the user would otherwise miss.
+    refreshAfterVisibilityRestore() {
+        if (!this.isRunning || this.isPaused) {
+            return;
+        }
+        // Advance the timer state once synchronously so the next paint is accurate.
+        try {
+            this.updateTimer();
+        } catch (error) {
+            console.warn('Failed to refresh timer after visibility restore:', error);
+        }
+        if (this.isFullscreen && typeof this.updateFullscreenDisplay === 'function') {
+            try {
+                this.updateFullscreenDisplay();
+            } catch (error) {
+                console.warn('Failed to refresh fullscreen timer after visibility restore:', error);
+            }
         }
     }
     
@@ -753,6 +786,17 @@ class TimerInstance {
         audio.playbackRate = this.playbackSpeed;
 
         this.currentAudio = audio;
+        let audioFailureHandled = false;
+
+        const handleAudioFailure = (err) => {
+            if (audioFailureHandled) {
+                return;
+            }
+            audioFailureHandled = true;
+            console.warn('Failed to play timer audio:', err);
+            this.currentAudio = null;
+            this.notifyAudioFallback();
+        };
         
         audio.addEventListener('ended', () => {
             if (this.loopSound && this.currentLoopIteration < this.loopCount - 1) {
@@ -775,14 +819,33 @@ class TimerInstance {
         });
         
         audio.addEventListener('error', (err) => {
-            console.warn('Failed to play timer audio:', err);
-            this.currentAudio = null;
+            handleAudioFailure(err);
         });
 
         audio.play().catch(err => {
-            console.warn('Failed to play timer audio:', err);
-            this.currentAudio = null;
+            // autoplay / codec / network failures tend to fail silently which is
+            // catastrophic in a classroom — surface a visible fallback so the
+            // teacher still knows the timer hit zero.
+            handleAudioFailure(err);
         });
+    }
+
+    notifyAudioFallback() {
+        const timeDisplay = this.displayElement?.querySelector('.timer-display-time');
+        if (timeDisplay) {
+            timeDisplay.classList.add('finished');
+            // CSS already animates .finished; this simply guarantees it's visible
+            // even if the caller bypassed the normal finished flow.
+        }
+        const fallbackMessage = getTimerText('timer.audioFallback', 'Timer finished (sound unavailable)');
+        const toast = (typeof window !== 'undefined')
+            ? (window.drawingBoard?.settingsManager?.toastManager || window.toastManager)
+            : null;
+        try {
+            toast?.show?.(fallbackMessage, 'warning');
+        } catch (error) {
+            console.warn('Failed to display timer audio fallback toast:', error);
+        }
     }
     
     adjustTimer() {
@@ -931,7 +994,7 @@ class TimerInstance {
     }
     
     updateFontSize(size) {
-        this.fontSize = parseInt(size);
+        this.fontSize = parseInt(size, 10);
         const timeDisplay = this.displayElement.querySelector('.timer-display-time');
         if (timeDisplay) {
             timeDisplay.style.fontSize = `${this.fontSize}px`;
@@ -1071,7 +1134,7 @@ class TimerManager {
     constructor() {
         this.timers = new Map();
         this.nextTimerId = 1;
-        
+
         // Preloaded sounds (use correct case-insensitive paths)
         this.sounds = {
             'class-bell': 'sounds/class-bell.MP3',
@@ -1079,25 +1142,40 @@ class TimerManager {
             'gentle-alarm': 'sounds/gentle-alarm.MP3',
             'digital-beep': 'sounds/digital-beep.MP3'
         };
-        
+
         // Preload all sounds on initialization
         this.preloadedAudio = {};
         this.preloadSounds();
-        
+
         // Load custom sounds from localStorage
         this.customSounds = this.loadCustomSounds();
-        
+
         // Current timer being adjusted (for adjust functionality)
         this.adjustingTimer = null;
         this.timerSettingsPreviouslyFocusedElement = null;
         this.timerAlertPreviouslyFocusedElement = null;
-        
+
         // Audio preview state
         this.previewAudio = null;
         this.currentPreviewButton = null;
-        
+
         this.setupEventListeners();
         this.renderCustomSounds();
+
+        // Backgrounded tabs throttle setInterval down to ~1Hz, so when the user
+        // switches back we force every running timer to refresh immediately so
+        // they don't see a multi-second "jump". We also flush the finished state
+        // for timers that crossed zero while hidden so the classroom gets the
+        // visual cue they would have missed.
+        this.handleVisibilityChange = () => {
+            if (document.visibilityState !== 'visible') return;
+            this.timers.forEach((timer) => {
+                if (typeof timer.refreshAfterVisibilityRestore === 'function') {
+                    timer.refreshAfterVisibilityRestore();
+                }
+            });
+        };
+        document.addEventListener('visibilitychange', this.handleVisibilityChange);
     }
     
     updateMainPreviewButtonState() {
@@ -1124,7 +1202,7 @@ class TimerManager {
 
         const isLoop = loopCheckbox && loopCheckbox.checked;
         const isSpeedChanged = speedSlider && parseFloat(speedSlider.value) !== 1.0;
-        const isIntervalSet = intervalInput && parseInt(intervalInput.value) > 0;
+        const isIntervalSet = intervalInput && parseInt(intervalInput.value, 10) > 0;
 
         // Active if any setting is non-default
         if (isLoop || isSpeedChanged || (isLoop && isIntervalSet)) {

@@ -787,6 +787,7 @@ window.translations = {
         pause: '一時停止',
         reset: 'リセット',
         stop: '停止',
+        audioFallback: 'タイマー終了（サウンドを再生できません）',
         alertSetTime: 'カウントダウン時間を設定してください',
         alertTitle: '警告'
     },

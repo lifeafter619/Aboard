@@ -213,6 +213,9 @@ class DrawingBoard {
         this.syncSessionSnapshotKey = 'aboardSyncSessionSnapshot';
         this.lastUserActivityAt = Date.now();
         this.suppressBeforeUnloadPrompt = false;
+        this.hasUnresolvedRecoveryData = false;
+        this.recoveryPromptOpen = false;
+        this.recoveryCheckPromise = null;
         
         // Coordinate origin dragging state
         this.isDraggingCoordinateOrigin = false;
@@ -315,8 +318,16 @@ class DrawingBoard {
             return message;
         });
         
-        // Check for saved canvas data and show recovery dialog
-        this.checkForRecovery();
+        // Check for saved canvas data and keep the pending promise available so
+        // startup update flows can avoid overwriting restorable sessions.
+        this.recoveryCheckPromise = Promise.resolve(this.checkForRecovery())
+            .catch((error) => {
+                console.warn('Recovery check failed:', error);
+                return false;
+            })
+            .finally(() => {
+                this.recoveryCheckPromise = null;
+            });
     }
 
     async loadManagerConstructor(name) {
@@ -1077,13 +1088,18 @@ class DrawingBoard {
             activeElement.isContentEditable
             || ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeElement.tagName)
         );
+        const hasBlockingModal = Boolean(
+            document.querySelector('.modal.show:not(.non-blocking-modal), .time-fullscreen-modal.show, .timer-fullscreen-modal.show')
+        );
 
         return {
             lastActivityAt: this.lastUserActivityAt,
             isDrawing: Boolean(this.drawingEngine?.isDrawing || this.shapeDrawingManager?.isDrawing),
             isPinching: Boolean(this.isPinching || this.activePointers?.size > 1),
             isDraggingPanel: Boolean(this.isDraggingPanel || this.isDraggingCoordinateOrigin),
-            isModalBusy: Boolean(this.modalDragState || this.modalResizeState),
+            // Idle updates must not reload while a blocking modal is visible, even
+            // if the user is only reading it and not actively dragging/resizing it.
+            isModalBusy: Boolean(hasBlockingModal || this.modalDragState || this.modalResizeState),
             isSelectionBusy: Boolean(
                 this.selectionManager?.isDragging
                 || this.selectionManager?.isResizing

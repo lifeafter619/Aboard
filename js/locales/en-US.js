@@ -886,6 +886,7 @@ window.translations = {
         pause: 'Pause',
         reset: 'Reset',
         stop: 'Stop',
+        audioFallback: 'Timer finished (sound unavailable)',
         alertSetTime: 'Please set the countdown time',
         alertTitle: 'Alert'
     },

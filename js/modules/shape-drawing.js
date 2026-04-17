@@ -52,11 +52,11 @@ class ShapeDrawingManager {
     
     loadSettings() {
         this.lineStyle = localStorage.getItem('shapeLineStyle') || 'solid';
-        this.dashDensity = parseInt(localStorage.getItem('shapeDashDensity')) || 10;
-        this.waveDensity = parseInt(localStorage.getItem('shapeWaveDensity')) || 10;
-        this.multiLineCount = parseInt(localStorage.getItem('shapeMultiLineCount')) || 2;
-        this.multiLineSpacing = parseInt(localStorage.getItem('shapeMultiLineSpacing')) || 4;
-        this.arrowSize = parseInt(localStorage.getItem('shapeArrowSize')) || this.ARROW_SIZE_DEFAULT;
+        this.dashDensity = parseInt(localStorage.getItem('shapeDashDensity'), 10) || 10;
+        this.waveDensity = parseInt(localStorage.getItem('shapeWaveDensity'), 10) || 10;
+        this.multiLineCount = parseInt(localStorage.getItem('shapeMultiLineCount'), 10) || 2;
+        this.multiLineSpacing = parseInt(localStorage.getItem('shapeMultiLineSpacing'), 10) || 4;
+        this.arrowSize = parseInt(localStorage.getItem('shapeArrowSize'), 10) || this.ARROW_SIZE_DEFAULT;
     }
     
     saveSettings() {

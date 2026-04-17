@@ -22,6 +22,7 @@ import { BrowserCheck } from '../infra/browser-check.js';
 import { registerDialogManagerGlobal } from '../infra/dialog-manager.js';
 import { registerRichTextParserGlobal } from '../infra/rich-text-parser.js';
 import { registerScriptLoaderGlobal } from '../infra/script-loader.js';
+import { registerDeepCloneGlobal } from '../infra/deep-clone.js';
 import { registerToastManagerGlobal } from '../features/toast/toast-manager.js';
 import { registerAnnouncementManagerGlobal } from '../features/announcement/announcement-manager.js';
 import { registerGifManagerGlobal } from '../features/media/gif-manager.js';
@@ -150,6 +151,7 @@ async function startPostVisibleStartup(app, { win = window, doc = document } = {
 
 async function runStartupUpdateGate(app, { win = window } = {}) {
   const pwaManager = app.services?.pwaManager || win.pwaManager;
+  const drawingBoard = app.drawingBoard || win.drawingBoard || null;
   if (!pwaManager?.collectStartupUpdateState || !pwaManager?.getUpdatePreference) {
     return {
       action: STARTUP_UPDATE_ACTIONS.CONTINUE,
@@ -159,6 +161,22 @@ async function runStartupUpdateGate(app, { win = window } = {}) {
   }
 
   try {
+    if (drawingBoard?.recoveryCheckPromise) {
+      try {
+        await drawingBoard.recoveryCheckPromise;
+      } catch (error) {
+        console.warn('Aboard startup update gate could not await recovery check:', error);
+      }
+    }
+
+    if (drawingBoard?.hasUnresolvedRecoveryData) {
+      return {
+        action: STARTUP_UPDATE_ACTIONS.CONTINUE,
+        userChoice: STARTUP_UPDATE_USER_CHOICES.IDLE,
+        updateState: null
+      };
+    }
+
     const updateState = await pwaManager.collectStartupUpdateState();
     const action = resolveStartupUpdateAction({
       currentVersion: updateState?.currentVersion,
@@ -273,6 +291,7 @@ export async function createApp({ win = window, doc = document } = {}) {
     registerDialogManagerGlobal(win, doc);
     registerRichTextParserGlobal(win);
     registerScriptLoaderGlobal(win, doc);
+    registerDeepCloneGlobal(win);
     registerToastManagerGlobal(win, doc);
     registerAnnouncementManagerGlobal(win, doc);
     registerGifManagerGlobal(win, doc);

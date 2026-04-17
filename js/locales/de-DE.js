@@ -805,6 +805,7 @@ window.translations = {
         pause: 'Pause',
         reset: 'Zurücksetzen',
         stop: 'Stoppen',
+        audioFallback: 'Timer beendet (Ton nicht verfügbar)',
         alertSetTime: 'Bitte stellen Sie die Countdown-Zeit ein',
         alertTitle: 'Hinweis'
     },

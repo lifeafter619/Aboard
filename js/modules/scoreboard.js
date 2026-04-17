@@ -626,7 +626,7 @@ class ScoreboardInstance {
             // Using a property on the modal element is easy.
             okBtn.addEventListener('click', () => {
                 const activeInstance = getActiveScoreboardInstance();
-                const pendingIndex = parseInt(modal.dataset.pendingIndex);
+                const pendingIndex = parseInt(modal.dataset.pendingIndex, 10);
                 if (activeInstance && !isNaN(pendingIndex)) {
                     activeInstance.removeTeam(pendingIndex);
                 }

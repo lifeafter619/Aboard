@@ -2741,7 +2741,10 @@ class SelectionManager {
     }
 
     createTextCopy(textObj) {
-        // Use structuredClone when available; fallback for environments without it (e.g., older embedded browsers).
+        if (typeof window.safeDeepClone === 'function') {
+            return window.safeDeepClone(textObj);
+        }
+        // Fallback for environments where the shared helper is not yet registered.
         if (typeof structuredClone === 'function') {
             return structuredClone(textObj);
         }

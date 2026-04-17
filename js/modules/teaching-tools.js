@@ -618,8 +618,8 @@ class TeachingToolsManager {
                 }
                 
                 if (!input) return;
-                
-                let value = parseInt(input.value) || 0;
+
+                let value = parseInt(input.value, 10) || 0;
                 if (action === 'plus' && value < 10) {
                     value++;
                 } else if (action === 'minus' && value > 0) {
@@ -642,7 +642,7 @@ class TeachingToolsManager {
             const el = document.getElementById(config.id);
             if (el) {
                 el.addEventListener('change', (e) => {
-                    let value = parseInt(e.target.value) || 0;
+                    let value = parseInt(e.target.value, 10) || 0;
                     value = Math.max(0, Math.min(10, value));
                     e.target.value = value;
                     this[config.prop] = value;

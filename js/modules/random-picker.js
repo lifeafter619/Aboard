@@ -314,8 +314,8 @@ class RandomPickerInstance {
             }
         } else {
             // Number mode
-            const min = parseInt(this.config.min);
-            const max = parseInt(this.config.max);
+            const min = parseInt(this.config.min, 10);
+            const max = parseInt(this.config.max, 10);
 
             if (!this.config.allowRepeats) {
                 if (this.remainingNumbers.length === 0) {
@@ -381,8 +381,8 @@ class RandomPickerInstance {
         } else {
             // Number mode
             if (this.config.allowRepeats) {
-                const min = parseInt(this.config.min);
-                const max = parseInt(this.config.max);
+                const min = parseInt(this.config.min, 10);
+                const max = parseInt(this.config.max, 10);
                 result = Math.floor(Math.random() * (max - min + 1)) + min;
             } else {
                 if (this.remainingNumbers.length === 0) {
@@ -498,8 +498,8 @@ class RandomPickerInstance {
     }
 
     resetRemainingNumbers() {
-        const min = parseInt(this.config.min);
-        const max = parseInt(this.config.max);
+        const min = parseInt(this.config.min, 10);
+        const max = parseInt(this.config.max, 10);
         if (Number.isNaN(min) || Number.isNaN(max) || min > max) {
             this.remainingNumbers = [];
             return;

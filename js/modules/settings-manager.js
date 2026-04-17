@@ -23,7 +23,7 @@ class SettingsManager {
         const isLargeScreen = window.innerWidth >= largeScreenWidth;
         const isHighDpi = (window.devicePixelRatio || 1) >= highDpiRatio;
         const isHighResDisplay = isLargeScreen || isHighDpi;
-        this.toolbarSize = storedToolbarSize ? parseInt(storedToolbarSize) : (isHighResDisplay ? 65 : 60);
+        this.toolbarSize = storedToolbarSize ? parseInt(storedToolbarSize, 10) : (isHighResDisplay ? 65 : 60);
         this.configScale = storedConfigScale ? parseFloat(storedConfigScale) : (isHighResDisplay ? 1.1 : 1.0);
         this.controlPosition = localStorage.getItem('controlPosition') || 'top-right';
         this.edgeSnapEnabled = localStorage.getItem('edgeSnapEnabled') !== 'false';
@@ -1171,11 +1171,11 @@ class SettingsManager {
             canvasPreset: this.canvasPreset,
             themeColor: this.themeColor,
             globalFont: this.globalFont,
-            customFonts: JSON.parse(JSON.stringify(this.customFonts || [])),
-            fontPreferences: JSON.parse(JSON.stringify(this.fontPreferences || {})),
-            fontPreviewSettings: JSON.parse(JSON.stringify(this.fontPreviewSettings || {})),
-            modalSizePreferences: JSON.parse(JSON.stringify(this.modalSizePreferences || {})),
-            modalCenterPreferences: JSON.parse(JSON.stringify(this.modalCenterPreferences || {})),
+            customFonts: (window.safeDeepClone || ((v) => JSON.parse(JSON.stringify(v))))(this.customFonts || []),
+            fontPreferences: (window.safeDeepClone || ((v) => JSON.parse(JSON.stringify(v))))(this.fontPreferences || {}),
+            fontPreviewSettings: (window.safeDeepClone || ((v) => JSON.parse(JSON.stringify(v))))(this.fontPreviewSettings || {}),
+            modalSizePreferences: (window.safeDeepClone || ((v) => JSON.parse(JSON.stringify(v))))(this.modalSizePreferences || {}),
+            modalCenterPreferences: (window.safeDeepClone || ((v) => JSON.parse(JSON.stringify(v))))(this.modalCenterPreferences || {}),
             localeSettings: this.getLocaleSettingsState(),
             // Also include toolbar customization
             toolbarOrder: localStorage.getItem('toolbarOrder'),

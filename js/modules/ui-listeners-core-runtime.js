@@ -71,7 +71,7 @@ function setupToolConfigListeners() {
         
         if (penSizeSlider) {
             penSizeSlider.addEventListener('input', (e) => {
-            const size = parseInt(e.target.value);
+            const size = parseInt(e.target.value, 10);
             this.drawingEngine.setPenSize(size);
             if (penSizeValue) {
                 penSizeValue.textContent = size;
@@ -84,7 +84,7 @@ function setupToolConfigListeners() {
             }
 
             if (arrowSizeSlider && arrowSizeValue) {
-                if (parseInt(arrowSizeSlider.value) < size) {
+                if (parseInt(arrowSizeSlider.value, 10) < size) {
                     arrowSizeSlider.value = size;
                     arrowSizeValue.textContent = size;
                     this.shapeDrawingManager?.setArrowSize?.(size);
@@ -92,10 +92,10 @@ function setupToolConfigListeners() {
             }
             });
         }
-        
+
         if (shapeSizeSlider) {
             shapeSizeSlider.addEventListener('input', (e) => {
-                const size = parseInt(e.target.value);
+                const size = parseInt(e.target.value, 10);
                 this.drawingEngine.setPenSize(size);
                 if (shapeSizeValue) {
                     shapeSizeValue.textContent = size;

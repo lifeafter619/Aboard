@@ -787,6 +787,7 @@ window.translations = {
         pause: '일시 정지',
         reset: '재설정',
         stop: '정지',
+        audioFallback: '타이머 종료 (소리를 재생할 수 없음)',
         alertSetTime: '카운트다운 시간을 설정해주세요',
         alertTitle: '알림'
     },

@@ -108,6 +108,9 @@ class ProjectManager {
         }
 
         try {
+            if (typeof window !== 'undefined' && typeof window.safeDeepClone === 'function') {
+                return window.safeDeepClone(value);
+            }
             return JSON.parse(JSON.stringify(value));
         } catch (error) {
             console.warn('Failed to deep-clone serializable value:', error);

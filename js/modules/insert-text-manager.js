@@ -468,7 +468,7 @@ class InsertTextManager {
         const sizeValue = document.getElementById('insert-text-size-value');
         sizeSlider.addEventListener('input', (e) => {
             sizeValue.textContent = e.target.value;
-            this.textConfig.fontSize = parseInt(e.target.value);
+            this.textConfig.fontSize = parseInt(e.target.value, 10);
             this.textScale = 1.0;
             if (this.isActive) {
                 this.updateOverlay();
@@ -490,7 +490,7 @@ class InsertTextManager {
         const decorationWidthValue = document.getElementById('insert-text-decoration-width-value');
         if (decorationWidthSlider && decorationWidthValue) {
             decorationWidthSlider.addEventListener('input', (e) => {
-                const widthValue = parseInt(e.target.value);
+                const widthValue = parseInt(e.target.value, 10);
                 decorationWidthValue.textContent = e.target.value;
                 this.textConfig.decorationWidth = widthValue;
                 if (this.isActive) {

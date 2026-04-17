@@ -417,17 +417,48 @@ class I18n {
      */
     async loadTranslations() {
         try {
-            const loadScriptData = async (url, globalKey) => {
-                const response = await fetch(url);
-                if (!response.ok) {
-                    return null;
+            // Locale files set window.translations / window.help_translations /
+            // window.locale_translation_overrides when evaluated. Historically this
+            // module ran them via eval(text), which requires CSP `unsafe-eval` and
+            // treats any SW-cache tampering as full script execution. We now load
+            // the file as an ordinary <script src> via the shared ScriptLoader:
+            //   - the browser enforces its normal JS parsing rules (no unsafe-eval)
+            //   - same-origin + SW cache semantics apply uniformly
+            //   - snapshot-and-delete still needs serialisation because every
+            //     locale file writes to the same global key
+            // We also cache the snapshot per URL so that re-loading the same locale
+            // (e.g. user switches language back) doesn't re-fire ScriptLoader on an
+            // already-executed <script> element with no side-effect.
+            const localeDataCache = this._localeDataCache = this._localeDataCache || new Map();
+            this._localeLoadChain = this._localeLoadChain || Promise.resolve();
+
+            const loadScriptData = (url, globalKey) => {
+                if (localeDataCache.has(url)) {
+                    return localeDataCache.get(url);
                 }
-                const text = await response.text();
-                delete window[globalKey];
-                eval(text);
-                const data = window[globalKey] || null;
-                delete window[globalKey];
-                return data;
+                const next = this._localeLoadChain.then(async () => {
+                    try {
+                        const Loader = typeof window !== 'undefined' ? window.ScriptLoader : null;
+                        if (!Loader || typeof Loader.load !== 'function') {
+                            console.warn('ScriptLoader unavailable; cannot load locale file:', url);
+                            return null;
+                        }
+                        // Clear the shared global before executing so the locale
+                        // snapshot is unambiguous even if the script mutates state.
+                        delete window[globalKey];
+                        await Loader.load(url);
+                        const data = window[globalKey] || null;
+                        delete window[globalKey];
+                        return data;
+                    } catch (loadError) {
+                        console.warn(`Failed to load locale file: ${url}`, loadError);
+                        return null;
+                    }
+                });
+                this._localeLoadChain = next.catch(() => null);
+                const cached = next.then((data) => data);
+                localeDataCache.set(url, cached);
+                return cached;
             };
 
             const loadLocaleFile = async (locale) => {
@@ -437,6 +468,9 @@ class I18n {
             const cloneTranslations = (source) => {
                 if (!source || typeof source !== 'object') {
                     return {};
+                }
+                if (typeof window !== 'undefined' && typeof window.safeDeepClone === 'function') {
+                    return window.safeDeepClone(source);
                 }
                 return JSON.parse(JSON.stringify(source));
             };

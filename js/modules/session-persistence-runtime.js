@@ -132,6 +132,8 @@ async function persistSessionForUpdateReload(metadata = {}) {
 
 async function checkForRecovery() {
         try {
+            this.hasUnresolvedRecoveryData = false;
+            this.recoveryPromptOpen = false;
             const hasSession = await this.storageManager.hasSession();
             const rawSyncSnapshot = localStorage.getItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot');
             const rawPlannedUpdateReload = localStorage.getItem(SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY);
@@ -162,15 +164,22 @@ async function checkForRecovery() {
                 }
             }
 
+            if (plannedUpdateReload) {
+                // Planned update reload is a one-shot trigger. Consume it as
+                // soon as it is recognized so stale markers never leak into
+                // future sessions, even when recovery data is gone or restore fails.
+                localStorage.removeItem(SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY);
+            }
+
             if (plannedUpdateReload && (hasSession || hasSyncSnapshot)) {
                 const restored = await this.restoreSession();
                 if (restored) {
-                    localStorage.removeItem(SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY);
                     return true;
                 }
             }
 
             if (hasSession || hasSyncSnapshot) {
+                this.hasUnresolvedRecoveryData = true;
                 this.showRecoveryModal();
                 return true;
             }

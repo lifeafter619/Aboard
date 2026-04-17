@@ -62,6 +62,7 @@ const CORE_ASSETS = [
   './js/infra/dialog-manager.js',
   './js/infra/rich-text-parser.js',
   './js/infra/script-loader.js',
+  './js/infra/deep-clone.js',
   './js/features/toast/toast-manager.js',
   './js/features/announcement/announcement-manager.js',
   './js/features/media/gif-manager.js',
@@ -222,9 +223,63 @@ async function cacheFirst(request) {
   return response;
 }
 
+// Assets that must be available for the shell to boot at all. If any of these
+// fails to cache during install, the new Service Worker is genuinely broken and
+// must not activate.
+const ESSENTIAL_CORE_ASSETS = [
+  './',
+  './index.html',
+  './manifest.json',
+  './css/style.css',
+  './js/main.js',
+  './js/app/bootstrap.js',
+  './js/app/create-app.js',
+  './js/app/create-app-context.js',
+  './js/app/create-app-services.js',
+  './js/app/create-board-dependencies.js',
+  './js/app/create-board-runtime-dependencies.js',
+  './js/app/legacy-manifest.js',
+  './js/app/legacy-script-loader.js',
+  './js/app/resolve-legacy-constructor.js',
+  './js/app/startup-update-policy.js',
+  './js/infra/browser-check.js',
+  './js/infra/deep-clone.js',
+  './js/infra/dialog-manager.js',
+  './js/infra/rich-text-parser.js',
+  './js/infra/script-loader.js',
+  './js/features/toast/toast-manager.js',
+  './js/features/announcement/announcement-manager.js',
+  './js/features/media/gif-manager.js',
+  './js/legacy/runtime-bridge.js'
+];
+
+async function precacheCoreAssets(cache) {
+  // Atomic: essentials must all succeed or the install fails cleanly.
+  await cache.addAll(ESSENTIAL_CORE_ASSETS);
+
+  // Best-effort: individual failures (renamed file, temporary 404) warn and move
+  // on instead of poisoning the whole install. First-use traffic will still
+  // populate the runtime cache via the fetch handler.
+  const optionalAssets = CORE_ASSETS.filter((asset) => !ESSENTIAL_CORE_ASSETS.includes(asset));
+  await Promise.allSettled(
+    optionalAssets.map(async (asset) => {
+      try {
+        const response = await fetch(asset, { cache: 'reload' });
+        if (!response || !response.ok) {
+          console.warn('Skipping optional asset during install:', asset, response && response.status);
+          return;
+        }
+        await cache.put(asset, response);
+      } catch (error) {
+        console.warn('Failed to precache optional asset:', asset, error);
+      }
+    })
+  );
+}
+
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CORE_CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS))
+    caches.open(CORE_CACHE_NAME).then((cache) => precacheCoreAssets(cache))
   );
 });
 

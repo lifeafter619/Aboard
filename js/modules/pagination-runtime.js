@@ -142,7 +142,7 @@ function savePageBackground(pageNumber) {
             coordinateOverlayState: this.backgroundManager.getCoordinateOverlayState(),
             backgroundImageData: this.backgroundManager.backgroundImageData,
             imageSize: this.backgroundManager.imageSize,
-            imageTransform: JSON.parse(JSON.stringify(this.backgroundManager.imageTransform)),
+            imageTransform: (window.safeDeepClone || ((v) => JSON.parse(JSON.stringify(v))))(this.backgroundManager.imageTransform),
             gifLoopCount: this.backgroundManager.gifLoopCount,
             backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder
         };
@@ -172,7 +172,7 @@ function restorePageBackground(pageNumber) {
                 this.backgroundManager.coordinateOriginY = bg.coordinateOriginY;
             }
             this.backgroundManager.setCoordinateOverlayState(bg.coordinateOverlayState, { persist: false, redraw: false });
-            if (bg.imageTransform) this.backgroundManager.imageTransform = JSON.parse(JSON.stringify(bg.imageTransform));
+            if (bg.imageTransform) this.backgroundManager.imageTransform = (window.safeDeepClone || ((v) => JSON.parse(JSON.stringify(v))))(bg.imageTransform);
             if (typeof bg.gifLoopCount !== 'undefined') this.backgroundManager.gifLoopCount = bg.gifLoopCount;
             if (typeof bg.backgroundOutsideLayerOrder !== 'undefined') {
                 this.backgroundManager.backgroundOutsideLayerOrder = bg.backgroundOutsideLayerOrder;

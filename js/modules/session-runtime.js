@@ -9,7 +9,10 @@ function getRecoveryFailureMessage() {
 
 function showRecoveryModal() {
         const modal = document.getElementById('recovery-modal');
-        if (!modal) return;
+        if (!modal) {
+            this.recoveryPromptOpen = false;
+            return;
+        }
         const restoreBtn = document.getElementById('recovery-restore-btn');
         const discardBtn = document.getElementById('recovery-discard-btn');
         const scheduleFrame = typeof window.requestAnimationFrame === 'function'
@@ -19,6 +22,7 @@ function showRecoveryModal() {
             ? document.activeElement
             : null;
         let isClosed = false;
+        let isPending = false;
 
         modal.setAttribute('role', 'dialog');
         modal.setAttribute('aria-modal', 'true');
@@ -26,22 +30,26 @@ function showRecoveryModal() {
         modal.setAttribute('aria-describedby', 'recovery-message');
         modal.tabIndex = -1;
 
-        const setPendingState = (isPending) => {
-            if (restoreBtn) restoreBtn.disabled = isPending;
-            if (discardBtn) discardBtn.disabled = isPending;
+        const setPendingState = (value) => {
+            const nextPending = Boolean(value);
+            isPending = nextPending;
+            if (restoreBtn) restoreBtn.disabled = nextPending;
+            if (discardBtn) discardBtn.disabled = nextPending;
         };
 
         const closeModal = () => {
-            if (isClosed) {
+            if (isClosed || isPending) {
                 return;
             }
             isClosed = true;
+            this.recoveryPromptOpen = false;
             modal.classList.remove('show');
             scheduleFrame(() => {
                 restoreFocusTarget?.focus?.();
             });
         };
         
+        this.recoveryPromptOpen = true;
         modal.classList.add('show');
         scheduleFrame(() => {
             (restoreBtn || discardBtn || modal)?.focus?.();
@@ -140,7 +148,7 @@ async function restoreSession() {
                 if (settings.panOffset) this.drawingEngine.panOffset = { ...settings.panOffset };
 
                 // Restore Backgrounds
-                if (settings.pageBackgrounds) this.pageBackgrounds = JSON.parse(JSON.stringify(settings.pageBackgrounds));
+                if (settings.pageBackgrounds) this.pageBackgrounds = (window.safeDeepClone || ((v) => JSON.parse(JSON.stringify(v))))(settings.pageBackgrounds);
                 if (settings.backgroundColor) this.backgroundManager.backgroundColor = settings.backgroundColor;
                 if (settings.backgroundPattern) this.backgroundManager.backgroundPattern = settings.backgroundPattern;
                 if (typeof settings.bgOpacity !== 'undefined') this.backgroundManager.bgOpacity = settings.bgOpacity;
@@ -251,6 +259,7 @@ async function restoreSession() {
             // Sync UI controls
             this.syncSettingsUI(settings);
 
+            this.hasUnresolvedRecoveryData = false;
             console.log('Session restored');
             return true;
         } catch (e) {
@@ -316,6 +325,8 @@ async function clearSessionData() {
         } catch (e) {
             console.warn('Failed to clear local session snapshot:', e);
         }
+
+        this.hasUnresolvedRecoveryData = false;
     
 }
 
