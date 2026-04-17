@@ -236,6 +236,7 @@ function updatePaginationUI() {
             const label = window.i18n ? window.i18n.t('page.newPage') : 'New Page';
             nextOrAddBtn.title = label;
             nextOrAddBtn.setAttribute('aria-label', label);
+            nextOrAddBtn.setAttribute('data-i18n-title', 'page.newPage');
         } else {
             // Show next icon
             nextOrAddBtn.innerHTML = `
@@ -246,6 +247,7 @@ function updatePaginationUI() {
             const label = window.i18n ? window.i18n.t('page.next') : 'Next Page';
             nextOrAddBtn.title = label;
             nextOrAddBtn.setAttribute('aria-label', label);
+            nextOrAddBtn.setAttribute('data-i18n-title', 'page.next');
         }
     
 }

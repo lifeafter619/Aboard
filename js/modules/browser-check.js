@@ -19,6 +19,21 @@ class BrowserCheck {
         return String(feature?.label || feature || '');
     }
 
+    static hasModernJavaScriptSupport() {
+        const requiredChecks = [
+            typeof window.Promise === 'function',
+            typeof window.Map === 'function',
+            typeof window.Set === 'function',
+            typeof window.WeakMap === 'function',
+            typeof window.WeakSet === 'function',
+            typeof window.Symbol === 'function',
+            typeof window.Array?.from === 'function',
+            typeof window.Object?.assign === 'function'
+        ];
+
+        return requiredChecks.every(Boolean);
+    }
+
     static init() {
         const warnings = [];
 
@@ -27,11 +42,8 @@ class BrowserCheck {
             warnings.push({ key: 'canvas' });
         }
 
-        // Check for ES6 features (basic check)
-        try {
-            eval("class Test {}");
-            eval("const test = () => {}");
-        } catch (e) {
+        // Avoid eval-based probing so CSP can stay strict and older browsers still get a warning.
+        if (!this.hasModernJavaScriptSupport()) {
             warnings.push({ key: 'es6' });
         }
 

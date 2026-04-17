@@ -12,6 +12,37 @@ function getScoreboardText(key, fallback) {
     return translated && translated !== key ? translated : fallback;
 }
 
+function escapeScoreboardHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+const KNOWN_DEFAULT_TEAM_NAME_BASES = new Set([
+    'Team',
+    'Equipe',
+    '\u00c9quipe',
+    'Equipo',
+    '\u961f\u4f0d',
+    '\u968a\u4f0d',
+    '\u30c1\u30fc\u30e0',
+    '\ud300'
+]);
+
+function extractDefaultTeamSuffix(teamName, knownBases = KNOWN_DEFAULT_TEAM_NAME_BASES) {
+    const normalizedName = String(teamName || '').trim();
+    const match = normalizedName.match(/^(.+)\s([A-Z])$/);
+    if (!match) {
+        return null;
+    }
+
+    const baseName = match[1].trim();
+    return knownBases.has(baseName) ? match[2] : null;
+}
+
 function getActiveScoreboardInstance() {
     return window.__activeScoreboardModalInstance || null;
 }
@@ -116,15 +147,15 @@ class ScoreboardInstance {
 
         div.innerHTML = `
             <div class="scoreboard-header">
-                <span class="scoreboard-title">${title}</span>
+                <span class="scoreboard-title">${escapeScoreboardHtml(title)}</span>
                 <div class="scoreboard-controls-top">
-                    <button class="scoreboard-icon-btn scoreboard-add-team-btn" title="${addTeamLabel}" aria-label="${addTeamLabel}">
+                    <button class="scoreboard-icon-btn scoreboard-add-team-btn" title="${escapeScoreboardHtml(addTeamLabel)}" aria-label="${escapeScoreboardHtml(addTeamLabel)}">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                     </button>
-                    <button class="scoreboard-icon-btn scoreboard-reset-btn" title="${resetLabel}" aria-label="${resetLabel}">
+                    <button class="scoreboard-icon-btn scoreboard-reset-btn" title="${escapeScoreboardHtml(resetLabel)}" aria-label="${escapeScoreboardHtml(resetLabel)}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
                             <path d="M21 3v5h-5"></path>
@@ -132,14 +163,14 @@ class ScoreboardInstance {
                             <path d="M3 21v-5h5"></path>
                         </svg>
                     </button>
-                    <button class="scoreboard-icon-btn scoreboard-help-btn" title="${helpLabel}" aria-label="${helpLabel}">
+                    <button class="scoreboard-icon-btn scoreboard-help-btn" title="${escapeScoreboardHtml(helpLabel)}" aria-label="${escapeScoreboardHtml(helpLabel)}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
                             <line x1="12" y1="17" x2="12" y2="17"></line>
                         </svg>
                     </button>
-                    <button class="scoreboard-icon-btn scoreboard-close-btn" title="${closeLabel}" aria-label="${closeLabel}">
+                    <button class="scoreboard-icon-btn scoreboard-close-btn" title="${escapeScoreboardHtml(closeLabel)}" aria-label="${escapeScoreboardHtml(closeLabel)}">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -166,34 +197,19 @@ class ScoreboardInstance {
     }
 
     handleLocaleChange(newLocale, oldLocale) {
-        // Simple regex to match default team names in various languages
-        // e.g., "Team A", "队伍 A", "Équipe A", etc.
-        // We assume the pattern is "Name [A-Z]"
-        const teamNameRegex = /^(.+)\s([A-Z])$/;
-
-        // Get the default "Team" prefix for the old locale if possible
-        // Since we don't have access to old translations easily, we'll try to guess based on current names
-        // or just apply the new locale's default name if it matches a known pattern.
-
-        // Better approach: Check if the name matches the *current* default name pattern
-        // and if so, update it to the *new* default name pattern.
-
-        // Since we can't easily get the old translation, we will rely on the structure.
-        // If a team name ends with a space and a single uppercase letter, we assume it's a default name.
-
         const newTeamNameBase = window.i18n.t('scoreboard.teamDefault') || 'Team';
+        const knownDefaultBases = new Set(KNOWN_DEFAULT_TEAM_NAME_BASES);
+        knownDefaultBases.add(String(newTeamNameBase).trim());
 
         let changed = false;
         this.config.teams.forEach(team => {
-            const match = team.name.match(teamNameRegex);
-            if (match) {
-                // It looks like a default name "Something X"
-                // Check if "Something" is a known localization of "Team"
-                // Actually, let's just update it if it matches the pattern to the new locale
-                // This might be aggressive but users requested "switch to English, team name also switch"
-                const suffix = match[2];
-                team.name = `${newTeamNameBase} ${suffix}`;
-                changed = true;
+            const suffix = extractDefaultTeamSuffix(team.name, knownDefaultBases);
+            if (suffix) {
+                const localizedName = `${newTeamNameBase} ${suffix}`;
+                if (team.name !== localizedName) {
+                    team.name = localizedName;
+                    changed = true;
+                }
             }
         });
 
@@ -221,8 +237,9 @@ class ScoreboardInstance {
             col.className = 'score-column';
             col.dataset.index = index;
 
+            const removeTeamLabel = getScoreboardText('scoreboard.removeTeam', 'Remove Team');
             col.innerHTML = `
-                <button class="score-remove-btn" title="${getScoreboardText('scoreboard.removeTeam', 'Remove Team')}" aria-label="${getScoreboardText('scoreboard.removeTeam', 'Remove Team')}">
+                <button class="score-remove-btn" title="${escapeScoreboardHtml(removeTeamLabel)}" aria-label="${escapeScoreboardHtml(removeTeamLabel)}">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -531,13 +548,13 @@ class ScoreboardInstance {
             modal.innerHTML = `
                 <div class="modal-content confirm-modal-content">
                     <div class="modal-header">
-                        <h2 id="scoreboard-reset-title">${window.i18n.t('scoreboard.title')}</h2>
+                        <h2 id="scoreboard-reset-title">${escapeScoreboardHtml(window.i18n.t('scoreboard.title'))}</h2>
                     </div>
                     <div class="modal-body">
-                        <p id="scoreboard-reset-message" class="confirm-message">${window.i18n.t('scoreboard.confirmReset')}</p>
+                        <p id="scoreboard-reset-message" class="confirm-message">${escapeScoreboardHtml(window.i18n.t('scoreboard.confirmReset'))}</p>
                         <div class="confirm-buttons">
-                            <button type="button" class="confirm-btn cancel-btn">${window.i18n.t('common.cancel')}</button>
-                            <button type="button" class="confirm-btn ok-btn">${window.i18n.t('common.confirm')}</button>
+                            <button type="button" class="confirm-btn cancel-btn">${escapeScoreboardHtml(window.i18n.t('common.cancel'))}</button>
+                            <button type="button" class="confirm-btn ok-btn">${escapeScoreboardHtml(window.i18n.t('common.confirm'))}</button>
                         </div>
                     </div>
                 </div>
@@ -601,13 +618,13 @@ class ScoreboardInstance {
             modal.innerHTML = `
                 <div class="modal-content confirm-modal-content">
                     <div class="modal-header">
-                        <h2 id="scoreboard-remove-title">${window.i18n.t('scoreboard.title')}</h2>
+                        <h2 id="scoreboard-remove-title">${escapeScoreboardHtml(window.i18n.t('scoreboard.title'))}</h2>
                     </div>
                     <div class="modal-body">
-                        <p id="scoreboard-remove-message" class="confirm-message">${window.i18n.t('scoreboard.confirmRemoveTeam')}</p>
+                        <p id="scoreboard-remove-message" class="confirm-message">${escapeScoreboardHtml(window.i18n.t('scoreboard.confirmRemoveTeam'))}</p>
                         <div class="confirm-buttons">
-                            <button type="button" class="confirm-btn cancel-btn">${window.i18n.t('common.cancel')}</button>
-                            <button type="button" class="confirm-btn ok-btn">${window.i18n.t('common.confirm')}</button>
+                            <button type="button" class="confirm-btn cancel-btn">${escapeScoreboardHtml(window.i18n.t('common.cancel'))}</button>
+                            <button type="button" class="confirm-btn ok-btn">${escapeScoreboardHtml(window.i18n.t('common.confirm'))}</button>
                         </div>
                     </div>
                 </div>

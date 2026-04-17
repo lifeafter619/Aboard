@@ -67,7 +67,7 @@ function zoomOut() {
 }
 
 function setZoom(value) {
-    let percent = parseInt(value);
+    let percent = parseInt(value, 10);
     if (isNaN(percent)) {
         this.updateZoomUI();
         return;

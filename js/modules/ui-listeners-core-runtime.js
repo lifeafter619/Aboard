@@ -108,7 +108,7 @@ function setupToolConfigListeners() {
                 }
 
                 if (arrowSizeSlider && arrowSizeValue) {
-                    if (parseInt(arrowSizeSlider.value) < size) {
+                    if (parseInt(arrowSizeSlider.value, 10) < size) {
                         arrowSizeSlider.value = size;
                         arrowSizeValue.textContent = size;
                         this.shapeDrawingManager?.setArrowSize?.(size);
@@ -129,7 +129,7 @@ function setupToolConfigListeners() {
         
         if (eraserSizeSlider) {
             eraserSizeSlider.addEventListener('input', (e) => {
-                this.drawingEngine.setEraserSize(parseInt(e.target.value));
+                this.drawingEngine.setEraserSize(parseInt(e.target.value, 10));
                 if (eraserSizeValue) {
                     eraserSizeValue.textContent = e.target.value;
                 }

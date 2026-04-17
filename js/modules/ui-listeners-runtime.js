@@ -173,7 +173,7 @@ function setupToolConfigListeners() {
         // Pen size slider - syncs with shape slider
         if (penSizeSlider) {
             penSizeSlider.addEventListener('input', (e) => {
-            const size = parseInt(e.target.value);
+            const size = parseInt(e.target.value, 10);
             this.drawingEngine.setPenSize(size);
             // Ensure penSizeValue element exists and update text content
             if (penSizeValue) {
@@ -189,7 +189,7 @@ function setupToolConfigListeners() {
 
             // Enforce arrow size constraint
             if (arrowSizeSlider && arrowSizeValue) {
-                if (parseInt(arrowSizeSlider.value) < size) {
+                if (parseInt(arrowSizeSlider.value, 10) < size) {
                     arrowSizeSlider.value = size;
                     arrowSizeValue.textContent = size;
                     this.shapeDrawingManager?.setArrowSize?.(size);
@@ -201,7 +201,7 @@ function setupToolConfigListeners() {
         // Shape size slider - syncs with pen slider
         if (shapeSizeSlider) {
             shapeSizeSlider.addEventListener('input', (e) => {
-                const size = parseInt(e.target.value);
+                const size = parseInt(e.target.value, 10);
                 this.drawingEngine.setPenSize(size);
                 if (shapeSizeValue) {
                     shapeSizeValue.textContent = size;
@@ -216,7 +216,7 @@ function setupToolConfigListeners() {
 
                 // Enforce arrow size constraint
                 if (arrowSizeSlider && arrowSizeValue) {
-                    if (parseInt(arrowSizeSlider.value) < size) {
+                    if (parseInt(arrowSizeSlider.value, 10) < size) {
                         arrowSizeSlider.value = size;
                         arrowSizeValue.textContent = size;
                         this.shapeDrawingManager?.setArrowSize?.(size);
@@ -239,7 +239,7 @@ function setupToolConfigListeners() {
         
         if (eraserSizeSlider) {
             eraserSizeSlider.addEventListener('input', (e) => {
-                this.drawingEngine.setEraserSize(parseInt(e.target.value));
+                this.drawingEngine.setEraserSize(parseInt(e.target.value, 10));
                 if (eraserSizeValue) {
                     eraserSizeValue.textContent = e.target.value;
                 }
@@ -278,7 +278,7 @@ function setupShapeToolConfigListeners() {
             shapeSizeValue.textContent = this.drawingEngine.penSize;
 
             shapeSizeSlider.addEventListener('input', (e) => {
-                const size = parseInt(e.target.value);
+                const size = parseInt(e.target.value, 10);
                 this.drawingEngine.setPenSize(size);
                 shapeSizeValue.textContent = size;
 
@@ -291,7 +291,7 @@ function setupShapeToolConfigListeners() {
                     penSizeValue.textContent = size;
                 }
 
-                if (arrowSizeSlider && arrowSizeValue && parseInt(arrowSizeSlider.value) < size) {
+                if (arrowSizeSlider && arrowSizeValue && parseInt(arrowSizeSlider.value, 10) < size) {
                     arrowSizeSlider.value = size;
                     arrowSizeValue.textContent = size;
                     this.shapeDrawingManager.setArrowSize(size);
@@ -304,7 +304,7 @@ function setupShapeToolConfigListeners() {
             arrowSizeValue.textContent = this.shapeDrawingManager.arrowSize;
 
             arrowSizeSlider.addEventListener('input', (e) => {
-                let val = parseInt(e.target.value);
+                let val = parseInt(e.target.value, 10);
                 const minSize = this.drawingEngine.penSize;
                 if (val < minSize) {
                     val = minSize;
@@ -599,7 +599,7 @@ function setupBackgroundToolConfigListeners() {
         const bgImageSizeValue = document.getElementById('bg-image-size-value');
         if (bgImageSizeSlider) {
             bgImageSizeSlider.addEventListener('input', (e) => {
-                this.backgroundManager.setImageSize(parseInt(e.target.value) / 100);
+                this.backgroundManager.setImageSize(parseInt(e.target.value, 10) / 100);
                 if (bgImageSizeValue) bgImageSizeValue.textContent = e.target.value;
             });
         }
@@ -685,7 +685,7 @@ function setupBackgroundToolConfigListeners() {
         if (gifSettingsOkBtn && gifSettingsModal) {
             gifSettingsOkBtn.addEventListener('click', () => {
                 if (gifSettingsInput) {
-                    this.backgroundManager.setGifLoopCount(parseInt(gifSettingsInput.value));
+                    this.backgroundManager.setGifLoopCount(parseInt(gifSettingsInput.value, 10));
                 }
                 closeGifSettingsModal();
             });
@@ -714,7 +714,7 @@ function setupBackgroundToolConfigListeners() {
         const patternDensityValue = document.getElementById('pattern-density-value');
         if (patternDensitySlider && patternDensityValue) {
             patternDensitySlider.addEventListener('input', (e) => {
-                this.backgroundManager.setPatternDensity(parseInt(e.target.value) / 100);
+                this.backgroundManager.setPatternDensity(parseInt(e.target.value, 10) / 100);
                 patternDensityValue.textContent = e.target.value;
             });
         }
@@ -1032,7 +1032,7 @@ function setupSettingsListeners() {
         const toolbarSizeInput = document.getElementById('toolbar-size-input');
         if (toolbarSizeSlider && toolbarSizeValue && toolbarSizeInput) {
             toolbarSizeSlider.addEventListener('input', (e) => {
-                this.settingsManager.toolbarSize = parseInt(e.target.value);
+                this.settingsManager.toolbarSize = parseInt(e.target.value, 10);
                 toolbarSizeValue.textContent = e.target.value;
                 toolbarSizeInput.value = e.target.value;
                 this.settingsManager.updateToolbarSize();
@@ -1056,7 +1056,7 @@ function setupSettingsListeners() {
         const configScaleInput = document.getElementById('config-scale-input');
         if (configScaleSlider && configScaleValue && configScaleInput) {
             configScaleSlider.addEventListener('input', (e) => {
-                this.settingsManager.configScale = parseInt(e.target.value) / 100;
+                this.settingsManager.configScale = parseInt(e.target.value, 10) / 100;
                 configScaleValue.textContent = Math.round(this.settingsManager.configScale * 100);
                 configScaleInput.value = e.target.value;
                 this.settingsManager.updateConfigScale();
@@ -1081,7 +1081,7 @@ function setupSettingsListeners() {
         const bgOpacityInput = document.getElementById('bg-opacity-input');
         if (bgOpacitySlider && bgOpacityValue && bgOpacityInput) {
             bgOpacitySlider.addEventListener('input', (e) => {
-                this.backgroundManager.setOpacity(parseInt(e.target.value) / 100);
+                this.backgroundManager.setOpacity(parseInt(e.target.value, 10) / 100);
                 bgOpacityValue.textContent = e.target.value;
                 bgOpacityInput.value = e.target.value;
             });
@@ -1100,7 +1100,7 @@ function setupSettingsListeners() {
         const patternIntensityInput = document.getElementById('pattern-intensity-input');
         if (patternIntensitySlider && patternIntensityValue && patternIntensityInput) {
             patternIntensitySlider.addEventListener('input', (e) => {
-                this.backgroundManager.setPatternIntensity(parseInt(e.target.value) / 100);
+                this.backgroundManager.setPatternIntensity(parseInt(e.target.value, 10) / 100);
                 patternIntensityValue.textContent = e.target.value;
                 patternIntensityInput.value = e.target.value;
             });

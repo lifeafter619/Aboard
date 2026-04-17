@@ -41,6 +41,15 @@ function normalizeTimerNumberInputValue(rawValue, {
     return Math.max(min, Math.min(max, parsedValue));
 }
 
+function escapeTimerHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // Single Timer Instance Class
 class TimerInstance {
     constructor(options) {
@@ -216,7 +225,7 @@ class TimerInstance {
         display.className = 'timer-display-widget';
         display.dataset.timerId = this.id;
         
-        const titleHTML = this.title ? `<div class="timer-display-title">${this.title}</div>` : '';
+        const titleHTML = this.title ? `<div class="timer-display-title">${escapeTimerHtml(this.title)}</div>` : '';
         
         const modeText = this.mode === 'stopwatch' ? window.i18n.t('timer.stopwatch') : window.i18n.t('timer.countdown');
         const helpLabel = getTimerText('common.help', 'Help');
@@ -979,7 +988,9 @@ class TimerInstance {
         const fsTextColor = this.fullscreenTextColor;
         const fsBgColor = this.fullscreenBgColor;
 
-        const titleHTML = this.title ? `<div class="timer-fullscreen-title" style="font-size: ${titleFontSize}px; color: ${fsTextColor};">${this.title}</div>` : '';
+        const titleHTML = this.title
+            ? `<div class="timer-fullscreen-title" style="font-size: ${titleFontSize}px; color: ${fsTextColor};">${escapeTimerHtml(this.title)}</div>`
+            : '';
         
         this.fullscreenContent.innerHTML = `
             <div class="timer-fullscreen-mode" style="font-size: ${modeFontSize}px; color: ${fsTextColor};">${modeText}</div>

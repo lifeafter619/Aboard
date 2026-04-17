@@ -39,15 +39,7 @@ function loadBackgroundManager() {
 function makeEvaluator(BackgroundManager, expression) {
   const proto = BackgroundManager.prototype;
   const stub = Object.create(proto);
-  const tokens = proto.tokenizePlotExpression.call(stub, expression);
-  const rpn = proto.convertPlotTokensToRpn.call(stub, tokens);
-  return (x, theta, deg) => proto.evaluatePlotRpn.call(stub, rpn, {
-    x,
-    theta,
-    deg,
-    PI: Math.PI,
-    E: Math.E
-  });
+  return proto.createPlotEvaluator.call(stub, expression, 'coordinate');
 }
 
 function approxEqual(a, b, epsilon = 1e-9) {
@@ -59,8 +51,11 @@ function testArithmetic(BackgroundManager) {
     ['3*x+2', 1, 5],
     ['x*x+2*x+1', 3, 16],
     ['2**3', 0, 8],
+    ['2^-3', 0, 0.125],
     ['-x+5', 2, 3],
-    ['(x+1)*(x-1)', 4, 15]
+    ['(x+1)*(x-1)', 4, 15],
+    ['-x^2', 2, -4],
+    ['-2^2', 0, -4]
   ];
   for (const [expr, x, expected] of cases) {
     const fn = makeEvaluator(BackgroundManager, expr);

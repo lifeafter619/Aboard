@@ -1655,6 +1655,43 @@ class BackgroundManager {
             .replace(/'/g, '&#39;');
     }
 
+    sanitizeSvgColor(value, fallback = '#2563eb') {
+        const normalized = String(value ?? '').trim();
+
+        if (/^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(normalized)) {
+            return normalized.toLowerCase();
+        }
+
+        if (/^(?:rgb|hsl)a?\(\s*[-\d.%\s,]+\)$/i.test(normalized)) {
+            return normalized.replace(/\s+/g, ' ').trim();
+        }
+
+        const keyword = normalized.toLowerCase();
+        const safeKeywords = new Set([
+            'transparent',
+            'currentcolor',
+            'black',
+            'white',
+            'red',
+            'green',
+            'blue',
+            'yellow',
+            'orange',
+            'purple',
+            'pink',
+            'gray',
+            'grey',
+            'brown',
+            'cyan',
+            'magenta'
+        ]);
+        if (safeKeywords.has(keyword)) {
+            return keyword === 'currentcolor' ? 'currentColor' : keyword;
+        }
+
+        return fallback;
+    }
+
     roundToDecimals(value, decimals = 2) {
         const factor = 10 ** decimals;
         return Math.round(value * factor) / factor;
@@ -1994,7 +2031,7 @@ class BackgroundManager {
         // Keep in sync with evaluatePlotRpn. Function nodes carry `argCount`
         // so variadic Math helpers preserve their original call boundaries.
         const functionArity = BackgroundManager.PLOT_FUNCTION_ARITY;
-        const precedence = { '+': 1, '-': 1, '*': 2, '/': 2, '**': 3, 'u+': 4, 'u-': 4 };
+        const precedence = { '+': 1, '-': 1, '*': 2, '/': 2, 'u+': 3, 'u-': 3, '**': 4 };
         const rightAssoc = new Set(['**', 'u+', 'u-']);
         const binaryOps = new Set(['+', '-', '*', '/', '**']);
 
@@ -2059,6 +2096,14 @@ class BackgroundManager {
                     if (top.kind === 'function') {
                         output.push(stack.pop());
                         continue;
+                    }
+                    // Treat a leading sign as applying to the whole power term
+                    // (`-x^2` => `-(x^2)`), while still allowing negative
+                    // exponents (`2^-3`). So when we are reading a unary sign,
+                    // we keep a pending exponent on the stack until its right
+                    // operand has been parsed.
+                    if ((opName === 'u+' || opName === 'u-') && top.name === '**') {
+                        break;
                     }
                     const topPrecedence = precedence[top.name];
                     const shouldPop = rightAssoc.has(opName)
@@ -2433,7 +2478,7 @@ class BackgroundManager {
         const unitSize = this.getCoordinateUnitSize();
         const parts = [];
 
-        activePlots.forEach(plot => {
+        activePlots.forEach((plot, index) => {
             try {
                 const evaluator = this.createPlotEvaluator(plot.expression, plot.coordinateType);
                 const strokeWidth = Math.max(1, Math.min(24, this.normalizePlotStrokeWidth(plot.strokeWidth) * metrics.visualScale));
@@ -2514,7 +2559,8 @@ class BackgroundManager {
                 }
 
                 if (pathData.trim()) {
-                    parts.push(`<path d="${pathData.trim()}" fill="none" stroke="${plot.color}" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"${dashAttr}></path>`);
+                    const safePlotColor = this.sanitizeSvgColor(plot.color, this.getCoordinatePaletteColor(index + 2));
+                    parts.push(`<path d="${pathData.trim()}" fill="none" stroke="${safePlotColor}" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"${dashAttr}></path>`);
                 }
             } catch (error) {
                 console.warn('Failed to render coordinate plot:', plot.expression, error);
@@ -2540,6 +2586,8 @@ class BackgroundManager {
         const labelFontSize = Math.max(12, Math.min(42, 12 * metrics.visualScale));
         const parts = [];
         const shouldShowPoints = this.shouldShowCoordinatePoints();
+        const safeLineColor = this.sanitizeSvgColor(this.getCoordinateLineColor(), '#2563eb');
+        const safeBackgroundColor = this.sanitizeSvgColor(this.backgroundColor, '#ffffff');
 
         this.getCoordinateLinePaths({ includeTransientSelection: true }).forEach(path => {
             const pointMap = new Map(screenEntries.map(point => [point.id, point]));
@@ -2551,13 +2599,13 @@ class BackgroundManager {
             }
             const polylinePoints = pathEntries.map(point => `${point.screen.x},${point.screen.y}`).join(' ');
             const opacityAttr = path.transient ? ' opacity="0.72"' : '';
-            parts.push(`<polyline points="${polylinePoints}" fill="none" stroke="${this.getCoordinateLineColor()}" stroke-width="${lineStrokeWidth}" stroke-linejoin="round" stroke-linecap="round"${opacityAttr}></polyline>`);
+            parts.push(`<polyline points="${polylinePoints}" fill="none" stroke="${safeLineColor}" stroke-width="${lineStrokeWidth}" stroke-linejoin="round" stroke-linecap="round"${opacityAttr}></polyline>`);
         });
 
         screenEntries.forEach((point, index) => {
-            const color = point.color || this.getCoordinatePaletteColor(index);
+            const color = this.sanitizeSvgColor(point.color || this.getCoordinatePaletteColor(index), this.getCoordinatePaletteColor(index));
             if (shouldShowPoints) {
-                parts.push(`<circle cx="${point.screen.x}" cy="${point.screen.y}" r="${pointRadius}" fill="${color}" stroke="${this.backgroundColor}" stroke-width="${pointStrokeWidth}"></circle>`);
+                parts.push(`<circle cx="${point.screen.x}" cy="${point.screen.y}" r="${pointRadius}" fill="${color}" stroke="${safeBackgroundColor}" stroke-width="${pointStrokeWidth}"></circle>`);
             }
 
             if (shouldShowPoints && this.coordinateOverlayState.showPointLabels) {

@@ -1083,10 +1083,24 @@ class I18n {
         
         const nextBtn = document.getElementById('next-or-add-page-btn');
         if (nextBtn) {
-            const isLastPage = true; // This will be determined by context
-            const label = this.t('page.next');
+            const pageInput = document.getElementById('page-input');
+            const pageTotal = document.getElementById('page-total');
+            const board = window.drawingBoard;
+
+            const currentPage = Number.isInteger(board?.currentPage)
+                ? board.currentPage
+                : Number.parseInt(pageInput?.value || '', 10);
+            const totalPages = Array.isArray(board?.pages)
+                ? board.pages.length
+                : Number.parseInt(String(pageTotal?.textContent || '').replace(/[^\d]/g, ''), 10);
+
+            const labelKey = totalPages === 1 || (Number.isInteger(currentPage) && Number.isInteger(totalPages) && currentPage >= totalPages)
+                ? 'page.newPage'
+                : 'page.next';
+            const label = this.t(labelKey);
             nextBtn.title = label;
             nextBtn.setAttribute('aria-label', label);
+            nextBtn.setAttribute('data-i18n-title', labelKey);
         }
         
         const pageInput = document.getElementById('page-input');

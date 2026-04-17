@@ -10,6 +10,22 @@ function getBackgroundText(key, fallback, params = {}) {
         return translated && translated !== key ? translated : fallback;
 }
 
+function sanitizeCoordinatePlotColor(value, fallback = '#2563eb') {
+        const normalized = String(value ?? '').trim();
+        const hexMatch = normalized.match(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+
+        if (!hexMatch) {
+            return fallback;
+        }
+
+        const hexValue = hexMatch[1].toLowerCase();
+        if (hexValue.length === 3) {
+            return `#${hexValue.split('').map((char) => char + char).join('')}`;
+        }
+
+        return `#${hexValue}`;
+}
+
 function renderCoordinatePlotList(currentPattern) {
         const plotList = document.getElementById('coordinate-plot-list');
         if (!plotList) return;
@@ -52,6 +68,7 @@ function renderCoordinatePlotList(currentPattern) {
 
         plotList.innerHTML = activePlots.map(plot => {
             const isExpanded = this.expandedCoordinatePlotId === plot.id;
+            const safePlotColor = sanitizeCoordinatePlotColor(plot.color);
             const dashOptions = Object.entries(dashStyleLabels)
                 .map(([value, label]) => `<option value="${value}"${value === (plot.dashStyle || 'solid') ? ' selected' : ''}>${label}</option>`)
                 .join('');
@@ -62,7 +79,7 @@ function renderCoordinatePlotList(currentPattern) {
             return `
                 <div class="coordinate-plot-item ${isExpanded ? 'expanded' : ''}" data-plot-id="${this.escapeHtml(plot.id)}" data-coordinate-type="${this.escapeHtml(plot.coordinateType)}">
                     <div class="coordinate-plot-summary">
-                        <span class="coordinate-plot-color" style="background:${plot.color};"></span>
+                        <span class="coordinate-plot-color" style="background:${safePlotColor};"></span>
                         <span class="coordinate-plot-expression">${this.getCoordinateExpressionPrefix(plot.coordinateType)}${this.escapeHtml(plot.expression)}</span>
                         <div class="coordinate-plot-actions">
                             <button type="button" class="coordinate-plot-action-btn" data-plot-toggle-edit="${this.escapeHtml(plot.id)}" title="${this.escapeHtml(editTitle)}" aria-label="${this.escapeHtml(editTitle)}">✎</button>
@@ -77,7 +94,7 @@ function renderCoordinatePlotList(currentPattern) {
                         <div class="coordinate-plot-style-grid">
                             <div class="coordinate-plot-field">
                                 <label>${this.escapeHtml(colorLabel)}</label>
-                                <input class="coordinate-plot-color-input" type="color" data-plot-field="color" value="${this.escapeHtml(plot.color)}" aria-label="${this.escapeHtml(colorInputLabel)}">
+                                <input class="coordinate-plot-color-input" type="color" data-plot-field="color" value="${this.escapeHtml(safePlotColor)}" aria-label="${this.escapeHtml(colorInputLabel)}">
                             </div>
                             <div class="coordinate-plot-field">
                                 <label>${this.escapeHtml(lineStyleLabel)}</label>
