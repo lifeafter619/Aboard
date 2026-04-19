@@ -296,11 +296,13 @@ export async function createApp({ win = window, doc = document } = {}) {
     registerAnnouncementManagerGlobal(win, doc);
     registerGifManagerGlobal(win, doc);
 
+    // Run compatibility checks before loading/initializing app services so
+    // partially supported browsers still see the warning overlay.
+    BrowserCheck.init(win, doc);
+
     await loadLegacyScripts(VISIBLE_CORE_STARTUP_SCRIPTS, { doc });
     await loadLegacyScripts(VISIBLE_CORE_SERVICE_SCRIPTS, { doc });
     const services = await createAppServices(win);
-
-    BrowserCheck.init(win, doc);
 
     const bridge = createLegacyRuntimeBridge(win);
     await loadLegacyScripts(VISIBLE_CORE_BOARD_DEPENDENCY_SCRIPTS, { doc });

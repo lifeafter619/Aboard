@@ -54,7 +54,11 @@ function showConfigDiffModal(diff, newSettings) {
 
         if (diff.length === 0) {
             const noChangeMsg = window.i18n?.t('settings.importNoChange') || 'No configuration changes detected';
-            list.innerHTML = `<div style="padding:10px; text-align:center;">${noChangeMsg}</div>`;
+            const emptyState = document.createElement('div');
+            emptyState.style.padding = '10px';
+            emptyState.style.textAlign = 'center';
+            emptyState.textContent = noChangeMsg;
+            list.appendChild(emptyState);
         } else {
             diff.forEach((item, index) => {
                 const div = document.createElement('div');

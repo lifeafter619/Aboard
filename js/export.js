@@ -362,15 +362,22 @@ class ExportManager {
         if (!container) return;
         
         container.innerHTML = '';
+
+        const renderHint = (text) => {
+            const hint = document.createElement('p');
+            hint.className = 'export-hint';
+            hint.textContent = text;
+            container.appendChild(hint);
+        };
         
         if (!this.drawingBoard || !this.drawingBoard.pages) {
-            container.innerHTML = `<p class="export-hint">${getExportText('export.paginationRequired', 'Pagination required')}</p>`;
+            renderHint(getExportText('export.paginationRequired', 'Pagination required'));
             return;
         }
         
         const pageCount = this.drawingBoard.pages.length;
         if (pageCount === 0) {
-            container.innerHTML = `<p class="export-hint">${getExportText('export.noPages', 'No pages')}</p>`;
+            renderHint(getExportText('export.noPages', 'No pages'));
             return;
         }
         

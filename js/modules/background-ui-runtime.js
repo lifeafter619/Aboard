@@ -26,6 +26,15 @@ function sanitizeCoordinatePlotColor(value, fallback = '#2563eb') {
         return `#${hexValue}`;
 }
 
+function escapeBackgroundUiHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+}
+
 function renderCoordinatePlotList(currentPattern) {
         const plotList = document.getElementById('coordinate-plot-list');
         if (!plotList) return;
@@ -37,7 +46,7 @@ function renderCoordinatePlotList(currentPattern) {
 
         if (activePlots.length === 0) {
             const emptyText = getBackgroundText('background.noPlots', 'No plotted functions yet');
-            plotList.innerHTML = `<div class="coordinate-empty-state">${emptyText}</div>`;
+            plotList.innerHTML = `<div class="coordinate-empty-state">${escapeBackgroundUiHtml(emptyText)}</div>`;
             return;
         }
 

@@ -104,7 +104,7 @@ function createCoordinatePlotRangeRowMarkup(segment = {}, coordinateType = this.
 
     return `
         <div class="coordinate-plot-range-row" data-range-row data-segment-id="${this.escapeHtml(segmentId)}">
-            <select data-range-field="axis" aria-label="${this.escapeHtml(axisLabel)}">${axisOptions}</select>
+            <select data-range-field="axis" aria-label="${this.escapeHtml(axisLabel)}">${axisOptionsMarkup}</select>
             <input type="number" step="0.1" data-range-field="min" value="${this.escapeHtml(minValue)}" placeholder="${this.escapeHtml(getCoordinateText('background.plotRangeMinPlaceholder', 'Min value'))}" aria-label="${this.escapeHtml(minLabel)}">
             <input type="number" step="0.1" data-range-field="max" value="${this.escapeHtml(maxValue)}" placeholder="${this.escapeHtml(getCoordinateText('background.plotRangeMaxPlaceholder', 'Max value'))}" aria-label="${this.escapeHtml(maxLabel)}">
             <button type="button" class="coordinate-plot-range-remove" data-plot-range-remove="${this.escapeHtml(segmentId)}" title="${this.escapeHtml(getCoordinateText('background.plotRemoveRange', 'Remove range'))}" aria-label="${this.escapeHtml(getCoordinateText('background.plotRemoveRange', 'Remove range'))}">✕</button>

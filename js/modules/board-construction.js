@@ -1,13 +1,4 @@
 function resolveLegacyClass(name) {
-    try {
-        const resolvedFromEval = window.eval?.(name);
-        if (typeof resolvedFromEval === 'function') {
-            return resolvedFromEval;
-        }
-    } catch (error) {
-        // Ignore lookup failures and fall back to window properties.
-    }
-
     return typeof window[name] === 'function' ? window[name] : null;
 }
 
