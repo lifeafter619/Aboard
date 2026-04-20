@@ -11,6 +11,74 @@ function resolvePreferredConstructor(win, preferredNames) {
   return undefined;
 }
 
+function createNoopStorageManager() {
+  return {
+    initPromise: Promise.resolve(null),
+    async saveSession() {
+      return false;
+    },
+    async loadSession() {
+      return null;
+    },
+    async hasSession() {
+      return false;
+    },
+    async clearSession() {},
+    closeDB() {},
+    getSessionSizeEstimate() {
+      return 0;
+    },
+    setSessionSizeEstimate() {},
+    clearSessionSizeEstimate() {}
+  };
+}
+
+function createNoopCollapsibleManager() {
+  return {
+    collapsedState: { default: true },
+    loadCollapsedState() {
+      return { default: true };
+    },
+    saveCollapsedState() {},
+    initializeCollapsibles() {},
+    setup() {},
+    makeCollapsible() {}
+  };
+}
+
+function createNoopAnnouncementManager() {
+  return {
+    setupEventListeners() {},
+    checkAndShowAnnouncement() {},
+    showModal() {},
+    closeModal() {},
+    updateSettingsContent() {},
+    showFromSettings() {}
+  };
+}
+
+function createNoopHelpSystem() {
+  return {
+    init() {},
+    bindDataHelpButtons() {},
+    refreshHelpButtonLabels() {},
+    showHelp() {}
+  };
+}
+
+function instantiateWithFallback(label, ctor, args = [], fallbackFactory) {
+  if (typeof ctor !== 'function') {
+    return typeof fallbackFactory === 'function' ? fallbackFactory() : undefined;
+  }
+
+  try {
+    return Reflect.construct(ctor, args);
+  } catch (error) {
+    console.warn(`Aboard ${label} failed to initialize, continuing with degraded behavior:`, error);
+    return typeof fallbackFactory === 'function' ? fallbackFactory() : undefined;
+  }
+}
+
 export function createBoardDependencies(win = window) {
   const SettingsManager = resolvePreferredConstructor(win, ['AboardSettingsManager', 'SettingsManager']);
   const StorageManager = resolvePreferredConstructor(win, ['AboardStorageManager', 'StorageManager']);
@@ -23,21 +91,21 @@ export function createBoardDependencies(win = window) {
 
   const settingsManager = typeof SettingsManager === 'function' ? new SettingsManager() : undefined;
   const timeDisplayManager = typeof TimeDisplayManager === 'function' && settingsManager
-    ? new TimeDisplayManager(settingsManager)
+    ? instantiateWithFallback('TimeDisplayManager', TimeDisplayManager, [settingsManager], () => null)
     : undefined;
 
   return {
     settingsManager,
-    storageManager: typeof StorageManager === 'function' ? new StorageManager() : undefined,
-    collapsibleManager: typeof CollapsibleManager === 'function' ? new CollapsibleManager() : undefined,
-    announcementManager: typeof AnnouncementManager === 'function' ? new AnnouncementManager() : undefined,
-    helpSystem: typeof HelpSystem === 'function' ? new HelpSystem() : undefined,
+    storageManager: instantiateWithFallback('StorageManager', StorageManager, [], createNoopStorageManager),
+    collapsibleManager: instantiateWithFallback('CollapsibleManager', CollapsibleManager, [], createNoopCollapsibleManager),
+    announcementManager: instantiateWithFallback('AnnouncementManager', AnnouncementManager, [], createNoopAnnouncementManager),
+    helpSystem: instantiateWithFallback('HelpSystem', HelpSystem, [], createNoopHelpSystem),
     timeDisplayManager,
     timeDisplayControls: typeof TimeDisplayControls === 'function' && timeDisplayManager
-      ? new TimeDisplayControls(timeDisplayManager)
+      ? instantiateWithFallback('TimeDisplayControls', TimeDisplayControls, [timeDisplayManager])
       : undefined,
     timeDisplaySettingsModal: typeof TimeDisplaySettingsModal === 'function' && timeDisplayManager
-      ? new TimeDisplaySettingsModal(timeDisplayManager)
+      ? instantiateWithFallback('TimeDisplaySettingsModal', TimeDisplaySettingsModal, [timeDisplayManager])
       : undefined
   };
 }

@@ -8,7 +8,7 @@ class HistoryManager {
         this.history = [];
         this.historyStep = -1;
         this.maxHistory = 50;
-        this.memoryLimitBytes = 512 * 1024 * 1024; // 512 MB cap for history
+        this.memoryLimitBytes = 128 * 1024 * 1024; // 128 MB cap for history
         this.onStateChanged = null;
     }
 

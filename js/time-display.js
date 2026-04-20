@@ -19,6 +19,25 @@ function focusTimeDisplayElement(element, win = window) {
     });
 }
 
+function safeTimeDisplayStorageGetItem(key) {
+    try {
+        return localStorage.getItem(key);
+    } catch (error) {
+        console.warn(`Failed to read time display localStorage key "${key}":`, error);
+        return null;
+    }
+}
+
+function safeTimeDisplayStorageSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to write time display localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
 class TimeDisplayManager {
     constructor(settingsManager) {
         this.settingsManager = settingsManager;
@@ -31,11 +50,11 @@ class TimeDisplayManager {
         
         // Load settings from localStorage
         // Default to true if no value is stored (first time load)
-        const storedEnabled = localStorage.getItem('timeDisplayEnabled');
+        const storedEnabled = safeTimeDisplayStorageGetItem('timeDisplayEnabled');
         this.enabled = storedEnabled === null ? true : storedEnabled === 'true';
 
         // Auto-detect time format if not set
-        const storedTimeFormat = localStorage.getItem('timeDisplayTimeFormat');
+        const storedTimeFormat = safeTimeDisplayStorageGetItem('timeDisplayTimeFormat');
         if (storedTimeFormat) {
             this.timeFormat = storedTimeFormat;
         } else {
@@ -45,28 +64,28 @@ class TimeDisplayManager {
             this.timeFormat = is12Hour ? '12h' : '24h';
         }
 
-        const storedFontSize = parseInt(localStorage.getItem('timeDisplayFontSize'), 10);
-        const storedOpacity = parseInt(localStorage.getItem('timeDisplayOpacity'), 10);
-        const storedFullscreenFontSize = parseInt(localStorage.getItem('timeDisplayFullscreenFontSize'), 10);
-        const storedFullscreenTitleFontSize = parseInt(localStorage.getItem('timeDisplayFullscreenTitleFontSize'), 10);
-        const storedFullscreenOpacity = parseInt(localStorage.getItem('timeDisplayFullscreenOpacity'), 10);
+        const storedFontSize = parseInt(safeTimeDisplayStorageGetItem('timeDisplayFontSize'), 10);
+        const storedOpacity = parseInt(safeTimeDisplayStorageGetItem('timeDisplayOpacity'), 10);
+        const storedFullscreenFontSize = parseInt(safeTimeDisplayStorageGetItem('timeDisplayFullscreenFontSize'), 10);
+        const storedFullscreenTitleFontSize = parseInt(safeTimeDisplayStorageGetItem('timeDisplayFullscreenTitleFontSize'), 10);
+        const storedFullscreenOpacity = parseInt(safeTimeDisplayStorageGetItem('timeDisplayFullscreenOpacity'), 10);
 
-        this.dateFormat = localStorage.getItem('timeDisplayDateFormat') || 'auto'; // Default to auto
-        this.color = localStorage.getItem('timeDisplayColor') || '#000000';
-        this.bgColor = localStorage.getItem('timeDisplayBgColor') || '#FFFFFF';
+        this.dateFormat = safeTimeDisplayStorageGetItem('timeDisplayDateFormat') || 'auto'; // Default to auto
+        this.color = safeTimeDisplayStorageGetItem('timeDisplayColor') || '#000000';
+        this.bgColor = safeTimeDisplayStorageGetItem('timeDisplayBgColor') || '#FFFFFF';
         this.fontSize = Number.isNaN(storedFontSize) ? 16 : Math.max(12, Math.min(48, storedFontSize));
         this.opacity = Number.isNaN(storedOpacity) ? 100 : Math.max(0, Math.min(100, storedOpacity));
-        this.showDate = localStorage.getItem('timeDisplayShowDate') !== 'false'; // Default true
-        this.showTime = localStorage.getItem('timeDisplayShowTime') !== 'false'; // Default true
-        this.fullscreenMode = localStorage.getItem('timeDisplayFullscreenMode') || 'double'; // Default 'double' (disabled/single/double)
+        this.showDate = safeTimeDisplayStorageGetItem('timeDisplayShowDate') !== 'false'; // Default true
+        this.showTime = safeTimeDisplayStorageGetItem('timeDisplayShowTime') !== 'false'; // Default true
+        this.fullscreenMode = safeTimeDisplayStorageGetItem('timeDisplayFullscreenMode') || 'double'; // Default 'double' (disabled/single/double)
         this.fullscreenFontSize = Number.isNaN(storedFullscreenFontSize) ? 15 : Math.max(10, Math.min(85, storedFullscreenFontSize)); // Default 15 (vmin percentage)
         this.fullscreenTitleFontSize = Number.isNaN(storedFullscreenTitleFontSize) ? 5 : Math.max(2, Math.min(20, storedFullscreenTitleFontSize)); // Default 5 (vmin percentage) for date
-        this.fullscreenColor = localStorage.getItem('timeDisplayFullscreenColor') || '#ffffff';
-        this.fullscreenBgColor = localStorage.getItem('timeDisplayFullscreenBgColor') || '#000000';
+        this.fullscreenColor = safeTimeDisplayStorageGetItem('timeDisplayFullscreenColor') || '#ffffff';
+        this.fullscreenBgColor = safeTimeDisplayStorageGetItem('timeDisplayFullscreenBgColor') || '#000000';
         this.fullscreenOpacity = Number.isNaN(storedFullscreenOpacity) ? 95 : Math.max(0, Math.min(100, storedFullscreenOpacity));
 
         // Get user's current timezone by default, or use saved value
-        this.timezone = localStorage.getItem('timeDisplayTimezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        this.timezone = safeTimeDisplayStorageGetItem('timeDisplayTimezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
         
         // Click detection settings
         this.clickTimeout = null;
@@ -96,7 +115,7 @@ class TimeDisplayManager {
     
     toggle() {
         this.enabled = !this.enabled;
-        localStorage.setItem('timeDisplayEnabled', this.enabled);
+        safeTimeDisplayStorageSetItem('timeDisplayEnabled', this.enabled);
         
         if (this.enabled) {
             this.show();
@@ -107,7 +126,7 @@ class TimeDisplayManager {
     
     show() {
         this.enabled = true;
-        localStorage.setItem('timeDisplayEnabled', 'true');
+        safeTimeDisplayStorageSetItem('timeDisplayEnabled', 'true');
         if (!this.timeDisplayElement) {
             return;
         }
@@ -118,7 +137,7 @@ class TimeDisplayManager {
     
     hide() {
         this.enabled = false;
-        localStorage.setItem('timeDisplayEnabled', 'false');
+        safeTimeDisplayStorageSetItem('timeDisplayEnabled', 'false');
         if (!this.timeDisplayElement) {
             return;
         }
@@ -320,7 +339,7 @@ class TimeDisplayManager {
     
     setTimeFormat(format) {
         this.timeFormat = format;
-        localStorage.setItem('timeDisplayTimeFormat', format);
+        safeTimeDisplayStorageSetItem('timeDisplayTimeFormat', format);
         if (this.enabled) {
             this.updateDisplay();
         }
@@ -328,7 +347,7 @@ class TimeDisplayManager {
     
     setDateFormat(format) {
         this.dateFormat = format;
-        localStorage.setItem('timeDisplayDateFormat', format);
+        safeTimeDisplayStorageSetItem('timeDisplayDateFormat', format);
         if (this.enabled) {
             this.updateDisplay();
         }
@@ -336,7 +355,7 @@ class TimeDisplayManager {
     
     setTimezone(timezone) {
         this.timezone = timezone;
-        localStorage.setItem('timeDisplayTimezone', timezone);
+        safeTimeDisplayStorageSetItem('timeDisplayTimezone', timezone);
         if (this.enabled) {
             this.updateDisplay();
         }
@@ -344,25 +363,25 @@ class TimeDisplayManager {
     
     setColor(color) {
         this.color = color;
-        localStorage.setItem('timeDisplayColor', color);
+        safeTimeDisplayStorageSetItem('timeDisplayColor', color);
         this.applySettings();
     }
     
     setBgColor(bgColor) {
         this.bgColor = bgColor;
-        localStorage.setItem('timeDisplayBgColor', bgColor);
+        safeTimeDisplayStorageSetItem('timeDisplayBgColor', bgColor);
         this.applySettings();
     }
     
     setFullscreenMode(mode) {
         this.fullscreenMode = mode;
-        localStorage.setItem('timeDisplayFullscreenMode', mode);
+        safeTimeDisplayStorageSetItem('timeDisplayFullscreenMode', mode);
     }
     
     setFullscreenFontSize(size) {
         // Constrain to 10-85% range for safety
         this.fullscreenFontSize = Math.max(10, Math.min(85, size));
-        localStorage.setItem('timeDisplayFullscreenFontSize', this.fullscreenFontSize);
+        safeTimeDisplayStorageSetItem('timeDisplayFullscreenFontSize', this.fullscreenFontSize);
         if (this.isFullscreen) {
             this.updateFullscreenDisplay();
         }
@@ -371,7 +390,7 @@ class TimeDisplayManager {
     setFullscreenTitleFontSize(size) {
         // Constrain to 2-20% range for date/title
         this.fullscreenTitleFontSize = Math.max(2, Math.min(20, size));
-        localStorage.setItem('timeDisplayFullscreenTitleFontSize', this.fullscreenTitleFontSize);
+        safeTimeDisplayStorageSetItem('timeDisplayFullscreenTitleFontSize', this.fullscreenTitleFontSize);
         if (this.isFullscreen) {
             this.updateFullscreenDisplay();
         }
@@ -379,7 +398,7 @@ class TimeDisplayManager {
 
     setFullscreenColor(color) {
         this.fullscreenColor = color;
-        localStorage.setItem('timeDisplayFullscreenColor', color);
+        safeTimeDisplayStorageSetItem('timeDisplayFullscreenColor', color);
         if (this.isFullscreen) {
             this.updateFullscreenDisplay();
         }
@@ -387,7 +406,7 @@ class TimeDisplayManager {
 
     setFullscreenBgColor(color) {
         this.fullscreenBgColor = color;
-        localStorage.setItem('timeDisplayFullscreenBgColor', color);
+        safeTimeDisplayStorageSetItem('timeDisplayFullscreenBgColor', color);
         if (this.isFullscreen) {
             this.updateFullscreenDisplay();
         }
@@ -395,7 +414,7 @@ class TimeDisplayManager {
 
     setFullscreenOpacity(opacity) {
         this.fullscreenOpacity = opacity;
-        localStorage.setItem('timeDisplayFullscreenOpacity', opacity);
+        safeTimeDisplayStorageSetItem('timeDisplayFullscreenOpacity', opacity);
         if (this.isFullscreen) {
             this.updateFullscreenDisplay();
         }
@@ -403,7 +422,7 @@ class TimeDisplayManager {
     
     setFontSize(size) {
         this.fontSize = size;
-        localStorage.setItem('timeDisplayFontSize', size);
+        safeTimeDisplayStorageSetItem('timeDisplayFontSize', size);
         this.applySettings();
         if (this.enabled) {
             this.updateDisplay();
@@ -412,13 +431,13 @@ class TimeDisplayManager {
     
     setOpacity(opacity) {
         this.opacity = opacity;
-        localStorage.setItem('timeDisplayOpacity', opacity);
+        safeTimeDisplayStorageSetItem('timeDisplayOpacity', opacity);
         this.applySettings();
     }
     
     setShowDate(show) {
         this.showDate = show;
-        localStorage.setItem('timeDisplayShowDate', show);
+        safeTimeDisplayStorageSetItem('timeDisplayShowDate', show);
         if (this.enabled) {
             this.updateDisplay();
         }
@@ -426,7 +445,7 @@ class TimeDisplayManager {
     
     setShowTime(show) {
         this.showTime = show;
-        localStorage.setItem('timeDisplayShowTime', show);
+        safeTimeDisplayStorageSetItem('timeDisplayShowTime', show);
         if (this.enabled) {
             this.updateDisplay();
         }

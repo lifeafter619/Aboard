@@ -1,3 +1,22 @@
+function safeAnnouncementStorageGetItem(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    console.warn(`Failed to read announcement localStorage key "${key}":`, error);
+    return null;
+  }
+}
+
+function safeAnnouncementStorageSetItem(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (error) {
+    console.warn(`Failed to write announcement localStorage key "${key}":`, error);
+    return false;
+  }
+}
+
 export class AnnouncementManager {
   constructor(win = window, doc = document) {
     this.win = win;
@@ -40,7 +59,7 @@ export class AnnouncementManager {
     });
 
     this.noShowButton?.addEventListener('click', () => {
-      localStorage.setItem('hideAnnouncement', 'true');
+      safeAnnouncementStorageSetItem('hideAnnouncement', 'true');
       this.closeModal();
     });
 
@@ -59,7 +78,7 @@ export class AnnouncementManager {
   }
 
   checkAndShowAnnouncement() {
-    const hideAnnouncement = localStorage.getItem('hideAnnouncement');
+    const hideAnnouncement = safeAnnouncementStorageGetItem('hideAnnouncement');
 
     if (!hideAnnouncement && this.win.i18n) {
       this.showModal();

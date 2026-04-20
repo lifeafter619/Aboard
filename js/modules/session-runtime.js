@@ -3,6 +3,184 @@
 
 const SESSION_RUNTIME_PLANNED_UPDATE_RELOAD_KEY = 'aboardPlannedUpdateReload';
 
+function getDefaultCoordinateOverlayState(backgroundManager) {
+        if (typeof backgroundManager?.getDefaultCoordinateOverlayState === 'function') {
+            return backgroundManager.getDefaultCoordinateOverlayState();
+        }
+
+        return {
+            showTicks: true,
+            showLabels: true,
+            showPointLabels: true,
+            showOrigin: true,
+            pointLineMode: 'auto',
+            connectPoints: true,
+            snapToGrid: true,
+            lineColor: '#2563eb',
+            points: [],
+            plots: [],
+            groups: []
+        };
+}
+
+function getDefaultImageTransform() {
+        return {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            rotation: 0,
+            scale: 1,
+            flipHorizontal: false,
+            flipVertical: false
+        };
+}
+
+function normalizeImageTransform(transform) {
+        const nextTransform = transform && typeof transform === 'object' ? transform : {};
+        const defaults = getDefaultImageTransform();
+        const scale = Number.isFinite(nextTransform.scale) ? nextTransform.scale : defaults.scale;
+        let x = Number.isFinite(nextTransform.x) ? nextTransform.x : defaults.x;
+        let y = Number.isFinite(nextTransform.y) ? nextTransform.y : defaults.y;
+        let width = Number.isFinite(nextTransform.width) ? nextTransform.width : defaults.width;
+        let height = Number.isFinite(nextTransform.height) ? nextTransform.height : defaults.height;
+
+        if (scale && scale !== 1 && width > 0 && height > 0) {
+            const factor = Math.abs(scale);
+            const newWidth = width * factor;
+            const newHeight = height * factor;
+            x -= (newWidth - width) / 2;
+            y -= (newHeight - height) / 2;
+            width = newWidth;
+            height = newHeight;
+        }
+
+        return {
+            x,
+            y,
+            width,
+            height,
+            rotation: Number.isFinite(nextTransform.rotation) ? nextTransform.rotation : defaults.rotation,
+            scale: 1,
+            flipHorizontal: !!nextTransform.flipHorizontal,
+            flipVertical: !!nextTransform.flipVertical
+        };
+}
+
+function resetTransientBackgroundMediaState(backgroundManager) {
+        if (!backgroundManager || typeof backgroundManager !== 'object') {
+            return;
+        }
+
+        backgroundManager.currentGifLoop = 0;
+        backgroundManager.isImagePaused = false;
+        backgroundManager.imageStaticData = null;
+}
+
+function getCanvasStateStorageKeys(board) {
+        const canvasKeys = board.getCacheKeyGroups?.()?.canvasKeys;
+        if (canvasKeys && typeof canvasKeys.forEach === 'function') {
+            const keys = new Set();
+            canvasKeys.forEach((key) => keys.add(key));
+            keys.add(board.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot');
+            keys.add(SESSION_RUNTIME_PLANNED_UPDATE_RELOAD_KEY);
+            return keys;
+        }
+
+        return new Set([
+            'savedCanvasData',
+            'savedBgCanvasData',
+            'savedCanvasTimestamp',
+            'savedCurrentPage',
+            'pageBackgrounds',
+            'pageScenes',
+            'backgroundColor',
+            'backgroundPattern',
+            'bgOpacity',
+            'patternIntensity',
+            'patternDensity',
+            'backgroundImageData',
+            'backgroundImageConfirmed',
+            'imageTransform',
+            'imageSize',
+            'coordinateOriginX',
+            'coordinateOriginY',
+            'coordinateOverlayState',
+            'backgroundOutsideLayerOrder',
+            'uploadedImages',
+            'canvasScale',
+            'panOffsetX',
+            'panOffsetY',
+            'aboardSessionSizeEstimate',
+            board.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot',
+            SESSION_RUNTIME_PLANNED_UPDATE_RELOAD_KEY
+        ]);
+}
+
+function clearCanvasStateStorage(board) {
+        const canvasKeys = getCanvasStateStorageKeys(board);
+        canvasKeys.forEach((key) => {
+            localStorage.removeItem(key);
+            if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.removeItem(key);
+            }
+        });
+}
+
+function resetRuntimeCanvasState() {
+        this.pageBackgrounds = {};
+        this.uploadedImages = [];
+        this.currentPage = 1;
+
+        this.clearAllPageScenes?.();
+        if (!this.clearAllPageScenes) {
+            this.pageScenes = {};
+            this.clearPageSceneRuntimeState?.();
+        }
+
+        if (this.ctx && this.canvas) {
+            this.ctx.clearRect?.(0, 0, this.canvas.width, this.canvas.height);
+            if (typeof this.ctx.getImageData === 'function') {
+                this.pages = [this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height)];
+            } else {
+                this.pages = [];
+            }
+        }
+
+        const backgroundManager = this.backgroundManager;
+        if (backgroundManager) {
+            backgroundManager.clearBackgroundImage?.();
+            backgroundManager.backgroundColor = '#ffffff';
+            backgroundManager.backgroundPattern = 'blank';
+            backgroundManager.bgOpacity = 1;
+            backgroundManager.patternIntensity = 0.5;
+            backgroundManager.patternDensity = 1;
+            backgroundManager.imageSize = 1;
+            backgroundManager.coordinateOriginX = 0;
+            backgroundManager.coordinateOriginY = 0;
+            backgroundManager.setCoordinateOverlayState?.(
+                getDefaultCoordinateOverlayState(backgroundManager),
+                { persist: false, redraw: false }
+            );
+            backgroundManager.backgroundImage = null;
+            backgroundManager.backgroundImageData = null;
+            backgroundManager.imageTransform = getDefaultImageTransform();
+            backgroundManager.gifLoopCount = 0;
+            backgroundManager.currentGifLoop = 0;
+            backgroundManager.isImagePaused = false;
+            backgroundManager.imageStaticData = null;
+            backgroundManager.backgroundOutsideLayerOrder = 1;
+            backgroundManager.backgroundWasOutsideCanvas = false;
+            backgroundManager.drawBackground?.();
+            backgroundManager.emitBackgroundUiState?.();
+        }
+
+        this.imageControls?.resetConfirmation?.();
+        this.updateUploadedImagesButtons?.();
+        this.updateBackgroundUI?.();
+        this.updatePaginationUI?.();
+}
+
 function getRecoveryFailureMessage() {
         return window.i18n?.t('recovery.restoreFailed') || 'Failed to restore your previous content. Please try again.';
 }
@@ -154,6 +332,7 @@ async function restoreSession() {
                 if (typeof settings.bgOpacity !== 'undefined') this.backgroundManager.bgOpacity = settings.bgOpacity;
                 if (typeof settings.patternIntensity !== 'undefined') this.backgroundManager.patternIntensity = settings.patternIntensity;
                 if (typeof settings.patternDensity !== 'undefined') this.backgroundManager.patternDensity = settings.patternDensity;
+                resetTransientBackgroundMediaState(this.backgroundManager);
                 if (typeof settings.coordinateOriginX !== 'undefined') {
                     this.backgroundManager.coordinateOriginX = settings.coordinateOriginX;
                     this.backgroundManager.coordinateOriginY = settings.coordinateOriginY;
@@ -161,6 +340,9 @@ async function restoreSession() {
                 this.backgroundManager.setCoordinateOverlayState(settings.coordinateOverlayState, { persist: false, redraw: false });
                 if (typeof settings.imageSize !== 'undefined') this.backgroundManager.imageSize = settings.imageSize;
                 if (settings.backgroundImageData) this.backgroundManager.backgroundImageData = settings.backgroundImageData;
+                if (settings.imageTransform) {
+                    this.backgroundManager.imageTransform = normalizeImageTransform(settings.imageTransform);
+                }
                 if (typeof settings.backgroundOutsideLayerOrder !== 'undefined') {
                     this.backgroundManager.backgroundOutsideLayerOrder = settings.backgroundOutsideLayerOrder;
                 }
@@ -315,17 +497,12 @@ async function clearSessionData() {
         }
 
         try {
-            // Also clear legacy localStorage data to be clean
-            localStorage.removeItem('savedCanvasData');
-            localStorage.removeItem('savedBgCanvasData');
-            localStorage.removeItem('savedCanvasTimestamp');
-            localStorage.removeItem('savedCurrentPage');
-            localStorage.removeItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot');
-            localStorage.removeItem(SESSION_RUNTIME_PLANNED_UPDATE_RELOAD_KEY);
+            clearCanvasStateStorage(this);
         } catch (e) {
             console.warn('Failed to clear local session snapshot:', e);
         }
 
+        resetRuntimeCanvasState.call(this);
         this.hasUnresolvedRecoveryData = false;
     
 }

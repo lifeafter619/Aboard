@@ -16,33 +16,62 @@ function normalizeCanvasDimension(value, fallbackValue) {
     return Math.max(minCanvasDimension, Math.min(maxCanvasDimension, Math.round(parsedValue)));
 }
 
+function safeLocalStorageGetItem(key) {
+    try {
+        return localStorage.getItem(key);
+    } catch (error) {
+        console.warn(`Failed to read localStorage key "${key}":`, error);
+        return null;
+    }
+}
+
+function safeLocalStorageSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to write localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
+function safeLocalStorageRemoveItem(key) {
+    try {
+        localStorage.removeItem(key);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to remove localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
 class SettingsManager {
     constructor() {
-        const storedToolbarSize = localStorage.getItem('toolbarSize');
-        const storedConfigScale = localStorage.getItem('configScale');
+        const storedToolbarSize = safeLocalStorageGetItem('toolbarSize');
+        const storedConfigScale = safeLocalStorageGetItem('configScale');
         const isLargeScreen = window.innerWidth >= largeScreenWidth;
         const isHighDpi = (window.devicePixelRatio || 1) >= highDpiRatio;
         const isHighResDisplay = isLargeScreen || isHighDpi;
         this.toolbarSize = storedToolbarSize ? parseInt(storedToolbarSize, 10) : (isHighResDisplay ? 65 : 60);
         this.configScale = storedConfigScale ? parseFloat(storedConfigScale) : (isHighResDisplay ? 1.1 : 1.0);
-        this.controlPosition = localStorage.getItem('controlPosition') || 'top-right';
-        this.edgeSnapEnabled = localStorage.getItem('edgeSnapEnabled') !== 'false';
-        this.touchZoomEnabled = localStorage.getItem('touchZoomEnabled') !== 'false';
-        this.updatePreference = this.normalizeUpdatePreference(localStorage.getItem('updatePreference'));
-        this.legacyProjectImportEnabled = localStorage.getItem('legacyProjectImportEnabled') === 'true';
-        this.unlimitedZoom = localStorage.getItem('unlimitedZoom') === 'true';
+        this.controlPosition = safeLocalStorageGetItem('controlPosition') || 'top-right';
+        this.edgeSnapEnabled = safeLocalStorageGetItem('edgeSnapEnabled') !== 'false';
+        this.touchZoomEnabled = safeLocalStorageGetItem('touchZoomEnabled') !== 'false';
+        this.updatePreference = this.normalizeUpdatePreference(safeLocalStorageGetItem('updatePreference'));
+        this.legacyProjectImportEnabled = safeLocalStorageGetItem('legacyProjectImportEnabled') === 'true';
+        this.unlimitedZoom = safeLocalStorageGetItem('unlimitedZoom') === 'true';
         this.infiniteCanvas = false; // Always use pagination mode
-        this.showZoomControls = localStorage.getItem('showZoomControls') !== 'false';
-        this.showImportExportBtn = localStorage.getItem('showImportExportBtn') !== 'false';
-        this.showFullscreenBtn = localStorage.getItem('showFullscreenBtn') !== 'false';
-        this.showToolbarText = localStorage.getItem('showToolbarText') !== 'false'; // Default true
-        this.keepMorePanelOpen = localStorage.getItem('keepMorePanelOpen') !== 'false';
+        this.showZoomControls = safeLocalStorageGetItem('showZoomControls') !== 'false';
+        this.showImportExportBtn = safeLocalStorageGetItem('showImportExportBtn') !== 'false';
+        this.showFullscreenBtn = safeLocalStorageGetItem('showFullscreenBtn') !== 'false';
+        this.showToolbarText = safeLocalStorageGetItem('showToolbarText') !== 'false'; // Default true
+        this.keepMorePanelOpen = safeLocalStorageGetItem('keepMorePanelOpen') !== 'false';
         this.patternPreferences = this.loadPatternPreferences();
-        this.canvasWidth = normalizeCanvasDimension(localStorage.getItem('canvasWidth'), defaultCanvasWidth);
-        this.canvasHeight = normalizeCanvasDimension(localStorage.getItem('canvasHeight'), defaultCanvasHeight);
-        this.canvasPreset = localStorage.getItem('canvasPreset') || 'custom';
-        this.themeColor = localStorage.getItem('themeColor') || '#007AFF';
-        this.globalFont = localStorage.getItem('globalFont') || 'system';
+        this.canvasWidth = normalizeCanvasDimension(safeLocalStorageGetItem('canvasWidth'), defaultCanvasWidth);
+        this.canvasHeight = normalizeCanvasDimension(safeLocalStorageGetItem('canvasHeight'), defaultCanvasHeight);
+        this.canvasPreset = safeLocalStorageGetItem('canvasPreset') || 'custom';
+        this.themeColor = safeLocalStorageGetItem('themeColor') || '#007AFF';
+        this.globalFont = safeLocalStorageGetItem('globalFont') || 'system';
         this.customFonts = this.loadCustomFonts();
         this.fontPreferences = this.loadFontPreferences();
         this.fontPreviewSettings = this.loadFontPreviewSettings();
@@ -60,7 +89,7 @@ class SettingsManager {
     
     // Load custom fonts from localStorage
     loadCustomFonts() {
-        const saved = localStorage.getItem('customFonts');
+        const saved = safeLocalStorageGetItem('customFonts');
         if (saved) {
             try {
                 return JSON.parse(saved);
@@ -100,7 +129,7 @@ class SettingsManager {
     }
 
     loadFontPreferences() {
-        const saved = localStorage.getItem('fontPreferences');
+        const saved = safeLocalStorageGetItem('fontPreferences');
         if (saved) {
             try {
                 return JSON.parse(saved);
@@ -122,7 +151,7 @@ class SettingsManager {
     }
 
     loadFontPreviewSettings() {
-        const saved = localStorage.getItem('fontPreviewSettings');
+        const saved = safeLocalStorageGetItem('fontPreviewSettings');
         if (saved) {
             try {
                 return JSON.parse(saved);
@@ -134,7 +163,7 @@ class SettingsManager {
     }
 
     loadModalSizePreferences() {
-        const saved = localStorage.getItem('modalSizePreferences');
+        const saved = safeLocalStorageGetItem('modalSizePreferences');
         if (saved) {
             try {
                 return JSON.parse(saved);
@@ -146,7 +175,7 @@ class SettingsManager {
     }
 
     loadModalCenterPreferences() {
-        const saved = localStorage.getItem('modalCenterPreferences');
+        const saved = safeLocalStorageGetItem('modalCenterPreferences');
         if (saved) {
             try {
                 return JSON.parse(saved);
@@ -158,19 +187,19 @@ class SettingsManager {
     }
 
     saveFontPreferences() {
-        localStorage.setItem('fontPreferences', JSON.stringify(this.fontPreferences));
+        safeLocalStorageSetItem('fontPreferences', JSON.stringify(this.fontPreferences));
     }
 
     saveFontPreviewSettings() {
-        localStorage.setItem('fontPreviewSettings', JSON.stringify(this.fontPreviewSettings));
+        safeLocalStorageSetItem('fontPreviewSettings', JSON.stringify(this.fontPreviewSettings));
     }
 
     saveModalSizePreferences() {
-        localStorage.setItem('modalSizePreferences', JSON.stringify(this.modalSizePreferences));
+        safeLocalStorageSetItem('modalSizePreferences', JSON.stringify(this.modalSizePreferences));
     }
 
     saveModalCenterPreferences() {
-        localStorage.setItem('modalCenterPreferences', JSON.stringify(this.modalCenterPreferences));
+        safeLocalStorageSetItem('modalCenterPreferences', JSON.stringify(this.modalCenterPreferences));
     }
 
     ensureFontPreferencesIntegrity() {
@@ -229,7 +258,7 @@ class SettingsManager {
     // Save custom fonts to localStorage
     saveCustomFonts() {
         try {
-            localStorage.setItem('customFonts', JSON.stringify(this.customFonts));
+            safeLocalStorageSetItem('customFonts', JSON.stringify(this.customFonts));
         } catch (e) {
             const msg = window.i18n ? window.i18n.t('tools.text.storageQuotaExceeded') : 'Storage quota exceeded. Please delete some custom fonts.';
             if (this.toastManager) {
@@ -354,7 +383,7 @@ class SettingsManager {
 
         if (select.value && this.globalFont !== select.value) {
             this.globalFont = select.value;
-            localStorage.setItem('globalFont', this.globalFont);
+            safeLocalStorageSetItem('globalFont', this.globalFont);
             this.applyGlobalFont();
         }
     }
@@ -472,7 +501,7 @@ class SettingsManager {
 
         if (this.globalFont === fontValue) {
             this.globalFont = 'system';
-            localStorage.setItem('globalFont', this.globalFont);
+            safeLocalStorageSetItem('globalFont', this.globalFont);
             this.applyGlobalFont();
         }
 
@@ -487,7 +516,7 @@ class SettingsManager {
         this.ensureFontPreferencesIntegrity();
         this.resetFontPreviewSettings({ text: true, size: true });
         this.globalFont = 'system';
-        localStorage.setItem('globalFont', this.globalFont);
+        safeLocalStorageSetItem('globalFont', this.globalFont);
         this.applyGlobalFont();
         this.populateGlobalFontSelect();
     }
@@ -558,7 +587,7 @@ class SettingsManager {
             'polar': true,
             'image': true
         };
-        const saved = localStorage.getItem('patternPreferences');
+        const saved = safeLocalStorageGetItem('patternPreferences');
         if (saved) {
             try {
                 return { ...defaults, ...JSON.parse(saved) };
@@ -580,7 +609,7 @@ class SettingsManager {
             prefs[checkbox.dataset.pattern] = checkbox.checked;
         });
         this.patternPreferences = prefs;
-        localStorage.setItem('patternPreferences', JSON.stringify(prefs));
+        safeLocalStorageSetItem('patternPreferences', JSON.stringify(prefs));
     }
     
     switchTab(tabName) {
@@ -689,7 +718,7 @@ class SettingsManager {
             }
         });
         
-        localStorage.setItem('toolbarSize', this.toolbarSize);
+        safeLocalStorageSetItem('toolbarSize', this.toolbarSize);
         
         // Apply responsive text visibility after size update
         this.updateToolbarTextVisibility();
@@ -759,7 +788,7 @@ class SettingsManager {
     
     setShowToolbarText(show) {
         this.showToolbarText = show;
-        localStorage.setItem('showToolbarText', show);
+        safeLocalStorageSetItem('showToolbarText', show);
         this.updateToolbarTextVisibility();
     }
     
@@ -777,12 +806,12 @@ class SettingsManager {
             configArea.style.transformOrigin = 'center bottom';
             configArea.style.transform = `translateX(-50%) scale(${this.configScale})`;
         }
-        localStorage.setItem('configScale', this.configScale);
+        safeLocalStorageSetItem('configScale', this.configScale);
     }
     
     setControlPosition(position, timeDisplayManager = null) {
         this.controlPosition = position;
-        localStorage.setItem('controlPosition', position);
+        safeLocalStorageSetItem('controlPosition', position);
         
         const historyControls = document.getElementById('history-controls');
         const paginationControls = document.getElementById('pagination-controls');
@@ -823,7 +852,7 @@ class SettingsManager {
 
     setUpdatePreference(value) {
         this.updatePreference = this.normalizeUpdatePreference(value);
-        localStorage.setItem('updatePreference', this.updatePreference);
+        safeLocalStorageSetItem('updatePreference', this.updatePreference);
         this.syncUpdatePreferenceButtons();
         window.pwaManager?.setUpdatePreference?.(this.updatePreference);
         return this.updatePreference;
@@ -831,7 +860,7 @@ class SettingsManager {
 
     setLegacyProjectImportEnabled(enabled) {
         this.legacyProjectImportEnabled = enabled === true;
-        localStorage.setItem('legacyProjectImportEnabled', this.legacyProjectImportEnabled ? 'true' : 'false');
+        safeLocalStorageSetItem('legacyProjectImportEnabled', this.legacyProjectImportEnabled ? 'true' : 'false');
         return this.legacyProjectImportEnabled;
     }
     
@@ -911,7 +940,7 @@ class SettingsManager {
     
     setCanvasPreset(preset) {
         this.canvasPreset = preset;
-        localStorage.setItem('canvasPreset', preset);
+        safeLocalStorageSetItem('canvasPreset', preset);
         
         // Update canvas dimensions based on preset
         const presets = {
@@ -930,8 +959,8 @@ class SettingsManager {
             this.canvasHeight = presets[preset].height;
             document.getElementById('canvas-width-input').value = this.canvasWidth;
             document.getElementById('canvas-height-input').value = this.canvasHeight;
-            localStorage.setItem('canvasWidth', this.canvasWidth);
-            localStorage.setItem('canvasHeight', this.canvasHeight);
+            safeLocalStorageSetItem('canvasWidth', this.canvasWidth);
+            safeLocalStorageSetItem('canvasHeight', this.canvasHeight);
         }
     }
     
@@ -942,13 +971,13 @@ class SettingsManager {
         const normalizedHeight = normalizeCanvasDimension(height, currentHeight);
         this.canvasWidth = normalizedWidth;
         this.canvasHeight = normalizedHeight;
-        localStorage.setItem('canvasWidth', normalizedWidth);
-        localStorage.setItem('canvasHeight', normalizedHeight);
+        safeLocalStorageSetItem('canvasWidth', normalizedWidth);
+        safeLocalStorageSetItem('canvasHeight', normalizedHeight);
     }
     
     setThemeColor(color) {
         this.themeColor = color;
-        localStorage.setItem('themeColor', color);
+        safeLocalStorageSetItem('themeColor', color);
         document.documentElement.style.setProperty('--theme-color', color);
         window.i18n?.syncGenericColorControls?.();
     }
@@ -959,7 +988,7 @@ class SettingsManager {
     
     setGlobalFont(font) {
         this.globalFont = font;
-        localStorage.setItem('globalFont', font);
+        safeLocalStorageSetItem('globalFont', font);
         this.applyGlobalFont();
     }
     
@@ -1083,7 +1112,7 @@ class SettingsManager {
     }
 
     getLocaleSettingsState() {
-        const downloadedLocalesRaw = localStorage.getItem('aboardDownloadedLocales');
+        const downloadedLocalesRaw = safeLocalStorageGetItem('aboardDownloadedLocales');
         let downloadedLocales = [];
         if (window.i18n?.getDownloadedLocales) {
             downloadedLocales = window.i18n.getDownloadedLocales();
@@ -1102,12 +1131,12 @@ class SettingsManager {
 
         return {
             locale: window.i18n?.getCurrentLocale?.()
-                || this.normalizeLocaleStateValue(localStorage.getItem('locale'))
+                || this.normalizeLocaleStateValue(safeLocalStorageGetItem('locale'))
                 || 'zh-CN',
-            preferenceMode: window.i18n?.getLocalePreferenceMode?.() || localStorage.getItem('aboardLocalePreferenceMode') || 'auto',
+            preferenceMode: window.i18n?.getLocalePreferenceMode?.() || safeLocalStorageGetItem('aboardLocalePreferenceMode') || 'auto',
             downloadedLocales,
             dismissedPreferredLocaleSuggestion: window.i18n?.getDismissedPreferredLocaleSuggestion?.()
-                || this.normalizeLocaleStateValue(localStorage.getItem('aboardDeferredLocaleSuggestionDismissed'))
+                || this.normalizeLocaleStateValue(safeLocalStorageGetItem('aboardDeferredLocaleSuggestionDismissed'))
         };
     }
 
@@ -1120,18 +1149,18 @@ class SettingsManager {
             const normalizedDownloadedLocales = localeSettings.downloadedLocales
                 .map(locale => this.normalizeLocaleStateValue(locale))
                 .filter(Boolean);
-            localStorage.setItem('aboardDownloadedLocales', JSON.stringify(normalizedDownloadedLocales));
+            safeLocalStorageSetItem('aboardDownloadedLocales', JSON.stringify(normalizedDownloadedLocales));
         }
 
         const normalizedDismissedLocale = this.normalizeLocaleStateValue(localeSettings.dismissedPreferredLocaleSuggestion);
         if (normalizedDismissedLocale) {
-            localStorage.setItem('aboardDeferredLocaleSuggestionDismissed', normalizedDismissedLocale);
+            safeLocalStorageSetItem('aboardDeferredLocaleSuggestionDismissed', normalizedDismissedLocale);
         } else if (localeSettings.dismissedPreferredLocaleSuggestion === null) {
-            localStorage.removeItem('aboardDeferredLocaleSuggestionDismissed');
+            safeLocalStorageRemoveItem('aboardDeferredLocaleSuggestionDismissed');
         }
 
         const localePreferenceMode = localeSettings.preferenceMode === 'manual' ? 'manual' : 'auto';
-        localStorage.setItem('aboardLocalePreferenceMode', localePreferenceMode);
+        safeLocalStorageSetItem('aboardLocalePreferenceMode', localePreferenceMode);
 
         if (typeof localeSettings.locale === 'string' && localeSettings.locale) {
             const normalizedLocale = this.normalizeLocaleStateValue(localeSettings.locale);
@@ -1142,9 +1171,9 @@ class SettingsManager {
                 });
             } else {
                 if (normalizedLocale) {
-                    localStorage.setItem('locale', normalizedLocale);
+                    safeLocalStorageSetItem('locale', normalizedLocale);
                 } else {
-                    localStorage.removeItem('locale');
+                    safeLocalStorageRemoveItem('locale');
                 }
             }
         }
@@ -1178,17 +1207,17 @@ class SettingsManager {
             modalCenterPreferences: (window.safeDeepClone || ((v) => JSON.parse(JSON.stringify(v))))(this.modalCenterPreferences || {}),
             localeSettings: this.getLocaleSettingsState(),
             // Also include toolbar customization
-            toolbarOrder: localStorage.getItem('toolbarOrder'),
-            toolbarVisibility: localStorage.getItem('toolbarVisibility'),
-            controlButtonOrder: localStorage.getItem('controlButtonOrder'),
+            toolbarOrder: safeLocalStorageGetItem('toolbarOrder'),
+            toolbarVisibility: safeLocalStorageGetItem('toolbarVisibility'),
+            controlButtonOrder: safeLocalStorageGetItem('controlButtonOrder'),
             // Control button visibility
             controlSettings: {
-                zoom: localStorage.getItem('controlShowZoom') !== 'false',
-                pagination: localStorage.getItem('controlShowPagination') !== 'false',
-                time: localStorage.getItem('controlShowTime') !== 'false',
-                fullscreen: localStorage.getItem('controlShowFullscreen') !== 'false',
-                import: localStorage.getItem('controlShowImport') !== 'false',
-                export: localStorage.getItem('controlShowExport') !== 'false'
+                zoom: safeLocalStorageGetItem('controlShowZoom') !== 'false',
+                pagination: safeLocalStorageGetItem('controlShowPagination') !== 'false',
+                time: safeLocalStorageGetItem('controlShowTime') !== 'false',
+                fullscreen: safeLocalStorageGetItem('controlShowFullscreen') !== 'false',
+                import: safeLocalStorageGetItem('controlShowImport') !== 'false',
+                export: safeLocalStorageGetItem('controlShowExport') !== 'false'
             }
         };
     }
@@ -1408,17 +1437,17 @@ class SettingsManager {
 
                 // Update localStorage
                 if (key === 'patternPreferences') {
-                    localStorage.setItem('patternPreferences', JSON.stringify(this[key]));
+                    safeLocalStorageSetItem('patternPreferences', JSON.stringify(this[key]));
                 } else {
-                    localStorage.setItem(key, this[key]);
+                    safeLocalStorageSetItem(key, this[key]);
                 }
             }
         });
 
         // Handle special storage items
-        if (newSettings.toolbarOrder) localStorage.setItem('toolbarOrder', newSettings.toolbarOrder);
-        if (newSettings.toolbarVisibility) localStorage.setItem('toolbarVisibility', newSettings.toolbarVisibility);
-        if (newSettings.controlButtonOrder) localStorage.setItem('controlButtonOrder', newSettings.controlButtonOrder);
+        if (newSettings.toolbarOrder) safeLocalStorageSetItem('toolbarOrder', newSettings.toolbarOrder);
+        if (newSettings.toolbarVisibility) safeLocalStorageSetItem('toolbarVisibility', newSettings.toolbarVisibility);
+        if (newSettings.controlButtonOrder) safeLocalStorageSetItem('controlButtonOrder', newSettings.controlButtonOrder);
         if (Array.isArray(newSettings.customFonts)) {
             this.customFonts = newSettings.customFonts;
             this.saveCustomFonts();
@@ -1442,12 +1471,12 @@ class SettingsManager {
         }
 
         if (newSettings.controlSettings) {
-            localStorage.setItem('controlShowZoom', newSettings.controlSettings.zoom);
-            localStorage.setItem('controlShowPagination', newSettings.controlSettings.pagination);
-            localStorage.setItem('controlShowTime', newSettings.controlSettings.time);
-            localStorage.setItem('controlShowFullscreen', newSettings.controlSettings.fullscreen);
-            localStorage.setItem('controlShowImport', newSettings.controlSettings.import);
-            localStorage.setItem('controlShowExport', newSettings.controlSettings.export);
+            safeLocalStorageSetItem('controlShowZoom', newSettings.controlSettings.zoom);
+            safeLocalStorageSetItem('controlShowPagination', newSettings.controlSettings.pagination);
+            safeLocalStorageSetItem('controlShowTime', newSettings.controlSettings.time);
+            safeLocalStorageSetItem('controlShowFullscreen', newSettings.controlSettings.fullscreen);
+            safeLocalStorageSetItem('controlShowImport', newSettings.controlSettings.import);
+            safeLocalStorageSetItem('controlShowExport', newSettings.controlSettings.export);
         }
 
         if (newSettings.localeSettings) {

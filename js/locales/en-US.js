@@ -595,7 +595,7 @@ window.translations = {
             '• Use **Ctrl+Z** to Undo, **Ctrl+Y** to Redo',
                 '• Click top-right zoom buttons or use mouse wheel to zoom',
                 '• Click Background button to choose different patterns',
-                '• Switch between Infinite Canvas or Pagination Mode in Settings',
+                '• Aboard now uses paginated canvases; use the page controls to add or switch pages',
                 '• Supports both touch and mouse interactions',
                 '',
             '[color=#007AFF]Links:[/color]',
@@ -616,7 +616,7 @@ window.translations = {
                 smartEraser: 'Smart eraser (supports Circle and Square)',
                 richPatterns: 'Rich background patterns (Dots, Grid, Tianzige, English 4-line, etc.)',
                 adjustable: 'Adjustable pattern density and transparency',
-                canvasModes: 'Infinite Canvas and Pagination Mode (supports A4, A3, B5 presets)',
+                canvasModes: 'Paginated canvas mode (supports A4, A3, B5 presets)',
                 customSize: 'Custom canvas size and ratio',
                 draggable: 'Draggable toolbar and properties panel (supports vertical layout)',
                 undoRedo: 'Undo/Redo functionality (supports up to 50 steps)',
@@ -972,7 +972,7 @@ Tips:
 • Use Ctrl+Z to Undo, Ctrl+Y to Redo
 • Click top-right zoom buttons or use mouse wheel to zoom
 • Click Background button to choose different patterns
-• Switch between Infinite Canvas or Pagination Mode in Settings
+• Aboard now uses paginated canvases; use the page controls to add or switch pages
 • Supports both touch and mouse interactions
 
 Enjoy using Aboard!`,

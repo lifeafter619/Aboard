@@ -14,7 +14,15 @@ function getCacheKeyGroups() {
         ]);
         const canvasKeys = new Set([
             'savedCanvasData', 'savedBgCanvasData', 'savedCanvasTimestamp',
-            'savedCurrentPage', 'pageBackgrounds', 'canvasScale', 'panOffsetX', 'panOffsetY',
+            'savedCurrentPage', 'pageBackgrounds', 'pageScenes',
+            'backgroundColor', 'backgroundPattern', 'bgOpacity',
+            'patternIntensity', 'patternDensity',
+            'backgroundImageData', 'backgroundImageConfirmed',
+            'imageTransform', 'imageSize',
+            'coordinateOriginX', 'coordinateOriginY', 'coordinateOverlayState',
+            'backgroundOutsideLayerOrder',
+            'uploadedImages',
+            'canvasScale', 'panOffsetX', 'panOffsetY',
             'aboardSessionSizeEstimate'
         ]);
         return { settingsKeys, canvasKeys };

@@ -7,6 +7,109 @@ const PROJECT_PACKAGE_SCHEMA_VERSION = 1;
 const ZIP_LIBRARY_SCRIPT = 'js/libs/fflate.min.js';
 const LEGACY_PROJECT_COMPAT_SCRIPT = 'js/modules/project-legacy-compat.js';
 
+function getDefaultCoordinateOverlayState(backgroundManager) {
+    if (typeof backgroundManager?.getDefaultCoordinateOverlayState === 'function') {
+        return backgroundManager.getDefaultCoordinateOverlayState();
+    }
+
+    return {
+        showTicks: true,
+        showLabels: true,
+        showPointLabels: true,
+        showOrigin: true,
+        pointLineMode: 'auto',
+        connectPoints: true,
+        snapToGrid: true,
+        lineColor: '#2563eb',
+        points: [],
+        plots: [],
+        groups: []
+    };
+}
+
+function getDefaultImageTransform() {
+    return {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        rotation: 0,
+        scale: 1,
+        flipHorizontal: false,
+        flipVertical: false
+    };
+}
+
+function normalizeImageTransform(transform) {
+    const nextTransform = transform && typeof transform === 'object' ? transform : {};
+    const defaults = getDefaultImageTransform();
+    const scale = Number.isFinite(nextTransform.scale) ? nextTransform.scale : defaults.scale;
+    let x = Number.isFinite(nextTransform.x) ? nextTransform.x : defaults.x;
+    let y = Number.isFinite(nextTransform.y) ? nextTransform.y : defaults.y;
+    let width = Number.isFinite(nextTransform.width) ? nextTransform.width : defaults.width;
+    let height = Number.isFinite(nextTransform.height) ? nextTransform.height : defaults.height;
+
+    if (scale && scale !== 1 && width > 0 && height > 0) {
+        const factor = Math.abs(scale);
+        const newWidth = width * factor;
+        const newHeight = height * factor;
+        x -= (newWidth - width) / 2;
+        y -= (newHeight - height) / 2;
+        width = newWidth;
+        height = newHeight;
+    }
+
+    return {
+        x,
+        y,
+        width,
+        height,
+        rotation: Number.isFinite(nextTransform.rotation) ? nextTransform.rotation : defaults.rotation,
+        scale: 1,
+        flipHorizontal: !!nextTransform.flipHorizontal,
+        flipVertical: !!nextTransform.flipVertical
+    };
+}
+
+function normalizeImportedBackgroundState(backgroundManager, backgroundData) {
+    const nextBackground = backgroundData && typeof backgroundData === 'object' ? backgroundData : {};
+    const hasCoordinateOverlayState = Object.prototype.hasOwnProperty.call(nextBackground, 'coordinateOverlayState');
+    return {
+        backgroundColor: typeof nextBackground.backgroundColor === 'string' ? nextBackground.backgroundColor : '#ffffff',
+        backgroundPattern: typeof nextBackground.backgroundPattern === 'string' ? nextBackground.backgroundPattern : 'blank',
+        bgOpacity: Number.isFinite(nextBackground.bgOpacity) ? nextBackground.bgOpacity : 1,
+        patternIntensity: Number.isFinite(nextBackground.patternIntensity) ? nextBackground.patternIntensity : 0.5,
+        patternDensity: Number.isFinite(nextBackground.patternDensity) ? nextBackground.patternDensity : 1,
+        imageSize: Number.isFinite(nextBackground.imageSize) && nextBackground.imageSize > 0 ? nextBackground.imageSize : 1,
+        backgroundImageData: typeof nextBackground.backgroundImageData === 'string' && nextBackground.backgroundImageData
+            ? nextBackground.backgroundImageData
+            : null,
+        coordinateOriginX: Number.isFinite(nextBackground.coordinateOriginX) ? nextBackground.coordinateOriginX : 0,
+        coordinateOriginY: Number.isFinite(nextBackground.coordinateOriginY) ? nextBackground.coordinateOriginY : 0,
+        coordinateOverlayState: hasCoordinateOverlayState
+            ? nextBackground.coordinateOverlayState
+            : getDefaultCoordinateOverlayState(backgroundManager),
+        imageTransform: normalizeImageTransform(nextBackground.imageTransform),
+        gifLoopCount: Number.isFinite(nextBackground.gifLoopCount) && nextBackground.gifLoopCount >= 0
+            ? nextBackground.gifLoopCount
+            : 0,
+        backgroundOutsideLayerOrder: Number.isFinite(nextBackground.backgroundOutsideLayerOrder)
+            && nextBackground.backgroundOutsideLayerOrder >= 1
+            ? nextBackground.backgroundOutsideLayerOrder
+            : 1
+    };
+}
+
+function resetTransientBackgroundMediaState(backgroundManager) {
+    if (!backgroundManager || typeof backgroundManager !== 'object') {
+        return;
+    }
+
+    backgroundManager.currentGifLoop = 0;
+    backgroundManager.isImagePaused = false;
+    backgroundManager.imageStaticData = null;
+}
+
 class ProjectManager {
     constructor(drawingBoard) {
         this.drawingBoard = drawingBoard;
@@ -234,35 +337,41 @@ class ProjectManager {
     }
 
     async applyGlobalBackground(backgroundData) {
-        if (!backgroundData) {
-            return;
-        }
-
         const bm = this.drawingBoard.backgroundManager;
+        const normalizedBackground = normalizeImportedBackgroundState(bm, backgroundData);
 
-        if (typeof backgroundData.backgroundColor !== 'undefined') bm.backgroundColor = backgroundData.backgroundColor;
-        if (typeof backgroundData.backgroundPattern !== 'undefined') bm.backgroundPattern = backgroundData.backgroundPattern;
-        if (typeof backgroundData.bgOpacity !== 'undefined') bm.bgOpacity = backgroundData.bgOpacity;
-        if (typeof backgroundData.patternIntensity !== 'undefined') bm.patternIntensity = backgroundData.patternIntensity;
-        if (typeof backgroundData.patternDensity !== 'undefined') bm.patternDensity = backgroundData.patternDensity;
-        if (typeof backgroundData.imageSize !== 'undefined') bm.imageSize = backgroundData.imageSize;
-        if (typeof backgroundData.coordinateOriginX !== 'undefined') {
-            bm.setCoordinateOrigin?.(backgroundData.coordinateOriginX, backgroundData.coordinateOriginY);
+        resetTransientBackgroundMediaState(bm);
+        bm.backgroundColor = normalizedBackground.backgroundColor;
+        bm.backgroundPattern = normalizedBackground.backgroundPattern;
+        bm.bgOpacity = normalizedBackground.bgOpacity;
+        bm.patternIntensity = normalizedBackground.patternIntensity;
+        bm.patternDensity = normalizedBackground.patternDensity;
+        bm.imageSize = normalizedBackground.imageSize;
+        if (typeof bm.setCoordinateOrigin === 'function') {
+            bm.setCoordinateOrigin(normalizedBackground.coordinateOriginX, normalizedBackground.coordinateOriginY);
+        } else {
+            bm.coordinateOriginX = normalizedBackground.coordinateOriginX;
+            bm.coordinateOriginY = normalizedBackground.coordinateOriginY;
         }
-        bm.setCoordinateOverlayState?.(backgroundData.coordinateOverlayState, { persist: false, redraw: false });
-        if (backgroundData.imageTransform) {
-            bm.updateImageTransform?.(backgroundData.imageTransform);
+        bm.setCoordinateOverlayState?.(
+            this.cloneSerializable(normalizedBackground.coordinateOverlayState),
+            { persist: false, redraw: false }
+        );
+        if (typeof bm.updateImageTransform === 'function') {
+            bm.updateImageTransform(normalizedBackground.imageTransform);
+        } else {
+            bm.imageTransform = this.cloneSerializable(normalizedBackground.imageTransform);
         }
-        if (typeof backgroundData.gifLoopCount !== 'undefined') {
-            bm.setGifLoopCount?.(backgroundData.gifLoopCount);
+        if (typeof bm.setGifLoopCount === 'function') {
+            bm.setGifLoopCount(normalizedBackground.gifLoopCount);
+        } else {
+            bm.gifLoopCount = normalizedBackground.gifLoopCount;
         }
-        if (typeof backgroundData.backgroundOutsideLayerOrder !== 'undefined') {
-            bm.backgroundOutsideLayerOrder = backgroundData.backgroundOutsideLayerOrder;
-        }
+        bm.backgroundOutsideLayerOrder = normalizedBackground.backgroundOutsideLayerOrder;
 
-        if (backgroundData.backgroundImageData) {
-            bm.backgroundImageData = backgroundData.backgroundImageData;
-            bm.backgroundImage = await this.loadImageElement(backgroundData.backgroundImageData);
+        if (normalizedBackground.backgroundImageData) {
+            bm.backgroundImageData = normalizedBackground.backgroundImageData;
+            bm.backgroundImage = await this.loadImageElement(normalizedBackground.backgroundImageData);
         } else {
             bm.backgroundImageData = null;
             bm.backgroundImage = null;
