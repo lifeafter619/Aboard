@@ -21,7 +21,12 @@ function loadSelectionManagerClass() {
     parseFloat,
     isNaN,
     window: {},
-    document: {}
+    document: {
+      getElementById() {
+        return null;
+      },
+      body: {}
+    }
   };
 
   sandbox.globalThis = sandbox;
@@ -38,7 +43,10 @@ function testCoordinatePositionEditorEscapesPointValues() {
   const SelectionManager = loadSelectionManagerClass();
   const maliciousValue = '0" autofocus onfocus="window.__selectionXss=1';
   const coordinatePositionList = {
-    innerHTML: ''
+    innerHTML: '',
+    querySelector() {
+      return null;
+    }
   };
   let modalShown = false;
 
@@ -59,11 +67,18 @@ function testCoordinatePositionEditorEscapesPointValues() {
       }
     },
     coordinatePositionModal: {
+      attributes: {},
+      setAttribute(name, value) {
+        this.attributes[name] = String(value);
+      },
       classList: {
         add(className) {
           if (className === 'show') {
             modalShown = true;
           }
+        },
+        contains() {
+          return false;
         }
       }
     },
@@ -72,7 +87,10 @@ function testCoordinatePositionEditorEscapesPointValues() {
     isCoordinateSelection() {
       return true;
     },
-    escapeHtml: SelectionManager.prototype.escapeHtml
+    escapeHtml: SelectionManager.prototype.escapeHtml,
+    getFocusableElement: SelectionManager.prototype.getFocusableElement,
+    scheduleCoordinatePositionFrame: SelectionManager.prototype.scheduleCoordinatePositionFrame,
+    configureCoordinatePositionDialog: SelectionManager.prototype.configureCoordinatePositionDialog
   };
 
   const didOpen = SelectionManager.prototype.openCoordinatePositionEditor.call(selection);

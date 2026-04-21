@@ -10,6 +10,8 @@ class LineStyleModal {
         
         // Current mode: 'pen' or 'shape'
         this.currentMode = 'pen';
+        this.mainModalPreviouslyFocusedElement = null;
+        this.expandedPreviewPreviouslyFocusedElement = null;
         
         // Preview canvas
         this.previewCanvas = null;
@@ -43,8 +45,8 @@ class LineStyleModal {
             <div id="line-style-modal" class="modal">
                 <div class="modal-content line-style-modal-content">
                     <div class="line-style-modal-header">
-                        <h2 data-i18n="tools.lineStyle.title">Line Style</h2>
-                        <button id="line-style-modal-close" class="line-style-modal-close" data-i18n-title="common.close" aria-label="${closeLabel}" title="${closeLabel}">
+                        <h2 id="line-style-modal-title" data-i18n="tools.lineStyle.title">Line Style</h2>
+                        <button id="line-style-modal-close" type="button" class="line-style-modal-close" data-i18n-title="common.close" aria-label="${closeLabel}" title="${closeLabel}">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -122,7 +124,7 @@ class LineStyleModal {
                             <label data-i18n="lineStyleModal.preview">Preview</label>
                             <div class="line-style-preview-area" id="line-style-preview-container">
                                 <canvas id="line-style-preview-canvas" width="320" height="80"></canvas>
-                                <button id="preview-expand-btn" class="preview-expand-btn" style="display: none;" data-i18n-title="settings.general.expandPreview" aria-label="${expandPreviewLabel}" title="${expandPreviewLabel}">
+                                <button id="preview-expand-btn" type="button" class="preview-expand-btn" style="display: none;" data-i18n-title="settings.general.expandPreview" aria-label="${expandPreviewLabel}" title="${expandPreviewLabel}">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                                     </svg>
@@ -133,7 +135,7 @@ class LineStyleModal {
                     
                     <!-- Modal Footer -->
                     <div class="line-style-modal-footer">
-                        <button id="line-style-modal-apply" class="btn-primary" data-i18n="common.apply">Apply</button>
+                        <button id="line-style-modal-apply" type="button" class="btn-primary" data-i18n="common.apply">Apply</button>
                     </div>
                 </div>
             </div>
@@ -145,22 +147,75 @@ class LineStyleModal {
         this.modal = document.getElementById('line-style-modal');
         this.previewCanvas = document.getElementById('line-style-preview-canvas');
         this.previewCtx = this.previewCanvas.getContext('2d');
+        this.configureDialog(this.modal, {
+            labelledBy: 'line-style-modal-title',
+            describedBy: 'line-style-preview-container'
+        });
         
         // Track arrow type (for shape mode only)
         this.arrowType = 'none';
     }
+
+    getFocusableElement() {
+        return document.activeElement && document.activeElement !== document.body
+            ? document.activeElement
+            : null;
+    }
+
+    scheduleDialogFrame(callback) {
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(callback);
+            return;
+        }
+        callback();
+    }
+
+    configureDialog(modal, {
+        labelledBy,
+        describedBy = null
+    } = {}) {
+        if (!modal) {
+            return;
+        }
+
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        if (labelledBy) {
+            modal.setAttribute('aria-labelledby', labelledBy);
+        }
+        if (describedBy) {
+            modal.setAttribute('aria-describedby', describedBy);
+        }
+        modal.tabIndex = -1;
+    }
+
+    bindDialogDismissal(modal, onClose, datasetKey) {
+        if (!modal || modal.dataset[datasetKey] === 'true') {
+            return;
+        }
+
+        modal.dataset[datasetKey] = 'true';
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                onClose();
+            }
+        });
+        modal.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                onClose();
+            }
+        });
+    }
     
     setupEventListeners() {
+        this.bindDialogDismissal(this.modal, () => {
+            this.hide();
+        }, 'lineStyleBindingsInitialized');
+
         // Close button
         document.getElementById('line-style-modal-close').addEventListener('click', () => {
             this.hide();
-        });
-        
-        // Click outside to close
-        this.modal.addEventListener('click', (e) => {
-            if (e.target === this.modal) {
-                this.hide();
-            }
         });
         
         // Apply button
@@ -216,6 +271,9 @@ class LineStyleModal {
         }
         
         this.loadCurrentSettings();
+        if (!this.modal.classList.contains('show')) {
+            this.mainModalPreviouslyFocusedElement = this.getFocusableElement();
+        }
         this.modal.classList.add('show');
         this.updatePreview();
         
@@ -223,10 +281,36 @@ class LineStyleModal {
         if (window.i18n && window.i18n.applyTranslations) {
             window.i18n.applyTranslations();
         }
+
+        const activeStyleButton = document.querySelector('#modal-line-style-grid .line-style-type-btn.active');
+        const closeBtn = document.getElementById('line-style-modal-close');
+        const applyBtn = document.getElementById('line-style-modal-apply');
+        const focusTarget = activeStyleButton || applyBtn || closeBtn || this.modal;
+        this.scheduleDialogFrame(() => {
+            focusTarget?.focus?.();
+        });
     }
     
     hide() {
         this.modal.classList.remove('show');
+        const restoreFocusTarget = this.mainModalPreviouslyFocusedElement;
+        this.mainModalPreviouslyFocusedElement = null;
+        this.scheduleDialogFrame(() => {
+            restoreFocusTarget?.focus?.();
+        });
+    }
+
+    hideExpandedPreview(expandedModal = document.getElementById('line-style-preview-expanded-modal')) {
+        if (!expandedModal) {
+            return;
+        }
+
+        expandedModal.classList.remove('show');
+        const restoreFocusTarget = this.expandedPreviewPreviouslyFocusedElement;
+        this.expandedPreviewPreviouslyFocusedElement = null;
+        this.scheduleDialogFrame(() => {
+            restoreFocusTarget?.focus?.();
+        });
     }
     
     loadCurrentSettings() {
@@ -595,8 +679,8 @@ class LineStyleModal {
                 <div id="line-style-preview-expanded-modal" class="modal">
                     <div class="modal-content expanded-preview-modal-content">
                         <div class="line-style-modal-header">
-                            <h2 data-i18n="lineStyleModal.preview">Preview</h2>
-                            <button id="expanded-preview-close" class="line-style-modal-close" data-i18n-title="common.close" aria-label="${closeLabel}" title="${closeLabel}">
+                            <h2 id="line-style-preview-expanded-title" data-i18n="lineStyleModal.preview">Preview</h2>
+                            <button id="expanded-preview-close" type="button" class="line-style-modal-close" data-i18n-title="common.close" aria-label="${closeLabel}" title="${closeLabel}">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <line x1="18" y1="6" x2="6" y2="18"></line>
                                     <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -611,17 +695,19 @@ class LineStyleModal {
             `;
             document.body.insertAdjacentHTML('beforeend', modalHTML);
             expandedModal = document.getElementById('line-style-preview-expanded-modal');
+            this.configureDialog(expandedModal, {
+                labelledBy: 'line-style-preview-expanded-title',
+                describedBy: 'expanded-preview-canvas'
+            });
+            this.bindDialogDismissal(expandedModal, () => {
+                this.hideExpandedPreview(expandedModal);
+            }, 'lineStyleExpandedBindingsInitialized');
             
             document.getElementById('expanded-preview-close').addEventListener('click', () => {
-                expandedModal.classList.remove('show');
-            });
-            
-            expandedModal.addEventListener('click', (e) => {
-                if (e.target === expandedModal) {
-                    expandedModal.classList.remove('show');
-                }
+                this.hideExpandedPreview(expandedModal);
             });
         }
+        this.expandedPreviewPreviouslyFocusedElement = this.getFocusableElement();
         
         // Draw expanded preview
         const canvas = document.getElementById('expanded-preview-canvas');
@@ -699,6 +785,10 @@ class LineStyleModal {
         }
         
         expandedModal.classList.add('show');
+        const closeBtn = document.getElementById('expanded-preview-close');
+        this.scheduleDialogFrame(() => {
+            (closeBtn || expandedModal)?.focus?.();
+        });
     }
 }
 

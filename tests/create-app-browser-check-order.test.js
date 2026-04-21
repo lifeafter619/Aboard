@@ -71,6 +71,9 @@ function loadCreateAppWithHooks({ events, createAppServices }) {
     registerDeepCloneGlobal() {
       events.push('registerDeepCloneGlobal');
     },
+    bindLabelButtonKeyboardSupport() {
+      events.push('bindLabelButtonKeyboardSupport');
+    },
     registerToastManagerGlobal() {
       events.push('registerToastManagerGlobal');
     },

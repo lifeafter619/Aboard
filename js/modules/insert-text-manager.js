@@ -85,6 +85,7 @@ class InsertTextManager {
             '#800080': { key: 'colors.purple', fallback: 'Purple' },
             '#FFC0CB': { key: 'colors.pink', fallback: 'Pink' }
         };
+        this.modalPreviouslyFocusedElement = null;
 
         this.createControls();
         this.setupEventListeners();
@@ -480,7 +481,67 @@ class InsertTextManager {
         }
     }
 
+    getFocusableElement() {
+        return document.activeElement && document.activeElement !== document.body
+            ? document.activeElement
+            : null;
+    }
+
+    scheduleModalFrame(callback) {
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(callback);
+            return;
+        }
+        callback();
+    }
+
+    bindModalAccessibility() {
+        if (!this.modal) {
+            return;
+        }
+
+        this.modal.setAttribute('role', 'dialog');
+        this.modal.setAttribute('aria-modal', 'true');
+        this.modal.setAttribute('aria-labelledby', 'insert-text-modal-title');
+        this.modal.setAttribute('aria-describedby', 'insert-text-input');
+        this.modal.tabIndex = -1;
+
+        if (this.modal.dataset.keyboardBindingsInitialized === 'true') {
+            return;
+        }
+
+        this.modal.dataset.keyboardBindingsInitialized = 'true';
+        this.modal.addEventListener('click', (event) => {
+            if (event.target === this.modal) {
+                this.closeModal();
+            }
+        });
+        this.modal.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                this.closeModal();
+            }
+        });
+    }
+
+    hideModal({ restoreFocus = true, clearEditingState = true } = {}) {
+        const restoreFocusTarget = restoreFocus ? this.modalPreviouslyFocusedElement : null;
+        this.modalPreviouslyFocusedElement = null;
+        this.modal?.classList?.remove('show');
+        if (clearEditingState) {
+            this.editingTextIndex = null;
+        }
+        window.drawingBoard?.syncVectorPreviewState?.();
+        if (restoreFocusTarget) {
+            this.scheduleModalFrame(() => {
+                restoreFocusTarget?.focus?.();
+            });
+        }
+    }
+
     setupEventListeners() {
+        this.bindModalAccessibility();
+
         // Modal Events
         document.getElementById('insert-text-modal-close-btn').addEventListener('click', () => this.closeModal());
         document.getElementById('insert-text-modal-cancel-btn').addEventListener('click', () => this.closeModal());
@@ -795,6 +856,9 @@ class InsertTextManager {
     }
 
     showModal(isEditing = false) {
+        if (!this.modal.classList.contains('show')) {
+            this.modalPreviouslyFocusedElement = this.getFocusableElement();
+        }
         this.modal.classList.add('show');
         // Re-populate fonts to ensure translations are up to date
         this.populateFonts();
@@ -840,14 +904,15 @@ class InsertTextManager {
         }
         this.updateDecorationControlsVisibility();
 
-        input.focus();
+        const closeBtn = document.getElementById('insert-text-modal-close-btn');
+        const focusTarget = input || closeBtn || this.modal;
+        this.scheduleModalFrame(() => {
+            focusTarget?.focus?.();
+        });
     }
 
     closeModal() {
-        this.modal.classList.remove('show');
-        // Reset editing state if user cancels the modal
-        this.editingTextIndex = null;
-        window.drawingBoard?.syncVectorPreviewState?.();
+        this.hideModal();
     }
 
     confirmModal() {
@@ -865,7 +930,10 @@ class InsertTextManager {
         const isEditingActiveOverlay = this.isActive && !isEditingStampedText;
         
         // Close modal (this resets editingTextIndex, so we check isEditing first)
-        this.modal.classList.remove('show');
+        this.hideModal({
+            restoreFocus: false,
+            clearEditingState: false
+        });
 
         if (isEditingStampedText) {
             this.stampText();

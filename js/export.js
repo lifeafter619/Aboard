@@ -39,6 +39,7 @@ class ExportManager {
         
         this.createExportModal();
         this.setupEventListeners();
+        this.setupTabAccessibility();
         window.addEventListener('localeChanged', this.handleLocaleChanged);
     }
     
@@ -172,6 +173,134 @@ class ExportManager {
         }
     }
 
+    getTabButtons() {
+        return this.exportModal ? Array.from(document.querySelectorAll('.export-tab-btn')) : [];
+    }
+
+    getTabPanels() {
+        return this.exportModal ? Array.from(document.querySelectorAll('.export-tab-content')) : [];
+    }
+
+    getActiveTabButton() {
+        const tabButtons = this.getTabButtons();
+        return tabButtons.find((btn) => btn.classList.contains('active')) || tabButtons[0] || null;
+    }
+
+    activateTab(targetTab, { focus = false } = {}) {
+        const tabButtons = this.getTabButtons();
+        const tabPanels = this.getTabPanels();
+        if (tabButtons.length === 0) {
+            return null;
+        }
+
+        const fallbackTab = tabButtons[0]?.dataset.tab || 'image';
+        const nextTab = tabButtons.some((btn) => btn.dataset.tab === targetTab)
+            ? targetTab
+            : fallbackTab;
+        let activeButton = null;
+
+        tabButtons.forEach((btn) => {
+            const isActive = btn.dataset.tab === nextTab;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            btn.tabIndex = isActive ? 0 : -1;
+            if (isActive) {
+                activeButton = btn;
+            }
+        });
+
+        tabPanels.forEach((panel) => {
+            const isActive = panel.id === `export-tab-${nextTab}`;
+            panel.classList.toggle('active', isActive);
+            panel.hidden = !isActive;
+            panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+        });
+
+        const activeScope = nextTab === 'project'
+            ? getActiveProjectExportScope()
+            : getActiveImageExportScope();
+        this.updateUIForScope(activeScope, nextTab);
+
+        if (focus) {
+            activeButton?.focus?.();
+        }
+
+        return activeButton;
+    }
+
+    handleTabKeydown(event) {
+        const tabButtons = this.getTabButtons();
+        if (tabButtons.length === 0) {
+            return;
+        }
+
+        const currentIndex = tabButtons.indexOf(event.currentTarget);
+        if (currentIndex === -1) {
+            return;
+        }
+
+        let nextIndex = null;
+        switch (event.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+            nextIndex = (currentIndex + 1) % tabButtons.length;
+            break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+            nextIndex = (currentIndex - 1 + tabButtons.length) % tabButtons.length;
+            break;
+        case 'Home':
+            nextIndex = 0;
+            break;
+        case 'End':
+            nextIndex = tabButtons.length - 1;
+            break;
+        default:
+            return;
+        }
+
+        event.preventDefault();
+        const nextButton = tabButtons[nextIndex];
+        this.activateTab(nextButton?.dataset.tab, { focus: true });
+    }
+
+    setupTabAccessibility() {
+        const tabButtons = this.getTabButtons();
+        const tabPanels = this.getTabPanels();
+        if (tabButtons.length === 0) {
+            return;
+        }
+
+        tabButtons.forEach((btn, index) => {
+            const tabName = btn.dataset.tab || `tab-${index + 1}`;
+            if (!btn.id) {
+                btn.id = `export-tab-btn-${tabName}`;
+            }
+            btn.setAttribute('role', 'tab');
+            btn.setAttribute('aria-controls', `export-tab-${tabName}`);
+
+            if (btn.dataset.tabBindingsInitialized !== 'true') {
+                btn.dataset.tabBindingsInitialized = 'true';
+                btn.addEventListener('click', () => {
+                    this.activateTab(tabName);
+                });
+                btn.addEventListener('keydown', (event) => {
+                    this.handleTabKeydown(event);
+                });
+            }
+        });
+
+        tabPanels.forEach((panel) => {
+            panel.setAttribute('role', 'tabpanel');
+            const labelledBy = tabButtons.find((btn) => `export-tab-${btn.dataset.tab}` === panel.id);
+            if (labelledBy) {
+                panel.setAttribute('aria-labelledby', labelledBy.id);
+            }
+        });
+
+        this.activateTab(this.getActiveTabButton()?.dataset.tab);
+    }
+
     refreshTranslations() {
         if (!this.exportModal) {
             return;
@@ -224,29 +353,6 @@ class ExportManager {
     }
     
     setupEventListeners() {
-        // Tab Switching
-        document.querySelectorAll('.export-tab-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const targetButton = e.currentTarget;
-                const tab = targetButton.dataset.tab;
-
-                // Update active tab button
-                document.querySelectorAll('.export-tab-btn').forEach(b => b.classList.remove('active'));
-                targetButton.classList.add('active');
-
-                // Show content
-                document.querySelectorAll('.export-tab-content').forEach(c => c.classList.remove('active'));
-                const tabContent = document.getElementById(`export-tab-${tab}`);
-                if (tabContent) {
-                    tabContent.classList.add('active');
-                }
-                const activeScope = tab === 'project'
-                    ? getActiveProjectExportScope()
-                    : getActiveImageExportScope();
-                this.updateUIForScope(activeScope, tab);
-            });
-        });
-
         // Image Export Scope
         document.querySelectorAll('.export-scope-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -504,15 +610,15 @@ class ExportManager {
         document.querySelectorAll('.export-project-scope-btn').forEach(b => b.classList.remove('active'));
         document.querySelector('.export-project-scope-btn[data-scope="current"]')?.classList.add('active');
         this.updateUIForScope('current', 'project');
-        
+        this.activateTab('image');
         this.exportModal.classList.add('show');
-        const focusCloseButton = () => {
-            document.getElementById('export-close-btn')?.focus?.();
+        const focusActiveTab = () => {
+            (this.getActiveTabButton() || document.getElementById('export-close-btn'))?.focus?.();
         };
         if (typeof window.requestAnimationFrame === 'function') {
-            window.requestAnimationFrame(focusCloseButton);
+            window.requestAnimationFrame(focusActiveTab);
         } else {
-            focusCloseButton();
+            focusActiveTab();
         }
     }
     

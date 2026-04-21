@@ -9,6 +9,7 @@ class TimeDisplaySettingsModal {
         this.setupEventListeners();
         this.setupSettingsControls();
         this.updateColorControlAccessibility();
+        this.setupTabAccessibility();
     }
 
     updateColorControlAccessibility() {
@@ -38,6 +39,129 @@ class TimeDisplaySettingsModal {
     getParsedIntegerValue(input, fallback) {
         const parsedValue = parseInt(input?.value ?? '', 10);
         return Number.isNaN(parsedValue) ? fallback : parsedValue;
+    }
+
+    getTabButtons() {
+        return this.modal ? Array.from(this.modal.querySelectorAll('.timer-tab-btn')) : [];
+    }
+
+    getTabPanels() {
+        return this.modal ? Array.from(this.modal.querySelectorAll('.td-tab-content')) : [];
+    }
+
+    getActiveTabButton() {
+        const tabButtons = this.getTabButtons();
+        return tabButtons.find((btn) => btn.classList.contains('active')) || tabButtons[0] || null;
+    }
+
+    activateTab(targetTab, { focus = false } = {}) {
+        const tabButtons = this.getTabButtons();
+        const tabPanels = this.getTabPanels();
+        if (tabButtons.length === 0) {
+            return null;
+        }
+
+        const fallbackTab = tabButtons[0]?.dataset.tab || null;
+        const nextTab = tabButtons.some((btn) => btn.dataset.tab === targetTab)
+            ? targetTab
+            : fallbackTab;
+        let activeButton = null;
+
+        tabButtons.forEach((btn) => {
+            const isActive = btn.dataset.tab === nextTab;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            btn.tabIndex = isActive ? 0 : -1;
+            if (isActive) {
+                activeButton = btn;
+            }
+        });
+
+        tabPanels.forEach((panel) => {
+            const isActive = panel.id === `td-tab-content-${nextTab}`;
+            panel.classList.toggle('active', isActive);
+            panel.hidden = !isActive;
+            panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+        });
+
+        if (focus) {
+            activeButton?.focus?.();
+        }
+
+        return activeButton;
+    }
+
+    handleTabKeydown(event) {
+        const tabButtons = this.getTabButtons();
+        if (tabButtons.length === 0) {
+            return;
+        }
+
+        const currentIndex = tabButtons.indexOf(event.currentTarget);
+        if (currentIndex === -1) {
+            return;
+        }
+
+        let nextIndex = null;
+        switch (event.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+            nextIndex = (currentIndex + 1) % tabButtons.length;
+            break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+            nextIndex = (currentIndex - 1 + tabButtons.length) % tabButtons.length;
+            break;
+        case 'Home':
+            nextIndex = 0;
+            break;
+        case 'End':
+            nextIndex = tabButtons.length - 1;
+            break;
+        default:
+            return;
+        }
+
+        event.preventDefault();
+        const nextButton = tabButtons[nextIndex];
+        this.activateTab(nextButton?.dataset.tab, { focus: true });
+    }
+
+    setupTabAccessibility() {
+        const tabButtons = this.getTabButtons();
+        const tabPanels = this.getTabPanels();
+        if (tabButtons.length === 0) {
+            return;
+        }
+
+        tabButtons.forEach((btn, index) => {
+            const tabName = btn.dataset.tab || `tab-${index + 1}`;
+            if (!btn.id) {
+                btn.id = `time-display-settings-tab-${tabName}`;
+            }
+            btn.setAttribute('role', 'tab');
+            btn.setAttribute('aria-controls', `td-tab-content-${tabName}`);
+
+            if (btn.dataset.tabBindingsInitialized !== 'true') {
+                btn.dataset.tabBindingsInitialized = 'true';
+                btn.addEventListener('click', () => {
+                    this.activateTab(tabName);
+                });
+                btn.addEventListener('keydown', (event) => {
+                    this.handleTabKeydown(event);
+                });
+            }
+        });
+
+        tabPanels.forEach((panel) => {
+            panel.setAttribute('role', 'tabpanel');
+            const labelledBy = tabButtons.find((btn) => `td-tab-content-${btn.dataset.tab}` === panel.id);
+            if (labelledBy) {
+                panel.setAttribute('aria-labelledby', labelledBy.id);
+            }
+        });
+
+        this.activateTab(this.getActiveTabButton()?.dataset.tab);
     }
     
     setupEventListeners() {
@@ -82,7 +206,7 @@ class TimeDisplaySettingsModal {
             });
             scheduleFrame(() => {
                 if (this.modal.classList.contains('show')) {
-                    (closeBtn || this.modal)?.focus?.();
+                    (this.getActiveTabButton() || closeBtn || this.modal)?.focus?.();
                 }
             });
         }
@@ -311,30 +435,6 @@ class TimeDisplaySettingsModal {
             });
         }
 
-        // Tab Switching Logic
-        const tabBtns = this.modal ? this.modal.querySelectorAll('.timer-tab-btn') : [];
-        const tabContents = this.modal ? this.modal.querySelectorAll('.td-tab-content') : [];
-
-        if (tabBtns.length > 0) {
-            tabBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const targetTab = btn.dataset.tab;
-
-                    // Update button states
-                    tabBtns.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-
-                    // Update content visibility
-                    tabContents.forEach(content => {
-                        if (content.id === `td-tab-content-${targetTab}`) {
-                            content.classList.add('active');
-                        } else {
-                            content.classList.remove('active');
-                        }
-                    });
-                });
-            });
-        }
     }
     
     show() {
@@ -346,7 +446,7 @@ class TimeDisplaySettingsModal {
             this.modal.classList.add('show');
             this.syncSettings();
             const closeBtn = document.getElementById('time-display-settings-close-btn');
-            const focusTarget = closeBtn || this.modal;
+            const focusTarget = this.getActiveTabButton() || closeBtn || this.modal;
             if (typeof window.requestAnimationFrame === 'function') {
                 window.requestAnimationFrame(() => focusTarget?.focus?.());
             } else {

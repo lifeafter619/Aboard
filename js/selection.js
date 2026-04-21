@@ -77,8 +77,11 @@ class SelectionManager {
         this.layerMenuVisible = false;
         this.layerMenuOutsideListener = null;
         this.layerMenuOutsideListenerAttached = false;
+        this.layerMenuPreviouslyFocusedElement = null;
+        this.coordinatePositionPreviouslyFocusedElement = null;
         this.selectionColorPresetValues = ['#ef4444', '#f97316', '#eab308', '#16a34a', '#0891b2', '#2563eb', '#7c3aed', '#111827'];
         this.selectionColorPopoverVisible = false;
+        this.selectionColorPopoverPreviouslyFocusedElement = null;
         this.selectionColorPopoverOutsideListener = null;
         this.selectionColorPopoverOutsideListenerAttached = false;
         
@@ -452,8 +455,8 @@ class SelectionManager {
             <div id="selection-coordinate-position-modal" class="modal">
                 <div class="modal-content coordinate-position-modal-content">
                     <div class="modal-header">
-                        <h2 data-i18n="selection.position">位置</h2>
-                        <button id="selection-coordinate-position-close-btn" class="modal-close-btn" data-i18n-title="common.close" title="Close" aria-label="Close">
+                        <h2 id="selection-coordinate-position-title" data-i18n="selection.position">位置</h2>
+                        <button id="selection-coordinate-position-close-btn" class="modal-close-btn" type="button" data-i18n-title="common.close" title="Close" aria-label="Close">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -463,8 +466,8 @@ class SelectionManager {
                     <div class="modal-body">
                         <div id="selection-coordinate-position-list" class="selection-coordinate-position-list"></div>
                         <div class="announcement-buttons">
-                            <button id="selection-coordinate-position-cancel-btn" class="announcement-btn secondary-btn" data-i18n="common.cancel">取消</button>
-                            <button id="selection-coordinate-position-save-btn" class="announcement-btn ok-btn" data-i18n="common.confirm">确定</button>
+                            <button id="selection-coordinate-position-cancel-btn" class="announcement-btn secondary-btn" type="button" data-i18n="common.cancel">取消</button>
+                            <button id="selection-coordinate-position-save-btn" class="announcement-btn ok-btn" type="button" data-i18n="common.confirm">确定</button>
                         </div>
                     </div>
                 </div>
@@ -726,6 +729,9 @@ class SelectionManager {
             });
         }
 
+        this.configureSelectionColorPopoverAccessibility();
+        this.bindSelectionColorPopoverKeyboardSupport();
+
         if (colorPopover) {
             ['mousedown', 'pointerdown', 'click'].forEach(eventName => {
                 colorPopover.addEventListener(eventName, (e) => {
@@ -744,7 +750,7 @@ class SelectionManager {
                     if (this.applySelectionColor(color)) {
                         this.syncSelectionColorUI(color);
                     }
-                    this.hideSelectionColorPopover();
+                    this.hideSelectionColorPopover({ restoreFocus: true });
                 });
             });
         }
@@ -777,7 +783,7 @@ class SelectionManager {
                 if (this.applySelectionColor(e.target.value)) {
                     this.syncSelectionColorUI(e.target.value);
                 }
-                this.hideSelectionColorPopover();
+                this.hideSelectionColorPopover({ restoreFocus: true });
             });
         }
 
@@ -841,6 +847,9 @@ class SelectionManager {
             });
         }
 
+        this.configureLayerMenuAccessibility();
+        this.bindLayerMenuKeyboardSupport();
+
         if (layerBtn && layerMenu) {
             layerBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -887,13 +896,8 @@ class SelectionManager {
             this.selectionColorPopoverOutsideListenerAttached = true;
         }
 
-        if (coordinatePositionModal) {
-            coordinatePositionModal.addEventListener('click', (e) => {
-                if (e.target === coordinatePositionModal) {
-                    this.closeCoordinatePositionEditor();
-                }
-            });
-        }
+        this.configureCoordinatePositionDialog();
+        this.bindCoordinatePositionDialogDismissal();
 
         [coordinatePositionCloseBtn, coordinatePositionCancelBtn].forEach(btn => {
             if (!btn) return;
@@ -922,16 +926,249 @@ class SelectionManager {
         }
     }
 
-    showLayerMenu() {
+    showLayerMenu(focusIndex = 0) {
         if (!this.layerMenu) return;
+        this.configureLayerMenuAccessibility();
+        if (!this.layerMenuVisible) {
+            this.layerMenuPreviouslyFocusedElement = this.getFocusableElement();
+        }
         this.layerMenu.classList.add('show');
         this.layerMenuVisible = true;
+        this.layerButton?.setAttribute('aria-expanded', 'true');
+        this.scheduleCoordinatePositionFrame(() => {
+            this.focusLayerMenuItem(focusIndex) || this.layerMenu?.focus?.();
+        });
     }
 
-    hideLayerMenu() {
+    hideLayerMenu({ restoreFocus = false } = {}) {
         if (!this.layerMenu) return;
         this.layerMenu.classList.remove('show');
         this.layerMenuVisible = false;
+        this.layerButton?.setAttribute('aria-expanded', 'false');
+        const restoreFocusTarget = restoreFocus ? this.layerMenuPreviouslyFocusedElement : null;
+        this.layerMenuPreviouslyFocusedElement = null;
+        if (restoreFocusTarget) {
+            this.scheduleCoordinatePositionFrame(() => {
+                restoreFocusTarget?.focus?.();
+            });
+        }
+    }
+
+    getFocusableElement() {
+        return document.activeElement && document.activeElement !== document.body
+            ? document.activeElement
+            : null;
+    }
+
+    getLayerMenuItems() {
+        return this.layerMenu
+            ? Array.from(this.layerMenu.querySelectorAll('[data-layer-action]'))
+            : [];
+    }
+
+    focusLayerMenuItem(index = 0) {
+        const items = this.getLayerMenuItems();
+        if (!items.length) return null;
+        const normalizedIndex = Math.min(Math.max(index, 0), items.length - 1);
+        const target = items[normalizedIndex];
+        target?.focus?.();
+        return target || null;
+    }
+
+    getSelectionColorSwatches() {
+        return this.colorPopover
+            ? Array.from(this.colorPopover.querySelectorAll('.selection-color-swatch'))
+            : [];
+    }
+
+    focusSelectionColorSwatch(index = 0) {
+        const swatches = this.getSelectionColorSwatches();
+        if (!swatches.length) return null;
+        const normalizedIndex = Math.min(Math.max(index, 0), swatches.length - 1);
+        const target = swatches[normalizedIndex];
+        target?.focus?.();
+        return target || null;
+    }
+
+    scheduleCoordinatePositionFrame(callback) {
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(callback);
+            return;
+        }
+        callback();
+    }
+
+    configureSelectionColorPopoverAccessibility() {
+        if (this.colorButton) {
+            this.colorButton.setAttribute('aria-controls', 'selection-color-popover');
+            this.colorButton.setAttribute('aria-expanded', this.selectionColorPopoverVisible ? 'true' : 'false');
+        }
+        if (this.colorPopover) {
+            this.colorPopover.setAttribute('role', 'group');
+            this.colorPopover.setAttribute('aria-label', 'Selection color options');
+            this.colorPopover.tabIndex = -1;
+        }
+    }
+
+    bindSelectionColorPopoverKeyboardSupport() {
+        if (!this.colorButton || !this.colorPopover) {
+            return;
+        }
+
+        if (this.colorButton.dataset.keyboardBindingsInitialized !== 'true') {
+            this.colorButton.dataset.keyboardBindingsInitialized = 'true';
+            this.colorButton.addEventListener('keydown', (event) => {
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    this.toggleSelectionColorPopover(true, { focusIndex: 0 });
+                } else if (event.key === 'Escape' && this.selectionColorPopoverVisible) {
+                    event.preventDefault();
+                    this.hideSelectionColorPopover({ restoreFocus: true });
+                }
+            });
+        }
+
+        if (this.colorPopover.dataset.keyboardBindingsInitialized === 'true') {
+            return;
+        }
+
+        this.colorPopover.dataset.keyboardBindingsInitialized = 'true';
+        this.colorPopover.addEventListener('keydown', (event) => {
+            const swatches = this.getSelectionColorSwatches();
+            if (!swatches.length) return;
+
+            const currentIndex = swatches.indexOf(event.target);
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                this.hideSelectionColorPopover({ restoreFocus: true });
+                return;
+            }
+            if (event.key === 'Home') {
+                event.preventDefault();
+                this.focusSelectionColorSwatch(0);
+                return;
+            }
+            if (event.key === 'End') {
+                event.preventDefault();
+                this.focusSelectionColorSwatch(swatches.length - 1);
+                return;
+            }
+            if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                event.preventDefault();
+                const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % swatches.length : 0;
+                this.focusSelectionColorSwatch(nextIndex);
+                return;
+            }
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                const previousIndex = currentIndex >= 0 ? (currentIndex - 1 + swatches.length) % swatches.length : swatches.length - 1;
+                this.focusSelectionColorSwatch(previousIndex);
+            }
+        });
+    }
+
+    configureLayerMenuAccessibility() {
+        if (this.layerButton) {
+            this.layerButton.setAttribute('aria-haspopup', 'menu');
+            this.layerButton.setAttribute('aria-controls', 'selection-layer-menu');
+            this.layerButton.setAttribute('aria-expanded', this.layerMenuVisible ? 'true' : 'false');
+        }
+        if (this.layerMenu) {
+            this.layerMenu.setAttribute('role', 'menu');
+            this.layerMenu.tabIndex = -1;
+        }
+        this.getLayerMenuItems().forEach((item) => {
+            item.setAttribute('role', 'menuitem');
+        });
+    }
+
+    bindLayerMenuKeyboardSupport() {
+        if (!this.layerButton || !this.layerMenu) {
+            return;
+        }
+
+        if (this.layerButton.dataset.keyboardBindingsInitialized !== 'true') {
+            this.layerButton.dataset.keyboardBindingsInitialized = 'true';
+            this.layerButton.addEventListener('keydown', (event) => {
+                if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    this.showLayerMenu();
+                } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    const lastIndex = Math.max(this.getLayerMenuItems().length - 1, 0);
+                    this.showLayerMenu(lastIndex);
+                } else if (event.key === 'Escape' && this.layerMenuVisible) {
+                    event.preventDefault();
+                    this.hideLayerMenu({ restoreFocus: true });
+                }
+            });
+        }
+
+        if (this.layerMenu.dataset.keyboardBindingsInitialized === 'true') {
+            return;
+        }
+
+        this.layerMenu.dataset.keyboardBindingsInitialized = 'true';
+        this.layerMenu.addEventListener('keydown', (event) => {
+            const items = this.getLayerMenuItems();
+            if (!items.length) return;
+
+            const currentIndex = items.indexOf(event.target);
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                this.hideLayerMenu({ restoreFocus: true });
+                return;
+            }
+            if (event.key === 'Home') {
+                event.preventDefault();
+                this.focusLayerMenuItem(0);
+                return;
+            }
+            if (event.key === 'End') {
+                event.preventDefault();
+                this.focusLayerMenuItem(items.length - 1);
+                return;
+            }
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % items.length : 0;
+                this.focusLayerMenuItem(nextIndex);
+                return;
+            }
+            if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                const previousIndex = currentIndex >= 0 ? (currentIndex - 1 + items.length) % items.length : items.length - 1;
+                this.focusLayerMenuItem(previousIndex);
+            }
+        });
+    }
+
+    configureCoordinatePositionDialog() {
+        if (!this.coordinatePositionModal) return;
+        this.coordinatePositionModal.setAttribute('role', 'dialog');
+        this.coordinatePositionModal.setAttribute('aria-modal', 'true');
+        this.coordinatePositionModal.setAttribute('aria-labelledby', 'selection-coordinate-position-title');
+        this.coordinatePositionModal.setAttribute('aria-describedby', 'selection-coordinate-position-list');
+        this.coordinatePositionModal.tabIndex = -1;
+    }
+
+    bindCoordinatePositionDialogDismissal() {
+        if (!this.coordinatePositionModal || this.coordinatePositionModal.dataset.keyboardBindingsInitialized === 'true') {
+            return;
+        }
+
+        this.coordinatePositionModal.dataset.keyboardBindingsInitialized = 'true';
+        this.coordinatePositionModal.addEventListener('click', (event) => {
+            if (event.target === this.coordinatePositionModal) {
+                this.closeCoordinatePositionEditor();
+            }
+        });
+        this.coordinatePositionModal.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                this.closeCoordinatePositionEditor();
+            }
+        });
     }
 
     updateLayerMenuVisibility() {
@@ -952,7 +1189,7 @@ class SelectionManager {
         if (this.selectionType === 'background') {
             if (!this.backgroundManager?.isBackgroundImageOutsideCanvas?.()) return;
             const changed = this.backgroundManager.applyOutsideLayerAction?.(action, this.drawingEngine, this.textManager?.textObjects || []);
-            this.hideLayerMenu();
+            this.hideLayerMenu({ restoreFocus: true });
             this.updateControlBox();
             if (changed) {
                 this.saveHistory();
@@ -990,14 +1227,14 @@ class SelectionManager {
         }
 
         if (targetIndex === currentIndex) {
-            this.hideLayerMenu();
+            this.hideLayerMenu({ restoreFocus: true });
             return;
         }
 
         renderables.splice(currentIndex, 1);
         renderables.splice(targetIndex, 0, selectedRenderable);
         this.drawingEngine.normalizeTopLevelLayerOrders(this.textManager?.textObjects || [], renderables);
-        this.hideLayerMenu();
+        this.hideLayerMenu({ restoreFocus: true });
         this.redrawWithSelection();
         this.updateControlBox();
         this.saveHistory();
@@ -1257,13 +1494,21 @@ class SelectionManager {
         }
     }
 
-    toggleSelectionColorPopover(force) {
+    toggleSelectionColorPopover(force, {
+        restoreFocus = false,
+        focusIndex = null
+    } = {}) {
         if (!this.colorPopover || !this.colorWrapper || !this.colorButton) return false;
 
+        const wasVisible = this.selectionColorPopoverVisible;
         const nextVisible = this.isCoordinateSelection() && (typeof force === 'boolean'
             ? force
             : !this.selectionColorPopoverVisible);
 
+        this.configureSelectionColorPopoverAccessibility();
+        if (nextVisible && !wasVisible) {
+            this.selectionColorPopoverPreviouslyFocusedElement = this.getFocusableElement();
+        }
         this.selectionColorPopoverVisible = nextVisible;
         this.colorWrapper.classList.toggle('show-color-popover', nextVisible);
         this.colorPopover.style.display = nextVisible ? 'flex' : 'none';
@@ -1271,13 +1516,26 @@ class SelectionManager {
 
         if (nextVisible) {
             this.syncSelectionColorUI();
+            if (typeof focusIndex === 'number') {
+                this.scheduleCoordinatePositionFrame(() => {
+                    this.focusSelectionColorSwatch(focusIndex) || this.colorPopover?.focus?.();
+                });
+            }
+        } else {
+            const restoreFocusTarget = restoreFocus ? this.selectionColorPopoverPreviouslyFocusedElement : null;
+            this.selectionColorPopoverPreviouslyFocusedElement = null;
+            if (restoreFocusTarget) {
+                this.scheduleCoordinatePositionFrame(() => {
+                    restoreFocusTarget?.focus?.();
+                });
+            }
         }
 
         return nextVisible;
     }
 
-    hideSelectionColorPopover() {
-        this.toggleSelectionColorPopover(false);
+    hideSelectionColorPopover(options = {}) {
+        this.toggleSelectionColorPopover(false, options);
     }
     
     showControls() {
@@ -2356,15 +2614,33 @@ class SelectionManager {
             </div>
         `).join('');
 
+        this.configureCoordinatePositionDialog();
+        if (!this.coordinatePositionModal.classList.contains('show')) {
+            this.coordinatePositionPreviouslyFocusedElement = this.getFocusableElement();
+        }
         this.coordinatePositionModal.classList.add('show');
+        const closeBtn = document.getElementById('selection-coordinate-position-close-btn');
+        const saveBtn = document.getElementById('selection-coordinate-position-save-btn');
+        const firstInput = this.coordinatePositionList.querySelector('input[data-point-id][data-axis]');
+        const focusTarget = firstInput || saveBtn || closeBtn || this.coordinatePositionModal;
+        this.scheduleCoordinatePositionFrame(() => {
+            focusTarget?.focus?.();
+        });
         return true;
     }
 
     closeCoordinatePositionEditor(shouldRefocus = true) {
         if (!this.coordinatePositionModal) return;
         this.coordinatePositionModal.classList.remove('show');
+        const restoreFocusTarget = shouldRefocus ? this.coordinatePositionPreviouslyFocusedElement : null;
+        this.coordinatePositionPreviouslyFocusedElement = null;
         if (shouldRefocus && this.hasSelection()) {
             this.updateControlBox();
+        }
+        if (restoreFocusTarget) {
+            this.scheduleCoordinatePositionFrame(() => {
+                restoreFocusTarget?.focus?.();
+            });
         }
     }
 

@@ -54,6 +54,8 @@ class TeachingToolsManager {
         
         // Control overlay
         this.controlOverlay = null;
+        this.modal = null;
+        this.modalPreviouslyFocusedElement = null;
         
         this.loadImages();
         this.createModal();
@@ -112,8 +114,8 @@ class TeachingToolsManager {
         modal.innerHTML = `
             <div class="modal-content teaching-tools-modal-content">
                 <div class="modal-header">
-                    <h2 data-i18n="teachingTools.title">Teaching Tools</h2>
-                    <button id="teaching-tools-close-btn" class="modal-close-btn" data-i18n-title="common.close" title="${closeTitle}" aria-label="${closeTitle}">
+                    <h2 id="teaching-tools-modal-title" data-i18n="teachingTools.title">Teaching Tools</h2>
+                    <button id="teaching-tools-close-btn" class="modal-close-btn" type="button" data-i18n-title="common.close" title="${closeTitle}" aria-label="${closeTitle}">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -287,20 +289,74 @@ class TeachingToolsManager {
                         </div>
                     </div>
                     <div class="teaching-tools-hint">
-                        <span data-i18n="teachingTools.hint">Tip: Click to move, double-click to resize/rotate/delete</span>
+                        <span id="teaching-tools-modal-hint" data-i18n="teachingTools.hint">Tip: Click to move, double-click to resize/rotate/delete</span>
                     </div>
                 </div>
                 <div class="teaching-tools-footer">
-                    <button id="teaching-tools-confirm-btn" class="teaching-tools-confirm-btn" data-i18n="common.confirm">Confirm</button>
+                    <button id="teaching-tools-confirm-btn" class="teaching-tools-confirm-btn" type="button" data-i18n="common.confirm">Confirm</button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
+        this.modal = modal;
+        modal.querySelectorAll('button').forEach((button) => {
+            if (!button.getAttribute('type')) {
+                button.type = 'button';
+            }
+        });
+        this.configureModalAccessibility();
         
         // Setup modal event listeners
         this.setupModalListeners();
         window.i18n?.applyTranslations?.();
         this.updateCounterButtonLabels();
+    }
+
+    getFocusableElement() {
+        return document.activeElement && document.activeElement !== document.body
+            ? document.activeElement
+            : null;
+    }
+
+    scheduleModalFrame(callback) {
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(callback);
+            return;
+        }
+        callback();
+    }
+
+    configureModalAccessibility() {
+        const modal = this.modal || document.getElementById('teaching-tools-modal');
+        if (!modal) {
+            return;
+        }
+
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-labelledby', 'teaching-tools-modal-title');
+        modal.setAttribute('aria-describedby', 'teaching-tools-modal-hint');
+        modal.tabIndex = -1;
+    }
+
+    bindModalDismissal() {
+        const modal = this.modal || document.getElementById('teaching-tools-modal');
+        if (!modal || modal.dataset.dismissBindingsInitialized === 'true') {
+            return;
+        }
+
+        modal.dataset.dismissBindingsInitialized = 'true';
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                this.hideModal();
+            }
+        });
+        modal.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                this.hideModal();
+            }
+        });
     }
 
     getText(key, fallback, replacements = null) {
@@ -535,16 +591,11 @@ class TeachingToolsManager {
     }
     
     setupModalListeners() {
+        this.bindModalDismissal();
+
         // Close button
         document.getElementById('teaching-tools-close-btn').addEventListener('click', () => {
             this.hideModal();
-        });
-        
-        // Click outside to close
-        document.getElementById('teaching-tools-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'teaching-tools-modal') {
-                this.hideModal();
-            }
         });
         
         // Counter buttons for new tools
@@ -855,6 +906,16 @@ class TeachingToolsManager {
     }
     
     showModal() {
+        const modal = this.modal || document.getElementById('teaching-tools-modal');
+        if (!modal) {
+            return;
+        }
+
+        this.configureModalAccessibility();
+        if (!modal.classList.contains('show')) {
+            this.modalPreviouslyFocusedElement = this.getFocusableElement();
+        }
+
         // Reset new tool counts to 0
         this.ruler1Count = 0;
         this.ruler2Count = 0;
@@ -880,11 +941,28 @@ class TeachingToolsManager {
         }
         this.updateCounterButtonLabels();
         
-        document.getElementById('teaching-tools-modal').classList.add('show');
+        modal.classList.add('show');
+        const closeBtn = document.getElementById('teaching-tools-close-btn');
+        const focusTarget = ruler1Input || closeBtn || modal;
+        this.scheduleModalFrame(() => {
+            focusTarget?.focus?.();
+        });
     }
     
     hideModal() {
-        document.getElementById('teaching-tools-modal').classList.remove('show');
+        const modal = this.modal || document.getElementById('teaching-tools-modal');
+        if (!modal) {
+            return;
+        }
+
+        modal.classList.remove('show');
+        const restoreFocusTarget = this.modalPreviouslyFocusedElement;
+        this.modalPreviouslyFocusedElement = null;
+        if (restoreFocusTarget) {
+            this.scheduleModalFrame(() => {
+                restoreFocusTarget?.focus?.();
+            });
+        }
     }
     
     insertTools() {

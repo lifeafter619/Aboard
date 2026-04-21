@@ -65,7 +65,7 @@ function toggleCoordinateSettingsPanel(board, force) {
 
     if (board.isCoordinateSettingsExpanded) {
         scheduleCoordinatePanelFrame(() => {
-            (closeBtn || firstToggle || modal)?.focus?.();
+            (firstToggle || closeBtn || modal)?.focus?.();
         });
     } else if (wasVisible) {
         restoreCoordinateFocus(board, 'coordinateSettingsPreviouslyFocusedElement');

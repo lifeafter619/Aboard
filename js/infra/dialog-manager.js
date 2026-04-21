@@ -147,6 +147,9 @@ export class DialogManager {
         ? this.doc.activeElement
         : null;
       let isClosed = false;
+      const confirmDialog = () => {
+        okBtn?.click?.();
+      };
       const cancelledResult = config.returnDetails
         ? { confirmed: false, selectedValues: [], inputValue: null }
         : false;
@@ -225,6 +228,20 @@ export class DialogManager {
         if (event.key === 'Escape') {
           event.preventDefault();
           close(cancelledResult);
+          return;
+        }
+        if (event.key === 'Enter' && !inputElement) {
+          const target = event.target;
+          const tagName = String(target?.tagName || '').toLowerCase();
+          const isInteractiveTarget = tagName === 'button'
+            || tagName === 'input'
+            || tagName === 'textarea'
+            || tagName === 'select'
+            || Boolean(target?.isContentEditable);
+          if (!isInteractiveTarget) {
+            event.preventDefault();
+            confirmDialog();
+          }
         }
       };
       modal.addEventListener('keydown', this.confirmModalKeydownHandler);
@@ -246,13 +263,16 @@ export class DialogManager {
           focusInput();
         }
       } else {
-        const focusCancelButton = () => {
-          modal.querySelector('#app-confirm-cancel-btn')?.focus?.();
+        const focusPreferredAction = () => {
+          const preferredButton = config.preferredAction === 'cancel'
+            ? modal.querySelector('#app-confirm-cancel-btn')
+            : modal.querySelector('#app-confirm-ok-btn') || modal.querySelector('#app-confirm-cancel-btn');
+          preferredButton?.focus?.();
         };
         if (typeof this.win.requestAnimationFrame === 'function') {
-          this.win.requestAnimationFrame(focusCancelButton);
+          this.win.requestAnimationFrame(focusPreferredAction);
         } else {
-          focusCancelButton();
+          focusPreferredAction();
         }
       }
     });

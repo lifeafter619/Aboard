@@ -23,6 +23,7 @@ import { registerDialogManagerGlobal } from '../infra/dialog-manager.js';
 import { registerRichTextParserGlobal } from '../infra/rich-text-parser.js';
 import { registerScriptLoaderGlobal } from '../infra/script-loader.js';
 import { registerDeepCloneGlobal } from '../infra/deep-clone.js';
+import { bindLabelButtonKeyboardSupport } from '../infra/label-button-keyboard.js';
 import { registerToastManagerGlobal } from '../features/toast/toast-manager.js';
 import { registerAnnouncementManagerGlobal } from '../features/announcement/announcement-manager.js';
 import { registerGifManagerGlobal } from '../features/media/gif-manager.js';
@@ -292,6 +293,7 @@ export async function createApp({ win = window, doc = document } = {}) {
     registerRichTextParserGlobal(win);
     registerScriptLoaderGlobal(win, doc);
     registerDeepCloneGlobal(win);
+    bindLabelButtonKeyboardSupport(doc);
     registerToastManagerGlobal(win, doc);
     registerAnnouncementManagerGlobal(win, doc);
     registerGifManagerGlobal(win, doc);

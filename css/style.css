@@ -1260,8 +1260,24 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     display: flex;
     align-items: center;
     gap: 8px;
+    width: 100%;
+    padding: 2px 4px;
+    margin: -2px -4px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    text-align: left;
     cursor: pointer;
     user-select: none;
+}
+
+.settings-group-header:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.settings-group-header:focus-visible {
+    outline: 2px solid var(--theme-color);
+    outline-offset: 2px;
 }
 
 .collapse-toggle {

@@ -1669,6 +1669,11 @@ class TimerManager {
             timerSettingsModal.tabIndex = -1;
             if (timerSettingsModal.dataset.keyboardBindingsInitialized !== 'true') {
                 timerSettingsModal.dataset.keyboardBindingsInitialized = 'true';
+                timerSettingsModal.addEventListener('click', (event) => {
+                    if (event.target === timerSettingsModal) {
+                        this.hideSettingsModal();
+                    }
+                });
                 timerSettingsModal.addEventListener('keydown', (event) => {
                     if (event.key === 'Escape') {
                         event.preventDefault();
@@ -1695,6 +1700,11 @@ class TimerManager {
             timerAlertModal.tabIndex = -1;
             if (timerAlertModal.dataset.keyboardBindingsInitialized !== 'true') {
                 timerAlertModal.dataset.keyboardBindingsInitialized = 'true';
+                timerAlertModal.addEventListener('click', (event) => {
+                    if (event.target === timerAlertModal) {
+                        this.hideAlertModal();
+                    }
+                });
                 timerAlertModal.addEventListener('keydown', (event) => {
                     if (event.key === 'Escape') {
                         event.preventDefault();

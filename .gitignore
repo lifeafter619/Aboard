@@ -24,6 +24,9 @@ test-results/
 *.test.gif
 .edge-profile/
 .playwright-browsers/
+.tmp/
+.localappdata/
+.appdata/
 
 # OS files
 .DS_Store

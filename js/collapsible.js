@@ -104,10 +104,13 @@ class CollapsibleManager {
         // Create header wrapper
         const header = document.createElement('div');
         header.className = 'settings-group-header';
+        header.setAttribute('role', 'button');
+        header.setAttribute('tabindex', '0');
         
         // Create collapse toggle
         const toggle = document.createElement('div');
         toggle.className = 'collapse-toggle';
+        toggle.setAttribute('aria-hidden', 'true');
         toggle.innerHTML = `
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -121,6 +124,7 @@ class CollapsibleManager {
         // Create content wrapper for remaining elements
         const content = document.createElement('div');
         content.className = 'settings-group-content';
+        content.id = `${groupId}-content`;
         
         // Move all remaining children to content
         while (group.firstChild) {
@@ -142,19 +146,26 @@ class CollapsibleManager {
             group.classList.add('collapsed');
         }
         
-        // Set initial max-height for animation
-        if (!group.classList.contains('collapsed')) {
-            content.style.maxHeight = content.scrollHeight + 'px';
-        }
+        this.syncAccessibilityState(group);
+        this.syncContentHeight(group);
         
         // Add click handler
         header.addEventListener('click', () => {
             this.toggleCollapse(group);
         });
+        header.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                this.toggleCollapse(group);
+            }
+        });
     }
     
     toggleCollapse(group) {
         const content = group.querySelector('.settings-group-content');
+        if (!content) {
+            return;
+        }
         const isCollapsed = group.classList.contains('collapsed');
         
         if (isCollapsed) {
@@ -174,7 +185,34 @@ class CollapsibleManager {
             this.collapsedState[group.id] = true;
         }
         
+        this.syncAccessibilityState(group);
         this.saveCollapsedState();
+    }
+
+    syncAccessibilityState(group) {
+        const header = group.querySelector(':scope > .settings-group-header');
+        const content = group.querySelector(':scope > .settings-group-content');
+        if (!header || !content) {
+            return;
+        }
+
+        header.setAttribute('aria-controls', content.id);
+        header.setAttribute('aria-expanded', group.classList.contains('collapsed') ? 'false' : 'true');
+        content.setAttribute('aria-hidden', group.classList.contains('collapsed') ? 'true' : 'false');
+    }
+
+    syncContentHeight(group) {
+        const content = group.querySelector(':scope > .settings-group-content');
+        if (!content) {
+            return;
+        }
+
+        if (group.classList.contains('collapsed')) {
+            content.style.maxHeight = '0px';
+            return;
+        }
+
+        content.style.maxHeight = content.scrollHeight + 'px';
     }
     
     // Public method to refresh a specific group's max-height
@@ -191,10 +229,7 @@ class CollapsibleManager {
     // Public method to refresh all groups
     refreshAll() {
         document.querySelectorAll('.settings-group.collapsible:not(.collapsed)').forEach(group => {
-            const content = group.querySelector('.settings-group-content');
-            if (content) {
-                content.style.maxHeight = content.scrollHeight + 'px';
-            }
+            this.syncContentHeight(group);
         });
     }
 }

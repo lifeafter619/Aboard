@@ -3,6 +3,9 @@ export class ToastManager {
     this.win = win;
     this.doc = doc;
     this.container = null;
+    this.activeToasts = new Map();
+    this.maxVisibleToasts = 4;
+    this.exitDurationMs = 350;
     this.init();
   }
 
@@ -10,18 +13,139 @@ export class ToastManager {
     if (!this.doc.querySelector('.toast-container')) {
       this.container = this.doc.createElement('div');
       this.container.className = 'toast-container';
+      this.container.setAttribute('aria-live', 'polite');
+      this.container.setAttribute('aria-relevant', 'additions text');
       this.doc.body.appendChild(this.container);
     } else {
       this.container = this.doc.querySelector('.toast-container');
     }
   }
 
+  getToastKey(message, type) {
+    return `${type}::${message}`;
+  }
+
+  getScheduleFrame() {
+    if (typeof this.win.requestAnimationFrame === 'function') {
+      return this.win.requestAnimationFrame.bind(this.win);
+    }
+    return (callback) => this.getScheduleTimeout()(callback, 0);
+  }
+
+  getScheduleTimeout() {
+    if (typeof this.win.setTimeout === 'function') {
+      return this.win.setTimeout.bind(this.win);
+    }
+    return setTimeout;
+  }
+
+  getClearTimeout() {
+    if (typeof this.win.clearTimeout === 'function') {
+      return this.win.clearTimeout.bind(this.win);
+    }
+    return clearTimeout;
+  }
+
+  syncRepeatBadge(record) {
+    if (!record?.repeatBadge) {
+      return;
+    }
+    const visible = record.repeatCount > 1;
+    record.repeatBadge.hidden = !visible;
+    record.repeatBadge.textContent = visible ? String(record.repeatCount) : '';
+  }
+
+  clearToastTimers(record) {
+    const clearTimeoutRef = this.getClearTimeout();
+    if (record.dismissTimer != null) {
+      clearTimeoutRef(record.dismissTimer);
+      record.dismissTimer = null;
+    }
+    if (record.cleanupTimer != null) {
+      clearTimeoutRef(record.cleanupTimer);
+      record.cleanupTimer = null;
+    }
+    if (record.transitionHandler) {
+      record.toast.removeEventListener('transitionend', record.transitionHandler);
+      record.transitionHandler = null;
+    }
+  }
+
+  removeToast(record) {
+    if (!record) {
+      return;
+    }
+    this.clearToastTimers(record);
+    if (this.activeToasts.get(record.key) === record) {
+      this.activeToasts.delete(record.key);
+    }
+    if (record.toast?.parentElement) {
+      record.toast.remove();
+    }
+  }
+
+  beginToastDismiss(record) {
+    if (!record?.toast) {
+      return;
+    }
+    record.toast.classList.remove('show');
+    const finishDismiss = () => {
+      this.removeToast(record);
+    };
+    record.transitionHandler = finishDismiss;
+    record.toast.addEventListener('transitionend', finishDismiss, { once: true });
+    record.cleanupTimer = this.getScheduleTimeout()(finishDismiss, this.exitDurationMs + 50);
+  }
+
+  scheduleToastDismiss(record, duration) {
+    this.clearToastTimers(record);
+    record.toast.classList.add('show');
+    record.dismissTimer = this.getScheduleTimeout()(
+      () => this.beginToastDismiss(record),
+      duration
+    );
+  }
+
+  trimToastStack() {
+    if (!this.container) {
+      return;
+    }
+    while (this.container.children.length >= this.maxVisibleToasts) {
+      const oldestToast = this.container.children[0];
+      const oldestRecord = Array.from(this.activeToasts.values()).find(
+        (entry) => entry.toast === oldestToast
+      );
+      if (oldestRecord) {
+        this.removeToast(oldestRecord);
+      } else {
+        oldestToast.remove();
+      }
+    }
+  }
+
   show(message, type = 'info', duration = 3000) {
+    const normalizedMessage = String(message ?? '');
+    const normalizedType = String(type || 'info');
+    const normalizedDuration = Number.isFinite(duration) && duration >= 0 ? duration : 3000;
+    const toastKey = this.getToastKey(normalizedMessage, normalizedType);
+    const existingRecord = this.activeToasts.get(toastKey);
+    if (existingRecord?.toast?.parentElement) {
+      existingRecord.repeatCount += 1;
+      this.syncRepeatBadge(existingRecord);
+      this.scheduleToastDismiss(existingRecord, normalizedDuration);
+      return existingRecord.toast;
+    }
+
+    this.trimToastStack();
+
     const toast = this.doc.createElement('div');
-    toast.className = `toast ${type}`;
+    toast.className = `toast ${normalizedType}`;
+    toast.setAttribute('role', normalizedType === 'error' ? 'alert' : 'status');
+    toast.setAttribute('aria-live', normalizedType === 'error' ? 'assertive' : 'polite');
+    toast.setAttribute('aria-atomic', 'true');
 
     let iconSvg = '';
-    switch (type) {
+    switch (normalizedType) {
       case 'success':
         iconSvg = `<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>`;
         break;
@@ -37,25 +161,37 @@ export class ToastManager {
     }
 
     toast.innerHTML = iconSvg;
+
     const messageSpan = this.doc.createElement('span');
-    messageSpan.textContent = message;
+    messageSpan.className = 'toast-message';
+    messageSpan.textContent = normalizedMessage;
     toast.appendChild(messageSpan);
+
+    const repeatBadge = this.doc.createElement('span');
+    repeatBadge.className = 'toast-repeat-count';
+    repeatBadge.hidden = true;
+    repeatBadge.setAttribute('aria-hidden', 'true');
+    toast.appendChild(repeatBadge);
+
+    const record = {
+      key: toastKey,
+      toast,
+      repeatBadge,
+      repeatCount: 1,
+      dismissTimer: null,
+      cleanupTimer: null,
+      transitionHandler: null
+    };
+    this.syncRepeatBadge(record);
+    this.activeToasts.set(toastKey, record);
     this.container.appendChild(toast);
 
-    const scheduleFrame = this.win.requestAnimationFrame || requestAnimationFrame;
-    scheduleFrame(() => {
+    this.getScheduleFrame()(() => {
       toast.classList.add('show');
     });
 
-    const scheduleTimeout = this.win.setTimeout || setTimeout;
-    scheduleTimeout(() => {
-      toast.classList.remove('show');
-      toast.addEventListener('transitionend', () => {
-        if (toast.parentElement) {
-          toast.remove();
-        }
-      });
-    }, duration);
+    this.scheduleToastDismiss(record, normalizedDuration);
+    return toast;
   }
 }
 

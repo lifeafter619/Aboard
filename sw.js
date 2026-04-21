@@ -1,4 +1,4 @@
-const CORE_CACHE_NAME = 'aboard-core-v36';
+const CORE_CACHE_NAME = 'aboard-core-v37';
 const RUNTIME_CACHE_NAME = 'aboard-runtime-v32';
 const RUNTIME_CACHE_MAX_ENTRIES = 24;
 const RUNTIME_CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'worker', 'image', 'font', 'manifest']);
@@ -63,6 +63,7 @@ const CORE_ASSETS = [
   './js/infra/rich-text-parser.js',
   './js/infra/script-loader.js',
   './js/infra/deep-clone.js',
+  './js/infra/label-button-keyboard.js',
   './js/features/toast/toast-manager.js',
   './js/features/announcement/announcement-manager.js',
   './js/features/media/gif-manager.js',
@@ -245,6 +246,7 @@ const ESSENTIAL_CORE_ASSETS = [
   './js/infra/browser-check.js',
   './js/infra/deep-clone.js',
   './js/infra/dialog-manager.js',
+  './js/infra/label-button-keyboard.js',
   './js/infra/rich-text-parser.js',
   './js/infra/script-loader.js',
   './js/features/toast/toast-manager.js',
