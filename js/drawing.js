@@ -1,6 +1,25 @@
 // Drawing Engine Module
 // Handles all drawing operations, pen types, and canvas interactions
 
+function safeDrawingStorageGetItem(key) {
+    try {
+        return localStorage.getItem(key);
+    } catch (error) {
+        console.warn(`Failed to read drawing localStorage key "${key}":`, error);
+        return null;
+    }
+}
+
+function safeDrawingStorageSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to write drawing localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
 class DrawingEngine {
     constructor(canvas, ctx) {
         this.canvas = canvas;
@@ -10,19 +29,19 @@ class DrawingEngine {
         this.isDrawing = false;
         this.currentColor = '#000000';
         this.penSize = 5;
-        this.penType = localStorage.getItem('penType') || 'normal';
-        const storedEraserSize = parseInt(localStorage.getItem('eraserSize'), 10);
+        this.penType = safeDrawingStorageGetItem('penType') || 'normal';
+        const storedEraserSize = parseInt(safeDrawingStorageGetItem('eraserSize'), 10);
         this.eraserSize = Number.isFinite(storedEraserSize)
             ? this.normalizeEraserSize(storedEraserSize)
             : this.getAdaptiveDefaultEraserSize();
-        this.eraserShape = localStorage.getItem('eraserShape') || 'circle';
+        this.eraserShape = safeDrawingStorageGetItem('eraserShape') || 'circle';
         this.currentTool = 'pen';
         
         // Line style settings for pen
-        this.penLineStyle = localStorage.getItem('penLineStyle') || 'solid';
-        this.penDashDensity = parseInt(localStorage.getItem('penDashDensity'), 10) || 10;
-        this.penMultiLineCount = parseInt(localStorage.getItem('penMultiLineCount'), 10) || 2;
-        this.penMultiLineSpacing = parseInt(localStorage.getItem('penMultiLineSpacing'), 10) || 10;
+        this.penLineStyle = safeDrawingStorageGetItem('penLineStyle') || 'solid';
+        this.penDashDensity = parseInt(safeDrawingStorageGetItem('penDashDensity'), 10) || 10;
+        this.penMultiLineCount = parseInt(safeDrawingStorageGetItem('penMultiLineCount'), 10) || 2;
+        this.penMultiLineSpacing = parseInt(safeDrawingStorageGetItem('penMultiLineSpacing'), 10) || 10;
         
         // Accumulated distance for dashed line drawing
         this.accumulatedDistance = 0;
@@ -69,13 +88,15 @@ class DrawingEngine {
         this.vectorSceneMaskCounter = 0;
         
         // Canvas scaling and panning
-        this.canvasScale = parseFloat(localStorage.getItem('canvasScale')) || 1.0;
+        this.canvasScale = parseFloat(safeDrawingStorageGetItem('canvasScale')) || 1.0;
         this.panOffset = { 
-            x: parseFloat(localStorage.getItem('panOffsetX')) || 0, 
-            y: parseFloat(localStorage.getItem('panOffsetY')) || 0 
+            x: parseFloat(safeDrawingStorageGetItem('panOffsetX')) || 0, 
+            y: parseFloat(safeDrawingStorageGetItem('panOffsetY')) || 0 
         };
         this.isPanning = false;
         this.lastPanPoint = null;
+        this.viewStatePersistTimeoutId = null;
+        this.viewStatePersistDelayMs = 120;
 
         // Live preview overlay for high-zoom pen drawing
         this.livePreviewCanvas = null;
@@ -88,6 +109,42 @@ class DrawingEngine {
         this.liveEraserPreviewRafId = null;
         this.liveEraserPreviewMaskId = 'vector-scene-live-eraser-mask';
         this.createLivePreviewCanvas();
+    }
+
+    cancelPendingViewStatePersistence() {
+        if (this.viewStatePersistTimeoutId) {
+            clearTimeout(this.viewStatePersistTimeoutId);
+            this.viewStatePersistTimeoutId = null;
+        }
+    }
+
+    flushViewStatePersistence() {
+        const persistedScale = safeDrawingStorageSetItem('canvasScale', this.canvasScale);
+        const persistedPanX = safeDrawingStorageSetItem('panOffsetX', this.panOffset.x);
+        const persistedPanY = safeDrawingStorageSetItem('panOffsetY', this.panOffset.y);
+
+        if (!persistedScale || !persistedPanX || !persistedPanY) {
+            console.warn('Failed to persist drawing view state to localStorage.');
+        }
+    }
+
+    persistViewState(options = {}) {
+        const {
+            immediate = false,
+            debounceMs = this.viewStatePersistDelayMs
+        } = options;
+
+        if (immediate) {
+            this.cancelPendingViewStatePersistence();
+            this.flushViewStatePersistence();
+            return;
+        }
+
+        this.cancelPendingViewStatePersistence();
+        this.viewStatePersistTimeoutId = setTimeout(() => {
+            this.viewStatePersistTimeoutId = null;
+            this.flushViewStatePersistence();
+        }, debounceMs);
     }
     
     /**
@@ -430,22 +487,22 @@ class DrawingEngine {
     
     setPenLineStyle(style) {
         this.penLineStyle = style;
-        localStorage.setItem('penLineStyle', style);
+        safeDrawingStorageSetItem('penLineStyle', style);
     }
     
     setPenDashDensity(density) {
         this.penDashDensity = Math.max(1, Math.min(100, density));
-        localStorage.setItem('penDashDensity', this.penDashDensity);
+        safeDrawingStorageSetItem('penDashDensity', this.penDashDensity);
     }
     
     setPenMultiLineCount(count) {
         this.penMultiLineCount = Math.max(2, Math.min(10, count));
-        localStorage.setItem('penMultiLineCount', this.penMultiLineCount);
+        safeDrawingStorageSetItem('penMultiLineCount', this.penMultiLineCount);
     }
     
     setPenMultiLineSpacing(spacing) {
         this.penMultiLineSpacing = Math.max(5, Math.min(50, spacing));
-        localStorage.setItem('penMultiLineSpacing', this.penMultiLineSpacing);
+        safeDrawingStorageSetItem('penMultiLineSpacing', this.penMultiLineSpacing);
     }
 
     getLineStyleDashPattern(lineStyle = 'solid', dashDensity = 10, strokeSize = this.penSize) {
@@ -1949,15 +2006,15 @@ class DrawingEngine {
         this.panOffset.y += dy;
         
         this.lastPanPoint = { x: e.clientX, y: e.clientY };
-        
-        localStorage.setItem('panOffsetX', this.panOffset.x);
-        localStorage.setItem('panOffsetY', this.panOffset.y);
+
+        this.persistViewState();
     }
     
     stopPanning() {
         if (this.isPanning) {
             this.isPanning = false;
             this.lastPanPoint = null;
+            this.persistViewState({ immediate: true });
             // Restore cursor based on current tool
             if (this.currentTool === 'pan') {
                 this.canvas.style.cursor = 'grab';
@@ -1991,7 +2048,7 @@ class DrawingEngine {
     
     setPenType(type) {
         this.penType = type;
-        localStorage.setItem('penType', type);
+        safeDrawingStorageSetItem('penType', type);
     }
     
     normalizeEraserSize(size) {
@@ -2013,7 +2070,7 @@ class DrawingEngine {
     }
 
     hasStoredEraserSizePreference() {
-        return localStorage.getItem('eraserSize') !== null;
+        return safeDrawingStorageGetItem('eraserSize') !== null;
     }
 
     refreshAdaptiveEraserSize() {
@@ -2028,13 +2085,13 @@ class DrawingEngine {
         const { persist = true } = options;
         this.eraserSize = this.normalizeEraserSize(size);
         if (persist) {
-            localStorage.setItem('eraserSize', String(this.eraserSize));
+            safeDrawingStorageSetItem('eraserSize', String(this.eraserSize));
         }
     }
     
     setEraserShape(shape) {
         this.eraserShape = shape;
-        localStorage.setItem('eraserShape', shape);
+        safeDrawingStorageSetItem('eraserShape', shape);
     }
 
     getCanvasEraserSize() {

@@ -1,6 +1,25 @@
 // Insert Text Module
 // Handles inserting text onto the canvas as stamped pixels
 
+function safeInsertTextStorageGetItem(key) {
+    try {
+        return localStorage.getItem(key);
+    } catch (error) {
+        console.warn(`Failed to read custom fonts localStorage key "${key}":`, error);
+        return null;
+    }
+}
+
+function safeInsertTextStorageSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to write custom fonts localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
 class InsertTextManager {
     constructor(canvas, ctx, historyManager, drawingEngine) {
         this.canvas = canvas;
@@ -83,7 +102,7 @@ class InsertTextManager {
 
     // Load custom fonts from localStorage
     loadCustomFonts() {
-        const saved = localStorage.getItem('customFonts');
+        const saved = safeInsertTextStorageGetItem('customFonts');
         if (saved) {
             try {
                 return JSON.parse(saved);
@@ -97,7 +116,10 @@ class InsertTextManager {
     // Save custom fonts to localStorage
     saveCustomFonts() {
         try {
-            localStorage.setItem('customFonts', JSON.stringify(this.customFonts));
+            const persisted = safeInsertTextStorageSetItem('customFonts', JSON.stringify(this.customFonts));
+            if (!persisted) {
+                throw new Error('custom-font-persistence-failed');
+            }
         } catch (e) {
             // Handle storage quota exceeded
             const msg = window.i18n ? window.i18n.t('tools.text.storageQuotaExceeded') : 'Storage quota exceeded. Please delete some custom fonts.';

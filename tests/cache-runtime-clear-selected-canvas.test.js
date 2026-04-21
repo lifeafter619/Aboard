@@ -30,6 +30,44 @@ function createStorageStub(initialEntries = {}) {
   };
 }
 
+function createBlockedStorageStub(initialEntries = {}, blockedMethods = []) {
+  const storage = createStorageStub(initialEntries);
+  const blocked = new Set(blockedMethods);
+
+  return {
+    get length() {
+      return storage.length;
+    },
+    key(index) {
+      return storage.key(index);
+    },
+    getItem(key) {
+      if (blocked.has('getItem')) {
+        throw new Error(`Blocked getItem for ${key}`);
+      }
+      return storage.getItem(key);
+    },
+    setItem(key, value) {
+      if (blocked.has('setItem')) {
+        throw new Error(`Blocked setItem for ${key}`);
+      }
+      return storage.setItem(key, value);
+    },
+    removeItem(key) {
+      if (blocked.has('removeItem')) {
+        throw new Error(`Blocked removeItem for ${key}`);
+      }
+      return storage.removeItem(key);
+    },
+    clear() {
+      if (blocked.has('clear')) {
+        throw new Error('Blocked clear');
+      }
+      return storage.clear();
+    }
+  };
+}
+
 function loadCacheRuntime(localStorage, sessionStorage) {
   const window = {
     setTimeout,
@@ -158,8 +196,91 @@ async function testCanvasClearRemovesExtendedBoardStateKeys() {
   );
 }
 
+async function testCanvasClearSurvivesBlockedLocalStorageRemoval() {
+  const localStorage = createBlockedStorageStub({
+    pageBackgrounds: '{"1":{"backgroundPattern":"image"}}',
+    backgroundImageData: 'data:image/png;base64,abc',
+    uploadedImages: '[{"id":"img-1","data":"data:image/png;base64,abc"}]'
+  }, ['removeItem']);
+  const sessionStorage = createStorageStub({
+    backgroundImageData: 'data:image/png;base64,abc',
+    uploadedImages: '[{"id":"img-1"}]'
+  });
+  const runtime = loadCacheRuntime(localStorage, sessionStorage);
+
+  let clearSessionDataCalls = 0;
+  const board = {
+    cacheStorageSizeSnapshotKey: 'aboardCacheStorageSnapshot',
+    getCacheKeyGroups() {
+      return runtime.getCacheKeyGroups(this);
+    },
+    async clearSessionData() {
+      clearSessionDataCalls += 1;
+    },
+    storageManager: {
+      getSessionSizeEstimate() {
+        return 0;
+      }
+    }
+  };
+
+  await assert.doesNotReject(async () => {
+    await runtime.clearSelectedCache(board, {
+      canvas: true,
+      settings: false,
+      other: false
+    });
+  }, 'canvas cache clear should not reject when localStorage removals are blocked');
+
+  assert.equal(clearSessionDataCalls, 1);
+  assert.equal(
+    sessionStorage.getItem('backgroundImageData'),
+    null,
+    'canvas cache clear should still clear matching sessionStorage entries when localStorage removal fails'
+  );
+  assert.equal(sessionStorage.getItem('uploadedImages'), null);
+}
+
+async function testClearAllLocalDataSurvivesBlockedLocalStorageClear() {
+  const localStorage = createBlockedStorageStub({
+    pageBackgrounds: '{"1":{"backgroundPattern":"image"}}'
+  }, ['clear']);
+  const sessionStorage = createStorageStub({
+    backgroundImageData: 'data:image/png;base64,abc'
+  });
+  const runtime = loadCacheRuntime(localStorage, sessionStorage);
+
+  let clearSessionDataCalls = 0;
+  let closeDbCalls = 0;
+  const board = {
+    isClearingLocalData: false,
+    saveTimeout: null,
+    storageManager: {
+      dbName: null,
+      closeDB() {
+        closeDbCalls += 1;
+      }
+    },
+    async clearSessionData() {
+      clearSessionDataCalls += 1;
+    },
+    setCacheStorageSizeSnapshot() {}
+  };
+
+  await assert.doesNotReject(async () => {
+    await runtime.clearAllLocalData(board);
+  }, 'clear-all flow should not reject when localStorage.clear is blocked');
+
+  assert.equal(clearSessionDataCalls, 1);
+  assert.equal(closeDbCalls, 1);
+  assert.equal(sessionStorage.getItem('backgroundImageData'), null);
+  assert.equal(board.isClearingLocalData, false);
+}
+
 (async function main() {
   await testCanvasClearRemovesExtendedBoardStateKeys();
+  await testCanvasClearSurvivesBlockedLocalStorageRemoval();
+  await testClearAllLocalDataSurvivesBlockedLocalStorageClear();
   console.log('cache-runtime-clear-selected-canvas.test: all assertions passed');
 })().catch((error) => {
   console.error(error);

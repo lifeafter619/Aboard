@@ -24,6 +24,33 @@ function createStorageStub(initialEntries = {}) {
   };
 }
 
+function createBlockedStorageStub(initialEntries = {}, blockedMethods = []) {
+  const storage = createStorageStub(initialEntries);
+  const blocked = new Set(blockedMethods);
+
+  return {
+    ...storage,
+    getItem(key) {
+      if (blocked.has('getItem')) {
+        throw new Error(`Blocked getItem for ${key}`);
+      }
+      return storage.getItem(key);
+    },
+    setItem(key, value) {
+      if (blocked.has('setItem')) {
+        throw new Error(`Blocked setItem for ${key}`);
+      }
+      return storage.setItem(key, value);
+    },
+    removeItem(key) {
+      if (blocked.has('removeItem')) {
+        throw new Error(`Blocked removeItem for ${key}`);
+      }
+      return storage.removeItem(key);
+    }
+  };
+}
+
 function createDefaultCoordinateOverlayState() {
   return {
     showTicks: true,
@@ -311,6 +338,106 @@ async function testRestoreSessionClearsPausedGifRuntimeState() {
   );
 }
 
+async function testRestoreSessionFallsBackWhenSyncSnapshotStorageIsBlocked() {
+  const localStorage = createBlockedStorageStub({}, ['getItem']);
+  const sessionStorage = createStorageStub();
+  const runtime = loadSessionRuntime(localStorage, sessionStorage);
+
+  const board = {
+    storageManager: {
+      async loadSession() {
+        return {
+          pagesRaw: [{ restored: true }],
+          settings: {
+            currentPage: 1,
+            backgroundPattern: 'image',
+            backgroundImageData: 'data:image/png;base64,recovered',
+            imageSize: 1,
+            imageTransform: {
+              x: 32,
+              y: 48,
+              width: 240,
+              height: 135,
+              rotation: 10,
+              scale: 1,
+              flipHorizontal: false,
+              flipVertical: true
+            },
+            coordinateOverlayState: createDefaultCoordinateOverlayState()
+          }
+        };
+      }
+    },
+    drawingEngine: {
+      currentTool: 'pen',
+      penSize: 4,
+      currentColor: '#000000',
+      penType: 'pen',
+      eraserSize: 12,
+      eraserShape: 'circle',
+      canvasScale: 1,
+      panOffset: { x: 0, y: 0 }
+    },
+    selectionManager: {
+      setTextManager() {}
+    },
+    backgroundManager: {
+      backgroundColor: '#ffffff',
+      backgroundPattern: 'blank',
+      bgOpacity: 1,
+      patternIntensity: 0.5,
+      patternDensity: 1,
+      coordinateOriginX: 0,
+      coordinateOriginY: 0,
+      coordinateOverlayState: createDefaultCoordinateOverlayState(),
+      imageSize: 1,
+      backgroundImageData: null,
+      imageTransform: createDefaultImageTransform(),
+      backgroundOutsideLayerOrder: 1,
+      setCoordinateOverlayState(state) {
+        this.coordinateOverlayState = JSON.parse(JSON.stringify(state));
+      }
+    },
+    pageBackgrounds: {},
+    pages: [],
+    currentPage: 1,
+    canvas: { width: 1280, height: 720 },
+    ctx: {
+      getImageData() {
+        return { blank: true };
+      }
+    },
+    async applySerializedPageScenes() {},
+    loadPage(pageNumber) {
+      this.currentPage = pageNumber;
+    },
+    updateUI() {},
+    updateZoomUI() {},
+    applyZoom() {},
+    updatePaginationUI() {},
+    syncSettingsUI() {},
+    setTool() {}
+  };
+
+  const restored = await runtime.restoreSession(board);
+
+  assert.equal(restored, true, 'restore should still succeed when sync snapshot storage is unavailable');
+  assert.equal(board.backgroundManager.backgroundImageData, 'data:image/png;base64,recovered');
+  assert.deepEqual(
+    toPlainObject(board.backgroundManager.imageTransform),
+    {
+      x: 32,
+      y: 48,
+      width: 240,
+      height: 135,
+      rotation: 10,
+      scale: 1,
+      flipHorizontal: false,
+      flipVertical: true
+    }
+  );
+}
+
 async function testClearSessionDataDropsPersistedCanvasStateAndResetsRuntimeState() {
   const syncKey = 'aboardSyncSessionSnapshot';
   const localStorage = createStorageStub({
@@ -477,10 +604,118 @@ async function testClearSessionDataDropsPersistedCanvasStateAndResetsRuntimeStat
   assert.equal(sessionStorage.getItem('backgroundImageData'), null);
 }
 
+async function testClearSessionDataStillClearsSessionStorageWhenLocalStorageRemoveIsBlocked() {
+  const syncKey = 'aboardSyncSessionSnapshot';
+  const localStorage = createBlockedStorageStub({
+    backgroundImageData: 'data:image/png;base64,stale',
+    imageTransform: '{"x":12,"y":24,"width":300,"height":180}',
+    [syncKey]: '{"timestamp":1}'
+  }, ['removeItem']);
+  const sessionStorage = createStorageStub({
+    backgroundImageData: 'data:image/png;base64,stale',
+    imageTransform: '{"x":12,"y":24,"width":300,"height":180}',
+    [syncKey]: '{"timestamp":1}',
+    aboardPlannedUpdateReload: '{"reason":"update"}'
+  });
+  const runtime = loadSessionRuntime(localStorage, sessionStorage);
+
+  const board = {
+    syncSessionSnapshotKey: syncKey,
+    storageManager: {
+      async clearSession() {},
+      clearSessionSizeEstimate() {}
+    },
+    getCacheKeyGroups() {
+      return {
+        canvasKeys: new Set([
+          'backgroundImageData',
+          'imageTransform'
+        ])
+      };
+    },
+    pageBackgrounds: {
+      1: { backgroundPattern: 'image' }
+    },
+    pageScenes: {
+      1: { strokes: [1] }
+    },
+    uploadedImages: [{ id: 'img-1' }],
+    currentPage: 2,
+    pages: [{ existing: true }],
+    canvas: { width: 1280, height: 720 },
+    ctx: {
+      clearRect() {},
+      getImageData() {
+        return { blank: true };
+      }
+    },
+    updateUploadedImagesButtons() {},
+    updateBackgroundUI() {},
+    updatePaginationUI() {},
+    imageControls: {
+      resetConfirmation() {}
+    },
+    backgroundManager: {
+      backgroundColor: '#112233',
+      backgroundPattern: 'image',
+      bgOpacity: 0.2,
+      patternIntensity: 0.8,
+      patternDensity: 1.4,
+      backgroundImageData: 'data:image/png;base64,stale',
+      imageSize: 1.8,
+      coordinateOriginX: 10,
+      coordinateOriginY: 20,
+      coordinateOverlayState: createDefaultCoordinateOverlayState(),
+      imageTransform: {
+        x: 12,
+        y: 24,
+        width: 300,
+        height: 180,
+        rotation: 30,
+        scale: 1,
+        flipHorizontal: true,
+        flipVertical: false
+      },
+      gifLoopCount: 5,
+      backgroundOutsideLayerOrder: 9,
+      getDefaultCoordinateOverlayState() {
+        return createDefaultCoordinateOverlayState();
+      },
+      setCoordinateOverlayState(state) {
+        this.coordinateOverlayState = JSON.parse(JSON.stringify(state));
+      },
+      clearBackgroundImage() {
+        this.backgroundImageData = null;
+        this.imageTransform = createDefaultImageTransform();
+        this.backgroundPattern = 'blank';
+        this.backgroundOutsideLayerOrder = 1;
+      },
+      drawBackground() {},
+      emitBackgroundUiState() {}
+    },
+    hasUnresolvedRecoveryData: true
+  };
+
+  await runtime.clearSessionData(board);
+
+  assert.equal(
+    sessionStorage.getItem('backgroundImageData'),
+    null,
+    'session fallback cleanup should still clear sessionStorage keys when localStorage removal is blocked'
+  );
+  assert.equal(sessionStorage.getItem('imageTransform'), null);
+  assert.equal(sessionStorage.getItem(syncKey), null);
+  assert.equal(sessionStorage.getItem('aboardPlannedUpdateReload'), null);
+  assert.equal(board.hasUnresolvedRecoveryData, false);
+  assert.equal(board.currentPage, 1);
+}
+
 (async function main() {
   await testRestoreSessionRehydratesLegacyImageTransformWithoutPageBackgrounds();
   await testRestoreSessionClearsPausedGifRuntimeState();
   await testClearSessionDataDropsPersistedCanvasStateAndResetsRuntimeState();
+  await testRestoreSessionFallsBackWhenSyncSnapshotStorageIsBlocked();
+  await testClearSessionDataStillClearsSessionStorageWhenLocalStorageRemoveIsBlocked();
   console.log('session-clear-data-canvas-state.test: all assertions passed');
 })().catch((error) => {
   console.error(error);

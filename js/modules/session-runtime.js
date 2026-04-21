@@ -3,6 +3,25 @@
 
 const SESSION_RUNTIME_PLANNED_UPDATE_RELOAD_KEY = 'aboardPlannedUpdateReload';
 
+function safeSessionRuntimeStorageGetItem(storage, key, storageLabel = 'storage') {
+        try {
+            return storage?.getItem?.(key) ?? null;
+        } catch (error) {
+            console.warn(`Failed to read ${storageLabel} key "${key}":`, error);
+            return null;
+        }
+}
+
+function safeSessionRuntimeStorageRemoveItem(storage, key, storageLabel = 'storage') {
+        try {
+            storage?.removeItem?.(key);
+            return true;
+        } catch (error) {
+            console.warn(`Failed to remove ${storageLabel} key "${key}":`, error);
+            return false;
+        }
+}
+
 function getDefaultCoordinateOverlayState(backgroundManager) {
         if (typeof backgroundManager?.getDefaultCoordinateOverlayState === 'function') {
             return backgroundManager.getDefaultCoordinateOverlayState();
@@ -120,10 +139,16 @@ function getCanvasStateStorageKeys(board) {
 function clearCanvasStateStorage(board) {
         const canvasKeys = getCanvasStateStorageKeys(board);
         canvasKeys.forEach((key) => {
-            localStorage.removeItem(key);
-            if (typeof sessionStorage !== 'undefined') {
-                sessionStorage.removeItem(key);
-            }
+            safeSessionRuntimeStorageRemoveItem(
+                typeof localStorage !== 'undefined' ? localStorage : null,
+                key,
+                'localStorage'
+            );
+            safeSessionRuntimeStorageRemoveItem(
+                typeof sessionStorage !== 'undefined' ? sessionStorage : null,
+                key,
+                'sessionStorage'
+            );
         });
 }
 
@@ -270,7 +295,11 @@ async function restoreSession() {
             let syncSnapshot = null;
             let shouldMergeSyncSnapshot = false;
 
-            const rawSnapshot = localStorage.getItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot');
+            const rawSnapshot = safeSessionRuntimeStorageGetItem(
+                typeof localStorage !== 'undefined' ? localStorage : null,
+                this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot',
+                'localStorage'
+            );
             if (rawSnapshot) {
                 try {
                     syncSnapshot = JSON.parse(rawSnapshot);

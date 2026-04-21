@@ -5,6 +5,21 @@ function getElement(id) {
     return document.getElementById(id);
 }
 
+function persistBoardViewState(board, options = {}) {
+    if (typeof board?.drawingEngine?.persistViewState === 'function') {
+        board.drawingEngine.persistViewState(options);
+        return;
+    }
+
+    try {
+        localStorage.setItem('canvasScale', board.drawingEngine.canvasScale);
+        localStorage.setItem('panOffsetX', board.drawingEngine.panOffset.x);
+        localStorage.setItem('panOffsetY', board.drawingEngine.panOffset.y);
+    } catch (error) {
+        console.warn('Failed to persist view controls state to localStorage:', error);
+    }
+}
+
 function handleDoubleTap(touch) {
     const currentScale = this.drawingEngine.canvasScale;
     const newScale = Math.abs(currentScale - 1.0) > 0.1 ? 1.0 : 2.0;
@@ -43,9 +58,7 @@ function zoomToPoint(clientX, clientY, newScale, animate = false) {
         this.applyZoom(false);
     }
 
-    localStorage.setItem('canvasScale', newScale);
-    localStorage.setItem('panOffsetX', this.drawingEngine.panOffset.x);
-    localStorage.setItem('panOffsetY', this.drawingEngine.panOffset.y);
+    persistBoardViewState(this, { immediate: true });
 }
 
 function zoomIn() {
@@ -54,7 +67,7 @@ function zoomIn() {
     this.drawingEngine.canvasScale = newScale;
     this.updateZoomUI();
     this.applyZoom(false);
-    localStorage.setItem('canvasScale', newScale);
+    persistBoardViewState(this, { immediate: true });
 }
 
 function zoomOut() {
@@ -63,7 +76,7 @@ function zoomOut() {
     this.drawingEngine.canvasScale = newScale;
     this.updateZoomUI();
     this.applyZoom(false);
-    localStorage.setItem('canvasScale', newScale);
+    persistBoardViewState(this, { immediate: true });
 }
 
 function setZoom(value) {
@@ -77,7 +90,7 @@ function setZoom(value) {
     this.drawingEngine.canvasScale = newScale;
     this.updateZoomUI();
     this.applyZoom(false);
-    localStorage.setItem('canvasScale', newScale);
+    persistBoardViewState(this, { immediate: true });
 }
 
 function applyZoom(updateConfigScale = true) {
@@ -143,7 +156,7 @@ function updateMaxCanvasScale() {
             this.drawingEngine.canvasScale = this.MAX_CANVAS_SCALE;
             this.updateZoomUI();
             this.applyZoom(false);
-            localStorage.setItem('canvasScale', this.drawingEngine.canvasScale);
+            persistBoardViewState(this, { immediate: true });
         }
     }
 }

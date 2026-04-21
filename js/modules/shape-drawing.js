@@ -2,6 +2,25 @@
 // Handles drawing shapes (line, rectangle, circle, etc.) on the canvas
 // Uses the same properties as the pen tool (color, size, pen type)
 
+function safeShapeDrawingStorageGetItem(key) {
+    try {
+        return localStorage.getItem(key);
+    } catch (error) {
+        console.warn(`Failed to read shape drawing localStorage key "${key}":`, error);
+        return null;
+    }
+}
+
+function safeShapeDrawingStorageSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to write shape drawing localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
 class ShapeDrawingManager {
     constructor(canvas, ctx, drawingEngine, historyManager) {
         this.canvas = canvas;
@@ -51,21 +70,21 @@ class ShapeDrawingManager {
     }
     
     loadSettings() {
-        this.lineStyle = localStorage.getItem('shapeLineStyle') || 'solid';
-        this.dashDensity = parseInt(localStorage.getItem('shapeDashDensity'), 10) || 10;
-        this.waveDensity = parseInt(localStorage.getItem('shapeWaveDensity'), 10) || 10;
-        this.multiLineCount = parseInt(localStorage.getItem('shapeMultiLineCount'), 10) || 2;
-        this.multiLineSpacing = parseInt(localStorage.getItem('shapeMultiLineSpacing'), 10) || 4;
-        this.arrowSize = parseInt(localStorage.getItem('shapeArrowSize'), 10) || this.ARROW_SIZE_DEFAULT;
+        this.lineStyle = safeShapeDrawingStorageGetItem('shapeLineStyle') || 'solid';
+        this.dashDensity = parseInt(safeShapeDrawingStorageGetItem('shapeDashDensity'), 10) || 10;
+        this.waveDensity = parseInt(safeShapeDrawingStorageGetItem('shapeWaveDensity'), 10) || 10;
+        this.multiLineCount = parseInt(safeShapeDrawingStorageGetItem('shapeMultiLineCount'), 10) || 2;
+        this.multiLineSpacing = parseInt(safeShapeDrawingStorageGetItem('shapeMultiLineSpacing'), 10) || 4;
+        this.arrowSize = parseInt(safeShapeDrawingStorageGetItem('shapeArrowSize'), 10) || this.ARROW_SIZE_DEFAULT;
     }
     
     saveSettings() {
-        localStorage.setItem('shapeLineStyle', this.lineStyle);
-        localStorage.setItem('shapeDashDensity', this.dashDensity);
-        localStorage.setItem('shapeWaveDensity', this.waveDensity);
-        localStorage.setItem('shapeMultiLineCount', this.multiLineCount);
-        localStorage.setItem('shapeMultiLineSpacing', this.multiLineSpacing);
-        localStorage.setItem('shapeArrowSize', this.arrowSize);
+        safeShapeDrawingStorageSetItem('shapeLineStyle', this.lineStyle);
+        safeShapeDrawingStorageSetItem('shapeDashDensity', this.dashDensity);
+        safeShapeDrawingStorageSetItem('shapeWaveDensity', this.waveDensity);
+        safeShapeDrawingStorageSetItem('shapeMultiLineCount', this.multiLineCount);
+        safeShapeDrawingStorageSetItem('shapeMultiLineSpacing', this.multiLineSpacing);
+        safeShapeDrawingStorageSetItem('shapeArrowSize', this.arrowSize);
     }
     
     setArrowSize(size) {

@@ -8,10 +8,34 @@ const DEFAULT_MIN_FIT_SCALE = 0.1;
 const DEFAULT_TARGET_COVERAGE = 0.7;
 const DEFAULT_MIN_DEFAULT_SCALE = 0.9;
 
+function safeCanvasViewStorageGetItem(key) {
+        try {
+                return localStorage.getItem(key);
+        } catch (error) {
+                console.warn(`Failed to read canvas view localStorage key "${key}":`, error);
+                return null;
+        }
+}
+
+function persistBoardViewState(board, options = {}) {
+        if (typeof board?.drawingEngine?.persistViewState === 'function') {
+                board.drawingEngine.persistViewState(options);
+                return;
+        }
+
+        try {
+                localStorage.setItem('canvasScale', board.drawingEngine.canvasScale);
+                localStorage.setItem('panOffsetX', board.drawingEngine.panOffset.x);
+                localStorage.setItem('panOffsetY', board.drawingEngine.panOffset.y);
+        } catch (error) {
+                console.warn('Failed to persist canvas view state to localStorage:', error);
+        }
+}
+
 function initializeCanvasView() {
         // On startup or refresh, set canvas to a larger default scale and center it
         // Only apply if no saved scale exists
-        const savedScale = localStorage.getItem('canvasScale');
+        const savedScale = safeCanvasViewStorageGetItem('canvasScale');
         // Always calculate fit scale for applyZoom and default coverage logic.
         this.canvasFitScale = this.calculateCanvasFitScale();
         if (!savedScale) {
@@ -22,7 +46,6 @@ function initializeCanvasView() {
             const boundedScale = Math.max(DEFAULT_MIN_DEFAULT_SCALE, scaleForCoverage);
             const initialScale = Number(Math.min(this.MAX_CANVAS_SCALE, boundedScale).toFixed(4));
             this.drawingEngine.canvasScale = initialScale;
-            localStorage.setItem('canvasScale', initialScale);
         }
         
         // Always center the canvas on startup/refresh
@@ -39,9 +62,8 @@ function centerCanvas() {
         this.drawingEngine.panOffset.x = 0;
         this.drawingEngine.panOffset.y = 0;
         
-        // Save to localStorage
-        localStorage.setItem('panOffsetX', this.drawingEngine.panOffset.x);
-        localStorage.setItem('panOffsetY', this.drawingEngine.panOffset.y);
+        // Persist the centered view state when storage is available.
+        persistBoardViewState(this, { immediate: true });
         
         // Apply the transform
         this.applyPanTransform();

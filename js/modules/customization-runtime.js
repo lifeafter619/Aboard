@@ -1,13 +1,32 @@
 // Extracted toolbar/control customization runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+function safeCustomizationStorageGetItem(key, label = 'customization') {
+        try {
+                return localStorage.getItem(key);
+        } catch (error) {
+                console.warn(`Failed to read ${label} localStorage key "${key}":`, error);
+                return null;
+        }
+}
+
+function safeCustomizationStorageSetItem(key, value, label = 'customization') {
+        try {
+                localStorage.setItem(key, value);
+                return true;
+        } catch (error) {
+                console.warn(`Failed to write ${label} localStorage key "${key}":`, error);
+                return false;
+        }
+}
+
 function initToolbarCustomization() {
         const toolbarList = document.getElementById('toolbar-customization-list');
         if (!toolbarList) return;
         
         // Load saved settings
-        const savedToolbarOrder = localStorage.getItem('toolbarOrder');
-        const savedToolbarVisibility = localStorage.getItem('toolbarVisibility');
+        const savedToolbarOrder = safeCustomizationStorageGetItem('toolbarOrder', 'toolbar');
+        const savedToolbarVisibility = safeCustomizationStorageGetItem('toolbarVisibility', 'toolbar');
         
         if (savedToolbarOrder) {
             try {
@@ -86,7 +105,7 @@ function reorderToolbarItems(container, order) {
 function saveToolbarOrder() {
         const items = document.querySelectorAll('#toolbar-customization-list .toolbar-item');
         const order = Array.from(items).map(item => item.dataset.tool);
-        localStorage.setItem('toolbarOrder', JSON.stringify(order));
+        safeCustomizationStorageSetItem('toolbarOrder', JSON.stringify(order), 'toolbar');
     
 }
 
@@ -99,7 +118,7 @@ function saveToolbarVisibility() {
                 visibility[item.dataset.tool] = checkbox.checked;
             }
         });
-        localStorage.setItem('toolbarVisibility', JSON.stringify(visibility));
+        safeCustomizationStorageSetItem('toolbarVisibility', JSON.stringify(visibility), 'toolbar');
     
 }
 
@@ -119,7 +138,7 @@ function getToolToButtonIdMap() {
 }
 
 function applyToolbarOrder() {
-        const savedOrder = localStorage.getItem('toolbarOrder');
+        const savedOrder = safeCustomizationStorageGetItem('toolbarOrder', 'toolbar');
         if (!savedOrder) return;
         
         try {
@@ -144,7 +163,7 @@ function applyToolbarOrder() {
 
 function applyToolbarVisibility(visibility) {
         if (!visibility) {
-            const savedVisibility = localStorage.getItem('toolbarVisibility');
+            const savedVisibility = safeCustomizationStorageGetItem('toolbarVisibility', 'toolbar');
             if (!savedVisibility) return;
             try {
                 visibility = JSON.parse(savedVisibility);
@@ -168,16 +187,16 @@ function applyToolbarVisibility(visibility) {
 function initControlButtonSettings() {
         // Load saved settings
         const controlSettings = {
-            zoom: localStorage.getItem('controlShowZoom') !== 'false',
-            pagination: localStorage.getItem('controlShowPagination') !== 'false',
-            time: localStorage.getItem('controlShowTime') !== 'false',
-            fullscreen: localStorage.getItem('controlShowFullscreen') !== 'false',
-            import: localStorage.getItem('controlShowImport') !== 'false',
-            export: localStorage.getItem('controlShowExport') !== 'false'
+            zoom: safeCustomizationStorageGetItem('controlShowZoom', 'control button') !== 'false',
+            pagination: safeCustomizationStorageGetItem('controlShowPagination', 'control button') !== 'false',
+            time: safeCustomizationStorageGetItem('controlShowTime', 'control button') !== 'false',
+            fullscreen: safeCustomizationStorageGetItem('controlShowFullscreen', 'control button') !== 'false',
+            import: safeCustomizationStorageGetItem('controlShowImport', 'control button') !== 'false',
+            export: safeCustomizationStorageGetItem('controlShowExport', 'control button') !== 'false'
         };
         
         // Load saved order
-        const savedOrder = localStorage.getItem('controlButtonOrder');
+        const savedOrder = safeCustomizationStorageGetItem('controlButtonOrder', 'control button');
         if (savedOrder) {
             try {
                 const order = JSON.parse(savedOrder);
@@ -209,42 +228,42 @@ function initControlButtonSettings() {
         // Add event listeners with null checks
         if (zoomCheckbox) {
             zoomCheckbox.addEventListener('change', (e) => {
-                localStorage.setItem('controlShowZoom', e.target.checked);
+                safeCustomizationStorageSetItem('controlShowZoom', e.target.checked, 'control button');
                 this.applyControlButtonVisibility();
             });
         }
         
         if (paginationCheckbox) {
             paginationCheckbox.addEventListener('change', (e) => {
-                localStorage.setItem('controlShowPagination', e.target.checked);
+                safeCustomizationStorageSetItem('controlShowPagination', e.target.checked, 'control button');
                 this.applyControlButtonVisibility();
             });
         }
         
         if (timeCheckbox) {
             timeCheckbox.addEventListener('change', (e) => {
-                localStorage.setItem('controlShowTime', e.target.checked);
+                safeCustomizationStorageSetItem('controlShowTime', e.target.checked, 'control button');
                 this.applyControlButtonVisibility();
             });
         }
         
         if (fullscreenCheckbox) {
             fullscreenCheckbox.addEventListener('change', (e) => {
-                localStorage.setItem('controlShowFullscreen', e.target.checked);
+                safeCustomizationStorageSetItem('controlShowFullscreen', e.target.checked, 'control button');
                 this.applyControlButtonVisibility();
             });
         }
         
         if (importCheckbox) {
             importCheckbox.addEventListener('change', (e) => {
-                localStorage.setItem('controlShowImport', e.target.checked);
+                safeCustomizationStorageSetItem('controlShowImport', e.target.checked, 'control button');
                 this.applyControlButtonVisibility();
             });
         }
         
         if (exportCheckbox) {
             exportCheckbox.addEventListener('change', (e) => {
-                localStorage.setItem('controlShowExport', e.target.checked);
+                safeCustomizationStorageSetItem('controlShowExport', e.target.checked, 'control button');
                 this.applyControlButtonVisibility();
             });
         }
@@ -322,7 +341,7 @@ function saveControlButtonOrder() {
         const order = [...list.querySelectorAll('.control-button-item')]
             .map(item => item.dataset.control)
             .filter(control => control !== undefined);
-        localStorage.setItem('controlButtonOrder', JSON.stringify(order));
+        safeCustomizationStorageSetItem('controlButtonOrder', JSON.stringify(order), 'control button');
         
         // Apply the order to actual control buttons
         this.reorderControlButtons(order);
@@ -385,12 +404,12 @@ function reorderControlButtons(order) {
 function applyControlButtonVisibility(settings) {
         if (!settings) {
             settings = {
-                zoom: localStorage.getItem('controlShowZoom') !== 'false',
-                pagination: localStorage.getItem('controlShowPagination') !== 'false',
-                time: localStorage.getItem('controlShowTime') !== 'false',
-                fullscreen: localStorage.getItem('controlShowFullscreen') !== 'false',
-                import: localStorage.getItem('controlShowImport') !== 'false',
-                export: localStorage.getItem('controlShowExport') !== 'false'
+                zoom: safeCustomizationStorageGetItem('controlShowZoom', 'control button') !== 'false',
+                pagination: safeCustomizationStorageGetItem('controlShowPagination', 'control button') !== 'false',
+                time: safeCustomizationStorageGetItem('controlShowTime', 'control button') !== 'false',
+                fullscreen: safeCustomizationStorageGetItem('controlShowFullscreen', 'control button') !== 'false',
+                import: safeCustomizationStorageGetItem('controlShowImport', 'control button') !== 'false',
+                export: safeCustomizationStorageGetItem('controlShowExport', 'control button') !== 'false'
             };
         }
         

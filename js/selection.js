@@ -1786,6 +1786,9 @@ class SelectionManager {
             this.isDragging = false;
             this.hasUnsavedChanges = true;
             this.controlBox.style.cursor = 'move';
+            if (this.selectionType === 'background') {
+                this.backgroundManager?.flushPendingPersistence?.();
+            }
             
             // Clear original position markers for strokes
             if (this.selectionType === 'stroke' && this.selectedIndex !== null) {
@@ -2035,6 +2038,9 @@ class SelectionManager {
             this.hasUnsavedChanges = true;
             this.resizeHandle = null;
             this.resizeStartBounds = null;
+            if (this.selectionType === 'background') {
+                this.backgroundManager?.flushPendingPersistence?.();
+            }
             
             if (this.selectionType === 'stroke' && this.selectedIndex !== null) {
                 const stroke = this.drawingEngine.strokes[this.selectedIndex];
@@ -2279,6 +2285,9 @@ class SelectionManager {
         if (this.isRotating) {
             this.isRotating = false;
             this.hasUnsavedChanges = true;
+            if (this.selectionType === 'background') {
+                this.backgroundManager?.flushPendingPersistence?.();
+            }
             
             if (this.selectionType === 'stroke' && this.selectedIndex !== null) {
                 const stroke = this.drawingEngine.strokes[this.selectedIndex];

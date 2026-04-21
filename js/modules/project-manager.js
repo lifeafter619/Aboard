@@ -7,6 +7,16 @@ const PROJECT_PACKAGE_SCHEMA_VERSION = 1;
 const ZIP_LIBRARY_SCRIPT = 'js/libs/fflate.min.js';
 const LEGACY_PROJECT_COMPAT_SCRIPT = 'js/modules/project-legacy-compat.js';
 
+function safeProjectStorageSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to write project localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
 function getDefaultCoordinateOverlayState(backgroundManager) {
     if (typeof backgroundManager?.getDefaultCoordinateOverlayState === 'function') {
         return backgroundManager.getDefaultCoordinateOverlayState();
@@ -939,11 +949,11 @@ class ProjectManager {
             ? this.cloneSerializable(uploadedImages)
             : [];
         this.drawingBoard.updateUploadedImagesButtons?.();
-        localStorage.setItem('uploadedImages', JSON.stringify(this.drawingBoard.uploadedImages));
+        safeProjectStorageSetItem('uploadedImages', JSON.stringify(this.drawingBoard.uploadedImages));
 
         // 3. Restore backgrounds and scenes
         this.drawingBoard.pageBackgrounds = this.cloneSerializable(pageBackgrounds || {});
-        localStorage.setItem('pageBackgrounds', JSON.stringify(this.drawingBoard.pageBackgrounds));
+        safeProjectStorageSetItem('pageBackgrounds', JSON.stringify(this.drawingBoard.pageBackgrounds));
         await this.applyGlobalBackground(globalBackground || null);
         await this.drawingBoard.applySerializedPageScenes(pageScenes || {});
 

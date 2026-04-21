@@ -23,6 +23,35 @@ const UPDATE_USER_CHOICES = Object.freeze({
     IMMEDIATE: 'immediate'
 });
 
+function safePwaStorageGetItem(key) {
+    try {
+        return localStorage.getItem(key);
+    } catch (error) {
+        console.warn(`Failed to read PWA localStorage key "${key}":`, error);
+        return null;
+    }
+}
+
+function safePwaStorageSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to write PWA localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
+function safePwaStorageRemoveItem(key) {
+    try {
+        localStorage.removeItem(key);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to remove PWA localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
 function splitVersionParts(version) {
     const normalized = String(version || '').trim();
     if (!SEMVER_PATTERN.test(normalized)) {
@@ -147,7 +176,7 @@ class PWAManager {
         this.serviceWorkerRegistration = null;
         this.serviceWorkerRegistrationPromise = null;
         this.pendingUpdateWorker = null;
-        this.updatePreference = this.normalizeUpdatePreference(localStorage.getItem(UPDATE_PREFERENCE_KEY));
+        this.updatePreference = this.normalizeUpdatePreference(safePwaStorageGetItem(UPDATE_PREFERENCE_KEY));
         this.startupUpdateDeferredForSession = false;
         this.autoActivateUpdates = false;
         this.autoActivateResetTimer = null;
@@ -462,13 +491,13 @@ class PWAManager {
     }
 
     getUpdatePreference() {
-        this.updatePreference = this.normalizeUpdatePreference(localStorage.getItem(UPDATE_PREFERENCE_KEY));
+        this.updatePreference = this.normalizeUpdatePreference(safePwaStorageGetItem(UPDATE_PREFERENCE_KEY));
         return this.updatePreference;
     }
 
     setUpdatePreference(value) {
         this.updatePreference = this.normalizeUpdatePreference(value);
-        localStorage.setItem(UPDATE_PREFERENCE_KEY, this.updatePreference);
+        safePwaStorageSetItem(UPDATE_PREFERENCE_KEY, this.updatePreference);
         return this.updatePreference;
     }
 
@@ -501,12 +530,12 @@ class PWAManager {
     }
 
     writePlannedUpdateIntent(intent) {
-        localStorage.setItem(PWA_PLANNED_UPDATE_RELOAD_KEY, JSON.stringify(intent));
+        safePwaStorageSetItem(PWA_PLANNED_UPDATE_RELOAD_KEY, JSON.stringify(intent));
         return intent;
     }
 
     clearPlannedUpdateIntent() {
-        localStorage.removeItem(PWA_PLANNED_UPDATE_RELOAD_KEY);
+        safePwaStorageRemoveItem(PWA_PLANNED_UPDATE_RELOAD_KEY);
     }
 
     getDrawingBoard() {

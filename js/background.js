@@ -1,24 +1,55 @@
 // Background Management Module
 // Handles background colors, patterns, and rendering
 
+function safeBackgroundStorageGetItem(key) {
+    try {
+        return localStorage.getItem(key);
+    } catch (error) {
+        console.warn(`Failed to read background localStorage key "${key}":`, error);
+        return null;
+    }
+}
+
+function safeBackgroundStorageSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to write background localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
+function safeBackgroundStorageRemoveItem(key) {
+    try {
+        localStorage.removeItem(key);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to remove background localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
+const BACKGROUND_STORAGE_REMOVE = 'remove';
+
 class BackgroundManager {
     constructor(bgCanvas, bgCtx) {
         this.bgCanvas = bgCanvas;
         this.bgCtx = bgCtx;
         
-        this.backgroundColor = localStorage.getItem('backgroundColor') || '#ffffff';
-        this.backgroundPattern = localStorage.getItem('backgroundPattern') || 'blank';
-        const savedBgOpacity = parseFloat(localStorage.getItem('bgOpacity'));
-        const savedPatternIntensity = parseFloat(localStorage.getItem('patternIntensity'));
-        const savedPatternDensity = parseFloat(localStorage.getItem('patternDensity'));
-        const savedImageSize = parseFloat(localStorage.getItem('imageSize'));
-        const savedCoordinateOriginX = parseFloat(localStorage.getItem('coordinateOriginX'));
-        const savedCoordinateOriginY = parseFloat(localStorage.getItem('coordinateOriginY'));
+        this.backgroundColor = safeBackgroundStorageGetItem('backgroundColor') || '#ffffff';
+        this.backgroundPattern = safeBackgroundStorageGetItem('backgroundPattern') || 'blank';
+        const savedBgOpacity = parseFloat(safeBackgroundStorageGetItem('bgOpacity'));
+        const savedPatternIntensity = parseFloat(safeBackgroundStorageGetItem('patternIntensity'));
+        const savedPatternDensity = parseFloat(safeBackgroundStorageGetItem('patternDensity'));
+        const savedImageSize = parseFloat(safeBackgroundStorageGetItem('imageSize'));
+        const savedCoordinateOriginX = parseFloat(safeBackgroundStorageGetItem('coordinateOriginX'));
+        const savedCoordinateOriginY = parseFloat(safeBackgroundStorageGetItem('coordinateOriginY'));
         this.bgOpacity = Number.isNaN(savedBgOpacity) ? 1.0 : savedBgOpacity;
         this.patternIntensity = Number.isNaN(savedPatternIntensity) ? 0.5 : savedPatternIntensity;
         this.patternDensity = Number.isNaN(savedPatternDensity) ? 1.0 : savedPatternDensity;
         this.backgroundImage = null;
-        this.backgroundImageData = localStorage.getItem('backgroundImageData') || null;
+        this.backgroundImageData = safeBackgroundStorageGetItem('backgroundImageData') || null;
         this.imageSize = Number.isNaN(savedImageSize) ? 1.0 : savedImageSize;
         this.isImagePaused = false; // State for GIF playback control
         this.imageStaticData = null; // Store static frame for paused GIF
@@ -41,7 +72,7 @@ class BackgroundManager {
         this.backgroundWasOutsideCanvas = false;
         
         // Load saved transform if exists
-        const savedTransform = localStorage.getItem('imageTransform');
+        const savedTransform = safeBackgroundStorageGetItem('imageTransform');
         if (savedTransform) {
             try {
             this.imageTransform = JSON.parse(savedTransform);
@@ -84,7 +115,7 @@ class BackgroundManager {
         this.backgroundPatternSvg = null;
         let savedCoordinateOverlayState = null;
         try {
-            savedCoordinateOverlayState = JSON.parse(localStorage.getItem('coordinateOverlayState') || 'null');
+            savedCoordinateOverlayState = JSON.parse(safeBackgroundStorageGetItem('coordinateOverlayState') || 'null');
         } catch (error) {
             console.warn('Failed to parse coordinate overlay state, using defaults:', error);
         }
@@ -105,6 +136,9 @@ class BackgroundManager {
             gifSettingsDisplay: null
         };
         this.backgroundUiStateCache = null;
+        this.pendingBackgroundStorageWrites = new Map();
+        this.backgroundStorageFlushTimer = null;
+        this.backgroundStorageFlushDelayMs = 80;
     }
 
     setStyleIfChanged(element, property, value, cacheKey = property) {
@@ -128,6 +162,59 @@ class BackgroundManager {
         this.backgroundUiStateCache = nextState;
         const detail = JSON.parse(nextState);
         window.dispatchEvent(new CustomEvent('backgroundMediaStateChanged', { detail }));
+    }
+
+    queueBackgroundStorageWrite(key, value) {
+        this.pendingBackgroundStorageWrites.set(key, { value });
+        this.scheduleBackgroundStorageFlush();
+    }
+
+    queueBackgroundStorageRemoval(key) {
+        this.pendingBackgroundStorageWrites.set(key, { type: BACKGROUND_STORAGE_REMOVE });
+        this.scheduleBackgroundStorageFlush();
+    }
+
+    scheduleBackgroundStorageFlush() {
+        if (this.backgroundStorageFlushTimer !== null) {
+            return;
+        }
+
+        if (typeof setTimeout !== 'function') {
+            this.flushPendingBackgroundStorageWrites();
+            return;
+        }
+
+        this.backgroundStorageFlushTimer = setTimeout(() => {
+            this.backgroundStorageFlushTimer = null;
+            this.flushPendingBackgroundStorageWrites();
+        }, this.backgroundStorageFlushDelayMs);
+    }
+
+    flushPendingBackgroundStorageWrites() {
+        if (this.backgroundStorageFlushTimer !== null && typeof clearTimeout === 'function') {
+            clearTimeout(this.backgroundStorageFlushTimer);
+            this.backgroundStorageFlushTimer = null;
+        }
+
+        if (!(this.pendingBackgroundStorageWrites instanceof Map) || this.pendingBackgroundStorageWrites.size === 0) {
+            return;
+        }
+
+        const pendingWrites = Array.from(this.pendingBackgroundStorageWrites.entries());
+        this.pendingBackgroundStorageWrites.clear();
+
+        pendingWrites.forEach(([key, operation]) => {
+            if (operation?.type === BACKGROUND_STORAGE_REMOVE) {
+                safeBackgroundStorageRemoveItem(key);
+                return;
+            }
+
+            safeBackgroundStorageSetItem(key, operation?.value);
+        });
+    }
+
+    flushPendingPersistence() {
+        this.flushPendingBackgroundStorageWrites();
     }
 
     hasBackgroundImage() {
@@ -1272,7 +1359,7 @@ class BackgroundManager {
     }
 
     persistCoordinateOverlayState() {
-        localStorage.setItem('coordinateOverlayState', JSON.stringify(this.coordinateOverlayState));
+        this.queueBackgroundStorageWrite('coordinateOverlayState', JSON.stringify(this.coordinateOverlayState));
     }
 
     getCoordinateOverlayState() {
@@ -2874,32 +2961,32 @@ class BackgroundManager {
     
     setBackgroundColor(color) {
         this.backgroundColor = color;
-        localStorage.setItem('backgroundColor', this.backgroundColor);
+        safeBackgroundStorageSetItem('backgroundColor', this.backgroundColor);
         this.drawBackground();
     }
     
     setBackgroundPattern(pattern) {
         this.backgroundPattern = pattern;
-        localStorage.setItem('backgroundPattern', this.backgroundPattern);
+        safeBackgroundStorageSetItem('backgroundPattern', this.backgroundPattern);
         this.drawBackground();
         this.emitBackgroundUiState();
     }
     
     setOpacity(opacity) {
         this.bgOpacity = opacity;
-        localStorage.setItem('bgOpacity', this.bgOpacity);
+        safeBackgroundStorageSetItem('bgOpacity', this.bgOpacity);
         this.drawBackground();
     }
     
     setPatternIntensity(intensity) {
         this.patternIntensity = intensity;
-        localStorage.setItem('patternIntensity', this.patternIntensity);
+        safeBackgroundStorageSetItem('patternIntensity', this.patternIntensity);
         this.drawBackground();
     }
     
     setPatternDensity(density) {
         this.patternDensity = density;
-        localStorage.setItem('patternDensity', density);
+        safeBackgroundStorageSetItem('patternDensity', density);
         this.drawBackground();
     }
     
@@ -2908,11 +2995,7 @@ class BackgroundManager {
         this.isImagePaused = false;
         this.imageStaticData = null;
         this.currentGifLoop = 0;
-        try {
-            localStorage.setItem('backgroundImageData', imageData);
-        } catch (e) {
-            console.warn('Failed to save background image to localStorage (quota exceeded?):', e);
-        }
+        safeBackgroundStorageSetItem('backgroundImageData', imageData);
         const preserveTransform = this.imageTransform.width > 0 && this.imageTransform.height > 0;
         const existingTransform = preserveTransform ? { ...this.imageTransform } : null;
         
@@ -2991,7 +3074,7 @@ class BackgroundManager {
     setImageSize(size) {
         const previousSize = this.imageSize || 1;
         this.imageSize = size;
-        localStorage.setItem('imageSize', size);
+        this.queueBackgroundStorageWrite('imageSize', size);
         // If transform exists, scale width/height directly so the visual image and control box stay aligned
         if (this.imageTransform.width > 0 && this.imageTransform.height > 0) {
             const factor = previousSize > 0 ? (size / previousSize) : size;
@@ -3002,7 +3085,7 @@ class BackgroundManager {
             this.imageTransform.width = newWidth;
             this.imageTransform.height = newHeight;
             this.imageTransform.scale = 1;
-            localStorage.setItem('imageTransform', JSON.stringify(this.imageTransform));
+            this.queueBackgroundStorageWrite('imageTransform', JSON.stringify(this.imageTransform));
         }
         if (this.backgroundPattern === 'image') {
             this.drawBackground();
@@ -3016,7 +3099,7 @@ class BackgroundManager {
             flipHorizontal: !!transform.flipHorizontal,
             flipVertical: !!transform.flipVertical
         };
-        localStorage.setItem('imageTransform', JSON.stringify(this.imageTransform));
+        this.queueBackgroundStorageWrite('imageTransform', JSON.stringify(this.imageTransform));
         if (this.backgroundPattern === 'image') {
             this.drawBackground();
         }
@@ -3042,15 +3125,16 @@ class BackgroundManager {
         this.backgroundWasOutsideCanvas = false;
         this.backgroundOutsideLayerOrder = 1;
 
-        localStorage.removeItem('backgroundImageData');
-        localStorage.removeItem('imageTransform');
-        localStorage.removeItem('backgroundImageConfirmed');
+        this.queueBackgroundStorageRemoval('backgroundImageData');
+        this.queueBackgroundStorageRemoval('imageTransform');
+        this.queueBackgroundStorageRemoval('backgroundImageConfirmed');
 
         if (this.backgroundPattern === 'image') {
             this.backgroundPattern = 'blank';
-            localStorage.setItem('backgroundPattern', this.backgroundPattern);
+            this.queueBackgroundStorageWrite('backgroundPattern', this.backgroundPattern);
         }
 
+        this.flushPendingBackgroundStorageWrites();
         this.drawBackground();
         this.emitBackgroundUiState();
     }
@@ -3067,8 +3151,8 @@ class BackgroundManager {
     setCoordinateOrigin(x, y) {
         this.coordinateOriginX = x;
         this.coordinateOriginY = y;
-        localStorage.setItem('coordinateOriginX', x);
-        localStorage.setItem('coordinateOriginY', y);
+        this.queueBackgroundStorageWrite('coordinateOriginX', x);
+        this.queueBackgroundStorageWrite('coordinateOriginY', y);
         if (this.supportsMovableOrigin()) {
             this.drawBackground();
         }

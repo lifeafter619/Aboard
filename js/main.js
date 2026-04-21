@@ -47,6 +47,15 @@ const renderQualityRuntime = createWindowRuntimeProxy('AboardRenderQualityRuntim
 const boardHelpersRuntime = createWindowRuntimeProxy('AboardBoardHelpersRuntime');
 const deferredInitRuntime = createWindowRuntimeProxy('AboardDeferredInitRuntime');
 
+function safeMainStorageGetItem(key) {
+    try {
+        return localStorage.getItem(key);
+    } catch (error) {
+        console.warn(`Failed to read main localStorage key "${key}":`, error);
+        return null;
+    }
+}
+
 class DrawingBoard {
     constructor(options = {}) {
         // Canvas setup
@@ -162,7 +171,7 @@ class DrawingBoard {
         this.pageBackgrounds = {}; // Store background settings per page
         
         // Load saved page backgrounds
-        const savedPageBackgrounds = localStorage.getItem('pageBackgrounds');
+        const savedPageBackgrounds = safeMainStorageGetItem('pageBackgrounds');
         if (savedPageBackgrounds) {
             try {
                 this.pageBackgrounds = JSON.parse(savedPageBackgrounds);

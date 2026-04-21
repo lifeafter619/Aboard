@@ -1,6 +1,25 @@
 // Collapsible Settings Module
 // Handles collapsible sections in settings panels
 
+function safeCollapsibleStorageGetItem(key) {
+    try {
+        return localStorage.getItem(key);
+    } catch (error) {
+        console.warn(`Failed to read collapsed localStorage key "${key}":`, error);
+        return null;
+    }
+}
+
+function safeCollapsibleStorageSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to write collapsed localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
 class CollapsibleManager {
     constructor() {
         this.collapsedState = this.loadCollapsedState();
@@ -8,7 +27,7 @@ class CollapsibleManager {
     }
     
     loadCollapsedState() {
-        const saved = localStorage.getItem('collapsedSections');
+        const saved = safeCollapsibleStorageGetItem('collapsedSections');
         if (saved) {
             try {
                 return JSON.parse(saved);
@@ -20,7 +39,7 @@ class CollapsibleManager {
     }
     
     saveCollapsedState() {
-        localStorage.setItem('collapsedSections', JSON.stringify(this.collapsedState));
+        safeCollapsibleStorageSetItem('collapsedSections', JSON.stringify(this.collapsedState));
     }
     
     initializeCollapsibles() {

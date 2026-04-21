@@ -1,6 +1,21 @@
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+function persistBoardViewState(board, options = {}) {
+        if (typeof board?.drawingEngine?.persistViewState === 'function') {
+                board.drawingEngine.persistViewState(options);
+                return;
+        }
+
+        try {
+                localStorage.setItem('canvasScale', board.drawingEngine.canvasScale);
+                localStorage.setItem('panOffsetX', board.drawingEngine.panOffset.x);
+                localStorage.setItem('panOffsetY', board.drawingEngine.panOffset.y);
+        } catch (error) {
+                console.warn('Failed to persist zoom view state to localStorage:', error);
+        }
+}
+
 function setupCanvasZoom() {
         // Ctrl+scroll to zoom canvas towards mouse pointer
         document.addEventListener('wheel', (e) => {
@@ -54,11 +69,8 @@ function setupCanvasZoom() {
                 this.drawingEngine.canvasScale = newScale;
                 this.updateZoomUI();
                 this.applyZoom(false); // Don't update config-area scale on zoom
-                
-                // Save to localStorage
-                localStorage.setItem('canvasScale', newScale);
-                localStorage.setItem('panOffsetX', this.drawingEngine.panOffset.x);
-                localStorage.setItem('panOffsetY', this.drawingEngine.panOffset.y);
+
+                persistBoardViewState(this);
             }
         }, { passive: false });
     

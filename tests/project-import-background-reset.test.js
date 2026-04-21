@@ -25,6 +25,16 @@ function createLocalStorageStub() {
   };
 }
 
+function createBlockedLocalStorageStub() {
+  const storage = createLocalStorageStub();
+  return {
+    ...storage,
+    setItem() {
+      throw new Error('localStorage blocked');
+    }
+  };
+}
+
 function createDefaultCoordinateOverlayState() {
   return {
     showTicks: true,
@@ -132,8 +142,7 @@ function createBackgroundManagerWithStaleState() {
   };
 }
 
-function loadProjectImportRuntime() {
-  const localStorage = createLocalStorageStub();
+function loadProjectImportRuntime(localStorage = createLocalStorageStub()) {
   const window = {
     safeDeepClone: cloneValue
   };
@@ -494,6 +503,51 @@ async function testPageBackgroundImportNormalizesLegacyScaledImageTransform() {
   );
 }
 
+async function testImportStillRestoresStateWhenLocalStorageIsBlocked() {
+  const { ProjectManager, paginationRuntime } = loadProjectImportRuntime(createBlockedLocalStorageStub());
+  const board = createBoard(paginationRuntime);
+  const manager = new ProjectManager(board);
+  const uploadedImages = [{ id: 'img-1', name: 'Imported image', data: 'data:image/png;base64,imported' }];
+  const pageBackgrounds = {
+    1: {
+      backgroundColor: '#f8fafc',
+      backgroundPattern: 'image',
+      bgOpacity: 1,
+      patternIntensity: 0.5,
+      patternDensity: 1,
+      coordinateOriginX: 0,
+      coordinateOriginY: 0,
+      coordinateOverlayState: createDefaultCoordinateOverlayState(),
+      backgroundImageData: 'data:image/png;base64,imported-page',
+      imageSize: 1,
+      imageTransform: createDefaultImageTransform(),
+      gifLoopCount: 0,
+      backgroundOutsideLayerOrder: 1
+    }
+  };
+
+  await assert.doesNotReject(async () => {
+    await manager.applyImportedProjectState({
+      settings: {},
+      uploadedImages,
+      globalBackground: null,
+      pageBackgrounds,
+      pagesImageData: [{ blank: true }],
+      currentPage: 1,
+      pageCount: 1
+    });
+  }, 'project import should not fail when localStorage writes are blocked');
+
+  assert.deepEqual(board.uploadedImages, uploadedImages);
+  assert.deepEqual(board.pageBackgrounds, pageBackgrounds);
+  assert.equal(board.currentPage, 1);
+  assert.equal(
+    board.backgroundManager.backgroundImageData,
+    'data:image/png;base64,imported-page',
+    'blocked storage should not prevent imported backgrounds from being applied in memory'
+  );
+}
+
 (async function main() {
   await testPageBackgroundImportResetsStaleEnhancedState();
   await testGlobalBackgroundImportResetsStaleEnhancedState();
@@ -501,6 +555,7 @@ async function testPageBackgroundImportNormalizesLegacyScaledImageTransform() {
   await testGlobalBackgroundImportNormalizesLegacyScaledImageTransform();
   await testPageBackgroundImportNormalizesLegacyScaledImageTransform();
   await testGlobalBackgroundImportClearsPausedGifRuntimeState();
+  await testImportStillRestoresStateWhenLocalStorageIsBlocked();
   console.log('project-import-background-reset.test: all assertions passed');
 })().catch((error) => {
   console.error(error);

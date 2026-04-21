@@ -3,6 +3,35 @@
 
 const SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY = 'aboardPlannedUpdateReload';
 
+function safeSessionPersistenceStorageGetItem(key) {
+        try {
+            return localStorage.getItem(key);
+        } catch (error) {
+            console.warn(`Failed to read session persistence localStorage key "${key}":`, error);
+            return null;
+        }
+}
+
+function safeSessionPersistenceStorageSetItem(key, value) {
+        try {
+            localStorage.setItem(key, value);
+            return true;
+        } catch (error) {
+            console.warn(`Failed to write session persistence localStorage key "${key}":`, error);
+            return false;
+        }
+}
+
+function safeSessionPersistenceStorageRemoveItem(key) {
+        try {
+            localStorage.removeItem(key);
+            return true;
+        } catch (error) {
+            console.warn(`Failed to remove session persistence localStorage key "${key}":`, error);
+            return false;
+        }
+}
+
 function buildSyncSnapshot() {
         try {
             if (this.currentPage > 0 && this.currentPage <= this.pages.length) {
@@ -55,7 +84,7 @@ function saveSessionSnapshotSync() {
         }
 
         try {
-            localStorage.setItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot', JSON.stringify(snapshot));
+            safeSessionPersistenceStorageSetItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot', JSON.stringify(snapshot));
         } catch (e) {
             console.warn('Failed to save sync session snapshot:', e);
         }
@@ -135,8 +164,8 @@ async function checkForRecovery() {
             this.hasUnresolvedRecoveryData = false;
             this.recoveryPromptOpen = false;
             const hasSession = await this.storageManager.hasSession();
-            const rawSyncSnapshot = localStorage.getItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot');
-            const rawPlannedUpdateReload = localStorage.getItem(SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY);
+            const rawSyncSnapshot = safeSessionPersistenceStorageGetItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot');
+            const rawPlannedUpdateReload = safeSessionPersistenceStorageGetItem(SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY);
             let hasSyncSnapshot = false;
             let plannedUpdateReload = null;
 
@@ -146,7 +175,7 @@ async function checkForRecovery() {
                     hasSyncSnapshot = true;
                 } catch (snapshotError) {
                     console.warn('Ignoring invalid sync session snapshot:', snapshotError);
-                    localStorage.removeItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot');
+                    safeSessionPersistenceStorageRemoveItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot');
                 }
             }
 
@@ -156,11 +185,11 @@ async function checkForRecovery() {
                     if (parsedPlannedUpdateReload?.reason === 'update') {
                         plannedUpdateReload = parsedPlannedUpdateReload;
                     } else {
-                        localStorage.removeItem(SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY);
+                        safeSessionPersistenceStorageRemoveItem(SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY);
                     }
                 } catch (plannedReloadError) {
                     console.warn('Ignoring invalid planned update reload payload:', plannedReloadError);
-                    localStorage.removeItem(SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY);
+                    safeSessionPersistenceStorageRemoveItem(SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY);
                 }
             }
 
@@ -168,7 +197,7 @@ async function checkForRecovery() {
                 // Planned update reload is a one-shot trigger. Consume it as
                 // soon as it is recognized so stale markers never leak into
                 // future sessions, even when recovery data is gone or restore fails.
-                localStorage.removeItem(SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY);
+                safeSessionPersistenceStorageRemoveItem(SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY);
             }
 
             if (plannedUpdateReload && (hasSession || hasSyncSnapshot)) {

@@ -12,6 +12,35 @@
  * - es-ES: Spanish
  */
 
+function safeI18nStorageGetItem(key) {
+    try {
+        return localStorage.getItem(key);
+    } catch (error) {
+        console.warn(`Failed to read i18n localStorage key "${key}":`, error);
+        return null;
+    }
+}
+
+function safeI18nStorageSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to write i18n localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
+function safeI18nStorageRemoveItem(key) {
+    try {
+        localStorage.removeItem(key);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to remove i18n localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
 class I18n {
     constructor() {
         this.currentLocale = 'zh-CN'; // Default language
@@ -61,7 +90,7 @@ class I18n {
      * Get saved locale from localStorage
      */
     getSavedLocale() {
-        return this.normalizeSupportedLocale(localStorage.getItem('locale'));
+        return this.normalizeSupportedLocale(safeI18nStorageGetItem('locale'));
     }
 
     /**
@@ -70,9 +99,9 @@ class I18n {
     saveLocale(locale) {
         const normalizedLocale = this.normalizeSupportedLocale(locale);
         if (normalizedLocale) {
-            localStorage.setItem('locale', normalizedLocale);
+            safeI18nStorageSetItem('locale', normalizedLocale);
         } else {
-            localStorage.removeItem('locale');
+            safeI18nStorageRemoveItem('locale');
         }
     }
 
@@ -130,17 +159,17 @@ class I18n {
     }
 
     getSavedLocalePreferenceMode() {
-        const savedMode = localStorage.getItem(this.localePreferenceModeStorageKey);
+        const savedMode = safeI18nStorageGetItem(this.localePreferenceModeStorageKey);
         return savedMode === 'manual' ? 'manual' : 'auto';
     }
 
     saveLocalePreferenceMode(mode) {
-        localStorage.setItem(this.localePreferenceModeStorageKey, mode === 'manual' ? 'manual' : 'auto');
+        safeI18nStorageSetItem(this.localePreferenceModeStorageKey, mode === 'manual' ? 'manual' : 'auto');
     }
 
     hasLegacySavedLocaleWithoutPreferenceMode() {
-        return localStorage.getItem('locale') !== null
-            && localStorage.getItem(this.localePreferenceModeStorageKey) === null;
+        return safeI18nStorageGetItem('locale') !== null
+            && safeI18nStorageGetItem(this.localePreferenceModeStorageKey) === null;
     }
 
     isCoreLocale(locale) {
@@ -150,7 +179,7 @@ class I18n {
 
     getDownloadedLocales() {
         try {
-            const raw = localStorage.getItem(this.downloadedLocalesStorageKey);
+            const raw = safeI18nStorageGetItem(this.downloadedLocalesStorageKey);
             if (!raw) {
                 return [];
             }
@@ -177,7 +206,7 @@ class I18n {
                 .map(locale => this.normalizeSupportedLocale(locale))
                 .filter(locale => locale && !this.isCoreLocale(locale))
         ));
-        localStorage.setItem(this.downloadedLocalesStorageKey, JSON.stringify(normalizedLocales));
+        safeI18nStorageSetItem(this.downloadedLocalesStorageKey, JSON.stringify(normalizedLocales));
     }
 
     markLocaleDownloaded(locale) {
@@ -214,7 +243,7 @@ class I18n {
 
             this.saveLocalePreferenceMode('auto');
             if (this.isCoreLocale(savedLocale)) {
-                localStorage.removeItem('locale');
+                safeI18nStorageRemoveItem('locale');
             }
             return detectedLocale;
         }
@@ -316,7 +345,7 @@ class I18n {
 
     getDismissedPreferredLocaleSuggestion() {
         const dismissedLocale = this.normalizeSupportedLocale(
-            localStorage.getItem(this.localeSuggestionDismissStorageKey)
+            safeI18nStorageGetItem(this.localeSuggestionDismissStorageKey)
         );
         return this.availableLocales[dismissedLocale] ? dismissedLocale : null;
     }
@@ -324,11 +353,11 @@ class I18n {
     setDismissedPreferredLocaleSuggestion(locale) {
         const normalizedLocale = this.normalizeSupportedLocale(locale);
         if (!normalizedLocale || !this.availableLocales[normalizedLocale]) {
-            localStorage.removeItem(this.localeSuggestionDismissStorageKey);
+            safeI18nStorageRemoveItem(this.localeSuggestionDismissStorageKey);
             return;
         }
 
-        localStorage.setItem(this.localeSuggestionDismissStorageKey, normalizedLocale);
+        safeI18nStorageSetItem(this.localeSuggestionDismissStorageKey, normalizedLocale);
     }
 
     getDeferredPreferredLocaleCandidate() {

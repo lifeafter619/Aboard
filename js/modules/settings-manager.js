@@ -863,6 +863,48 @@ class SettingsManager {
         safeLocalStorageSetItem('legacyProjectImportEnabled', this.legacyProjectImportEnabled ? 'true' : 'false');
         return this.legacyProjectImportEnabled;
     }
+
+    setEdgeSnapEnabled(enabled) {
+        this.edgeSnapEnabled = enabled === true;
+        safeLocalStorageSetItem('edgeSnapEnabled', this.edgeSnapEnabled ? 'true' : 'false');
+        return this.edgeSnapEnabled;
+    }
+
+    setTouchZoomEnabled(enabled) {
+        this.touchZoomEnabled = enabled === true;
+        safeLocalStorageSetItem('touchZoomEnabled', this.touchZoomEnabled ? 'true' : 'false');
+        return this.touchZoomEnabled;
+    }
+
+    setUnlimitedZoom(enabled) {
+        this.unlimitedZoom = enabled === true;
+        safeLocalStorageSetItem('unlimitedZoom', this.unlimitedZoom ? 'true' : 'false');
+        return this.unlimitedZoom;
+    }
+
+    setShowZoomControls(enabled) {
+        this.showZoomControls = enabled === true;
+        safeLocalStorageSetItem('showZoomControls', this.showZoomControls ? 'true' : 'false');
+        return this.showZoomControls;
+    }
+
+    setShowImportExportBtn(enabled) {
+        this.showImportExportBtn = enabled === true;
+        safeLocalStorageSetItem('showImportExportBtn', this.showImportExportBtn ? 'true' : 'false');
+        return this.showImportExportBtn;
+    }
+
+    setShowFullscreenBtn(enabled) {
+        this.showFullscreenBtn = enabled === true;
+        safeLocalStorageSetItem('showFullscreenBtn', this.showFullscreenBtn ? 'true' : 'false');
+        return this.showFullscreenBtn;
+    }
+
+    setKeepMorePanelOpen(enabled) {
+        this.keepMorePanelOpen = enabled === true;
+        safeLocalStorageSetItem('keepMorePanelOpen', this.keepMorePanelOpen ? 'true' : 'false');
+        return this.keepMorePanelOpen;
+    }
     
     loadSettings() {
         document.getElementById('toolbar-size-slider').value = this.toolbarSize;

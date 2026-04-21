@@ -21,6 +21,25 @@ function escapeScoreboardHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+function safeScoreboardStorageGetItem(key) {
+    try {
+        return localStorage.getItem(key);
+    } catch (error) {
+        console.warn(`Failed to read scoreboard localStorage key "${key}":`, error);
+        return null;
+    }
+}
+
+function safeScoreboardStorageSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to write scoreboard localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
 const KNOWN_DEFAULT_TEAM_NAME_BASES = new Set([
     'Team',
     'Equipe',
@@ -82,7 +101,7 @@ class ScoreboardInstance {
         this.manager = manager;
 
         // Load saved state if available
-        const savedState = localStorage.getItem('scoreboard_data');
+        const savedState = safeScoreboardStorageGetItem('scoreboard_data');
         let initialTeams = null;
         if (savedState) {
             try {
@@ -126,7 +145,7 @@ class ScoreboardInstance {
         const data = {
             teams: this.config.teams
         };
-        localStorage.setItem('scoreboard_data', JSON.stringify(data));
+        safeScoreboardStorageSetItem('scoreboard_data', JSON.stringify(data));
     }
 
     createElement() {

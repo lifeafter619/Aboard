@@ -18,6 +18,7 @@ function dragCoordinateOrigin(e) {
 function stopDraggingCoordinateOrigin() {
         if (this.isDraggingCoordinateOrigin) {
             this.isDraggingCoordinateOrigin = false;
+            this.backgroundManager?.flushPendingPersistence?.();
             this.savePageBackground(this.currentPage);
             // Restore cursor based on current tool or mode
             if (this.isCoordinateOriginDragMode) {

@@ -1125,13 +1125,15 @@ function setupSettingsListeners() {
         });
         
         bindIfPresent(document.getElementById('edge-snap-checkbox'), 'change', (e) => {
-            this.settingsManager.edgeSnapEnabled = e.target.checked;
-            localStorage.setItem('edgeSnapEnabled', e.target.checked);
+            this.settingsManager.setEdgeSnapEnabled
+                ? this.settingsManager.setEdgeSnapEnabled(e.target.checked)
+                : (this.settingsManager.edgeSnapEnabled = e.target.checked);
         });
         
         bindIfPresent(document.getElementById('touch-zoom-checkbox'), 'change', (e) => {
-            this.settingsManager.touchZoomEnabled = e.target.checked;
-            localStorage.setItem('touchZoomEnabled', e.target.checked);
+            this.settingsManager.setTouchZoomEnabled
+                ? this.settingsManager.setTouchZoomEnabled(e.target.checked)
+                : (this.settingsManager.touchZoomEnabled = e.target.checked);
         });
 
         document.querySelectorAll('.update-preference-option-btn').forEach(btn => {
@@ -1146,8 +1148,9 @@ function setupSettingsListeners() {
         });
 
         bindIfPresent(document.getElementById('unlimited-zoom-checkbox'), 'change', (e) => {
-            this.settingsManager.unlimitedZoom = e.target.checked;
-            localStorage.setItem('unlimitedZoom', e.target.checked);
+            this.settingsManager.setUnlimitedZoom
+                ? this.settingsManager.setUnlimitedZoom(e.target.checked)
+                : (this.settingsManager.unlimitedZoom = e.target.checked);
             this.updateMaxCanvasScale();
         });
 
@@ -1280,8 +1283,9 @@ function setupSettingsListeners() {
         
         // Show/hide zoom controls
         bindIfPresent(document.getElementById('show-zoom-controls-checkbox'), 'change', (e) => {
-            this.settingsManager.showZoomControls = e.target.checked;
-            localStorage.setItem('showZoomControls', e.target.checked);
+            this.settingsManager.setShowZoomControls
+                ? this.settingsManager.setShowZoomControls(e.target.checked)
+                : (this.settingsManager.showZoomControls = e.target.checked);
             this.updateZoomControlsVisibility();
         });
 
@@ -1289,16 +1293,18 @@ function setupSettingsListeners() {
         const showImportExportBtnCheckbox = document.getElementById('show-import-export-btn-checkbox');
         if (showImportExportBtnCheckbox) {
             showImportExportBtnCheckbox.addEventListener('change', (e) => {
-                this.settingsManager.showImportExportBtn = e.target.checked;
-                localStorage.setItem('showImportExportBtn', e.target.checked);
+                this.settingsManager.setShowImportExportBtn
+                    ? this.settingsManager.setShowImportExportBtn(e.target.checked)
+                    : (this.settingsManager.showImportExportBtn = e.target.checked);
                 this.updateImportExportBtnVisibility();
             });
         }
         
         // Show/hide fullscreen button
         bindIfPresent(document.getElementById('show-fullscreen-btn-checkbox'), 'change', (e) => {
-            this.settingsManager.showFullscreenBtn = e.target.checked;
-            localStorage.setItem('showFullscreenBtn', e.target.checked);
+            this.settingsManager.setShowFullscreenBtn
+                ? this.settingsManager.setShowFullscreenBtn(e.target.checked)
+                : (this.settingsManager.showFullscreenBtn = e.target.checked);
             this.updateFullscreenBtnVisibility();
         });
         
@@ -1439,8 +1445,9 @@ function setupSettingsListeners() {
         const keepMorePanelOpenCheckbox = document.getElementById('keep-more-panel-open-checkbox');
         if (keepMorePanelOpenCheckbox) {
             keepMorePanelOpenCheckbox.addEventListener('change', (e) => {
-                this.settingsManager.keepMorePanelOpen = e.target.checked;
-                localStorage.setItem('keepMorePanelOpen', e.target.checked);
+                this.settingsManager.setKeepMorePanelOpen
+                    ? this.settingsManager.setKeepMorePanelOpen(e.target.checked)
+                    : (this.settingsManager.keepMorePanelOpen = e.target.checked);
             });
         }
 

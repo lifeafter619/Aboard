@@ -1,6 +1,43 @@
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+function safeCacheStorageRemoveItem(storage, key, storageLabel = 'storage') {
+        try {
+            storage?.removeItem?.(key);
+            return true;
+        } catch (error) {
+            console.warn(`Failed to remove ${storageLabel} key "${key}":`, error);
+            return false;
+        }
+}
+
+function safeCacheStorageClear(storage, storageLabel = 'storage') {
+        try {
+            storage?.clear?.();
+            return true;
+        } catch (error) {
+            console.warn(`Failed to clear ${storageLabel}:`, error);
+            return false;
+        }
+}
+
+function getStorageKeysSafely(storage, storageLabel = 'storage') {
+        try {
+            const keys = [];
+            const length = Number(storage?.length || 0);
+            for (let i = 0; i < length; i += 1) {
+                const key = storage.key(i);
+                if (key) {
+                    keys.push(key);
+                }
+            }
+            return keys;
+        } catch (error) {
+            console.warn(`Failed to enumerate ${storageLabel} keys:`, error);
+            return [];
+        }
+}
+
 function getCacheKeyGroups() {
         const settingsKeys = new Set([
             'toolbarSize', 'configScale', 'controlPosition', 'edgeSnapEnabled', 'touchZoomEnabled',
@@ -342,15 +379,15 @@ async function clearSelectedCache(options) {
         if (options.canvas) {
             await this.clearSessionData();
             canvasKeys.forEach(key => {
-                localStorage.removeItem(key);
-                sessionStorage.removeItem(key);
+                safeCacheStorageRemoveItem(localStorage, key, 'localStorage');
+                safeCacheStorageRemoveItem(sessionStorage, key, 'sessionStorage');
             });
         }
 
         if (options.settings) {
             settingsKeys.forEach(key => {
-                localStorage.removeItem(key);
-                sessionStorage.removeItem(key);
+                safeCacheStorageRemoveItem(localStorage, key, 'localStorage');
+                safeCacheStorageRemoveItem(sessionStorage, key, 'sessionStorage');
             });
         }
 
@@ -359,21 +396,13 @@ async function clearSelectedCache(options) {
             if (!options.settings) settingsKeys.forEach(k => preserved.add(k));
             if (!options.canvas) canvasKeys.forEach(k => preserved.add(k));
 
-            const localKeys = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key) localKeys.push(key);
-            }
+            const localKeys = getStorageKeysSafely(localStorage, 'localStorage');
             localKeys.forEach(key => {
-                if (!preserved.has(key)) localStorage.removeItem(key);
+                if (!preserved.has(key)) safeCacheStorageRemoveItem(localStorage, key, 'localStorage');
             });
-            const sessionKeys = [];
-            for (let i = 0; i < sessionStorage.length; i++) {
-                const key = sessionStorage.key(i);
-                if (key) sessionKeys.push(key);
-            }
+            const sessionKeys = getStorageKeysSafely(sessionStorage, 'sessionStorage');
             sessionKeys.forEach(key => {
-                if (!preserved.has(key)) sessionStorage.removeItem(key);
+                if (!preserved.has(key)) safeCacheStorageRemoveItem(sessionStorage, key, 'sessionStorage');
             });
 
             if ('caches' in window) {
@@ -408,8 +437,8 @@ async function clearAllLocalData() {
                 });
             }
 
-            localStorage.clear();
-            sessionStorage.clear();
+            safeCacheStorageClear(localStorage, 'localStorage');
+            safeCacheStorageClear(sessionStorage, 'sessionStorage');
 
             if ('caches' in window) {
                 const cacheKeys = await caches.keys();

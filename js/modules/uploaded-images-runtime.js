@@ -1,14 +1,43 @@
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+function safeUploadedImagesStorageGetItem(key) {
+        try {
+            return localStorage.getItem(key);
+        } catch (error) {
+            console.warn(`Failed to read uploaded images localStorage key "${key}":`, error);
+            return null;
+        }
+}
+
+function safeUploadedImagesStorageSetItem(key, value) {
+        try {
+            localStorage.setItem(key, value);
+            return true;
+        } catch (error) {
+            console.warn(`Failed to write uploaded images localStorage key "${key}":`, error);
+            return false;
+        }
+}
+
+function safeUploadedImagesStorageRemoveItem(key) {
+        try {
+            localStorage.removeItem(key);
+            return true;
+        } catch (error) {
+            console.warn(`Failed to remove uploaded images localStorage key "${key}":`, error);
+            return false;
+        }
+}
+
 function loadUploadedImages() {
-        const saved = localStorage.getItem('uploadedImages');
+        const saved = safeUploadedImagesStorageGetItem('uploadedImages');
         if (saved) {
             try {
                 return JSON.parse(saved);
             } catch (e) {
                 console.warn('Failed to load uploaded images from localStorage:', e);
-                localStorage.removeItem('uploadedImages');
+                safeUploadedImagesStorageRemoveItem('uploadedImages');
                 return [];
             }
         }
@@ -18,7 +47,7 @@ function loadUploadedImages() {
 
 function saveUploadedImage(imageData) {
         // Check if we're approaching localStorage limit
-        const currentSize = new Blob([localStorage.getItem('uploadedImages') || '[]']).size;
+        const currentSize = new Blob([safeUploadedImagesStorageGetItem('uploadedImages') || '[]']).size;
         const imageSize = new Blob([imageData]).size;
         
         // Limit to approximately 4MB total to avoid hitting localStorage limits
@@ -41,7 +70,10 @@ function saveUploadedImage(imageData) {
         });
         
         try {
-            localStorage.setItem('uploadedImages', JSON.stringify(this.uploadedImages));
+            const persisted = safeUploadedImagesStorageSetItem('uploadedImages', JSON.stringify(this.uploadedImages));
+            if (!persisted) {
+                throw new Error('uploaded-images-persistence-failed');
+            }
             this.updateUploadedImagesButtons();
         } catch (e) {
             console.error('Failed to save image to localStorage:', e);

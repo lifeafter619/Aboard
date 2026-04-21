@@ -1,6 +1,21 @@
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+function persistBoardViewState(board, options = {}) {
+        if (typeof board?.drawingEngine?.persistViewState === 'function') {
+                board.drawingEngine.persistViewState(options);
+                return;
+        }
+
+        try {
+                localStorage.setItem('canvasScale', board.drawingEngine.canvasScale);
+                localStorage.setItem('panOffsetX', board.drawingEngine.panOffset.x);
+                localStorage.setItem('panOffsetY', board.drawingEngine.panOffset.y);
+        } catch (error) {
+                console.warn('Failed to persist interaction view state to localStorage:', error);
+        }
+}
+
 function updateEraserCursor(e) {
         if (this.drawingEngine.currentTool === 'eraser') {
             this.eraserCursor.style.left = e.clientX + 'px';
@@ -134,9 +149,7 @@ function handlePinchEnd() {
         }
 
         // Save state after pinch ends
-        localStorage.setItem('canvasScale', this.drawingEngine.canvasScale);
-        localStorage.setItem('panOffsetX', this.drawingEngine.panOffset.x);
-        localStorage.setItem('panOffsetY', this.drawingEngine.panOffset.y);
+        persistBoardViewState(this, { immediate: true });
 
 }
 
@@ -259,9 +272,7 @@ function handlePointerPinchEnd() {
         }
 
         // Save state after pinch ends
-        localStorage.setItem('canvasScale', this.drawingEngine.canvasScale);
-        localStorage.setItem('panOffsetX', this.drawingEngine.panOffset.x);
-        localStorage.setItem('panOffsetY', this.drawingEngine.panOffset.y);
+        persistBoardViewState(this, { immediate: true });
 
 }
 

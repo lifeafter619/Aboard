@@ -1,6 +1,35 @@
 // Image Controls Module
 // Handles image manipulation - position, size, rotation (similar to Word)
 
+function safeImageControlsStorageGetItem(key) {
+    try {
+        return localStorage.getItem(key);
+    } catch (error) {
+        console.warn(`Failed to read image controls localStorage key "${key}":`, error);
+        return null;
+    }
+}
+
+function safeImageControlsStorageSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to write image controls localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
+function safeImageControlsStorageRemoveItem(key) {
+    try {
+        localStorage.removeItem(key);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to remove image controls localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
 class ImageControls {
     constructor(backgroundManager) {
         this.backgroundManager = backgroundManager;
@@ -8,7 +37,7 @@ class ImageControls {
         this.isDragging = false;
         this.isResizing = false;
         this.isRotating = false;
-        this.isConfirmed = localStorage.getItem('backgroundImageConfirmed') === 'true'; // Track if image has been confirmed
+        this.isConfirmed = safeImageControlsStorageGetItem('backgroundImageConfirmed') === 'true'; // Track if image has been confirmed
         
         // Constants
         this.MIN_IMAGE_SIZE = 50;
@@ -314,7 +343,7 @@ class ImageControls {
         this.isConfirmed = true;
         this.hideControls();
         // Save the confirmed state to localStorage
-        localStorage.setItem('backgroundImageConfirmed', 'true');
+        safeImageControlsStorageSetItem('backgroundImageConfirmed', 'true');
         
         // Dispatch event to notify that image has been confirmed
         window.dispatchEvent(new CustomEvent('imageConfirmed'));
@@ -323,7 +352,7 @@ class ImageControls {
     resetConfirmation() {
         // Reset confirmation state (used when uploading new image)
         this.isConfirmed = false;
-        localStorage.removeItem('backgroundImageConfirmed');
+        safeImageControlsStorageRemoveItem('backgroundImageConfirmed');
     }
 
     copyImageToCanvas() {
@@ -609,6 +638,7 @@ class ImageControls {
     stopDrag() {
         this.isDragging = false;
         this.controlBox.style.cursor = 'move';
+        this.backgroundManager?.flushPendingPersistence?.();
     }
     
     startResize(e, handle) {
@@ -680,6 +710,7 @@ class ImageControls {
     stopResize() {
         this.isResizing = false;
         this.resizeHandle = null;
+        this.backgroundManager?.flushPendingPersistence?.();
     }
     
     startRotate(e) {
@@ -709,6 +740,7 @@ class ImageControls {
     
     stopRotate() {
         this.isRotating = false;
+        this.backgroundManager?.flushPendingPersistence?.();
     }
     
     getCanvasScale() {
