@@ -7,6 +7,11 @@ const ENTRY_FILES = [
   'js/main.js',
   'js/app/bootstrap.js'
 ];
+const LEGACY_MANIFEST_ARRAY_NAMES = [
+  'VISIBLE_CORE_SERVICE_SCRIPTS',
+  'VISIBLE_CORE_BOARD_DEPENDENCY_SCRIPTS',
+  'VISIBLE_CORE_STARTUP_SCRIPTS'
+];
 
 const IMPORT_RE = /^\s*import\s+(?:[^'";]+?\s+from\s+)?['"]([^'"]+)['"]/gm;
 
@@ -54,6 +59,14 @@ function readEssentialCoreAssets() {
   );
 }
 
+function readLegacyManifestArray(arrayName) {
+  const source = readText('js/app/legacy-manifest.js');
+  const match = source.match(new RegExp(`export const ${arrayName} = \\[(.*?)\\];`, 's'));
+  assert.ok(match, `${arrayName} should exist in js/app/legacy-manifest.js`);
+
+  return [...match[1].matchAll(/'([^']+)'/g)].map(([, assetPath]) => assetPath);
+}
+
 function testEssentialCacheCoversOfflineBootstrapImportClosure() {
   const requiredModules = collectStaticModuleClosure(ENTRY_FILES);
   const essentialAssets = readEssentialCoreAssets();
@@ -66,8 +79,21 @@ function testEssentialCacheCoversOfflineBootstrapImportClosure() {
   );
 }
 
+function testEssentialCacheCoversVisibleCoreLegacyStartupAssets() {
+  const essentialAssets = readEssentialCoreAssets();
+  const requiredAssets = LEGACY_MANIFEST_ARRAY_NAMES.flatMap((arrayName) => readLegacyManifestArray(arrayName));
+  const missingAssets = requiredAssets.filter((assetPath) => !essentialAssets.has(assetPath));
+
+  assert.deepEqual(
+    missingAssets,
+    [],
+    `ESSENTIAL_CORE_ASSETS is missing visible-core legacy startup assets: ${missingAssets.join(', ')}`
+  );
+}
+
 function run() {
   testEssentialCacheCoversOfflineBootstrapImportClosure();
+  testEssentialCacheCoversVisibleCoreLegacyStartupAssets();
   console.log('sw-essential-assets.test: all assertions passed');
 }
 

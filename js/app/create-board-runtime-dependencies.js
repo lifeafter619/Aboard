@@ -15,6 +15,19 @@ function getCanvasContext(canvas, options) {
   return canvas?.getContext?.('2d', options) || null;
 }
 
+function instantiateOptionalDependency(label, ctor, args = []) {
+  if (typeof ctor !== 'function') {
+    return undefined;
+  }
+
+  try {
+    return Reflect.construct(ctor, args);
+  } catch (error) {
+    console.warn(`Aboard ${label} failed to initialize, continuing with degraded behavior:`, error);
+    return null;
+  }
+}
+
 export function createBoardRuntimeDependencies({ win = window, doc = document, boardDependencies = {} } = {}) {
   const canvas = doc.getElementById('canvas');
   const bgCanvas = doc.getElementById('background-canvas');
@@ -46,7 +59,7 @@ export function createBoardRuntimeDependencies({ win = window, doc = document, b
   const historyManager = typeof HistoryManager === 'function' ? new HistoryManager(canvas, ctx) : undefined;
   const backgroundManager = typeof BackgroundManager === 'function' ? new BackgroundManager(bgCanvas, bgCtx) : undefined;
   const imageControls = typeof ImageControls === 'function' && backgroundManager
-    ? new ImageControls(backgroundManager)
+    ? instantiateOptionalDependency('ImageControls', ImageControls, [backgroundManager])
     : undefined;
   const strokeControls = typeof StrokeControls === 'function' && drawingEngine && historyManager
     ? new StrokeControls(drawingEngine, canvas, ctx, historyManager)
@@ -59,7 +72,7 @@ export function createBoardRuntimeDependencies({ win = window, doc = document, b
   selectionManager?.setBackgroundManager?.(backgroundManager);
 
   const teachingToolsManager = typeof TeachingToolsManager === 'function' && historyManager
-    ? new TeachingToolsManager(canvas, ctx, historyManager)
+    ? instantiateOptionalDependency('TeachingToolsManager', TeachingToolsManager, [canvas, ctx, historyManager])
     : undefined;
   const shapeDrawingManager = typeof ShapeDrawingManager === 'function' && drawingEngine && historyManager
     ? new ShapeDrawingManager(canvas, ctx, drawingEngine, historyManager)
@@ -67,11 +80,11 @@ export function createBoardRuntimeDependencies({ win = window, doc = document, b
   drawingEngine?.setShapeDrawingManager?.(shapeDrawingManager);
 
   const lineStyleModal = typeof LineStyleModal === 'function' && drawingEngine && shapeDrawingManager
-    ? new LineStyleModal(drawingEngine, shapeDrawingManager)
+    ? instantiateOptionalDependency('LineStyleModal', LineStyleModal, [drawingEngine, shapeDrawingManager])
     : undefined;
 
   const edgeDrawingManager = typeof EdgeDrawingManager === 'function' && teachingToolsManager && drawingEngine
-    ? new EdgeDrawingManager(teachingToolsManager, drawingEngine)
+    ? instantiateOptionalDependency('EdgeDrawingManager', EdgeDrawingManager, [teachingToolsManager, drawingEngine])
     : undefined;
   drawingEngine?.setEdgeDrawingManager?.(edgeDrawingManager);
 

@@ -54,9 +54,54 @@ export class DialogManager {
     this.confirmModal = modal;
   }
 
-  showConfirm(messageOrConfig, title = null) {
+  getConfirmModalParts(modal = this.confirmModal) {
+    if (!modal) {
+      return null;
+    }
+
+    const parts = {
+      modal,
+      titleElement: modal.querySelector('#app-confirm-title'),
+      messageElement: modal.querySelector('#app-confirm-message'),
+      optionsContainer: modal.querySelector('#app-confirm-options'),
+      inputContainer: modal.querySelector('#app-confirm-input-container'),
+      footerElement: modal.querySelector('#app-confirm-footer'),
+      cancelBtn: modal.querySelector('#app-confirm-cancel-btn'),
+      okBtn: modal.querySelector('#app-confirm-ok-btn')
+    };
+
+    return Object.values(parts).every(Boolean) ? parts : null;
+  }
+
+  resetConfirmModal(modal = this.confirmModal) {
+    if (this.confirmModalKeydownHandler && modal?.removeEventListener) {
+      modal.removeEventListener('keydown', this.confirmModalKeydownHandler);
+      this.confirmModalKeydownHandler = null;
+    }
+    modal?.remove?.();
+    this.confirmModal = null;
+  }
+
+  ensureConfirmModalParts() {
     this.ensureConfirmModal();
-    const modal = this.confirmModal;
+    let parts = this.getConfirmModalParts();
+    if (parts) {
+      return parts;
+    }
+
+    console.warn('Confirm dialog template is incomplete. Rebuilding modal.');
+    this.resetConfirmModal();
+    this.ensureConfirmModal();
+    parts = this.getConfirmModalParts();
+    if (parts) {
+      return parts;
+    }
+
+    console.warn('Confirm dialog template could not be rebuilt.');
+    return null;
+  }
+
+  showConfirm(messageOrConfig, title = null) {
     const isConfigMode = typeof messageOrConfig === 'object' && messageOrConfig !== null;
     const config = isConfigMode ? messageOrConfig : { message: messageOrConfig, title };
     const localeTitle = config.title || (this.win.i18n ? this.win.i18n.t('common.confirm') : 'Confirm');
@@ -66,18 +111,27 @@ export class DialogManager {
     const footerText = String(config.footerText || '');
     const selectableItems = Array.isArray(config.selectableItems) ? config.selectableItems : [];
     const inputConfig = config.inputConfig && typeof config.inputConfig === 'object' ? config.inputConfig : null;
-    const optionsContainer = modal.querySelector('#app-confirm-options');
-    const inputContainer = modal.querySelector('#app-confirm-input-container');
-    const footerElement = modal.querySelector('#app-confirm-footer');
-    const messageElement = modal.querySelector('#app-confirm-message');
-    const titleElement = modal.querySelector('#app-confirm-title');
+    const cancelledResult = config.returnDetails
+      ? { confirmed: false, selectedValues: [], inputValue: null }
+      : false;
+    const modalParts = this.ensureConfirmModalParts();
+    if (!modalParts) {
+      return Promise.resolve(cancelledResult);
+    }
 
-    if (titleElement) {
-        titleElement.textContent = localeTitle;
-    }
-    if (messageElement) {
-        messageElement.textContent = message;
-    }
+    const {
+      modal,
+      titleElement,
+      messageElement,
+      optionsContainer,
+      inputContainer,
+      footerElement,
+      cancelBtn,
+      okBtn
+    } = modalParts;
+
+    titleElement.textContent = localeTitle;
+    messageElement.textContent = message;
     messageElement.classList.toggle('compact', selectableItems.length > 0 || Boolean(footerText) || Boolean(inputConfig));
     optionsContainer.innerHTML = '';
     optionsContainer.classList.toggle('show', selectableItems.length > 0);
@@ -130,17 +184,10 @@ export class DialogManager {
       inputContainer.appendChild(inputWrapper);
     }
 
-    const cancelBtn = modal.querySelector('#app-confirm-cancel-btn');
-    const okBtn = modal.querySelector('#app-confirm-ok-btn');
-
-    if (cancelBtn) {
-        cancelBtn.textContent = cancelText;
-        cancelBtn.setAttribute('aria-label', cancelText);
-    }
-    if (okBtn) {
-        okBtn.textContent = okText;
-        okBtn.setAttribute('aria-label', okText);
-    }
+    cancelBtn.textContent = cancelText;
+    cancelBtn.setAttribute('aria-label', cancelText);
+    okBtn.textContent = okText;
+    okBtn.setAttribute('aria-label', okText);
 
     return new Promise((resolve) => {
       const restoreFocusTarget = this.doc.activeElement && this.doc.activeElement !== this.doc.body
@@ -150,17 +197,14 @@ export class DialogManager {
       const confirmDialog = () => {
         okBtn?.click?.();
       };
-      const cancelledResult = config.returnDetails
-        ? { confirmed: false, selectedValues: [], inputValue: null }
-        : false;
       const close = (result) => {
         if (isClosed) {
           return;
         }
         isClosed = true;
         modal.classList.remove('show');
-        modal.querySelector('#app-confirm-cancel-btn').onclick = null;
-        modal.querySelector('#app-confirm-ok-btn').onclick = null;
+        cancelBtn.onclick = null;
+        okBtn.onclick = null;
         modal.onclick = null;
         if (this.confirmModalKeydownHandler) {
           modal.removeEventListener('keydown', this.confirmModalKeydownHandler);
@@ -179,10 +223,10 @@ export class DialogManager {
         }
         resolve(result);
       };
-      modal.querySelector('#app-confirm-cancel-btn').onclick = () => {
+      cancelBtn.onclick = () => {
         close(cancelledResult);
       };
-      modal.querySelector('#app-confirm-ok-btn').onclick = () => {
+      okBtn.onclick = () => {
         const selectedValues = Array.from(optionsContainer.querySelectorAll('input[type="checkbox"]:checked'))
           .map((input) => input.value);
         const inputValue = inputElement
@@ -250,7 +294,7 @@ export class DialogManager {
         inputElement.onkeydown = (event) => {
           if (event.key === 'Enter') {
             event.preventDefault();
-            modal.querySelector('#app-confirm-ok-btn')?.click();
+            okBtn?.click?.();
           }
         };
         const focusInput = () => {
@@ -265,8 +309,8 @@ export class DialogManager {
       } else {
         const focusPreferredAction = () => {
           const preferredButton = config.preferredAction === 'cancel'
-            ? modal.querySelector('#app-confirm-cancel-btn')
-            : modal.querySelector('#app-confirm-ok-btn') || modal.querySelector('#app-confirm-cancel-btn');
+            ? cancelBtn
+            : okBtn || cancelBtn;
           preferredButton?.focus?.();
         };
         if (typeof this.win.requestAnimationFrame === 'function') {

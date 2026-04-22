@@ -183,7 +183,7 @@ function loadStorageManager({
   return sandbox.__runtimeResilienceExports.StorageManager;
 }
 
-function loadSettingsManager({ localStorage, warnings = [] } = {}) {
+function loadSettingsManager({ localStorage, warnings = [], documentOverrides = {} } = {}) {
   const source = fs.readFileSync(
     path.join(__dirname, '..', 'js', 'modules', 'settings-manager.js'),
     'utf8'
@@ -213,7 +213,11 @@ function loadSettingsManager({ localStorage, warnings = [] } = {}) {
       },
       getElementById() {
         return null;
-      }
+      },
+      querySelectorAll() {
+        return [];
+      },
+      ...documentOverrides
     },
     localStorage,
     ToastManager: FakeToastManager,
@@ -623,6 +627,56 @@ function testSettingsManagerApplySettingsSurvivesBlockedLocalStorage() {
   );
 }
 
+function testSettingsManagerLayoutUpdatesSurviveMissingUiElements() {
+  const SettingsManager = loadSettingsManager({
+    localStorage: {
+      getItem() {
+        return null;
+      },
+      setItem() {},
+      removeItem() {}
+    }
+  });
+
+  const manager = new SettingsManager();
+
+  assert.doesNotThrow(() => {
+    manager.updateToolbarSize();
+  }, 'toolbar sizing should degrade instead of throwing when the toolbar element is missing');
+  assert.doesNotThrow(() => {
+    manager.updateToolbarTextVisibility();
+  }, 'toolbar text visibility should degrade instead of throwing when the toolbar element is missing');
+  assert.doesNotThrow(() => {
+    manager.updateConfigScale();
+  }, 'config scale updates should degrade instead of throwing when the config area is missing');
+  assert.doesNotThrow(() => {
+    manager.setControlPosition('top-left');
+  }, 'control position updates should degrade instead of throwing when control areas are missing');
+}
+
+function testSettingsManagerLoadSettingsSurvivesMissingUiElements() {
+  const SettingsManager = loadSettingsManager({
+    localStorage: {
+      getItem() {
+        return null;
+      },
+      setItem() {},
+      removeItem() {}
+    }
+  });
+
+  const manager = new SettingsManager();
+
+  assert.doesNotThrow(() => {
+    manager.loadSettings();
+  }, 'settings initialization should degrade instead of throwing when settings inputs are missing');
+  assert.doesNotThrow(() => {
+    manager.setCanvasPreset('A4-portrait');
+  }, 'canvas preset updates should degrade instead of throwing when canvas inputs are missing');
+  assert.equal(manager.canvasWidth, 794, 'preset application should still update the stored canvas width');
+  assert.equal(manager.canvasHeight, 1123, 'preset application should still update the stored canvas height');
+}
+
 function testHistoryManagerUsesSmallerDefaultMemoryCap() {
   const HistoryManager = loadHistoryManager();
   const manager = new HistoryManager(
@@ -664,6 +718,8 @@ function testHistoryManagerUsesSmallerDefaultMemoryCap() {
   testSettingsManagerUsesDefaultsWhenLocalStorageUnavailable();
   testSettingsManagerStateExportSurvivesBlockedLocalStorage();
   testSettingsManagerApplySettingsSurvivesBlockedLocalStorage();
+  testSettingsManagerLayoutUpdatesSurviveMissingUiElements();
+  testSettingsManagerLoadSettingsSurvivesMissingUiElements();
   testHistoryManagerUsesSmallerDefaultMemoryCap();
   console.log('runtime-resilience.test: all assertions passed');
 })().catch((error) => {

@@ -126,8 +126,27 @@ function serveStatic(reqPath, res, rawPath = reqPath) {
     });
 }
 
+function parseRequestUrl(req) {
+    const host = typeof req?.headers?.host === 'string' && req.headers.host
+        ? req.headers.host
+        : 'localhost';
+    const requestUrl = typeof req?.url === 'string' && req.url
+        ? req.url
+        : '/';
+
+    try {
+        return new URL(requestUrl, `http://${host}`);
+    } catch {
+        return null;
+    }
+}
+
 const server = http.createServer((req, res) => {
-    const url = new URL(req.url, `http://${req.headers.host}`);
+    const url = parseRequestUrl(req);
+    if (!url) {
+        sendJson(res, 400, { error: 'Bad Request' });
+        return;
+    }
 
     if (url.pathname === '/api/version') {
         fs.readFile(VERSION_FILE, 'utf8', (err, versionText) => {

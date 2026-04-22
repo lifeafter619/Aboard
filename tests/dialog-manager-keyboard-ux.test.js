@@ -319,8 +319,52 @@ async function testConfirmDialogDefaultsToPrimaryActionAndSupportsEnterKey() {
   assert.equal(modal.classList.contains('show'), false, 'dialog should close after confirmation');
 }
 
+async function testConfirmDialogRebuildsBrokenModalTemplate() {
+  const DialogManager = await loadDialogManager();
+  const document = createDocumentStub();
+  const window = createWindowStub(document);
+  const dialog = new DialogManager(window, document);
+  const warnings = [];
+  const originalWarn = console.warn;
+
+  dialog.ensureConfirmModal();
+  const brokenModal = document.getElementById('app-confirm-modal');
+  brokenModal.querySelector('#app-confirm-ok-btn').remove();
+  brokenModal.querySelector('#app-confirm-message').remove();
+
+  let confirmPromise;
+  let rebuiltModal;
+  let rebuiltOkButton;
+
+  try {
+    console.warn = (...args) => {
+      warnings.push(args.map((value) => String(value)).join(' '));
+    };
+
+    confirmPromise = dialog.showConfirm('Recover dialog?');
+    rebuiltModal = document.getElementById('app-confirm-modal');
+    rebuiltOkButton = document.getElementById('app-confirm-ok-btn');
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  assert.notEqual(rebuiltModal, brokenModal, 'dialog should replace a broken confirm modal instead of reusing it');
+  assert.equal(brokenModal.parentElement, null, 'broken confirm modal should be removed from the document');
+  assert.ok(rebuiltOkButton, 'rebuilt confirm modal should restore required action buttons');
+  assert.ok(
+    warnings.some((entry) => entry.includes('Confirm dialog template is incomplete')),
+    'dialog should warn when it has to rebuild a broken confirm modal'
+  );
+
+  rebuiltOkButton.click();
+
+  const result = await confirmPromise;
+  assert.equal(result, true, 'rebuilt confirm modal should still resolve the primary action');
+}
+
 (async function main() {
   await testConfirmDialogDefaultsToPrimaryActionAndSupportsEnterKey();
+  await testConfirmDialogRebuildsBrokenModalTemplate();
   console.log('dialog-manager-keyboard-ux.test: all assertions passed');
 })().catch((error) => {
   console.error(error);

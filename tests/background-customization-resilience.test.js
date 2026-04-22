@@ -103,11 +103,35 @@ function createThrowingStorageRecorder() {
   };
 }
 
-function loadBackgroundManager({ localStorage, warnings = [] }) {
+function loadBackgroundManager({
+  localStorage,
+  warnings = [],
+  windowOverrides = {},
+  documentOverrides = {},
+  globalOverrides = {}
+}) {
   const source = fs.readFileSync(
     path.join(__dirname, '..', 'js', 'background.js'),
     'utf8'
   ) + '\n;globalThis.__bgCustomizationResilienceExports = { BackgroundManager: window.AboardBackgroundManager || window.BackgroundManager };';
+
+  const documentStub = {
+    body: {
+      contains() {
+        return false;
+      }
+    },
+    getElementById() {
+      return null;
+    },
+    createElementNS() {
+      return createElementStub();
+    },
+    createElement() {
+      return createElementStub();
+    },
+    ...documentOverrides
+  };
 
   const sandbox = {
     console: {
@@ -122,24 +146,10 @@ function loadBackgroundManager({ localStorage, warnings = [] }) {
       dispatchEvent() {},
       safeDeepClone(value) {
         return JSON.parse(JSON.stringify(value));
-      }
+      },
+      ...windowOverrides
     },
-    document: {
-      body: {
-        contains() {
-          return false;
-        }
-      },
-      getElementById() {
-        return null;
-      },
-      createElementNS() {
-        return createElementStub();
-      },
-      createElement() {
-        return createElementStub();
-      }
-    },
+    document: documentStub,
     localStorage,
     sessionStorage: {
       getItem() { return null; },
@@ -170,11 +180,15 @@ function loadBackgroundManager({ localStorage, warnings = [] }) {
     Date,
     parseInt,
     parseFloat,
-    JSON
+    JSON,
+    ...globalOverrides
   };
 
   sandbox.globalThis = sandbox;
   sandbox.window.document = sandbox.document;
+  if (typeof sandbox.SuperGif === 'function' && typeof sandbox.window.SuperGif !== 'function') {
+    sandbox.window.SuperGif = sandbox.SuperGif;
+  }
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox, { filename: 'background.js' });
   return sandbox.__bgCustomizationResilienceExports.BackgroundManager;
@@ -287,6 +301,42 @@ function testBackgroundManagerSurvivesBlockedLocalStorage() {
     warnings.some((entry) => entry.includes('background') && entry.includes('localStorage')),
     'background manager storage failures should emit warnings'
   );
+}
+
+async function testBackgroundGifInitSurvivesMissingContainer() {
+  class FakeSuperGif {
+    load(callback) {
+      callback?.();
+    }
+
+    get_canvas() {
+      return null;
+    }
+  }
+
+  const BackgroundManager = loadBackgroundManager({
+    localStorage: {
+      getItem() { return null; },
+      setItem() {},
+      removeItem() {}
+    },
+    windowOverrides: {
+      SuperGif: FakeSuperGif
+    },
+    globalOverrides: {
+      SuperGif: FakeSuperGif
+    }
+  });
+  const bgCanvas = { width: 1280, height: 720, clientWidth: 1280, clientHeight: 720, style: {} };
+  const bgCtx = { clearRect() {}, fillRect() {}, save() {}, restore() {} };
+  const manager = new BackgroundManager(bgCanvas, bgCtx);
+  const imgElement = createElementStub({ style: {} });
+
+  await assert.doesNotReject(async () => {
+    await manager.initGif(imgElement);
+  }, 'GIF initialization should not reject when the background image container is unavailable');
+  assert.equal(manager.gifInstance, null, 'missing GIF container should leave GIF playback disabled');
+  assert.equal(imgElement.style.display, 'block', 'missing GIF container should keep the static image visible');
 }
 
 function testCollapsibleManagerSurvivesBlockedLocalStorage() {
@@ -407,9 +457,13 @@ function testCustomizationRuntimeSurvivesBlockedLocalStorage() {
   );
 }
 
-(function main() {
+(async function main() {
   testBackgroundManagerSurvivesBlockedLocalStorage();
+  await testBackgroundGifInitSurvivesMissingContainer();
   testCollapsibleManagerSurvivesBlockedLocalStorage();
   testCustomizationRuntimeSurvivesBlockedLocalStorage();
   console.log('background-customization-resilience.test: all assertions passed');
-})();
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

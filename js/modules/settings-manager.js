@@ -45,6 +45,16 @@ function safeLocalStorageRemoveItem(key) {
     }
 }
 
+function updateElementById(elementId, updater) {
+    const element = document.getElementById(elementId);
+    if (!element) {
+        return null;
+    }
+
+    updater(element);
+    return element;
+}
+
 class SettingsManager {
     constructor() {
         const storedToolbarSize = safeLocalStorageGetItem('toolbarSize');
@@ -641,6 +651,10 @@ class SettingsManager {
     
     updateToolbarSize() {
         const toolbar = document.getElementById('toolbar');
+        if (!toolbar) {
+            safeLocalStorageSetItem('toolbarSize', this.toolbarSize);
+            return;
+        }
         const buttons = toolbar.querySelectorAll('.tool-btn');
         const TOUCH_SMALL_SCREEN_THRESHOLD = 900;
         const PORTRAIT_TOUCH_MAX_BUTTON_SIZE = 46;
@@ -733,6 +747,9 @@ class SettingsManager {
     
     updateToolbarTextVisibility() {
         const toolbar = document.getElementById('toolbar');
+        if (!toolbar) {
+            return;
+        }
         const buttons = toolbar.querySelectorAll('.tool-btn');
         const windowWidth = window.innerWidth;
         const isVertical = toolbar.classList.contains('vertical');
@@ -801,6 +818,10 @@ class SettingsManager {
     
     updateConfigScale() {
         const configArea = document.getElementById('config-area');
+        if (!configArea) {
+            safeLocalStorageSetItem('configScale', this.configScale);
+            return;
+        }
         // Check if the config area has been manually dragged (tracked via data attribute)
         const hasBeenDragged = configArea.dataset.userDragged === 'true';
         
@@ -823,16 +844,23 @@ class SettingsManager {
         const historyControls = document.getElementById('history-controls');
         const paginationControls = document.getElementById('pagination-controls');
         
-        historyControls.className = '';
-        historyControls.classList.add(position);
-        
-        paginationControls.className = '';
-        if (!this.infiniteCanvas) {
-            paginationControls.classList.add('show');
+        if (historyControls) {
+            historyControls.className = '';
+            historyControls.classList.add(position);
         }
-        paginationControls.classList.add(position);
         
-        document.querySelectorAll('.position-option-btn').forEach(btn => {
+        if (paginationControls) {
+            paginationControls.className = '';
+            if (!this.infiniteCanvas) {
+                paginationControls.classList.add('show');
+            }
+            paginationControls.classList.add(position);
+        }
+        
+        const positionButtons = typeof document.querySelectorAll === 'function'
+            ? document.querySelectorAll('.position-option-btn')
+            : [];
+        positionButtons.forEach(btn => {
             btn.classList.remove('active');
             if (btn.dataset.position === position) {
                 btn.classList.add('active');
@@ -914,48 +942,68 @@ class SettingsManager {
     }
     
     loadSettings() {
-        document.getElementById('toolbar-size-slider').value = this.toolbarSize;
-        document.getElementById('toolbar-size-value').textContent = this.toolbarSize;
-        document.getElementById('toolbar-size-input').value = this.toolbarSize;
+        updateElementById('toolbar-size-slider', element => {
+            element.value = this.toolbarSize;
+        });
+        updateElementById('toolbar-size-value', element => {
+            element.textContent = this.toolbarSize;
+        });
+        updateElementById('toolbar-size-input', element => {
+            element.value = this.toolbarSize;
+        });
         this.updateToolbarSize();
         
-        document.getElementById('config-scale-slider').value = Math.round(this.configScale * 100);
-        document.getElementById('config-scale-value').textContent = Math.round(this.configScale * 100);
-        document.getElementById('config-scale-input').value = Math.round(this.configScale * 100);
+        updateElementById('config-scale-slider', element => {
+            element.value = Math.round(this.configScale * 100);
+        });
+        updateElementById('config-scale-value', element => {
+            element.textContent = Math.round(this.configScale * 100);
+        });
+        updateElementById('config-scale-input', element => {
+            element.value = Math.round(this.configScale * 100);
+        });
         this.updateConfigScale();
         
         this.setControlPosition(this.controlPosition);
         
-        document.getElementById('edge-snap-checkbox').checked = this.edgeSnapEnabled;
-        document.getElementById('touch-zoom-checkbox').checked = this.touchZoomEnabled;
+        updateElementById('edge-snap-checkbox', element => {
+            element.checked = this.edgeSnapEnabled;
+        });
+        updateElementById('touch-zoom-checkbox', element => {
+            element.checked = this.touchZoomEnabled;
+        });
         this.setUpdatePreference(this.updatePreference);
-        const legacyProjectImportCheckbox = document.getElementById('legacy-project-import-checkbox');
-        if (legacyProjectImportCheckbox) {
-            legacyProjectImportCheckbox.checked = this.legacyProjectImportEnabled;
-        }
-        document.getElementById('unlimited-zoom-checkbox').checked = this.unlimitedZoom;
-        document.getElementById('show-zoom-controls-checkbox').checked = this.showZoomControls;
-        const showImportExportBtnCheckbox = document.getElementById('show-import-export-btn-checkbox');
-        if (showImportExportBtnCheckbox) {
-            showImportExportBtnCheckbox.checked = this.showImportExportBtn;
-        }
+        updateElementById('legacy-project-import-checkbox', element => {
+            element.checked = this.legacyProjectImportEnabled;
+        });
+        updateElementById('unlimited-zoom-checkbox', element => {
+            element.checked = this.unlimitedZoom;
+        });
+        updateElementById('show-zoom-controls-checkbox', element => {
+            element.checked = this.showZoomControls;
+        });
+        updateElementById('show-import-export-btn-checkbox', element => {
+            element.checked = this.showImportExportBtn;
+        });
         
         // Load toolbar text visibility setting
-        const showToolbarTextCheckbox = document.getElementById('show-toolbar-text-checkbox');
-        if (showToolbarTextCheckbox) {
-            showToolbarTextCheckbox.checked = this.showToolbarText;
-        }
-        const keepMorePanelOpenCheckbox = document.getElementById('keep-more-panel-open-checkbox');
-        if (keepMorePanelOpenCheckbox) {
-            keepMorePanelOpenCheckbox.checked = this.keepMorePanelOpen;
-        }
+        updateElementById('show-toolbar-text-checkbox', element => {
+            element.checked = this.showToolbarText;
+        });
+        updateElementById('keep-more-panel-open-checkbox', element => {
+            element.checked = this.keepMorePanelOpen;
+        });
         this.updateToolbarTextVisibility();
         
         // Canvas is always in pagination mode now
         
         // Load canvas size settings
-        document.getElementById('canvas-width-input').value = this.canvasWidth;
-        document.getElementById('canvas-height-input').value = this.canvasHeight;
+        updateElementById('canvas-width-input', element => {
+            element.value = this.canvasWidth;
+        });
+        updateElementById('canvas-height-input', element => {
+            element.value = this.canvasHeight;
+        });
         document.querySelectorAll('.canvas-preset-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.preset === this.canvasPreset);
         });
@@ -967,7 +1015,9 @@ class SettingsManager {
         
         // Load theme color
         this.applyThemeColor();
-        document.getElementById('custom-theme-color-picker').value = this.themeColor;
+        updateElementById('custom-theme-color-picker', element => {
+            element.value = this.themeColor;
+        });
         document.querySelectorAll('.color-btn[data-theme-color]').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.themeColor === this.themeColor);
         });
@@ -1006,8 +1056,12 @@ class SettingsManager {
         if (presets[preset]) {
             this.canvasWidth = presets[preset].width;
             this.canvasHeight = presets[preset].height;
-            document.getElementById('canvas-width-input').value = this.canvasWidth;
-            document.getElementById('canvas-height-input').value = this.canvasHeight;
+            updateElementById('canvas-width-input', element => {
+                element.value = this.canvasWidth;
+            });
+            updateElementById('canvas-height-input', element => {
+                element.value = this.canvasHeight;
+            });
             safeLocalStorageSetItem('canvasWidth', this.canvasWidth);
             safeLocalStorageSetItem('canvasHeight', this.canvasHeight);
         }

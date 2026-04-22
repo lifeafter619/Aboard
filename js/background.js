@@ -775,14 +775,7 @@ class BackgroundManager {
                     }
                     if (this.gifInstance) {
                         this.gifInstance = null;
-                        // Restore img if SuperGif modified DOM
-                        const container = document.getElementById('background-image-container');
-                        const existingJsgif = container.querySelector('.jsgif');
-                        if (existingJsgif) {
-                             existingJsgif.remove();
-                             container.appendChild(imgElement);
-                             imgElement.style.display = 'block';
-                        }
+                        this.restoreBackgroundGifImage(imgElement);
                     }
                 }
             }
@@ -872,6 +865,30 @@ class BackgroundManager {
         return dataUrl && dataUrl.startsWith('data:image/gif');
     }
 
+    restoreBackgroundGifImage(imgElement) {
+        const container = document.getElementById('background-image-container');
+        if (!container) {
+            if (imgElement) {
+                imgElement.style.display = 'block';
+            }
+            return false;
+        }
+
+        const existingJsgif = typeof container.querySelector === 'function'
+            ? container.querySelector('.jsgif')
+            : null;
+        if (existingJsgif) {
+             existingJsgif.remove();
+             container.appendChild(imgElement);
+        }
+
+        if (imgElement) {
+            imgElement.style.display = 'block';
+        }
+
+        return Boolean(existingJsgif);
+    }
+
     async initGif(imgElement) {
         // Ensure SuperGif is loaded
         if (!window.SuperGif) {
@@ -890,13 +907,16 @@ class BackgroundManager {
 
         // Clear previous instance if exists (remove jsgif wrapper if any)
         const container = document.getElementById('background-image-container');
-        // If there is already a jsgif div, remove it and restore img
-        const existingJsgif = container.querySelector('.jsgif');
-        if (existingJsgif) {
-             existingJsgif.remove();
-             container.appendChild(imgElement);
-             imgElement.style.display = 'block';
+        if (!container) {
+            this.gifInstance = null;
+            if (imgElement) {
+                imgElement.style.display = 'block';
+            }
+            return;
         }
+
+        // If there is already a jsgif div, remove it and restore img
+        this.restoreBackgroundGifImage(imgElement);
 
         this.gifInstance = null;
 

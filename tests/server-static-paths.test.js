@@ -108,8 +108,32 @@ async function testDirectoryRequestReturnsNotFoundInsteadOfServerError() {
   assert.equal(res.body, JSON.stringify({ error: 'Not Found' }));
 }
 
+async function testMalformedRequestUrlReturnsBadRequestInsteadOfThrowing() {
+  const harness = loadServerHarness();
+  harness.setReadFileImpl(() => {
+    throw new Error('readFile should not run for malformed request URLs');
+  });
+
+  const res = createResponseRecorder();
+  assert.doesNotThrow(() => {
+    harness.requestHandler(
+      {
+        url: 'http://[::1',
+        headers: { host: 'localhost:8080' }
+      },
+      res
+    );
+  });
+
+  await res.ended;
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body, JSON.stringify({ error: 'Bad Request' }));
+}
+
 async function run() {
   await testDirectoryRequestReturnsNotFoundInsteadOfServerError();
+  await testMalformedRequestUrlReturnsBadRequestInsteadOfThrowing();
   console.log('server-static-paths.test: all assertions passed');
 }
 

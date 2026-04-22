@@ -44,6 +44,124 @@ async function testModularBoardDependenciesUseReadbackFriendlyContextOptions() {
   assert.equal(dependencies.ctx?.kind, 'main-context');
 }
 
+async function testModularBoardDependenciesSurviveOptionalUiManagerFailures() {
+  const moduleUrl = pathToFileURL(
+    path.join(__dirname, '..', 'js', 'app', 'create-board-runtime-dependencies.js')
+  ).href;
+  const { createBoardRuntimeDependencies } = await import(moduleUrl);
+
+  class FakeDrawingEngine {
+    setShapeDrawingManager(manager) {
+      this.shapeDrawingManager = manager;
+    }
+
+    setEdgeDrawingManager(manager) {
+      this.edgeDrawingManager = manager;
+    }
+  }
+
+  class FakeHistoryManager {}
+  class FakeBackgroundManager {}
+  class FakeShapeDrawingManager {}
+
+  class ThrowingImageControls {
+    constructor() {
+      throw new Error('image controls unavailable');
+    }
+  }
+
+  class ThrowingTeachingToolsManager {
+    constructor() {
+      throw new Error('teaching tools unavailable');
+    }
+  }
+
+  class ThrowingLineStyleModal {
+    constructor() {
+      throw new Error('line style modal unavailable');
+    }
+  }
+
+  class FakeEdgeDrawingManager {
+    constructor() {
+      throw new Error('edge drawing should not initialize without teaching tools');
+    }
+  }
+
+  const warnings = [];
+  const originalWarn = console.warn;
+
+  try {
+    console.warn = (...args) => {
+      warnings.push(args.map((value) => String(value)).join(' '));
+    };
+
+    const dependencies = createBoardRuntimeDependencies({
+      doc: {
+        getElementById(id) {
+          if (id === 'canvas') {
+            return {
+              getContext() {
+                return { kind: 'main-context' };
+              }
+            };
+          }
+          if (id === 'background-canvas') {
+            return {
+              getContext() {
+                return { kind: 'background-context' };
+              }
+            };
+          }
+          if (id === 'eraser-cursor') {
+            return { style: {} };
+          }
+          return null;
+        }
+      },
+      win: {
+        AboardDrawingEngine: FakeDrawingEngine,
+        AboardHistoryManager: FakeHistoryManager,
+        AboardBackgroundManager: FakeBackgroundManager,
+        AboardImageControls: ThrowingImageControls,
+        AboardTeachingToolsManager: ThrowingTeachingToolsManager,
+        AboardShapeDrawingManager: FakeShapeDrawingManager,
+        AboardLineStyleModal: ThrowingLineStyleModal,
+        AboardEdgeDrawingManager: FakeEdgeDrawingManager
+      },
+      boardDependencies: {}
+    });
+
+    assert.ok(dependencies.drawingEngine instanceof FakeDrawingEngine, 'core drawing engine should still initialize');
+    assert.ok(dependencies.historyManager instanceof FakeHistoryManager, 'core history manager should still initialize');
+    assert.ok(dependencies.backgroundManager instanceof FakeBackgroundManager, 'core background manager should still initialize');
+    assert.ok(dependencies.shapeDrawingManager instanceof FakeShapeDrawingManager, 'shape drawing should still initialize');
+    assert.equal(
+      dependencies.drawingEngine.shapeDrawingManager,
+      dependencies.shapeDrawingManager,
+      'core managers should still wire surviving shape drawing dependencies'
+    );
+    assert.equal(dependencies.imageControls, null, 'optional image controls should degrade when construction fails');
+    assert.equal(dependencies.teachingToolsManager, null, 'optional teaching tools should degrade when construction fails');
+    assert.equal(dependencies.lineStyleModal, null, 'optional line style modal should degrade when construction fails');
+    assert.equal(dependencies.edgeDrawingManager, undefined, 'dependent optional managers should be skipped when prerequisites fail');
+    assert.ok(
+      warnings.some((entry) => entry.includes('ImageControls')),
+      'optional image control failures should emit a warning'
+    );
+    assert.ok(
+      warnings.some((entry) => entry.includes('TeachingToolsManager')),
+      'optional teaching tools failures should emit a warning'
+    );
+    assert.ok(
+      warnings.some((entry) => entry.includes('LineStyleModal')),
+      'optional line style modal failures should emit a warning'
+    );
+  } finally {
+    console.warn = originalWarn;
+  }
+}
+
 function loadDrawingBoard() {
   const source = fs.readFileSync(
     path.join(__dirname, '..', 'js', 'main.js'),
@@ -195,6 +313,7 @@ function testLegacyDrawingBoardUsesReadbackFriendlyContextOptions() {
 
 async function run() {
   await testModularBoardDependenciesUseReadbackFriendlyContextOptions();
+  await testModularBoardDependenciesSurviveOptionalUiManagerFailures();
   testLegacyDrawingBoardUsesReadbackFriendlyContextOptions();
   console.log('canvas-context-options.test: all assertions passed');
 }
