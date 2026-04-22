@@ -56,6 +56,74 @@ function safeMainStorageGetItem(key) {
     }
 }
 
+function createNoopMainStorageManager() {
+    return {
+        initPromise: Promise.resolve(null),
+        async saveSession() {
+            return false;
+        },
+        async loadSession() {
+            return null;
+        },
+        async hasSession() {
+            return false;
+        },
+        async clearSession() {},
+        closeDB() {},
+        getSessionSizeEstimate() {
+            return 0;
+        },
+        setSessionSizeEstimate() {},
+        clearSessionSizeEstimate() {}
+    };
+}
+
+function createNoopMainCollapsibleManager() {
+    return {
+        collapsedState: { default: true },
+        loadCollapsedState() {
+            return { default: true };
+        },
+        saveCollapsedState() {},
+        initializeCollapsibles() {},
+        setup() {},
+        makeCollapsible() {}
+    };
+}
+
+function createNoopMainAnnouncementManager() {
+    return {
+        setupEventListeners() {},
+        checkAndShowAnnouncement() {},
+        showModal() {},
+        closeModal() {},
+        updateSettingsContent() {},
+        showFromSettings() {}
+    };
+}
+
+function createNoopMainHelpSystem() {
+    return {
+        init() {},
+        bindDataHelpButtons() {},
+        refreshHelpButtonLabels() {},
+        showHelp() {}
+    };
+}
+
+function instantiateOptionalMainDependency(label, ctor, args = [], fallbackFactory) {
+    if (typeof ctor !== 'function') {
+        return typeof fallbackFactory === 'function' ? fallbackFactory() : null;
+    }
+
+    try {
+        return Reflect.construct(ctor, args);
+    } catch (error) {
+        console.warn(`Aboard optional main dependency "${label}" failed to initialize:`, error);
+        return typeof fallbackFactory === 'function' ? fallbackFactory() : null;
+    }
+}
+
 class DrawingBoard {
     constructor(options = {}) {
         // Canvas setup
@@ -114,8 +182,10 @@ class DrawingBoard {
         this.projectManager = null;
         this.exportManager = null;
 
-        this.collapsibleManager = options.collapsibleManager || new CollapsibleManager();
-        this.announcementManager = options.announcementManager || new AnnouncementManager();
+        this.collapsibleManager = options.collapsibleManager
+            || instantiateOptionalMainDependency('CollapsibleManager', typeof CollapsibleManager === 'function' ? CollapsibleManager : null, [], createNoopMainCollapsibleManager);
+        this.announcementManager = options.announcementManager
+            || instantiateOptionalMainDependency('AnnouncementManager', typeof AnnouncementManager === 'function' ? AnnouncementManager : null, [], createNoopMainAnnouncementManager);
         this.teachingToolsManager = coreRuntimeDependencies.teachingToolsManager;
         this.toolButtonIds = {
             pen: 'pen-btn',
@@ -147,10 +217,20 @@ class DrawingBoard {
         // Initialize Help System
         if (options.helpSystem) {
             this.helpSystem = options.helpSystem;
-            this.helpSystem.init?.();
+            try {
+                this.helpSystem.init?.();
+            } catch (error) {
+                console.warn('Aboard optional main dependency "HelpSystem" failed to initialize:', error);
+                this.helpSystem = createNoopMainHelpSystem();
+            }
         } else if (window.HelpSystem) {
-            this.helpSystem = new HelpSystem();
-            this.helpSystem.init();
+            this.helpSystem = instantiateOptionalMainDependency(
+                'HelpSystem',
+                typeof HelpSystem === 'function' ? HelpSystem : window.HelpSystem,
+                [],
+                createNoopMainHelpSystem
+            );
+            this.helpSystem.init?.();
         }
         
         // Re-apply i18n translations for dynamically created elements (like selection controls)
@@ -254,7 +334,8 @@ class DrawingBoard {
         this.drawingEngine.setEdgeDrawingManager(this.edgeDrawingManager);
         
         // Initialize StorageManager
-        this.storageManager = options.storageManager || new StorageManager();
+        this.storageManager = options.storageManager
+            || instantiateOptionalMainDependency('StorageManager', typeof StorageManager === 'function' ? StorageManager : null, [], createNoopMainStorageManager);
 
         // Debounced save function
         this.saveTimeout = null;

@@ -545,6 +545,85 @@ async function testRestoreSessionKeepsRecoveringWhenOnePageBlobFails() {
   );
 }
 
+async function testRestoreSessionSurvivesMissingSelectionManagerWhenTextManagerExists() {
+  const localStorage = createStorageStub();
+  const sessionStorage = createStorageStub();
+  const runtime = loadSessionRuntime(localStorage, sessionStorage);
+
+  const board = {
+    storageManager: {
+      async loadSession() {
+        return {
+          pagesRaw: [{ restored: true }],
+          settings: {
+            currentPage: 1,
+            coordinateOverlayState: createDefaultCoordinateOverlayState()
+          }
+        };
+      }
+    },
+    drawingEngine: {
+      currentTool: 'pen',
+      penSize: 4,
+      currentColor: '#000000',
+      penType: 'pen',
+      eraserSize: 12,
+      eraserShape: 'circle',
+      canvasScale: 1,
+      panOffset: { x: 0, y: 0 }
+    },
+    selectionManager: null,
+    insertTextManager: {
+      textObjects: [{ id: 'text-1' }]
+    },
+    backgroundManager: {
+      backgroundColor: '#ffffff',
+      backgroundPattern: 'blank',
+      bgOpacity: 1,
+      patternIntensity: 0.5,
+      patternDensity: 1,
+      coordinateOriginX: 0,
+      coordinateOriginY: 0,
+      coordinateOverlayState: createDefaultCoordinateOverlayState(),
+      imageSize: 1,
+      backgroundImageData: null,
+      imageTransform: createDefaultImageTransform(),
+      backgroundOutsideLayerOrder: 1,
+      setCoordinateOverlayState(state) {
+        this.coordinateOverlayState = JSON.parse(JSON.stringify(state));
+      }
+    },
+    pageBackgrounds: {},
+    pages: [],
+    currentPage: 1,
+    canvas: { width: 1280, height: 720 },
+    ctx: {
+      getImageData() {
+        return { blank: true };
+      }
+    },
+    async applySerializedPageScenes() {},
+    loadPage(pageNumber) {
+      this.currentPage = pageNumber;
+    },
+    updateUI() {},
+    updateZoomUI() {},
+    applyZoom() {},
+    updatePaginationUI() {},
+    syncSettingsUI() {},
+    setTool() {}
+  };
+
+  const restored = await runtime.restoreSession(board);
+
+  assert.equal(
+    restored,
+    true,
+    'session restoration should degrade instead of failing when the optional selection manager is unavailable'
+  );
+  assert.equal(board.currentPage, 1);
+}
+
 async function testClearSessionDataDropsPersistedCanvasStateAndResetsRuntimeState() {
   const syncKey = 'aboardSyncSessionSnapshot';
   const localStorage = createStorageStub({
@@ -823,6 +902,7 @@ async function testClearSessionDataStillClearsSessionStorageWhenLocalStorageRemo
   await testClearSessionDataDropsPersistedCanvasStateAndResetsRuntimeState();
   await testRestoreSessionFallsBackWhenSyncSnapshotStorageIsBlocked();
   await testRestoreSessionKeepsRecoveringWhenOnePageBlobFails();
+  await testRestoreSessionSurvivesMissingSelectionManagerWhenTextManagerExists();
   await testClearSessionDataStillClearsSessionStorageWhenLocalStorageRemoveIsBlocked();
   console.log('session-clear-data-canvas-state.test: all assertions passed');
 })().catch((error) => {

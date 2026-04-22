@@ -53,6 +53,15 @@ function scheduleDeferredLocaleSuggestion(app, win) {
   }, 0);
 }
 
+function initializeDeferredFeature(label, initializer) {
+  try {
+    return initializer();
+  } catch (error) {
+    console.warn(`Aboard deferred ${label} failed to initialize:`, error);
+    return null;
+  }
+}
+
 function initializeDeferredBoardFeatures(app, win) {
   const { drawingBoard } = app;
   if (!drawingBoard) {
@@ -63,17 +72,25 @@ function initializeDeferredBoardFeatures(app, win) {
     const HelpSystem = resolveLegacyConstructor(win, 'AboardHelpSystem')
       || resolveLegacyConstructor(win, 'HelpSystem');
     if (typeof HelpSystem === 'function') {
-      drawingBoard.helpSystem = new HelpSystem();
-      drawingBoard.helpSystem.init?.();
+      const helpSystem = initializeDeferredFeature('HelpSystem', () => {
+        const instance = new HelpSystem();
+        instance.init?.();
+        return instance;
+      });
+      if (helpSystem) {
+        drawingBoard.helpSystem = helpSystem;
+      }
     }
   }
 
   if (!drawingBoard.timeDisplayManager) {
-    const timeDisplayDependencies = win.AboardBoardConstruction?.createTimeDisplayDependencies({
-      timeDisplayManager: drawingBoard.timeDisplayManager,
-      timeDisplayControls: drawingBoard.timeDisplayControls,
-      timeDisplaySettingsModal: drawingBoard.timeDisplaySettingsModal
-    }, drawingBoard.settingsManager || app.boardDependencies?.settingsManager);
+    const timeDisplayDependencies = initializeDeferredFeature('TimeDisplayDependencies', () => (
+      win.AboardBoardConstruction?.createTimeDisplayDependencies({
+        timeDisplayManager: drawingBoard.timeDisplayManager,
+        timeDisplayControls: drawingBoard.timeDisplayControls,
+        timeDisplaySettingsModal: drawingBoard.timeDisplaySettingsModal
+      }, drawingBoard.settingsManager || app.boardDependencies?.settingsManager)
+    ));
 
     if (timeDisplayDependencies?.timeDisplayManager) {
       drawingBoard.timeDisplayManager = timeDisplayDependencies.timeDisplayManager;
@@ -86,7 +103,10 @@ function initializeDeferredBoardFeatures(app, win) {
     }
   }
 
-  drawingBoard.uploadedImages = drawingBoard.loadUploadedImages?.() || drawingBoard.uploadedImages || [];
+  const restoredUploadedImages = initializeDeferredFeature('uploaded image restoration', () => (
+    drawingBoard.loadUploadedImages?.()
+  ));
+  drawingBoard.uploadedImages = restoredUploadedImages || drawingBoard.uploadedImages || [];
 }
 
 async function runImmediatePostVisibleSetup(app) {

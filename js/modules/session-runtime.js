@@ -463,7 +463,7 @@ async function restoreSession() {
 
             await this.applySerializedPageScenes(serializedPageScenes);
             if (this.insertTextManager) {
-                this.selectionManager.setTextManager(this.insertTextManager);
+                this.selectionManager?.setTextManager?.(this.insertTextManager);
             }
 
             // Apply restored state

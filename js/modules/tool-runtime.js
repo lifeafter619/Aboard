@@ -44,7 +44,7 @@ function setTool(tool, showConfig = true) {
     const isConfigVisible = configArea?.classList?.contains('show') || false;
     
     if (previousTool === 'select' && tool !== 'select') {
-        this.selectionManager.deactivate();
+        this.selectionManager?.deactivate?.();
     }
     
     this.drawingEngine.setTool(tool);
@@ -62,9 +62,9 @@ function setTool(tool, showConfig = true) {
     }
     
     if (tool === 'select') {
-        this.selectionManager.activate();
+        this.selectionManager?.activate?.();
         if (this.insertTextManager) {
-            this.selectionManager.setTextManager(this.insertTextManager);
+            this.selectionManager?.setTextManager?.(this.insertTextManager);
         }
     }
     

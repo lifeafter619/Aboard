@@ -7,6 +7,23 @@ function instantiateLegacyClass(name, args = []) {
     return typeof LegacyClass === 'function' ? Reflect.construct(LegacyClass, args) : null;
 }
 
+function instantiatePreferredOptionalLegacyClass(label, names, args = []) {
+    for (const name of names) {
+        const LegacyClass = resolveLegacyClass(name);
+        if (typeof LegacyClass !== 'function') {
+            continue;
+        }
+
+        try {
+            return Reflect.construct(LegacyClass, args);
+        } catch (error) {
+            console.warn(`Aboard optional legacy dependency "${label}" failed to initialize:`, error);
+        }
+    }
+
+    return null;
+}
+
 function instantiatePreferredLegacyClass(names, args = []) {
     for (const name of names) {
         const instance = instantiateLegacyClass(name, args);
@@ -19,15 +36,15 @@ function instantiatePreferredLegacyClass(names, args = []) {
 }
 
 function createTimeDisplayDependencies(options, settingsManager) {
-    const timeDisplayManager = options.timeDisplayManager || instantiatePreferredLegacyClass(['AboardTimeDisplayManager', 'TimeDisplayManager'], [settingsManager]);
+    const timeDisplayManager = options.timeDisplayManager || instantiatePreferredOptionalLegacyClass('TimeDisplayManager', ['AboardTimeDisplayManager', 'TimeDisplayManager'], [settingsManager]);
 
     return {
         timeDisplayManager,
         timeDisplayControls: options.timeDisplayControls || (
-            timeDisplayManager ? instantiatePreferredLegacyClass(['AboardTimeDisplayControls', 'TimeDisplayControls'], [timeDisplayManager]) : null
+            timeDisplayManager ? instantiatePreferredOptionalLegacyClass('TimeDisplayControls', ['AboardTimeDisplayControls', 'TimeDisplayControls'], [timeDisplayManager]) : null
         ),
         timeDisplaySettingsModal: options.timeDisplaySettingsModal || (
-            timeDisplayManager ? instantiatePreferredLegacyClass(['AboardTimeDisplaySettingsModal', 'TimeDisplaySettingsModal'], [timeDisplayManager]) : null
+            timeDisplayManager ? instantiatePreferredOptionalLegacyClass('TimeDisplaySettingsModal', ['AboardTimeDisplaySettingsModal', 'TimeDisplaySettingsModal'], [timeDisplayManager]) : null
         )
     };
 }
@@ -36,15 +53,15 @@ function createCoreRuntimeDependencies(options, refs) {
     const drawingEngine = options.drawingEngine || instantiatePreferredLegacyClass(['AboardDrawingEngine', 'DrawingEngine'], [refs.canvas, refs.ctx]);
     const historyManager = options.historyManager || instantiatePreferredLegacyClass(['AboardHistoryManager', 'HistoryManager'], [refs.canvas, refs.ctx]);
     const backgroundManager = options.backgroundManager || instantiatePreferredLegacyClass(['AboardBackgroundManager', 'BackgroundManager'], [refs.bgCanvas, refs.bgCtx]);
-    const imageControls = options.imageControls || (backgroundManager ? instantiatePreferredLegacyClass(['AboardImageControls', 'ImageControls'], [backgroundManager]) : null);
+    const imageControls = options.imageControls || (backgroundManager ? instantiatePreferredOptionalLegacyClass('ImageControls', ['AboardImageControls', 'ImageControls'], [backgroundManager]) : null);
     const strokeControls = options.strokeControls || (
         drawingEngine && historyManager
-            ? instantiatePreferredLegacyClass(['AboardStrokeControls', 'StrokeControls'], [drawingEngine, refs.canvas, refs.ctx, historyManager])
+            ? instantiatePreferredOptionalLegacyClass('StrokeControls', ['AboardStrokeControls', 'StrokeControls'], [drawingEngine, refs.canvas, refs.ctx, historyManager])
             : null
     );
     const selectionManager = options.selectionManager || (
         drawingEngine && strokeControls
-            ? instantiatePreferredLegacyClass(['AboardSelectionManager', 'SelectionManager'], [refs.canvas, refs.ctx, drawingEngine, strokeControls])
+            ? instantiatePreferredOptionalLegacyClass('SelectionManager', ['AboardSelectionManager', 'SelectionManager'], [refs.canvas, refs.ctx, drawingEngine, strokeControls])
             : null
     );
 
@@ -52,23 +69,23 @@ function createCoreRuntimeDependencies(options, refs) {
     selectionManager?.setBackgroundManager?.(backgroundManager);
 
     const teachingToolsManager = options.teachingToolsManager || (
-        historyManager ? instantiatePreferredLegacyClass(['AboardTeachingToolsManager', 'TeachingToolsManager'], [refs.canvas, refs.ctx, historyManager]) : null
+        historyManager ? instantiatePreferredOptionalLegacyClass('TeachingToolsManager', ['AboardTeachingToolsManager', 'TeachingToolsManager'], [refs.canvas, refs.ctx, historyManager]) : null
     );
     const shapeDrawingManager = options.shapeDrawingManager || (
         drawingEngine && historyManager
-            ? instantiatePreferredLegacyClass(['AboardShapeDrawingManager', 'ShapeDrawingManager'], [refs.canvas, refs.ctx, drawingEngine, historyManager])
+            ? instantiatePreferredOptionalLegacyClass('ShapeDrawingManager', ['AboardShapeDrawingManager', 'ShapeDrawingManager'], [refs.canvas, refs.ctx, drawingEngine, historyManager])
             : null
     );
     drawingEngine?.setShapeDrawingManager?.(shapeDrawingManager);
 
     const lineStyleModal = options.lineStyleModal || (
         drawingEngine && shapeDrawingManager
-            ? instantiatePreferredLegacyClass(['AboardLineStyleModal', 'LineStyleModal'], [drawingEngine, shapeDrawingManager])
+            ? instantiatePreferredOptionalLegacyClass('LineStyleModal', ['AboardLineStyleModal', 'LineStyleModal'], [drawingEngine, shapeDrawingManager])
             : null
     );
     const edgeDrawingManager = options.edgeDrawingManager || (
         teachingToolsManager && drawingEngine
-            ? instantiatePreferredLegacyClass(['AboardEdgeDrawingManager', 'EdgeDrawingManager'], [teachingToolsManager, drawingEngine])
+            ? instantiatePreferredOptionalLegacyClass('EdgeDrawingManager', ['AboardEdgeDrawingManager', 'EdgeDrawingManager'], [teachingToolsManager, drawingEngine])
             : null
     );
     drawingEngine?.setEdgeDrawingManager?.(edgeDrawingManager);

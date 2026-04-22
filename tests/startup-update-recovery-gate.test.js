@@ -10,7 +10,7 @@ function loadCreateAppInternals() {
   );
 
   const sanitizedSource = source
-    .replace(/import[\s\S]*?;\n/g, '')
+    .replace(/^import[\s\S]*?;\r?\n/gm, '')
     .replace('export async function createApp', 'async function createApp')
     + '\n;globalThis.__createAppTestExports = { runStartupUpdateGate };';
 

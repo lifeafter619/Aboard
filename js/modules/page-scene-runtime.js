@@ -328,7 +328,11 @@ async function applySerializedPageScenes(serializedScenes = {}) {
 
     const hasTextScenes = entries.some(([, scene]) => Array.isArray(scene?.textObjects) && scene.textObjects.length > 0);
     if (hasTextScenes && !this.insertTextManager && typeof this.getInsertTextManager === 'function') {
-        await this.getInsertTextManager();
+        try {
+            await this.getInsertTextManager();
+        } catch (error) {
+            console.warn('Failed to prepare InsertTextManager while restoring serialized page scenes:', error);
+        }
     }
 
     for (const [pageNumber, scene] of entries) {

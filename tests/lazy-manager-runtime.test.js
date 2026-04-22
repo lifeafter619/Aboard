@@ -3,7 +3,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-function loadLazyManagerRuntime() {
+function loadLazyManagerRuntime({
+  loadImpl,
+  windowOverrides = {},
+  boardOverrides = {}
+} = {}) {
   const source = fs.readFileSync(
     path.join(__dirname, '..', 'js', 'modules', 'lazy-manager-runtime.js'),
     'utf8'
@@ -16,6 +20,9 @@ function loadLazyManagerRuntime() {
   const window = {
     ScriptLoader: {
       async load(src) {
+        if (typeof loadImpl === 'function') {
+          return loadImpl(src, window);
+        }
         throw new Error(`Failed to load ${src}`);
       }
     },
@@ -28,7 +35,8 @@ function loadLazyManagerRuntime() {
       showAlert(message, type) {
         alertMessages.push({ message, type });
       }
-    }
+    },
+    ...windowOverrides
   };
 
   const context = {
@@ -58,7 +66,8 @@ function loadLazyManagerRuntime() {
           }
         }
       },
-      initResizableModals() {}
+      initResizableModals() {},
+      ...boardOverrides
     },
     toastMessages,
     alertMessages,
@@ -89,9 +98,41 @@ async function testPreloadFailuresStaySilentToUsers() {
   assert.deepEqual(alertMessages, []);
 }
 
+async function testInsertTextManagerSurvivesMissingSelectionManager() {
+  const { runtime, board, toastMessages, alertMessages } = loadLazyManagerRuntime({
+    loadImpl: async (src, runtimeWindow) => {
+      assert.equal(src, 'js/modules/insert-text-manager.js');
+      runtimeWindow.InsertTextManager = class InsertTextManager {
+        constructor(canvas, ctx, historyManager, drawingEngine) {
+          this.canvas = canvas;
+          this.ctx = ctx;
+          this.historyManager = historyManager;
+          this.drawingEngine = drawingEngine;
+        }
+      };
+    },
+    boardOverrides: {
+      canvas: { id: 'canvas' },
+      ctx: { id: 'ctx' },
+      historyManager: { id: 'history' },
+      drawingEngine: { id: 'engine' },
+      selectionManager: null
+    }
+  });
+
+  const manager = await runtime.getInsertTextManager(board);
+
+  assert.equal(board.insertTextManager, manager);
+  assert.equal(manager.canvas, board.canvas);
+  assert.equal(manager.ctx, board.ctx);
+  assert.deepEqual(toastMessages, []);
+  assert.deepEqual(alertMessages, []);
+}
+
 async function run() {
   await testManagerLoadFailureRejectsWithoutUserNotification();
   await testPreloadFailuresStaySilentToUsers();
+  await testInsertTextManagerSurvivesMissingSelectionManager();
   console.log('lazy-manager-runtime.test: all assertions passed');
 }
 

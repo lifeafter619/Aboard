@@ -10,7 +10,7 @@ function loadCreateAppServices({ constructors, warnings }) {
   );
 
   const sanitizedSource = source
-    .replace(/import[\s\S]*?;\n/g, '')
+    .replace(/^import[\s\S]*?;\r?\n/gm, '')
     .replace('export async function createAppServices', 'async function createAppServices')
     + '\n;globalThis.__runtimeResilienceExports = { createAppServices };';
 
@@ -54,7 +54,7 @@ function loadCreateBoardDependencies({ constructors, warnings }) {
   );
 
   const sanitizedSource = source
-    .replace(/import[\s\S]*?;\n/g, '')
+    .replace(/^import[\s\S]*?;\r?\n/gm, '')
     .replace('export function createBoardDependencies', 'function createBoardDependencies')
     + '\n;globalThis.__runtimeResilienceExports = { createBoardDependencies };';
 
@@ -85,6 +85,111 @@ function loadCreateBoardDependencies({ constructors, warnings }) {
   vm.runInContext(sanitizedSource, sandbox, { filename: 'create-board-dependencies.js' });
 
   return sandbox.__runtimeResilienceExports.createBoardDependencies;
+}
+
+function loadBoardConstruction({ constructors, warnings }) {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'js', 'modules', 'board-construction.js'),
+    'utf8'
+  );
+
+  const sandbox = {
+    window: { ...constructors },
+    console: {
+      warn(...args) {
+        warnings.push(args.map(String).join(' '));
+      },
+      log() {},
+      error() {}
+    },
+    Reflect,
+    Promise,
+    Object,
+    String,
+    Number,
+    Boolean,
+    Array,
+    Set,
+    Map
+  };
+
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox, { filename: 'board-construction.js' });
+
+  return sandbox.window.AboardBoardConstruction;
+}
+
+function loadPageSceneRuntime({ warnings = [] } = {}) {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'js', 'modules', 'page-scene-runtime.js'),
+    'utf8'
+  );
+
+  const sandbox = {
+    window: {},
+    console: {
+      warn(...args) {
+        warnings.push(args.map(String).join(' '));
+      },
+      log() {},
+      error() {}
+    },
+    Promise,
+    Object,
+    String,
+    Number,
+    Boolean,
+    Array,
+    Set,
+    Map,
+    JSON,
+    Math
+  };
+
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox, { filename: 'page-scene-runtime.js' });
+
+  return sandbox.window.AboardPageSceneRuntime;
+}
+
+function loadToolRuntime() {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'js', 'modules', 'tool-runtime.js'),
+    'utf8'
+  );
+
+  const sandbox = {
+    window: {},
+    document: {
+      getElementById() {
+        return null;
+      },
+      querySelectorAll() {
+        return [];
+      }
+    },
+    console: {
+      warn() {},
+      log() {},
+      error() {}
+    },
+    Promise,
+    Object,
+    String,
+    Number,
+    Boolean,
+    Array,
+    Set,
+    Map
+  };
+
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox, { filename: 'tool-runtime.js' });
+
+  return sandbox.window.AboardToolRuntime;
 }
 
 function loadHistoryManager() {
@@ -383,6 +488,191 @@ async function testCreateBoardDependenciesFallsBackForTimeDisplayFailures() {
     warnings.some((entry) => entry.includes('TimeDisplayManager')),
     'time display degradation should emit a warning'
   );
+}
+
+function testLegacyBoardConstructionFallsBackForOptionalManagers() {
+  class FakeDrawingEngine {
+    setShapeDrawingManager(manager) {
+      this.shapeDrawingManager = manager;
+    }
+
+    setEdgeDrawingManager(manager) {
+      this.edgeDrawingManager = manager;
+    }
+  }
+
+  class FakeHistoryManager {}
+  class FakeBackgroundManager {}
+
+  class ThrowingImageControls {
+    constructor() {
+      throw new Error('image controls unavailable');
+    }
+  }
+
+  class ThrowingStrokeControls {
+    constructor() {
+      throw new Error('stroke controls unavailable');
+    }
+  }
+
+  class ThrowingTeachingToolsManager {
+    constructor() {
+      throw new Error('teaching tools unavailable');
+    }
+  }
+
+  class ThrowingShapeDrawingManager {
+    constructor() {
+      throw new Error('shape drawing unavailable');
+    }
+  }
+
+  class ThrowingTimeDisplayManager {
+    constructor() {
+      throw new Error('time display unavailable');
+    }
+  }
+
+  const warnings = [];
+  const boardConstruction = loadBoardConstruction({
+    constructors: {
+      AboardDrawingEngine: FakeDrawingEngine,
+      AboardHistoryManager: FakeHistoryManager,
+      AboardBackgroundManager: FakeBackgroundManager,
+      AboardImageControls: ThrowingImageControls,
+      AboardStrokeControls: ThrowingStrokeControls,
+      AboardTeachingToolsManager: ThrowingTeachingToolsManager,
+      AboardShapeDrawingManager: ThrowingShapeDrawingManager,
+      AboardTimeDisplayManager: ThrowingTimeDisplayManager
+    },
+    warnings
+  });
+
+  const runtimeDeps = boardConstruction.createCoreRuntimeDependencies({}, {
+    canvas: {},
+    ctx: {},
+    bgCanvas: {},
+    bgCtx: {}
+  });
+  const timeDisplayDeps = boardConstruction.createTimeDisplayDependencies({}, {});
+
+  assert.ok(runtimeDeps.drawingEngine instanceof FakeDrawingEngine, 'legacy core drawing engine should still initialize');
+  assert.ok(runtimeDeps.historyManager instanceof FakeHistoryManager, 'legacy history manager should still initialize');
+  assert.ok(runtimeDeps.backgroundManager instanceof FakeBackgroundManager, 'legacy background manager should still initialize');
+  assert.equal(runtimeDeps.imageControls, null, 'legacy image controls should degrade instead of aborting startup');
+  assert.equal(runtimeDeps.strokeControls, null, 'legacy stroke controls should degrade instead of aborting startup');
+  assert.equal(runtimeDeps.selectionManager, null, 'legacy selection manager should be skipped when prerequisites fail');
+  assert.equal(runtimeDeps.teachingToolsManager, null, 'legacy teaching tools should degrade instead of aborting startup');
+  assert.equal(runtimeDeps.shapeDrawingManager, null, 'legacy shape drawing should degrade instead of aborting startup');
+  assert.equal(runtimeDeps.lineStyleModal, null, 'legacy line style modal should be skipped when shape drawing is unavailable');
+  assert.equal(runtimeDeps.edgeDrawingManager, null, 'legacy edge drawing should be skipped when teaching tools are unavailable');
+  assert.equal(runtimeDeps.drawingEngine.shapeDrawingManager, null, 'legacy drawing engine should still accept a degraded shape drawing dependency');
+  assert.equal(runtimeDeps.drawingEngine.edgeDrawingManager, null, 'legacy drawing engine should still accept a degraded edge drawing dependency');
+  assert.equal(timeDisplayDeps.timeDisplayManager, null, 'legacy time display manager should degrade instead of aborting startup');
+  assert.equal(timeDisplayDeps.timeDisplayControls, null, 'legacy time display controls should be skipped when the manager is unavailable');
+  assert.equal(timeDisplayDeps.timeDisplaySettingsModal, null, 'legacy time display settings modal should be skipped when the manager is unavailable');
+  assert.ok(
+    warnings.some((entry) => entry.includes('ImageControls'))
+      && warnings.some((entry) => entry.includes('StrokeControls'))
+      && warnings.some((entry) => entry.includes('TeachingToolsManager'))
+      && warnings.some((entry) => entry.includes('ShapeDrawingManager'))
+      && warnings.some((entry) => entry.includes('TimeDisplayManager')),
+    'legacy optional manager degradations should emit warnings'
+  );
+}
+
+async function testPageSceneRestoreSurvivesFailingLazyTextManager() {
+  const warnings = [];
+  const pageSceneRuntime = loadPageSceneRuntime({ warnings });
+  const board = {
+    pageScenes: null,
+    insertTextManager: null,
+    async getInsertTextManager() {
+      throw new Error('text-manager-load-failed');
+    }
+  };
+  const serializedScenes = {
+    1: {
+      pageNumber: 1,
+      textObjects: [{ id: 'text-1', text: 'Restored text' }],
+      strokes: [],
+      objectGroups: [],
+      stampedImages: []
+    }
+  };
+
+  await assert.doesNotReject(async () => {
+    await pageSceneRuntime.applySerializedPageScenes(board, serializedScenes);
+  }, 'page scene restoration should degrade instead of aborting when lazy text manager initialization fails');
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(board.pageScenes)),
+    serializedScenes,
+    'serialized page scenes should still be preserved when text manager initialization fails'
+  );
+  assert.equal(board.insertTextManager, null, 'failed lazy text manager initialization should leave the optional dependency unset');
+  assert.ok(
+    warnings.some((entry) => entry.includes('InsertTextManager')),
+    'page scene restoration degradation should emit a warning when lazy text manager initialization fails'
+  );
+}
+
+function testToolSelectionSurvivesMissingSelectionManager() {
+  const toolRuntime = loadToolRuntime();
+
+  const exitingSelectBoard = {
+    drawingEngine: {
+      currentTool: 'select',
+      setTool(tool) {
+        this.currentTool = tool;
+      }
+    },
+    selectionManager: null,
+    isCoordinateOriginDragMode: false,
+    isCoordinatePointMode: false,
+    disableCoordinateOriginDragMode() {},
+    setCoordinatePointMode() {},
+    toggleCoordinateSettingsPanel() {},
+    toggleCoordinatePointPanel() {},
+    ensureShapeToolConfigListenersInitialized() {},
+    ensureSelectToolConfigListenersInitialized() {},
+    ensureBackgroundPanelPrepared() {},
+    hideEraserCursor() {},
+    updateUI() {}
+  };
+
+  assert.doesNotThrow(() => {
+    toolRuntime.setTool(exitingSelectBoard, 'pen', false);
+  }, 'tool switching should degrade instead of throwing when exiting select mode without a selection manager');
+  assert.equal(exitingSelectBoard.drawingEngine.currentTool, 'pen');
+
+  const enteringSelectBoard = {
+    drawingEngine: {
+      currentTool: 'pen',
+      setTool(tool) {
+        this.currentTool = tool;
+      }
+    },
+    selectionManager: null,
+    insertTextManager: { textObjects: [] },
+    isCoordinateOriginDragMode: false,
+    isCoordinatePointMode: false,
+    disableCoordinateOriginDragMode() {},
+    setCoordinatePointMode() {},
+    toggleCoordinateSettingsPanel() {},
+    toggleCoordinatePointPanel() {},
+    ensureShapeToolConfigListenersInitialized() {},
+    ensureSelectToolConfigListenersInitialized() {},
+    ensureBackgroundPanelPrepared() {},
+    hideEraserCursor() {},
+    updateUI() {}
+  };
+
+  assert.doesNotThrow(() => {
+    toolRuntime.setTool(enteringSelectBoard, 'select', false);
+  }, 'select tool activation should degrade instead of throwing when the optional selection manager is unavailable');
+  assert.equal(enteringSelectBoard.drawingEngine.currentTool, 'select');
 }
 
 async function testStorageManagerGracefullyHandlesMissingIndexedDb() {
@@ -712,6 +1002,9 @@ function testHistoryManagerUsesSmallerDefaultMemoryCap() {
   await testCreateAppServicesSurvivesFailingOptionalPwaManager();
   await testCreateBoardDependenciesFallsBackForOptionalManagers();
   await testCreateBoardDependenciesFallsBackForTimeDisplayFailures();
+  testLegacyBoardConstructionFallsBackForOptionalManagers();
+  await testPageSceneRestoreSurvivesFailingLazyTextManager();
+  testToolSelectionSurvivesMissingSelectionManager();
   await testStorageManagerGracefullyHandlesMissingIndexedDb();
   await testStorageManagerFallsBackWhenCanvasToBlobIsUnavailable();
   await testStorageManagerFallsBackWhenCreateImageBitmapIsUnavailable();

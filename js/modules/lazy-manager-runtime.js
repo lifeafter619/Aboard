@@ -71,7 +71,7 @@ async function getInsertTextManager(board) {
     if (!board.insertTextManager) {
         const InsertTextManagerCtor = await loadManagerConstructor(board, 'InsertTextManager');
         board.insertTextManager = new InsertTextManagerCtor(board.canvas, board.ctx, board.historyManager, board.drawingEngine);
-        board.selectionManager.setTextManager(board.insertTextManager);
+        board.selectionManager?.setTextManager?.(board.insertTextManager);
     }
     return board.insertTextManager;
 }
