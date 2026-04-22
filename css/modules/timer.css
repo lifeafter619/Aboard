@@ -290,6 +290,32 @@
     position: relative;
 }
 
+.sound-preset-custom-row {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.sound-preset-custom-select {
+    flex: 1;
+    min-width: 0;
+    justify-content: flex-start;
+    padding-inline: 12px;
+}
+
+.sound-preset-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sound-preset-actions {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
 .sound-preset-btn:hover {
     background-color: #f0f0f0;
     border-color: var(--theme-color);
@@ -306,9 +332,11 @@
 }
 
 .sound-preview-btn {
+    width: 42px;
     padding: 6px;
-    border: none;
-    background: transparent;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #ffffff;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -317,7 +345,8 @@
 }
 
 .sound-preview-btn:hover {
-    transform: scale(1.1);
+    background-color: #f0f0f0;
+    border-color: var(--theme-color);
 }
 
 .sound-preview-btn svg {
@@ -326,9 +355,11 @@
 }
 
 .sound-delete-btn {
+    width: 42px;
     padding: 6px;
-    border: none;
-    background: transparent;
+    border: 1px solid #ffd6d3;
+    border-radius: 8px;
+    background: #fff5f5;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -338,12 +369,20 @@
 }
 
 .sound-delete-btn:hover {
-    transform: scale(1.1);
+    background: #ffe8e6;
+    border-color: #ff3b30;
 }
 
 .sound-delete-btn svg {
     width: 16px;
     height: 16px;
+}
+
+.sound-preview-btn:focus-visible,
+.sound-delete-btn:focus-visible,
+.sound-preset-btn:focus-visible {
+    outline: 3px solid var(--theme-color);
+    outline-offset: 2px;
 }
 
 .sound-upload-group {

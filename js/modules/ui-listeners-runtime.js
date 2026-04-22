@@ -540,22 +540,28 @@ function setupBackgroundToolConfigListeners() {
                 const reader = new FileReader();
                 reader.onload = async (event) => {
                     const imageData = event.target.result;
-                    
+
                     // Reset confirmation state for new image
                     this.imageControls.resetConfirmation();
-                    
+
                     await this.backgroundManager.setBackgroundImage(imageData);
                     this.updateBackgroundUI();
                     this.setCoordinatePointMode(false);
-                    
+
                     // Save uploaded image
                     this.saveUploadedImage(imageData);
-                    
+
                     // Show image controls for manipulation
                     const imgData = this.backgroundManager.getImageData();
                     if (imgData) {
                         this.imageControls.showControls(imgData);
                     }
+                };
+                reader.onerror = () => {
+                    console.warn('Failed to read background image file:', reader.error);
+                    const msg = window.i18n?.t?.('errors.fileReadFailed') || 'Failed to read the selected file.';
+                    const toast = this.settingsManager?.toastManager || window.toastManager;
+                    toast?.show?.(msg, 'error');
                 };
                 reader.readAsDataURL(file);
             }

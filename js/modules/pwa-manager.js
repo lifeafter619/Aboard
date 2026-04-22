@@ -2,6 +2,11 @@
 const UPDATE_CHECK_TIMEOUT = 1200;
 const UPDATE_APPLY_TIMEOUT = 5000;
 const UPDATE_IDLE_APPLY_DELAY = 15000;
+// Cap the idle-update polling loop so a stuck recovery prompt or
+// repeatedly-failing session persistence cannot keep a 1 Hz setInterval
+// running forever on classroom devices that stay powered on all day.
+const UPDATE_IDLE_POLL_MAX_DURATION_MS = 30 * 60 * 1000;
+const UPDATE_IDLE_RETRY_DELAY_MS = 60 * 1000;
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 const APP_VERSION_URLS = ['version.txt', './version.txt', '/api/version'];
 const UPDATE_PREFERENCE_KEY = 'updatePreference';
@@ -182,6 +187,8 @@ class PWAManager {
         this.autoActivateResetTimer = null;
         this.pendingIdleUpdateIntent = null;
         this.idleUpdateCheckTimer = null;
+        this.idleUpdateRetryTimer = null;
+        this.idleUpdatePollStartedAt = 0;
         this.idleUpdateInFlight = false;
         this.controllerChangeListenerRegistered = false;
         this.observedRegistrations = new WeakSet();
@@ -587,13 +594,54 @@ class PWAManager {
         };
     }
 
-    cancelIdleUpdate() {
+    pauseIdleUpdatePolling() {
         if (this.idleUpdateCheckTimer) {
             window.clearInterval(this.idleUpdateCheckTimer);
             this.idleUpdateCheckTimer = null;
         }
-        this.pendingIdleUpdateIntent = null;
+        this.idleUpdatePollStartedAt = 0;
         this.idleUpdateInFlight = false;
+    }
+
+    clearIdleUpdateRetry() {
+        if (this.idleUpdateRetryTimer) {
+            window.clearTimeout(this.idleUpdateRetryTimer);
+            this.idleUpdateRetryTimer = null;
+        }
+    }
+
+    restartIdleUpdatePolling() {
+        if (!this.pendingIdleUpdateIntent || this.idleUpdateCheckTimer) {
+            return false;
+        }
+
+        this.clearIdleUpdateRetry();
+        this.idleUpdatePollStartedAt = Date.now();
+        this.idleUpdateCheckTimer = window.setInterval(() => {
+            void this.maybeApplyIdleUpdate();
+        }, 1000);
+        void this.maybeApplyIdleUpdate();
+        return true;
+    }
+
+    scheduleIdleUpdateRetry() {
+        if (!this.pendingIdleUpdateIntent || this.idleUpdateRetryTimer) {
+            return false;
+        }
+
+        this.idleUpdateRetryTimer = window.setTimeout(() => {
+            this.idleUpdateRetryTimer = null;
+            this.restartIdleUpdatePolling();
+        }, UPDATE_IDLE_RETRY_DELAY_MS);
+        return true;
+    }
+
+    cancelIdleUpdate({ clearIntent = true } = {}) {
+        this.pauseIdleUpdatePolling();
+        this.clearIdleUpdateRetry();
+        if (clearIntent) {
+            this.pendingIdleUpdateIntent = null;
+        }
     }
 
     async applyPreparedUpdateNow(intent, { timeoutMs = UPDATE_APPLY_TIMEOUT } = {}) {
@@ -611,6 +659,18 @@ class PWAManager {
 
     async maybeApplyIdleUpdate() {
         if (!this.pendingIdleUpdateIntent || this.idleUpdateInFlight) {
+            return false;
+        }
+
+        // Abort the 1 Hz poll if we've been trying for too long — a stuck
+        // recovery prompt or repeatedly-failing persistence shouldn't keep a
+        // tight loop running forever on always-on classroom hardware. Fall
+        // back to a low-frequency retry so the pending update intent survives.
+        if (this.idleUpdatePollStartedAt
+            && (Date.now() - this.idleUpdatePollStartedAt) > UPDATE_IDLE_POLL_MAX_DURATION_MS) {
+            console.warn('Idle update poll exceeded max duration; pausing and scheduling a retry.');
+            this.pauseIdleUpdatePolling();
+            this.scheduleIdleUpdateRetry();
             return false;
         }
 
@@ -652,14 +712,13 @@ class PWAManager {
             mode: PLANNED_UPDATE_MODES.IDLE
         });
 
-        if (!this.idleUpdateCheckTimer) {
-            this.idleUpdateCheckTimer = window.setInterval(() => {
-                void this.maybeApplyIdleUpdate();
-            }, 1000);
+        this.clearIdleUpdateRetry();
+        if (this.idleUpdateCheckTimer) {
+            void this.maybeApplyIdleUpdate();
+            return true;
         }
 
-        void this.maybeApplyIdleUpdate();
-        return true;
+        return this.restartIdleUpdatePolling();
     }
 
     async requestUpdateApplication({ mode, reason = 'manual', currentVersion = null, latestVersion = null } = {}) {

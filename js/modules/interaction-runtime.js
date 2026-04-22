@@ -6,14 +6,7 @@ function persistBoardViewState(board, options = {}) {
                 board.drawingEngine.persistViewState(options);
                 return;
         }
-
-        try {
-                localStorage.setItem('canvasScale', board.drawingEngine.canvasScale);
-                localStorage.setItem('panOffsetX', board.drawingEngine.panOffset.x);
-                localStorage.setItem('panOffsetY', board.drawingEngine.panOffset.y);
-        } catch (error) {
-                console.warn('Failed to persist interaction view state to localStorage:', error);
-        }
+        window.AboardBoardHelpersRuntime?.persistViewState?.(board, options);
 }
 
 function updateEraserCursor(e) {

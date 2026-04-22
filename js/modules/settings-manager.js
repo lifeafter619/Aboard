@@ -355,6 +355,13 @@ class SettingsManager {
                 }
             }
         };
+        reader.onerror = () => {
+            console.warn('Failed to read font file:', reader.error);
+            const msg = window.i18n?.t?.('errors.fileReadFailed') || 'Failed to read the selected file.';
+            if (this.toastManager) {
+                this.toastManager.show(msg, 'error');
+            }
+        };
         reader.readAsDataURL(file);
     }
     

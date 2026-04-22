@@ -1,5 +1,11 @@
-const CORE_CACHE_NAME = 'aboard-core-v37';
-const RUNTIME_CACHE_NAME = 'aboard-runtime-v32';
+// Bumping SW_VERSION busts both caches atomically. Previously CORE and
+// RUNTIME tracked separate version numbers (v37 vs v32), so runtime-cached
+// resources from older releases could survive a core-cache rotation and
+// serve stale JS/CSS alongside new code. Keeping a single SW_VERSION
+// guarantees activate() clears both via the existing whitelist check.
+const SW_VERSION = 'v38';
+const CORE_CACHE_NAME = `aboard-core-${SW_VERSION}`;
+const RUNTIME_CACHE_NAME = `aboard-runtime-${SW_VERSION}`;
 const RUNTIME_CACHE_MAX_ENTRIES = 24;
 const RUNTIME_CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'worker', 'image', 'font', 'manifest']);
 const RUNTIME_CACHEABLE_EXTENSIONS = /\.(?:css|gif|ico|jpe?g|js|json|png|svg|webp|woff2?)$/i;

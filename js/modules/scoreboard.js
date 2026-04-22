@@ -439,8 +439,9 @@ class ScoreboardInstance {
             this.isDragging = true;
             this.element.classList.add('dragging');
 
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const primaryTouch = e.touches?.[0];
+            const clientX = primaryTouch ? primaryTouch.clientX : e.clientX;
+            const clientY = primaryTouch ? primaryTouch.clientY : e.clientY;
 
             const rect = this.element.getBoundingClientRect();
             this.dragOffset.x = clientX - rect.left;
@@ -457,8 +458,9 @@ class ScoreboardInstance {
             }
             if (e.type === 'touchmove') e.preventDefault();
 
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const primaryTouch = e.touches?.[0];
+            const clientX = primaryTouch ? primaryTouch.clientX : e.clientX;
+            const clientY = primaryTouch ? primaryTouch.clientY : e.clientY;
 
             let x = clientX - this.dragOffset.x;
             let y = clientY - this.dragOffset.y;

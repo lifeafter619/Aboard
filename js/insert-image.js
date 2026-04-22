@@ -245,6 +245,12 @@ class InsertImageManager {
             };
             img.src = event.target.result;
         };
+        reader.onerror = () => {
+            console.warn('Failed to read image file:', reader.error);
+            const msg = window.i18n?.t?.('errors.fileReadFailed') || 'Failed to read the selected file.';
+            const toast = window.drawingBoard?.settingsManager?.toastManager || window.toastManager;
+            toast?.show?.(msg, 'error');
+        };
         reader.readAsDataURL(file);
     }
 

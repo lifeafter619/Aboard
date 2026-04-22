@@ -84,7 +84,10 @@ function toPlainObject(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function loadSessionRuntime(localStorage, sessionStorage) {
+function loadSessionRuntime(localStorage, sessionStorage, {
+  StorageManager,
+  warnings = []
+} = {}) {
   const source = fs.readFileSync(
     path.join(__dirname, '..', 'js', 'modules', 'session-runtime.js'),
     'utf8'
@@ -99,9 +102,12 @@ function loadSessionRuntime(localStorage, sessionStorage) {
     },
     localStorage,
     sessionStorage,
+    StorageManager,
     console: {
       log() {},
-      warn() {},
+      warn(...args) {
+        warnings.push(args.map(String).join(' '));
+      },
       error() {}
     },
     Promise,
@@ -438,6 +444,107 @@ async function testRestoreSessionFallsBackWhenSyncSnapshotStorageIsBlocked() {
   );
 }
 
+async function testRestoreSessionKeepsRecoveringWhenOnePageBlobFails() {
+  const localStorage = createStorageStub();
+  const sessionStorage = createStorageStub();
+  const warnings = [];
+  const runtime = loadSessionRuntime(localStorage, sessionStorage, {
+    warnings,
+    StorageManager: {
+      async blobToImageData(blob) {
+        if (blob === 'bad-page') {
+          throw new Error('decode failed');
+        }
+        return { restored: blob };
+      }
+    }
+  });
+
+  let loadPageCalls = 0;
+  const board = {
+    storageManager: {
+      async loadSession() {
+        return {
+          pages: ['good-page', 'bad-page'],
+          settings: {
+            currentPage: 2,
+            coordinateOverlayState: createDefaultCoordinateOverlayState()
+          }
+        };
+      }
+    },
+    drawingEngine: {
+      currentTool: 'pen',
+      penSize: 4,
+      currentColor: '#000000',
+      penType: 'pen',
+      eraserSize: 12,
+      eraserShape: 'circle',
+      canvasScale: 1,
+      panOffset: { x: 0, y: 0 }
+    },
+    selectionManager: {
+      setTextManager() {}
+    },
+    backgroundManager: {
+      backgroundColor: '#ffffff',
+      backgroundPattern: 'blank',
+      bgOpacity: 1,
+      patternIntensity: 0.5,
+      patternDensity: 1,
+      coordinateOriginX: 0,
+      coordinateOriginY: 0,
+      coordinateOverlayState: createDefaultCoordinateOverlayState(),
+      imageSize: 1,
+      backgroundImageData: null,
+      imageTransform: createDefaultImageTransform(),
+      backgroundOutsideLayerOrder: 1,
+      setCoordinateOverlayState(state) {
+        this.coordinateOverlayState = JSON.parse(JSON.stringify(state));
+      }
+    },
+    pageBackgrounds: {},
+    pages: [],
+    currentPage: 1,
+    canvas: { width: 1280, height: 720 },
+    ctx: {
+      getImageData() {
+        return { blank: false };
+      },
+      createImageData(width, height) {
+        return { blank: true, width, height };
+      }
+    },
+    async applySerializedPageScenes() {},
+    loadPage(pageNumber) {
+      loadPageCalls += 1;
+      this.currentPage = pageNumber;
+    },
+    updateUI() {},
+    updateZoomUI() {},
+    applyZoom() {},
+    updatePaginationUI() {},
+    syncSettingsUI() {},
+    setTool() {}
+  };
+
+  const restored = await runtime.restoreSession(board);
+
+  assert.equal(restored, true, 'restore should still succeed when one blob page cannot be decoded');
+  assert.deepEqual(toPlainObject(board.pages[0]), { restored: 'good-page' });
+  assert.deepEqual(
+    toPlainObject(board.pages[1]),
+    { blank: true, width: 1280, height: 720 },
+    'failed blob pages should fall back to a blank page instead of aborting the entire restore'
+  );
+  assert.equal(loadPageCalls, 1, 'restore should still finish applying the recovered session');
+  assert.equal(board.currentPage, 2, 'restore should preserve the requested current page');
+  assert.ok(
+    warnings.some((warning) => warning.includes('Failed to restore page 2')),
+    'restore should log which page blob failed to decode'
+  );
+}
+
 async function testClearSessionDataDropsPersistedCanvasStateAndResetsRuntimeState() {
   const syncKey = 'aboardSyncSessionSnapshot';
   const localStorage = createStorageStub({
@@ -715,6 +822,7 @@ async function testClearSessionDataStillClearsSessionStorageWhenLocalStorageRemo
   await testRestoreSessionClearsPausedGifRuntimeState();
   await testClearSessionDataDropsPersistedCanvasStateAndResetsRuntimeState();
   await testRestoreSessionFallsBackWhenSyncSnapshotStorageIsBlocked();
+  await testRestoreSessionKeepsRecoveringWhenOnePageBlobFails();
   await testClearSessionDataStillClearsSessionStorageWhenLocalStorageRemoveIsBlocked();
   console.log('session-clear-data-canvas-state.test: all assertions passed');
 })().catch((error) => {

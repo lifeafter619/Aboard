@@ -6,22 +6,26 @@ function persistBoardViewState(board, options = {}) {
                 board.drawingEngine.persistViewState(options);
                 return;
         }
-
-        try {
-                localStorage.setItem('canvasScale', board.drawingEngine.canvasScale);
-                localStorage.setItem('panOffsetX', board.drawingEngine.panOffset.x);
-                localStorage.setItem('panOffsetY', board.drawingEngine.panOffset.y);
-        } catch (error) {
-                console.warn('Failed to persist zoom view state to localStorage:', error);
-        }
+        window.AboardBoardHelpersRuntime?.persistViewState?.(board, options);
 }
 
 function setupCanvasZoom() {
         // Ctrl+scroll to zoom canvas towards mouse pointer
         document.addEventListener('wheel', (e) => {
             if (e.ctrlKey || e.metaKey) {
+                // Skip when the user is scrolling inside a visible modal, a form
+                // field, or an editable region — otherwise the canvas hijacks
+                // Ctrl+wheel in places where the browser/app needs it (e.g.
+                // adjusting font size in a text box, scrolling a long modal).
+                const blockingTarget = typeof e.target?.closest === 'function'
+                    ? e.target.closest('.modal.show, input, textarea, select, [contenteditable="true"]')
+                    : null;
+                if (blockingTarget) {
+                    return;
+                }
+
                 e.preventDefault();
-                
+
                 // Get mouse position relative to viewport
                 const mouseX = e.clientX;
                 const mouseY = e.clientY;

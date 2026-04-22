@@ -411,7 +411,13 @@ async function restoreSession() {
             if (pagesRaw && Array.isArray(pagesRaw) && pagesRaw.length > 0) {
                 this.pages = pagesRaw;
             } else if (pages && Array.isArray(pages)) {
-                this.pages = await Promise.all(pages.map(blob => StorageManager.blobToImageData(blob)));
+                // Use allSettled so a single corrupted page blob doesn't wipe every page.
+                const results = await Promise.allSettled(pages.map(blob => StorageManager.blobToImageData(blob)));
+                this.pages = results.map((result, index) => {
+                    if (result.status === 'fulfilled') return result.value;
+                    console.warn(`[Session] Failed to restore page ${index + 1}:`, result.reason);
+                    return this.ctx.createImageData(this.canvas.width, this.canvas.height);
+                });
             }
 
             if (syncSnapshot?.pageDataUrl) {

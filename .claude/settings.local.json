@@ -14,7 +14,8 @@
       "Bash(node --check js/modules/i18n.js)",
       "Bash(node --check js/modules/shape-drawing.js)",
       "Bash(node --check js/modules/settings-manager.js)",
-      "Bash(node tests/safe-plot-evaluator.test.js)"
+      "Bash(node tests/safe-plot-evaluator.test.js)",
+      "Bash(xargs wc *)"
     ]
   }
 }

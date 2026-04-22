@@ -18,18 +18,15 @@ function safeCanvasViewStorageGetItem(key) {
 }
 
 function persistBoardViewState(board, options = {}) {
+        // DrawingEngine.persistViewState is the canonical debounced writer;
+        // fall back to the shared board helper only if the drawing engine
+        // isn't wired up yet. The inline-localStorage fallback that used to
+        // live here is centralized in board-helpers-runtime.
         if (typeof board?.drawingEngine?.persistViewState === 'function') {
                 board.drawingEngine.persistViewState(options);
                 return;
         }
-
-        try {
-                localStorage.setItem('canvasScale', board.drawingEngine.canvasScale);
-                localStorage.setItem('panOffsetX', board.drawingEngine.panOffset.x);
-                localStorage.setItem('panOffsetY', board.drawingEngine.panOffset.y);
-        } catch (error) {
-                console.warn('Failed to persist canvas view state to localStorage:', error);
-        }
+        window.AboardBoardHelpersRuntime?.persistViewState?.(board, options);
 }
 
 function initializeCanvasView() {

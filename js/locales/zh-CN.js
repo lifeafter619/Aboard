@@ -37,7 +37,9 @@ window.translations = {
     },
 
     errors: {
-        lazyLoadFailed: '加载{feature}失败，请刷新页面后重试。'
+        lazyLoadFailed: '加载{feature}失败，请刷新页面后重试。',
+        fileReadFailed: '无法读取所选文件，请检查文件是否损坏后重试。',
+        storageWriteFailed: '保存失败，请检查浏览器存储权限后重试。'
     },
 
     prompts: {
@@ -886,7 +888,8 @@ window.translations = {
         stop: '停止',
         audioFallback: '计时结束（无法播放铃声）',
         alertSetTime: '请设置倒计时时间',
-        alertTitle: '提示'
+        alertTitle: '提示',
+        customSoundQuotaExceeded: '存储空间不足，请删除一些自定义铃声。'
     },
 
     // Export

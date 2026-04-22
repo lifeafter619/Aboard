@@ -123,6 +123,25 @@ function getCoordinateExpressionPrefix(pattern = this.backgroundManager?.backgro
     return pattern === 'polar' ? 'r = ' : 'y = ';
 }
 
+// Shared persistence helper. Previously this exact function was duplicated in
+// canvas-view-runtime.js, interaction-runtime.js, and zoom-runtime.js — so any
+// fix/change had to land in three places. Prefer DrawingEngine.persistViewState
+// when present (it debounces); otherwise write the three legacy keys directly.
+function persistBoardViewState(board, options = {}) {
+    if (typeof board?.drawingEngine?.persistViewState === 'function') {
+        board.drawingEngine.persistViewState(options);
+        return;
+    }
+
+    try {
+        localStorage.setItem('canvasScale', board.drawingEngine.canvasScale);
+        localStorage.setItem('panOffsetX', board.drawingEngine.panOffset.x);
+        localStorage.setItem('panOffsetY', board.drawingEngine.panOffset.y);
+    } catch (error) {
+        console.warn('Failed to persist board view state to localStorage:', error);
+    }
+}
+
 window.AboardBoardHelpersRuntime = {
     syncEraserSizeControls(board) {
         return syncEraserSizeControls.call(board);
@@ -141,5 +160,8 @@ window.AboardBoardHelpersRuntime = {
     },
     getCoordinateExpressionPrefix(board, pattern) {
         return getCoordinateExpressionPrefix.call(board, pattern);
+    },
+    persistViewState(board, options) {
+        return persistBoardViewState(board, options);
     }
 };

@@ -105,6 +105,13 @@ export class GifManager {
         }
         this._initSuperGif(img, container, id, options);
       };
+      reader.onerror = () => {
+        console.warn('Failed to read GIF file:', reader.error);
+        const win = this.win || window;
+        const msg = win.i18n?.t?.('errors.fileReadFailed') || 'Failed to read the selected file.';
+        const toast = win.drawingBoard?.settingsManager?.toastManager || win.toastManager;
+        toast?.show?.(msg, 'error');
+      };
       reader.readAsDataURL(fileOrUrl);
     } else {
       img.src = fileOrUrl;
@@ -431,8 +438,9 @@ export class GifManager {
         : () => null;
       if (closest('.gif-controls') || closest('.gif-resize-handle')) return;
       isDragging = true;
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const primaryTouch = e.touches?.[0];
+      const clientX = primaryTouch ? primaryTouch.clientX : e.clientX;
+      const clientY = primaryTouch ? primaryTouch.clientY : e.clientY;
       startX = clientX;
       startY = clientY;
       startLeft = parseInt(element.style.left, 10) || 0;
@@ -443,8 +451,9 @@ export class GifManager {
     const onMove = (e) => {
       if (!isDragging) return;
       if (e.type === 'touchmove') e.preventDefault();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const primaryTouch = e.touches?.[0];
+      const clientX = primaryTouch ? primaryTouch.clientX : e.clientX;
+      const clientY = primaryTouch ? primaryTouch.clientY : e.clientY;
       element.style.left = `${startLeft + (clientX - startX)}px`;
       element.style.top = `${startTop + (clientY - startY)}px`;
     };
@@ -496,8 +505,9 @@ export class GifManager {
     const onDown = (e) => {
       e.stopPropagation();
       isResizing = true;
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const primaryTouch = e.touches?.[0];
+      const clientX = primaryTouch ? primaryTouch.clientX : e.clientX;
+      const clientY = primaryTouch ? primaryTouch.clientY : e.clientY;
       startX = clientX;
       startY = clientY;
       startWidth = element.offsetWidth;
@@ -508,8 +518,9 @@ export class GifManager {
     const onMove = (e) => {
       if (!isResizing) return;
       if (e.type === 'touchmove') e.preventDefault();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const primaryTouch = e.touches?.[0];
+      const clientX = primaryTouch ? primaryTouch.clientX : e.clientX;
+      const clientY = primaryTouch ? primaryTouch.clientY : e.clientY;
       const dx = clientX - startX;
       const dy = clientY - startY;
       let newWidth = startWidth + dx;

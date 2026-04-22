@@ -37,7 +37,9 @@ window.translations = {
     },
 
     errors: {
-        lazyLoadFailed: 'Failed to load {feature}. Please refresh and try again.'
+        lazyLoadFailed: 'Failed to load {feature}. Please refresh and try again.',
+        fileReadFailed: 'Failed to read the selected file. Please verify the file is not corrupted.',
+        storageWriteFailed: 'Failed to save your changes. Please check browser storage permissions and try again.'
     },
 
     prompts: {
@@ -888,7 +890,8 @@ window.translations = {
         stop: 'Stop',
         audioFallback: 'Timer finished (sound unavailable)',
         alertSetTime: 'Please set the countdown time',
-        alertTitle: 'Alert'
+        alertTitle: 'Alert',
+        customSoundQuotaExceeded: 'Storage quota exceeded. Please delete some custom sounds.'
     },
 
     // Export

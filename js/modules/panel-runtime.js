@@ -191,8 +191,9 @@ function setupDraggablePanels(board) {
         event.stopPropagation();
 
         const rect = element.getBoundingClientRect();
-        const clientX = event.touches ? event.touches[0].clientX : event.clientX;
-        const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+        const primaryTouch = event.touches?.[0];
+        const clientX = primaryTouch ? primaryTouch.clientX : event.clientX;
+        const clientY = primaryTouch ? primaryTouch.clientY : event.clientY;
 
         board.dragOffset.x = clientX - rect.left;
         board.dragOffset.y = clientY - rect.top;
@@ -264,8 +265,9 @@ function setupDraggablePanels(board) {
             return;
         }
 
-        const clientX = event.touches ? event.touches[0].clientX : event.clientX;
-        const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+        const primaryTouch = event.touches?.[0];
+        const clientX = primaryTouch ? primaryTouch.clientX : event.clientX;
+        const clientY = primaryTouch ? primaryTouch.clientY : event.clientY;
 
         if (!board.isDraggingPanel && board.pendingPanelDrag) {
             const distance = Math.hypot(clientX - board.pendingPanelDrag.startX, clientY - board.pendingPanelDrag.startY);

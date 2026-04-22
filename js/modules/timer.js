@@ -10,6 +10,17 @@ function getTimerText(key, fallback) {
     return translated && translated !== key ? translated : fallback;
 }
 
+function isQuotaExceededError(error) {
+    if (!error) {
+        return false;
+    }
+
+    return error.name === 'QuotaExceededError'
+        || error.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+        || error.code === 22
+        || error.code === 1014;
+}
+
 function scheduleTimerFrame(win = window) {
     return typeof win.requestAnimationFrame === 'function'
         ? win.requestAnimationFrame.bind(win)
@@ -50,6 +61,68 @@ function escapeTimerHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+// Strict CSS-color whitelist — refuses anything that could break out of a style attribute.
+// Accepted: #rgb/#rgba/#rrggbb/#rrggbbaa hex, rgb()/rgba()/hsl()/hsla() with safe chars only,
+// or a pure-letter CSS named color (red, transparent, currentColor, ...).
+function sanitizeTimerColor(value, fallback) {
+    if (typeof value !== 'string') return fallback;
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.length > 64) return fallback;
+    const hexPattern = /^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+    const rgbPattern = /^rgba?\(\s*[-+\d.,%\s/]+\s*\)$/i;
+    const hslPattern = /^hsla?\(\s*[-+\d.,%\s/deg]+\s*\)$/i;
+    const namedPattern = /^[a-zA-Z]+$/;
+    if (hexPattern.test(trimmed) || rgbPattern.test(trimmed) || hslPattern.test(trimmed) || namedPattern.test(trimmed)) {
+        return trimmed;
+    }
+    return fallback;
+}
+
+const timerPreviewPlayIconSvg = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+    </svg>
+`;
+
+const timerPreviewPauseIconSvg = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="6" y="4" width="4" height="16"></rect>
+        <rect x="14" y="4" width="4" height="16"></rect>
+    </svg>
+`;
+
+const timerDeleteIconSvg = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+`;
+
+function getTimerSoundActionLabel(key, fallback, soundName = '') {
+    const baseLabel = getTimerText(key, fallback);
+    return soundName ? `${baseLabel}: ${soundName}` : baseLabel;
+}
+
+function setTimerPreviewButtonState(previewButton, isPlaying) {
+    if (!previewButton) {
+        return;
+    }
+
+    const soundName = previewButton.dataset?.soundName || '';
+    const actionKey = isPlaying ? 'common.stop' : 'timer.preview';
+    const fallback = isPlaying ? 'Stop' : 'Preview';
+    const actionLabel = getTimerSoundActionLabel(actionKey, fallback, soundName);
+    previewButton.setAttribute?.('aria-label', actionLabel);
+    previewButton.title = actionLabel;
+
+    if (previewButton.id === 'timer-sound-preview-btn') {
+        previewButton.textContent = getTimerText(actionKey, fallback);
+        return;
+    }
+
+    previewButton.innerHTML = isPlaying ? timerPreviewPauseIconSvg : timerPreviewPlayIconSvg;
+}
+
 // Single Timer Instance Class
 class TimerInstance {
     constructor(options) {
@@ -59,10 +132,10 @@ class TimerInstance {
         this.title = options.title || ''; // Timer title
         
         // Color settings
-        this.textColor = options.textColor || '#333333';
-        this.bgColor = options.bgColor || '#FFFFFF';
-        this.fullscreenTextColor = options.fullscreenTextColor || '#FFFFFF'; // Default white text
-        this.fullscreenBgColor = options.fullscreenBgColor || '#000000';     // Default black bg
+        this.textColor = sanitizeTimerColor(options.textColor, '#333333');
+        this.bgColor = sanitizeTimerColor(options.bgColor, '#FFFFFF');
+        this.fullscreenTextColor = sanitizeTimerColor(options.fullscreenTextColor, '#FFFFFF');
+        this.fullscreenBgColor = sanitizeTimerColor(options.fullscreenBgColor, '#000000');
         
         // Timer state
         this.isRunning = false;
@@ -401,8 +474,12 @@ class TimerInstance {
             this.displayElement.classList.add('dragging');
             
             const rect = this.displayElement.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            // e.touches may exist but be length 0 during an aborted multi-touch
+            // gesture — fall back to the pointer/mouse coordinates instead of
+            // dereferencing an undefined touch and computing NaN offsets.
+            const primaryTouch = e.touches?.[0];
+            const clientX = primaryTouch ? primaryTouch.clientX : e.clientX;
+            const clientY = primaryTouch ? primaryTouch.clientY : e.clientY;
             
             this.dragOffset.x = clientX - rect.left;
             this.dragOffset.y = clientY - rect.top;
@@ -412,7 +489,6 @@ class TimerInstance {
         
         // Allow dragging from the entire widget
         // Add both mouse and touch event listeners for better touch device support
-        this.displayElement.addEventListener('mousedown', handleStart);
         this.displayElement.addEventListener('pointerdown', handleStart);
         this.displayElement.addEventListener('touchstart', handleStart, { passive: false });
         
@@ -424,9 +500,10 @@ class TimerInstance {
                 return;
             }
             if (e.type === 'touchmove') e.preventDefault();
-            
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            const primaryTouch = e.touches?.[0];
+            const clientX = primaryTouch ? primaryTouch.clientX : e.clientX;
+            const clientY = primaryTouch ? primaryTouch.clientY : e.clientY;
             
             const x = clientX - this.dragOffset.x;
             const y = clientY - this.dragOffset.y;
@@ -474,11 +551,12 @@ class TimerInstance {
         // Keep listeners attached permanently to document for better touch support
         this.mouseMoveHandler = handleMove;
         this.mouseUpHandler = handleEnd;
-        
-        // Add both mouse and touch event listeners
-        document.addEventListener('mousemove', this.mouseMoveHandler);
+
+        // Pointer events cover mouse + pen + touch; binding mouse* alongside
+        // pointer* makes desktop mouse moves run handleMove twice per tick.
+        // Touch listeners stay for iOS edge cases where pointercancel can be
+        // dropped.
         document.addEventListener('pointermove', this.mouseMoveHandler);
-        document.addEventListener('mouseup', this.mouseUpHandler);
         document.addEventListener('pointerup', this.mouseUpHandler);
         document.addEventListener('touchmove', this.mouseMoveHandler, { passive: false });
         document.addEventListener('touchend', this.mouseUpHandler);
@@ -1043,13 +1121,11 @@ class TimerInstance {
 
         // Remove event listeners
         if (this.mouseMoveHandler) {
-            document.removeEventListener('mousemove', this.mouseMoveHandler);
             document.removeEventListener('pointermove', this.mouseMoveHandler);
             document.removeEventListener('touchmove', this.mouseMoveHandler);
             this.mouseMoveHandler = null;
         }
         if (this.mouseUpHandler) {
-            document.removeEventListener('mouseup', this.mouseUpHandler);
             document.removeEventListener('pointerup', this.mouseUpHandler);
             document.removeEventListener('touchend', this.mouseUpHandler);
             document.removeEventListener('touchcancel', this.mouseUpHandler);
@@ -1096,11 +1172,10 @@ class TimerInstance {
         this.playbackSpeed = playbackSpeed;
         this.title = title;
         
-        // Update colors if provided
-        if (textColor) this.textColor = textColor;
-        if (bgColor) this.bgColor = bgColor;
-        if (fullscreenTextColor) this.fullscreenTextColor = fullscreenTextColor;
-        if (fullscreenBgColor) this.fullscreenBgColor = fullscreenBgColor;
+        if (textColor) this.textColor = sanitizeTimerColor(textColor, this.textColor);
+        if (bgColor) this.bgColor = sanitizeTimerColor(bgColor, this.bgColor);
+        if (fullscreenTextColor) this.fullscreenTextColor = sanitizeTimerColor(fullscreenTextColor, this.fullscreenTextColor);
+        if (fullscreenBgColor) this.fullscreenBgColor = sanitizeTimerColor(fullscreenBgColor, this.fullscreenBgColor);
         
         // Apply colors to display element
         if (this.displayElement) {
@@ -1192,6 +1267,10 @@ class TimerManager {
     updateMainPreviewButtonState() {
         const previewBtn = document.getElementById('timer-sound-preview-btn');
         if (!previewBtn) return;
+
+        document.querySelectorAll('.sound-preset-btn').forEach((button) => {
+            button.setAttribute('aria-pressed', button.classList.contains('active') ? 'true' : 'false');
+        });
 
         const soundCheckbox = document.getElementById('timer-sound-checkbox');
         const activeSoundBtn = document.querySelector('.sound-preset-btn.active');
@@ -1293,12 +1372,31 @@ class TimerManager {
         return [];
     }
     
-    saveCustomSounds() {
+    saveCustomSounds(customSounds = this.customSounds) {
         // Save custom sounds to localStorage
         try {
-            localStorage.setItem('timerCustomSounds', JSON.stringify(this.customSounds));
+            localStorage.setItem('timerCustomSounds', JSON.stringify(customSounds));
+            return true;
         } catch (e) {
             console.warn('Failed to save custom sounds:', e);
+            const message = isQuotaExceededError(e)
+                ? getTimerText(
+                    'timer.customSoundQuotaExceeded',
+                    'Storage quota exceeded. Please delete some custom sounds.'
+                )
+                : getTimerText(
+                    'errors.storageWriteFailed',
+                    'Failed to save custom sounds. Please check browser storage permissions and try again.'
+                );
+            const toast = (typeof window !== 'undefined')
+                ? (window.drawingBoard?.settingsManager?.toastManager || window.toastManager)
+                : null;
+            try {
+                toast?.show?.(message, 'error');
+            } catch (toastError) {
+                console.warn('Failed to display custom sound storage-error toast:', toastError);
+            }
+            return false;
         }
     }
     
@@ -1311,18 +1409,35 @@ class TimerManager {
                 name: file.name,
                 url: dataUrl
             };
-            
-            this.customSounds.push(customSound);
-            this.saveCustomSounds();
+
+            const nextCustomSounds = [...this.customSounds, customSound];
+            if (!this.saveCustomSounds(nextCustomSounds)) {
+                return;
+            }
+            this.customSounds = nextCustomSounds;
             this.renderCustomSounds();
+        };
+        reader.onerror = () => {
+            console.warn('Failed to read custom sound file:', reader.error);
+            const msg = getTimerText('errors.fileReadFailed', 'Failed to read the selected file.');
+            const toast = window.drawingBoard?.settingsManager?.toastManager || window.toastManager;
+            try {
+                toast?.show?.(msg, 'error');
+            } catch (toastError) {
+                console.warn('Failed to display custom sound read-error toast:', toastError);
+            }
         };
         reader.readAsDataURL(file);
     }
     
     removeCustomSound(id) {
-        this.customSounds = this.customSounds.filter(s => s.id !== id);
-        this.saveCustomSounds();
+        const nextCustomSounds = this.customSounds.filter(s => s.id !== id);
+        if (!this.saveCustomSounds(nextCustomSounds)) {
+            return false;
+        }
+        this.customSounds = nextCustomSounds;
         this.renderCustomSounds();
+        return true;
     }
     
     renderCustomSounds() {
@@ -1332,60 +1447,64 @@ class TimerManager {
         container.innerHTML = '';
         
         this.customSounds.forEach(sound => {
-            const btn = document.createElement('button');
-            btn.className = 'sound-preset-btn';
-            btn.dataset.sound = sound.id;
-            btn.dataset.url = sound.url;
-            
+            const row = document.createElement('div');
+            row.className = 'sound-preset-custom-row';
+
+            const selectBtn = document.createElement('button');
+            selectBtn.type = 'button';
+            selectBtn.className = 'sound-preset-btn sound-preset-custom-select';
+            selectBtn.dataset.sound = sound.id;
+            selectBtn.dataset.url = sound.url;
+            selectBtn.setAttribute('aria-pressed', 'false');
+            selectBtn.setAttribute('aria-label', sound.name);
+            selectBtn.title = sound.name;
+
             // Truncate filename if too long
             const displayName = sound.name.length > 25 ? sound.name.substring(0, 22) + '...' : sound.name;
-            
-            btn.innerHTML = `
-                ${displayName}
-                <div style="display: flex; gap: 4px;">
-                    <button class="sound-preview-btn" title="${getTimerText('timer.preview', 'Preview')}" aria-label="${getTimerText('timer.preview', 'Preview')}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                        </svg>
-                    </button>
-                    <button class="sound-delete-btn" title="${getTimerText('common.delete', 'Delete')}" aria-label="${getTimerText('common.delete', 'Delete')}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                    </button>
-                </div>
-            `;
-            
-            // Add click handler for selecting
-            btn.addEventListener('click', (e) => {
-                const closest = typeof e.target?.closest === 'function'
-                    ? e.target.closest.bind(e.target)
-                    : () => null;
-                if (closest('.sound-preview-btn') || closest('.sound-delete-btn')) {
-                    return;
-                }
-                
+
+            const label = document.createElement('span');
+            label.className = 'sound-preset-label';
+            label.textContent = displayName;
+            selectBtn.appendChild(label);
+
+            const actions = document.createElement('div');
+            actions.className = 'sound-preset-actions';
+
+            const previewBtn = document.createElement('button');
+            previewBtn.type = 'button';
+            previewBtn.className = 'sound-preview-btn';
+            previewBtn.dataset.soundName = sound.name;
+            setTimerPreviewButtonState(previewBtn, false);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'sound-delete-btn';
+            deleteBtn.setAttribute('aria-label', getTimerSoundActionLabel('common.delete', 'Delete', sound.name));
+            deleteBtn.title = getTimerSoundActionLabel('common.delete', 'Delete', sound.name);
+            deleteBtn.innerHTML = timerDeleteIconSvg;
+
+            actions.appendChild(previewBtn);
+            actions.appendChild(deleteBtn);
+            row.appendChild(selectBtn);
+            row.appendChild(actions);
+
+            selectBtn.addEventListener('click', () => {
                 document.querySelectorAll('.sound-preset-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+                selectBtn.classList.add('active');
                 this.updateMainPreviewButtonState();
             });
             
-            // Add preview button handler
-            const previewBtn = btn.querySelector('.sound-preview-btn');
             previewBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.previewSoundByUrl(sound.url, e.currentTarget);
             });
             
-            // Add delete button handler
-            const deleteBtn = btn.querySelector('.sound-delete-btn');
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.removeCustomSound(sound.id);
             });
             
-            container.appendChild(btn);
+            container.appendChild(row);
         });
 
         this.updateMainPreviewButtonState();
@@ -1462,15 +1581,29 @@ class TimerManager {
         document.querySelectorAll('.sound-preview-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const presetBtn = e.currentTarget.closest('.sound-preset-btn');
-                if (presetBtn) {
-                    const soundUrl = presetBtn.dataset.url;
-                    const soundKey = presetBtn.dataset.sound;
-                    if (soundUrl) {
-                        this.previewSoundByUrl(soundUrl, e.currentTarget);
-                    } else if (soundKey && this.sounds[soundKey]) {
-                        this.previewSound(soundKey, e.currentTarget);
-                    }
+                const previewButton = e.currentTarget;
+                const soundUrl = previewButton.dataset?.soundUrl;
+                const soundKey = previewButton.dataset?.soundKey;
+
+                if (soundUrl) {
+                    this.previewSoundByUrl(soundUrl, previewButton);
+                    return;
+                }
+
+                if (soundKey && this.sounds[soundKey]) {
+                    this.previewSound(soundKey, previewButton);
+                    return;
+                }
+
+                const presetBtn = previewButton.closest('.sound-preset-btn');
+                if (!presetBtn) {
+                    return;
+                }
+
+                if (presetBtn.dataset.url) {
+                    this.previewSoundByUrl(presetBtn.dataset.url, previewButton);
+                } else if (presetBtn.dataset.sound && this.sounds[presetBtn.dataset.sound]) {
+                    this.previewSound(presetBtn.dataset.sound, previewButton);
                 }
             });
         });
@@ -2251,16 +2384,7 @@ class TimerManager {
         
         // Reset all preview button states
         if (this.currentPreviewButton) {
-            if (this.currentPreviewButton.id === 'timer-sound-preview-btn') {
-                this.currentPreviewButton.textContent = getTimerText('timer.preview', 'Preview');
-            } else {
-                this.currentPreviewButton.innerHTML = `
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                    </svg>
-                `;
-                this.currentPreviewButton.title = getTimerText('timer.preview', 'Preview');
-            }
+            setTimerPreviewButtonState(this.currentPreviewButton, false);
             this.currentPreviewButton = null;
         }
     }
@@ -2282,24 +2406,20 @@ class TimerManager {
             this.previewAudio = preloadedAudio.cloneNode();
             this.currentPreviewButton = previewButton;
             
-            // Update button to show pause icon
-            if (previewButton.id === 'timer-sound-preview-btn') {
-                previewButton.textContent = getTimerText('common.stop', 'Stop');
-            } else {
-                previewButton.innerHTML = `
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="6" y="4" width="4" height="16"></rect>
-                        <rect x="14" y="4" width="4" height="16"></rect>
-                    </svg>
-                `;
-                previewButton.title = getTimerText('common.stop', 'Stop');
-            }
-            
+            setTimerPreviewButtonState(previewButton, true);
+
             // Reset button when audio ends
             this.previewAudio.addEventListener('ended', () => {
                 this.stopPreviewAudio();
             });
-            
+
+            // Also reset on decode/network failure — otherwise the button
+            // silently sticks in the "Stop" state because `ended` never fires.
+            this.previewAudio.addEventListener('error', (err) => {
+                console.warn('Timer preview audio error:', err);
+                this.stopPreviewAudio();
+            });
+
             // Play immediately
             this.previewAudio.play().catch(err => {
                 console.warn('Failed to play timer audio preview:', err);
@@ -2307,39 +2427,33 @@ class TimerManager {
             });
         }
     }
-    
+
     previewSoundByUrl(soundUrl, previewButton) {
         // If same button clicked and audio is playing, pause it
         if (this.currentPreviewButton === previewButton && this.previewAudio && !this.previewAudio.paused) {
             this.stopPreviewAudio();
             return;
         }
-        
+
         // Stop any currently playing preview
         this.stopPreviewAudio();
-        
+
         if (soundUrl) {
             this.previewAudio = new Audio(soundUrl);
             this.currentPreviewButton = previewButton;
-            
-            // Update button to show pause icon
-            if (previewButton.id === 'timer-sound-preview-btn') {
-                previewButton.textContent = getTimerText('common.stop', 'Stop');
-            } else {
-                previewButton.innerHTML = `
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="6" y="4" width="4" height="16"></rect>
-                        <rect x="14" y="4" width="4" height="16"></rect>
-                    </svg>
-                `;
-                previewButton.title = getTimerText('common.stop', 'Stop');
-            }
-            
+
+            setTimerPreviewButtonState(previewButton, true);
+
             // Reset button when audio ends
             this.previewAudio.addEventListener('ended', () => {
                 this.stopPreviewAudio();
             });
-            
+
+            this.previewAudio.addEventListener('error', (err) => {
+                console.warn('Timer preview audio error:', err);
+                this.stopPreviewAudio();
+            });
+
             this.previewAudio.play().catch(err => {
                 console.warn('Failed to play timer audio preview:', err);
                 this.stopPreviewAudio();

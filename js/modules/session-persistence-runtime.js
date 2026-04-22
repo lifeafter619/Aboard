@@ -84,9 +84,22 @@ function saveSessionSnapshotSync() {
         }
 
         try {
-            safeSessionPersistenceStorageSetItem(this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot', JSON.stringify(snapshot));
+            // safeSessionPersistenceStorageSetItem swallows QuotaExceededError
+            // and returns false. We must propagate that failure to callers —
+            // otherwise persistSessionForUpdateReload reports hasSyncSnapshot:true
+            // when nothing was actually written, PWA updates then reload,
+            // and recovery finds no snapshot (data loss on multi-page boards
+            // when IndexedDB is also unavailable).
+            const persisted = safeSessionPersistenceStorageSetItem(
+                this.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot',
+                JSON.stringify(snapshot)
+            );
+            if (!persisted) {
+                return null;
+            }
         } catch (e) {
             console.warn('Failed to save sync session snapshot:', e);
+            return null;
         }
 
         return snapshot;
