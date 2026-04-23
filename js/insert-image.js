@@ -1,6 +1,15 @@
 // Insert Image Module
 // Handles inserting images onto the canvas as stamped pixels
 
+function escapeInsertImageHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 class InsertImageManager {
     constructor(canvas, ctx, historyManager, drawingEngine) {
         this.canvas = canvas;
@@ -88,7 +97,7 @@ class InsertImageManager {
 
                     <!-- Control toolbar -->
                     <div class="image-controls-toolbar">
-                        <button id="insert-image-help-btn" class="image-control-btn image-help-btn" type="button" data-help-key="help.features.insertImage" data-i18n-title="common.help" title="${window.i18n.t('common.help')}" aria-label="${window.i18n.t('common.help')}">
+                        <button id="insert-image-help-btn" class="image-control-btn image-help-btn" type="button" data-help-key="help.features.insertImage" data-i18n-title="common.help" title="${escapeInsertImageHtml(window.i18n?.t?.('common.help') || 'Help')}" aria-label="${escapeInsertImageHtml(window.i18n?.t?.('common.help') || 'Help')}">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>

@@ -130,6 +130,7 @@ function getCanvasStateStorageKeys(board) {
             'canvasScale',
             'panOffsetX',
             'panOffsetY',
+            'canvasViewStateVersion',
             'aboardSessionSizeEstimate',
             board.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot',
             SESSION_RUNTIME_PLANNED_UPDATE_RELOAD_KEY

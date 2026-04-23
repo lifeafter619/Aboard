@@ -352,7 +352,7 @@ class DrawingBoard {
         };
 
         // Initialize
-        this.resizeCanvas();
+        this.resizeCanvas({ persistViewState: false });
         this.setupEventListeners();
         this.setupModalInteractionLock();
         this.settingsManager.loadSettings();
@@ -543,14 +543,14 @@ class DrawingBoard {
     initializeCanvasView() {
         return canvasViewRuntime.initializeCanvasView?.(this);
     }
-    centerCanvas() {
-        return canvasViewRuntime.centerCanvas?.(this);
+    centerCanvas(options = {}) {
+        return canvasViewRuntime.centerCanvas?.(this, options);
     }
-    recalculateAndRecenterCanvas() {
-        return canvasViewRuntime.recalculateAndRecenterCanvas?.(this);
+    recalculateAndRecenterCanvas(options = {}) {
+        return canvasViewRuntime.recalculateAndRecenterCanvas?.(this, options);
     }
-    resizeCanvas() {
-        return canvasViewRuntime.resizeCanvas?.(this);
+    resizeCanvas(options = {}) {
+        return canvasViewRuntime.resizeCanvas?.(this, options);
     }
     setupEventListeners() {
         return eventSetupRuntime.setupEventListeners?.(this);

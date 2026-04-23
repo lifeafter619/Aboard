@@ -7,6 +7,7 @@
 const DEFAULT_MIN_FIT_SCALE = 0.1;
 const DEFAULT_TARGET_COVERAGE = 0.7;
 const DEFAULT_MIN_DEFAULT_SCALE = 0.9;
+const CANVAS_VIEW_STATE_VERSION_KEY = 'canvasViewStateVersion';
 
 function safeCanvasViewStorageGetItem(key) {
         try {
@@ -29,13 +30,34 @@ function persistBoardViewState(board, options = {}) {
         window.AboardBoardHelpersRuntime?.persistViewState?.(board, options);
 }
 
+function isLikelySyntheticStartupViewState(savedScale) {
+        if (!savedScale || Number.parseFloat(savedScale) !== 1) {
+                return false;
+        }
+
+        if (safeCanvasViewStorageGetItem(CANVAS_VIEW_STATE_VERSION_KEY)) {
+                return false;
+        }
+
+        const savedPanX = Number.parseFloat(safeCanvasViewStorageGetItem('panOffsetX') || '0');
+        const savedPanY = Number.parseFloat(safeCanvasViewStorageGetItem('panOffsetY') || '0');
+
+        return (!Number.isFinite(savedPanX) || savedPanX === 0)
+                && (!Number.isFinite(savedPanY) || savedPanY === 0);
+}
+
+function shouldRestoreSavedViewState(savedScale) {
+        return !!savedScale && !isLikelySyntheticStartupViewState(savedScale);
+}
+
 function initializeCanvasView() {
         // On startup or refresh, set canvas to a larger default scale and center it
         // Only apply if no saved scale exists
         const savedScale = safeCanvasViewStorageGetItem('canvasScale');
+        const restoreSavedViewState = shouldRestoreSavedViewState(savedScale);
         // Always calculate fit scale for applyZoom and default coverage logic.
         this.canvasFitScale = this.calculateCanvasFitScale();
-        if (!savedScale) {
+        if (!restoreSavedViewState) {
             const safeFitScale = Math.max(DEFAULT_MIN_FIT_SCALE, this.canvasFitScale);
             // Compute canvasScale so fitScale * canvasScale meets desired coverage.
             const scaleForCoverage = DEFAULT_TARGET_COVERAGE / safeFitScale;
@@ -43,39 +65,52 @@ function initializeCanvasView() {
             const boundedScale = Math.max(DEFAULT_MIN_DEFAULT_SCALE, scaleForCoverage);
             const initialScale = Number(Math.min(this.MAX_CANVAS_SCALE, boundedScale).toFixed(4));
             this.drawingEngine.canvasScale = initialScale;
+
+            // Startup without a valid saved view should reset to the default centered
+            // viewport and persist that initialized state.
+            this.centerCanvas({ persist: true });
+            return;
         }
-        
-        // Always center the canvas on startup/refresh
-        // Note: This ensures the canvas is properly centered after each page load,
-        // regardless of previously saved pan offset values
-        this.centerCanvas();
+
+        // Preserve a previously saved viewport instead of wiping pan offsets during
+        // startup. Legacy unversioned view state is re-persisted once so future
+        // startups can distinguish it from the synthetic centered scale regression.
+        this.applyPanTransform();
+        if (!safeCanvasViewStorageGetItem(CANVAS_VIEW_STATE_VERSION_KEY)) {
+                persistBoardViewState(this, { immediate: true });
+        }
     
 }
 
-function centerCanvas() {
+function centerCanvas(options = {}) {
+        const { persist = true } = options;
         // In paginated mode, the canvas uses translate(-50%, -50%) to center itself
         // So pan offset of 0,0 means the canvas is centered
         // Reset pan offset to center the canvas
         this.drawingEngine.panOffset.x = 0;
         this.drawingEngine.panOffset.y = 0;
         
-        // Persist the centered view state when storage is available.
-        persistBoardViewState(this, { immediate: true });
+        // Startup resize runs before initializeCanvasView decides whether a saved
+        // scale really exists, so it must not create a synthetic saved scale.
+        if (persist) {
+                persistBoardViewState(this, { immediate: true });
+        }
         
         // Apply the transform
         this.applyPanTransform();
     
 }
 
-function recalculateAndRecenterCanvas() {
+function recalculateAndRecenterCanvas(options = {}) {
         // Recalculate fit scale for current viewport size
         this.canvasFitScale = this.calculateCanvasFitScale();
         // Re-center the canvas
-        this.centerCanvas();
+        this.centerCanvas(options);
     
 }
 
-function resizeCanvas() {
+function resizeCanvas(options = {}) {
+        const { persistViewState = true } = options;
         // Get window dimensions for canvas sizing
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
@@ -116,8 +151,14 @@ function resizeCanvas() {
 
         this.backgroundManager.drawBackground();
 
-        // Recalculate fit scale and re-center the canvas
-        this.recalculateAndRecenterCanvas();
+        if (persistViewState) {
+                // Recalculate fit scale and re-center the canvas for user-driven resizes.
+                this.recalculateAndRecenterCanvas({ persist: true });
+        } else {
+                // Startup sizing happens before initializeCanvasView decides whether a
+                // saved viewport should win, so do not mutate pan/zoom state here.
+                this.canvasFitScale = this.calculateCanvasFitScale();
+        }
         this.syncInteractiveOverlays();
 
 }
@@ -126,14 +167,14 @@ window.AboardCanvasViewRuntime = {
     initializeCanvasView(board) {
         return initializeCanvasView.call(board);
     },
-    centerCanvas(board) {
-        return centerCanvas.call(board);
+    centerCanvas(board, options = {}) {
+        return centerCanvas.call(board, options);
     },
-    recalculateAndRecenterCanvas(board) {
-        return recalculateAndRecenterCanvas.call(board);
+    recalculateAndRecenterCanvas(board, options = {}) {
+        return recalculateAndRecenterCanvas.call(board, options);
     },
-    resizeCanvas(board) {
-        return resizeCanvas.call(board);
+    resizeCanvas(board, options = {}) {
+        return resizeCanvas.call(board, options);
     }
 };
 })();

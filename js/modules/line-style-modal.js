@@ -3,6 +3,15 @@
  * Independent modal for configuring line styles for both Pen and Shape tools
  */
 
+function escapeLineStyleModalHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 class LineStyleModal {
     constructor(drawingEngine, shapeDrawingManager) {
         this.drawingEngine = drawingEngine;
@@ -46,7 +55,7 @@ class LineStyleModal {
                 <div class="modal-content line-style-modal-content">
                     <div class="line-style-modal-header">
                         <h2 id="line-style-modal-title" data-i18n="tools.lineStyle.title">Line Style</h2>
-                        <button id="line-style-modal-close" type="button" class="line-style-modal-close" data-i18n-title="common.close" aria-label="${closeLabel}" title="${closeLabel}">
+                        <button id="line-style-modal-close" type="button" class="line-style-modal-close" data-i18n-title="common.close" aria-label="${escapeLineStyleModalHtml(closeLabel)}" title="${escapeLineStyleModalHtml(closeLabel)}">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -124,7 +133,7 @@ class LineStyleModal {
                             <label data-i18n="lineStyleModal.preview">Preview</label>
                             <div class="line-style-preview-area" id="line-style-preview-container">
                                 <canvas id="line-style-preview-canvas" width="320" height="80"></canvas>
-                                <button id="preview-expand-btn" type="button" class="preview-expand-btn" style="display: none;" data-i18n-title="settings.general.expandPreview" aria-label="${expandPreviewLabel}" title="${expandPreviewLabel}">
+                                <button id="preview-expand-btn" type="button" class="preview-expand-btn" style="display: none;" data-i18n-title="settings.general.expandPreview" aria-label="${escapeLineStyleModalHtml(expandPreviewLabel)}" title="${escapeLineStyleModalHtml(expandPreviewLabel)}">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
                                     </svg>
@@ -680,7 +689,7 @@ class LineStyleModal {
                     <div class="modal-content expanded-preview-modal-content">
                         <div class="line-style-modal-header">
                             <h2 id="line-style-preview-expanded-title" data-i18n="lineStyleModal.preview">Preview</h2>
-                            <button id="expanded-preview-close" type="button" class="line-style-modal-close" data-i18n-title="common.close" aria-label="${closeLabel}" title="${closeLabel}">
+                            <button id="expanded-preview-close" type="button" class="line-style-modal-close" data-i18n-title="common.close" aria-label="${escapeLineStyleModalHtml(closeLabel)}" title="${escapeLineStyleModalHtml(closeLabel)}">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <line x1="18" y1="6" x2="6" y2="18"></line>
                                     <line x1="6" y1="6" x2="18" y2="18"></line>

@@ -1,6 +1,9 @@
 // Drawing Engine Module
 // Handles all drawing operations, pen types, and canvas interactions
 
+const CANVAS_VIEW_STATE_VERSION_KEY = 'canvasViewStateVersion';
+const CANVAS_VIEW_STATE_VERSION = '1';
+
 function safeDrawingStorageGetItem(key) {
     try {
         return localStorage.getItem(key);
@@ -122,8 +125,9 @@ class DrawingEngine {
         const persistedScale = safeDrawingStorageSetItem('canvasScale', this.canvasScale);
         const persistedPanX = safeDrawingStorageSetItem('panOffsetX', this.panOffset.x);
         const persistedPanY = safeDrawingStorageSetItem('panOffsetY', this.panOffset.y);
+        const persistedVersion = safeDrawingStorageSetItem(CANVAS_VIEW_STATE_VERSION_KEY, CANVAS_VIEW_STATE_VERSION);
 
-        if (!persistedScale || !persistedPanX || !persistedPanY) {
+        if (!persistedScale || !persistedPanX || !persistedPanY || !persistedVersion) {
             console.warn('Failed to persist drawing view state to localStorage.');
         }
     }

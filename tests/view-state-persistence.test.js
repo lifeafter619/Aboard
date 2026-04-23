@@ -3,6 +3,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
+const VIEW_STATE_STORAGE_KEYS = ['canvasScale', 'panOffsetX', 'panOffsetY', 'canvasViewStateVersion'];
+
 function createCanvasContextStub() {
   return {
     clearRect() {},
@@ -270,22 +272,27 @@ function loadInteractionRuntime() {
   return sandbox.__viewStatePersistenceInteractionExports;
 }
 
-function loadCanvasViewRuntime() {
+function loadCanvasViewRuntime(options = {}) {
+  const testLocalStorage = options.localStorage || {
+    getItem() {
+      throw new Error('canvas view runtime should not read localStorage directly when blocked');
+    },
+    setItem() {
+      throw new Error('canvas view runtime should not write view state directly when drawingEngine persistence exists');
+    }
+  };
+
   const source = fs.readFileSync(
     path.join(__dirname, '..', 'js', 'modules', 'canvas-view-runtime.js'),
     'utf8'
   ) + '\n;globalThis.__viewStatePersistenceCanvasViewExports = window.AboardCanvasViewRuntime;';
 
   const sandbox = {
-    window: {},
-    localStorage: {
-      getItem() {
-        throw new Error('canvas view runtime should not read localStorage directly when blocked');
-      },
-      setItem() {
-        throw new Error('canvas view runtime should not write view state directly when drawingEngine persistence exists');
-      }
+    window: {
+      innerWidth: 1280,
+      innerHeight: 720
     },
+    localStorage: testLocalStorage,
     document: {
       createElement() {
         return createCanvasElementStub();
@@ -354,7 +361,7 @@ function testPanDebouncesViewStatePersistence() {
 
   assert.deepEqual(
     storage.calls.map(([key]) => key),
-    ['canvasScale', 'panOffsetX', 'panOffsetY'],
+    VIEW_STATE_STORAGE_KEYS,
     'debounced persistence should write the view state only once after panning settles'
   );
 }
@@ -373,7 +380,7 @@ function testStopPanningFlushesPendingViewStatePersistence() {
 
   assert.deepEqual(
     storage.calls.map(([key]) => key),
-    ['canvasScale', 'panOffsetX', 'panOffsetY'],
+    VIEW_STATE_STORAGE_KEYS,
     'stopPanning should flush the latest buffered view state immediately'
   );
   assert.equal(scheduledTimeouts.size, 0, 'stopPanning should cancel the buffered timeout after flushing');
@@ -540,8 +547,8 @@ function testCanvasViewRuntimeUsesDrawingEnginePersistenceHook() {
     calculateCanvasFitScale() {
       return 1;
     },
-    centerCanvas() {
-      return canvasViewRuntime.centerCanvas(this);
+    centerCanvas(options = {}) {
+      return canvasViewRuntime.centerCanvas(this, options);
     },
     applyPanTransform() {},
     syncInteractiveOverlays() {},
@@ -566,6 +573,185 @@ function testCanvasViewRuntimeUsesDrawingEnginePersistenceHook() {
   );
 }
 
+function createCanvasViewBoard(canvasViewRuntime, { persistCallsRef }) {
+  const canvas = createCanvasElementStub();
+  const bgCanvas = createCanvasElementStub();
+
+  return {
+    canvas,
+    bgCanvas,
+    ctx: createCanvasContextStub(),
+    bgCtx: createCanvasContextStub(),
+    historyManager: { historyStep: -1 },
+    backgroundManager: { drawBackground() {} },
+    settingsManager: {
+      canvasWidth: 1920,
+      canvasHeight: 1080
+    },
+    dynamicRenderScale: 1,
+    MAX_CANVAS_SCALE: 4,
+    getRenderPixelRatio() {
+      return 1;
+    },
+    calculateCanvasFitScale() {
+      return 0.5;
+    },
+    centerCanvas(options = {}) {
+      return canvasViewRuntime.centerCanvas(this, options);
+    },
+    recalculateAndRecenterCanvas(options = {}) {
+      return canvasViewRuntime.recalculateAndRecenterCanvas(this, options);
+    },
+    applyPanTransform() {},
+    syncInteractiveOverlays() {},
+    drawingEngine: {
+      canvasScale: 1,
+      panOffset: { x: 25, y: -15 },
+      persistViewState() {
+        persistCallsRef.count += 1;
+      }
+    }
+  };
+}
+
+function testStartupResizeDoesNotCreateSyntheticSavedScale() {
+  const canvasViewRuntime = loadCanvasViewRuntime();
+  const persistCallsRef = { count: 0 };
+  const board = createCanvasViewBoard(canvasViewRuntime, { persistCallsRef });
+
+  canvasViewRuntime.resizeCanvas(board, { persistViewState: false });
+
+  assert.equal(
+    persistCallsRef.count,
+    0,
+    'startup resize should not persist canvasScale=1 before initializeCanvasView checks saved state'
+  );
+  assert.equal(board.drawingEngine.canvasScale, 1, 'startup resize should not change the user zoom scale');
+  assert.deepEqual(
+    board.drawingEngine.panOffset,
+    { x: 25, y: -15 },
+    'startup resize should not wipe a previously restored pan offset before initialization decides whether to keep it'
+  );
+
+  canvasViewRuntime.initializeCanvasView(board);
+
+  assert.equal(
+    board.drawingEngine.canvasScale,
+    1.4,
+    'initializeCanvasView should still apply the default coverage scale when no saved scale exists'
+  );
+  assert.equal(
+    persistCallsRef.count,
+    1,
+    'initializeCanvasView should persist only the final initialized view state'
+  );
+}
+
+function testInitializeCanvasViewMigratesSyntheticSavedScale() {
+  const storage = {
+    getItem(key) {
+      if (key === 'canvasScale') return '1';
+      if (key === 'panOffsetX' || key === 'panOffsetY') return '0';
+      return null;
+    },
+    setItem() {}
+  };
+  const canvasViewRuntime = loadCanvasViewRuntime({ localStorage: storage });
+  const persistCallsRef = { count: 0 };
+  const board = createCanvasViewBoard(canvasViewRuntime, { persistCallsRef });
+
+  canvasViewRuntime.initializeCanvasView(board);
+
+  assert.equal(
+    board.drawingEngine.canvasScale,
+    1.4,
+    'initializeCanvasView should treat centered canvasScale=1 as the startup persistence regression and restore default coverage'
+  );
+}
+
+function testInitializeCanvasViewPreservesExplicitSavedScale() {
+  const storage = {
+    getItem(key) {
+      if (key === 'canvasScale') return '2';
+      if (key === 'panOffsetX' || key === 'panOffsetY') return '0';
+      return null;
+    },
+    setItem() {}
+  };
+  const canvasViewRuntime = loadCanvasViewRuntime({ localStorage: storage });
+  const persistCallsRef = { count: 0 };
+  const board = createCanvasViewBoard(canvasViewRuntime, { persistCallsRef });
+
+  board.drawingEngine.canvasScale = 2;
+  canvasViewRuntime.initializeCanvasView(board);
+
+  assert.equal(
+    board.drawingEngine.canvasScale,
+    2,
+    'initializeCanvasView should preserve explicit non-default saved zoom values'
+  );
+  assert.equal(
+    persistCallsRef.count,
+    1,
+    'initializeCanvasView should version legacy explicit saved views once so later startups keep them intact'
+  );
+}
+
+function testInitializeCanvasViewPreservesVersionedCenteredScaleOne() {
+  const storage = {
+    getItem(key) {
+      if (key === 'canvasScale') return '1';
+      if (key === 'canvasViewStateVersion') return '1';
+      if (key === 'panOffsetX' || key === 'panOffsetY') return '0';
+      return null;
+    },
+    setItem() {}
+  };
+  const canvasViewRuntime = loadCanvasViewRuntime({ localStorage: storage });
+  const persistCallsRef = { count: 0 };
+  const board = createCanvasViewBoard(canvasViewRuntime, { persistCallsRef });
+
+  board.drawingEngine.canvasScale = 1;
+  canvasViewRuntime.initializeCanvasView(board);
+
+  assert.equal(
+    board.drawingEngine.canvasScale,
+    1,
+    'initializeCanvasView should preserve user-saved centered 100% zoom once the view state is versioned'
+  );
+}
+
+function testInitializeCanvasViewPreservesSavedPanOffset() {
+  const storage = {
+    getItem(key) {
+      if (key === 'canvasScale') return '2';
+      if (key === 'canvasViewStateVersion') return '1';
+      if (key === 'panOffsetX') return '25';
+      if (key === 'panOffsetY') return '-15';
+      return null;
+    },
+    setItem() {}
+  };
+  const canvasViewRuntime = loadCanvasViewRuntime({ localStorage: storage });
+  const persistCallsRef = { count: 0 };
+  const board = createCanvasViewBoard(canvasViewRuntime, { persistCallsRef });
+
+  board.drawingEngine.canvasScale = 2;
+  board.drawingEngine.panOffset = { x: 25, y: -15 };
+  canvasViewRuntime.initializeCanvasView(board);
+
+  assert.deepEqual(
+    board.drawingEngine.panOffset,
+    { x: 25, y: -15 },
+    'initializeCanvasView should preserve a previously saved pan offset instead of recentring on startup'
+  );
+  assert.equal(
+    persistCallsRef.count,
+    0,
+    'initializeCanvasView should not rewrite already versioned saved views when it only reapplies them'
+  );
+}
+
 (function main() {
   testPanDebouncesViewStatePersistence();
   testStopPanningFlushesPendingViewStatePersistence();
@@ -575,5 +761,10 @@ function testCanvasViewRuntimeUsesDrawingEnginePersistenceHook() {
   testViewControlsUseDrawingEnginePersistenceHook();
   testInteractionRuntimeUsesDrawingEnginePersistenceHook();
   testCanvasViewRuntimeUsesDrawingEnginePersistenceHook();
+  testStartupResizeDoesNotCreateSyntheticSavedScale();
+  testInitializeCanvasViewMigratesSyntheticSavedScale();
+  testInitializeCanvasViewPreservesExplicitSavedScale();
+  testInitializeCanvasViewPreservesVersionedCenteredScaleOne();
+  testInitializeCanvasViewPreservesSavedPanOffset();
   console.log('view-state-persistence.test: all assertions passed');
 })();

@@ -10,6 +10,15 @@ function getExportText(key, fallback) {
     return translated && translated !== key ? translated : fallback;
 }
 
+function escapeExportHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 function getActiveExportTab() {
     return document.querySelector('.export-tab-btn.active')?.dataset.tab || 'image';
 }
@@ -69,8 +78,8 @@ class ExportManager {
             <div id="export-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="export-modal-title" tabindex="-1">
                 <div class="modal-content export-modal-content">
                     <div class="modal-header">
-                        <h2 id="export-modal-title">${title}</h2>
-                        <button id="export-close-btn" type="button" class="modal-close-btn" data-i18n-title="common.close" title="${closeTitle}" aria-label="${closeTitle}">
+                        <h2 id="export-modal-title">${escapeExportHtml(title)}</h2>
+                        <button id="export-close-btn" type="button" class="modal-close-btn" data-i18n-title="common.close" title="${escapeExportHtml(closeTitle)}" aria-label="${escapeExportHtml(closeTitle)}">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -80,35 +89,35 @@ class ExportManager {
                     <div class="modal-body">
                         <!-- Tabs -->
                         <div class="export-tab-nav">
-                            <button id="export-tab-image-btn" type="button" class="export-tab-btn active" data-tab="image">${imageTab}</button>
-                            <button id="export-tab-project-btn" type="button" class="export-tab-btn" data-tab="project">${projectTab}</button>
+                            <button id="export-tab-image-btn" type="button" class="export-tab-btn active" data-tab="image">${escapeExportHtml(imageTab)}</button>
+                            <button id="export-tab-project-btn" type="button" class="export-tab-btn" data-tab="project">${escapeExportHtml(projectTab)}</button>
                         </div>
 
                         <!-- Image Export Tab -->
                         <div id="export-tab-image" class="export-tab-content active">
                             <div class="export-options">
                                 <div class="export-group">
-                                    <label id="export-image-scope-label">${scopeLabel}</label>
+                                    <label id="export-image-scope-label">${escapeExportHtml(scopeLabel)}</label>
                                     <div class="button-size-options button-size-options-3">
-                                        <button id="export-image-scope-current-btn" type="button" class="export-scope-btn active" data-scope="current">${currentPage}</button>
-                                        <button id="export-image-scope-all-btn" type="button" class="export-scope-btn" data-scope="all">${allPages}</button>
-                                        <button id="export-image-scope-specific-btn" type="button" class="export-scope-btn" data-scope="specific">${specificPages}</button>
+                                        <button id="export-image-scope-current-btn" type="button" class="export-scope-btn active" data-scope="current">${escapeExportHtml(currentPage)}</button>
+                                        <button id="export-image-scope-all-btn" type="button" class="export-scope-btn" data-scope="all">${escapeExportHtml(allPages)}</button>
+                                        <button id="export-image-scope-specific-btn" type="button" class="export-scope-btn" data-scope="specific">${escapeExportHtml(specificPages)}</button>
                                     </div>
                                 </div>
                                 <div class="export-group page-selection-group" style="display: none;">
-                                    <label id="export-image-page-selection-label">${pageSelection}</label>
+                                    <label id="export-image-page-selection-label">${escapeExportHtml(pageSelection)}</label>
                                     <div class="page-selection-buttons"></div>
                                 </div>
                                 <div class="export-group">
-                                    <label id="export-image-format-label">${imageFormat}</label>
+                                    <label id="export-image-format-label">${escapeExportHtml(imageFormat)}</label>
                                     <div class="button-size-options button-size-options-2">
                                         <button type="button" class="export-format-btn active" data-format="png">PNG</button>
                                         <button type="button" class="export-format-btn" data-format="jpeg">JPEG</button>
                                     </div>
                                 </div>
                                 <div class="export-group" id="jpeg-quality-group" style="display: none;">
-                                    <label><span id="export-image-quality-label">${imageQuality}</span> <span id="export-quality-value">90</span>%</label>
-                                    <input type="range" id="export-quality-slider" min="1" max="100" value="90" class="slider" aria-label="${imageQuality}">
+                                    <label><span id="export-image-quality-label">${escapeExportHtml(imageQuality)}</span> <span id="export-quality-value">90</span>%</label>
+                                    <input type="range" id="export-quality-slider" min="1" max="100" value="90" class="slider" aria-label="${escapeExportHtml(imageQuality)}">
                                 </div>
                             </div>
                         </div>
@@ -117,20 +126,20 @@ class ExportManager {
                         <div id="export-tab-project" class="export-tab-content">
                             <div class="export-options">
                                 <div class="export-group">
-                                    <label id="export-project-scope-label">${scopeLabel}</label>
+                                    <label id="export-project-scope-label">${escapeExportHtml(scopeLabel)}</label>
                                     <div class="button-size-options button-size-options-3">
-                                        <button id="export-project-scope-current-btn" type="button" class="export-project-scope-btn active" data-scope="current">${currentPage}</button>
-                                        <button id="export-project-scope-all-btn" type="button" class="export-project-scope-btn" data-scope="all">${allPages}</button>
-                                        <button id="export-project-scope-specific-btn" type="button" class="export-project-scope-btn" data-scope="specific">${specificPages}</button>
+                                        <button id="export-project-scope-current-btn" type="button" class="export-project-scope-btn active" data-scope="current">${escapeExportHtml(currentPage)}</button>
+                                        <button id="export-project-scope-all-btn" type="button" class="export-project-scope-btn" data-scope="all">${escapeExportHtml(allPages)}</button>
+                                        <button id="export-project-scope-specific-btn" type="button" class="export-project-scope-btn" data-scope="specific">${escapeExportHtml(specificPages)}</button>
                                     </div>
                                 </div>
                                 <div class="export-group project-page-selection-group" style="display: none;">
-                                    <label id="export-project-page-selection-label">${pageSelection}</label>
+                                    <label id="export-project-page-selection-label">${escapeExportHtml(pageSelection)}</label>
                                     <div class="project-page-selection-buttons page-selection-buttons"></div>
                                 </div>
                                 <div class="export-group">
                                     <p id="export-project-hint" class="export-hint">
-                                        ${projectHint}
+                                        ${escapeExportHtml(projectHint)}
                                     </p>
                                 </div>
                             </div>
@@ -139,19 +148,19 @@ class ExportManager {
                         <!-- Shared Filename & Actions -->
                         <div style="margin-top: 20px;">
                             <div class="export-group" id="filename-group">
-                                <label id="filename-label">${filenameLabel}</label>
-                                <input type="text" id="export-filename" class="export-filename-input" value="aboard-export" placeholder="${filenamePlaceholder}" aria-label="${filenameLabel}">
-                                <p class="export-hint" id="export-filename-hint" style="display: none;">${filenameHint}</p>
+                                <label id="filename-label">${escapeExportHtml(filenameLabel)}</label>
+                                <input type="text" id="export-filename" class="export-filename-input" value="aboard-export" placeholder="${escapeExportHtml(filenamePlaceholder)}" aria-label="${escapeExportHtml(filenameLabel)}">
+                                <p class="export-hint" id="export-filename-hint" style="display: none;">${escapeExportHtml(filenameHint)}</p>
                             </div>
                             <div class="export-actions">
-                                <button id="export-cancel-btn" type="button" class="button-secondary">${cancelLabel}</button>
+                                <button id="export-cancel-btn" type="button" class="button-secondary">${escapeExportHtml(cancelLabel)}</button>
                                 <button id="export-confirm-btn" type="button" class="button-primary">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 5px;">
                                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                         <polyline points="7 10 12 15 17 10"></polyline>
                                         <line x1="12" y1="15" x2="12" y2="3"></line>
                                     </svg>
-                                    <span id="export-confirm-btn-label">${confirmLabel}</span>
+                                    <span id="export-confirm-btn-label">${escapeExportHtml(confirmLabel)}</span>
                                 </button>
                             </div>
                         </div>

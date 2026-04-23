@@ -77,23 +77,18 @@ class RandomPickerInstance {
         const title = this.config.title || (this.config.mode === 'name' ?
             window.i18n.t('randomPicker.namePicker') :
             window.i18n.t('randomPicker.numberPicker'));
-        const helpLabel = getRandomPickerText('common.help', 'Help');
-        const closeLabel = getRandomPickerText('common.close', 'Close');
-        const startLabel = getRandomPickerText('common.start', 'Start');
-        const settingsLabel = getRandomPickerText('randomPicker.settingsTitle', 'Settings');
-
         div.innerHTML = `
             <div class="random-picker-header">
                 <span class="random-picker-title"></span>
                 <div style="display:flex; gap:6px;">
-                    <button class="random-picker-help-btn" title="${helpLabel}" aria-label="${helpLabel}">
+                    <button class="random-picker-help-btn" title="" aria-label="">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
                             <line x1="12" y1="17" x2="12" y2="17"></line>
                         </svg>
                     </button>
-                    <button class="random-picker-close-btn" title="${closeLabel}" aria-label="${closeLabel}">
+                    <button class="random-picker-close-btn" title="" aria-label="">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -104,14 +99,14 @@ class RandomPickerInstance {
             <div class="random-picker-content">
                 <div class="random-picker-result">?</div>
                 <div class="random-picker-controls">
-                    <button class="random-picker-btn random-picker-start-btn" title="${startLabel}" aria-label="${startLabel}">
+                    <button class="random-picker-btn random-picker-start-btn" title="" aria-label="">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M5 12h14"></path>
                             <path d="M12 5l7 7-7 7"></path>
                         </svg>
-                        <span>${startLabel}</span>
+                        <span></span>
                     </button>
-                    <button class="random-picker-btn random-picker-settings-btn" title="${settingsLabel}" aria-label="${settingsLabel}">
+                    <button class="random-picker-btn random-picker-settings-btn" title="" aria-label="">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="3"></circle>
                             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -636,7 +631,6 @@ class RandomPickerManager {
     }
 
     createSettingsModal() {
-        const closeLabel = getRandomPickerText('common.close', 'Close');
         const modal = document.createElement('div');
         modal.id = 'random-picker-settings-modal';
         modal.className = 'modal';
@@ -648,8 +642,8 @@ class RandomPickerManager {
         modal.innerHTML = `
             <div class="modal-content random-picker-modal-content settings-panel-modal-content">
                 <div class="modal-header">
-                    <h2 id="random-picker-settings-title">${window.i18n.t('randomPicker.settingsTitle')}</h2>
-                    <button type="button" class="modal-close-btn" title="${closeLabel}" aria-label="${closeLabel}">
+                    <h2 id="random-picker-settings-title"></h2>
+                    <button type="button" class="modal-close-btn" title="" aria-label="">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -658,39 +652,39 @@ class RandomPickerManager {
                 </div>
                 <div class="modal-body">
                     <div class="random-picker-mode-switch">
-                        <button type="button" class="random-picker-mode-btn active" data-mode="name">${window.i18n.t('randomPicker.modeName')}</button>
-                        <button type="button" class="random-picker-mode-btn" data-mode="number">${window.i18n.t('randomPicker.modeNumber')}</button>
+                        <button type="button" class="random-picker-mode-btn active" data-mode="name"></button>
+                        <button type="button" class="random-picker-mode-btn" data-mode="number"></button>
                     </div>
 
                     <div class="random-picker-input-group">
-                        <label for="rp-title-input" class="rp-title-label">${window.i18n.t('randomPicker.titleLabel')}</label>
-                        <input type="text" id="rp-title-input" class="export-filename-input" placeholder="${window.i18n.t('randomPicker.titlePlaceholder')}" aria-label="${window.i18n.t('randomPicker.titleLabel')}">
+                        <label for="rp-title-input" class="rp-title-label"></label>
+                        <input type="text" id="rp-title-input" class="export-filename-input" placeholder="" aria-label="">
                     </div>
 
                     <div id="rp-name-settings">
                         <div class="random-picker-input-group">
-                            <label for="rp-names-input" class="rp-names-label">${window.i18n.t('randomPicker.namesLabel')}</label>
-                            <textarea id="rp-names-input" class="random-picker-textarea" placeholder="${window.i18n.t('randomPicker.namesPlaceholder')}" aria-label="${window.i18n.t('randomPicker.namesLabel')}"></textarea>
+                            <label for="rp-names-input" class="rp-names-label"></label>
+                            <textarea id="rp-names-input" class="random-picker-textarea" placeholder="" aria-label=""></textarea>
                         </div>
 
                         <div class="random-picker-import-group" style="margin-bottom: 12px; border-top: 1px solid #eee; padding-top: 10px;">
-                            <label class="rp-import-label" style="display:block;margin-bottom:5px;font-size:12px;color:#666;">${window.i18n.t('randomPicker.importLabel')}</label>
+                            <label class="rp-import-label" style="display:block;margin-bottom:5px;font-size:12px;color:#666;"></label>
                             <div style="display:flex; gap:8px; margin-bottom:5px;">
-                                <input type="text" id="rp-import-col" value="${window.i18n.t('randomPicker.defaultColumnName')}" style="width:80px;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:12px;" placeholder="${window.i18n.t('randomPicker.importColumnPlaceholder')}" aria-label="${window.i18n.t('randomPicker.importColumnPlaceholder')}">
+                                <input type="text" id="rp-import-col" value="" style="width:80px;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:12px;" placeholder="" aria-label="">
                                 <input type="file" id="rp-import-file" accept=".xlsx, .xls, .csv" style="display:none">
-                                <button type="button" id="rp-import-btn" class="button-secondary" style="flex:1;padding:6px;font-size:12px;">${window.i18n.t('randomPicker.importBtn')}</button>
+                                <button type="button" id="rp-import-btn" class="button-secondary" style="flex:1;padding:6px;font-size:12px;"></button>
                             </div>
-                            <div class="settings-hint rp-import-hint">${window.i18n.t('randomPicker.importHint')}</div>
+                            <div class="settings-hint rp-import-hint"></div>
                         </div>
                     </div>
 
                     <div id="rp-number-settings" style="display: none;">
                         <div class="random-picker-input-group">
-                            <label class="rp-range-label">${window.i18n.t('randomPicker.rangeLabel')}</label>
+                            <label class="rp-range-label"></label>
                             <div class="random-picker-range-inputs">
-                                <input type="number" id="rp-min-input" class="random-picker-number-input" value="1" aria-label="${window.i18n.t('randomPicker.rangeLabel')} Min">
+                                <input type="number" id="rp-min-input" class="random-picker-number-input" value="1" aria-label="">
                                 <span>-</span>
-                                <input type="number" id="rp-max-input" class="random-picker-number-input" value="50" aria-label="${window.i18n.t('randomPicker.rangeLabel')} Max">
+                                <input type="number" id="rp-max-input" class="random-picker-number-input" value="50" aria-label="">
                             </div>
                         </div>
                     </div>
@@ -698,12 +692,12 @@ class RandomPickerManager {
                     <div class="random-picker-common-settings" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
                         <label class="random-picker-checkbox">
                             <input type="checkbox" id="rp-allow-repeats" checked>
-                            <span class="rp-allow-repeats-label">${window.i18n.t('randomPicker.allowRepeats')}</span>
+                            <span class="rp-allow-repeats-label"></span>
                         </label>
                     </div>
 
                     <div class="confirm-buttons">
-                        <button type="button" class="confirm-btn ok-btn" id="rp-save-btn">${window.i18n.t('common.confirm')}</button>
+                        <button type="button" class="confirm-btn ok-btn" id="rp-save-btn"></button>
                     </div>
                 </div>
             </div>
@@ -759,6 +753,10 @@ class RandomPickerManager {
         }
 
         this.refreshSettingsModalText();
+        const importColumnInput = modal.querySelector('#rp-import-col');
+        if (importColumnInput && !importColumnInput.value) {
+            importColumnInput.value = getRandomPickerText('randomPicker.defaultColumnName', 'Name');
+        }
     }
 
     refreshSettingsModalText() {

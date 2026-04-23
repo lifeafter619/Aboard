@@ -86,6 +86,11 @@ function createResponseRecorder() {
   };
 }
 
+function assertSecurityHeaders(headers) {
+  assert.equal(headers?.['X-Content-Type-Options'], 'nosniff');
+  assert.equal(headers?.['Referrer-Policy'], 'strict-origin-when-cross-origin');
+}
+
 async function testDirectoryRequestReturnsNotFoundInsteadOfServerError() {
   const harness = loadServerHarness();
   harness.setReadFileImpl((filePath, callback) => {
@@ -105,6 +110,7 @@ async function testDirectoryRequestReturnsNotFoundInsteadOfServerError() {
   await res.ended;
 
   assert.equal(res.statusCode, 404);
+  assertSecurityHeaders(res.headers);
   assert.equal(res.body, JSON.stringify({ error: 'Not Found' }));
 }
 
@@ -128,12 +134,37 @@ async function testMalformedRequestUrlReturnsBadRequestInsteadOfThrowing() {
   await res.ended;
 
   assert.equal(res.statusCode, 400);
+  assertSecurityHeaders(res.headers);
   assert.equal(res.body, JSON.stringify({ error: 'Bad Request' }));
+}
+
+async function testStaticResponseIncludesSecurityHeaders() {
+  const harness = loadServerHarness();
+  harness.setReadFileImpl((filePath, callback) => {
+    assert.match(filePath, /[\\/]index\.html$/);
+    callback(null, Buffer.from('<!doctype html>'));
+  });
+
+  const res = createResponseRecorder();
+  harness.requestHandler(
+    {
+      url: '/index.html',
+      headers: { host: 'localhost:8080' }
+    },
+    res
+  );
+
+  await res.ended;
+
+  assert.equal(res.statusCode, 200);
+  assertSecurityHeaders(res.headers);
+  assert.equal(res.headers?.['Content-Type'], 'text/html; charset=utf-8');
 }
 
 async function run() {
   await testDirectoryRequestReturnsNotFoundInsteadOfServerError();
   await testMalformedRequestUrlReturnsBadRequestInsteadOfThrowing();
+  await testStaticResponseIncludesSecurityHeaders();
   console.log('server-static-paths.test: all assertions passed');
 }
 

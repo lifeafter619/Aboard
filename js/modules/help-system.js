@@ -361,13 +361,12 @@ class HelpSystem {
             modal.setAttribute('aria-describedby', 'help-modal-content');
             modal.tabIndex = -1;
             // Set highest z-index to ensure help modal is always on top
-            const closeLabel = window.i18n?.t('common.close') || 'Close';
             modal.style.zIndex = '99999';
             modal.innerHTML = `
                 <div class="modal-content help-modal-content">
                     <div class="modal-header">
-                        <h2 id="help-modal-title">${window.i18n.t('common.help')}</h2>
-                        <button class="modal-close-btn" type="button" data-i18n-title="common.close" aria-label="${closeLabel}" title="${closeLabel}">
+                        <h2 id="help-modal-title"></h2>
+                        <button class="modal-close-btn" type="button" data-i18n-title="common.close" aria-label="Close" title="Close">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
@@ -417,11 +416,17 @@ class HelpSystem {
             closeBtn.setAttribute('aria-label', closeLabel);
         }
 
-        // Parse simple markdown-like syntax using RichTextParser
-        let formattedContent = window.RichTextParser ? window.RichTextParser.parse(content) : content;
         const helpContentElement = modal.querySelector('.help-content');
-        helpContentElement.innerHTML = formattedContent;
-        helpContentElement.scrollTop = 0;
+        if (helpContentElement) {
+            if (window.RichTextParser) {
+                helpContentElement.innerHTML = window.RichTextParser.parse(content);
+            } else {
+                helpContentElement.textContent = Array.isArray(content)
+                    ? content.join('\n')
+                    : String(content || '');
+            }
+            helpContentElement.scrollTop = 0;
+        }
         modal.classList.add('show');
         scheduleFrame(() => {
             closeBtn?.focus?.();

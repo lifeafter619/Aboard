@@ -15,6 +15,7 @@ function persistBoardViewState(board, options = {}) {
         localStorage.setItem('canvasScale', board.drawingEngine.canvasScale);
         localStorage.setItem('panOffsetX', board.drawingEngine.panOffset.x);
         localStorage.setItem('panOffsetY', board.drawingEngine.panOffset.y);
+        localStorage.setItem('canvasViewStateVersion', '1');
     } catch (error) {
         console.warn('Failed to persist view controls state to localStorage:', error);
     }

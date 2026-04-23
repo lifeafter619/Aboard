@@ -21,6 +21,15 @@ function safeCacheStorageClear(storage, storageLabel = 'storage') {
         }
 }
 
+function safeCacheStorageGetItem(storage, key, storageLabel = 'storage') {
+        try {
+            return storage?.getItem?.(key) ?? null;
+        } catch (error) {
+            console.warn(`Failed to read ${storageLabel} key "${key}":`, error);
+            return null;
+        }
+}
+
 function getStorageKeysSafely(storage, storageLabel = 'storage') {
         try {
             const keys = [];
@@ -59,7 +68,7 @@ function getCacheKeyGroups() {
             'coordinateOriginX', 'coordinateOriginY', 'coordinateOverlayState',
             'backgroundOutsideLayerOrder',
             'uploadedImages',
-            'canvasScale', 'panOffsetX', 'panOffsetY',
+            'canvasScale', 'panOffsetX', 'panOffsetY', 'canvasViewStateVersion',
             'aboardSessionSizeEstimate'
         ]);
         return { settingsKeys, canvasKeys };
@@ -293,26 +302,19 @@ async function getCacheSizeSummary() {
         const { settingsKeys, canvasKeys } = this.getCacheKeyGroups();
         const summary = { settings: 0, canvas: 0, other: 0 };
         const internalKeys = new Set([this.cacheStorageSizeSnapshotKey]);
+        const addStorageUsage = (storage, storageLabel) => {
+            getStorageKeysSafely(storage, storageLabel).forEach((key) => {
+                if (!key || internalKeys.has(key)) return;
+                const val = safeCacheStorageGetItem(storage, key, storageLabel);
+                const size = this.getStorageEntrySize(key, val);
+                if (settingsKeys.has(key)) summary.settings += size;
+                else if (canvasKeys.has(key)) summary.canvas += size;
+                else summary.other += size;
+            });
+        };
 
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (!key || internalKeys.has(key)) continue;
-            const val = localStorage.getItem(key);
-            const size = this.getStorageEntrySize(key, val);
-            if (settingsKeys.has(key)) summary.settings += size;
-            else if (canvasKeys.has(key)) summary.canvas += size;
-            else summary.other += size;
-        }
-
-        for (let i = 0; i < sessionStorage.length; i++) {
-            const key = sessionStorage.key(i);
-            if (!key || internalKeys.has(key)) continue;
-            const val = sessionStorage.getItem(key);
-            const size = this.getStorageEntrySize(key, val);
-            if (settingsKeys.has(key)) summary.settings += size;
-            else if (canvasKeys.has(key)) summary.canvas += size;
-            else summary.other += size;
-        }
+        addStorageUsage(localStorage, 'localStorage');
+        addStorageUsage(sessionStorage, 'sessionStorage');
 
         let indexedDbCanvasUsage = this.storageManager?.getSessionSizeEstimate?.() || 0;
         if (!indexedDbCanvasUsage) {

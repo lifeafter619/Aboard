@@ -29,11 +29,23 @@ const MIME_TYPES = {
     '.otf': 'font/otf'
 };
 
+const SECURITY_HEADERS = Object.freeze({
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
+});
+
+function withSecurityHeaders(headers = {}) {
+    return {
+        ...SECURITY_HEADERS,
+        ...headers
+    };
+}
+
 function sendJson(res, statusCode, payload) {
-    res.writeHead(statusCode, {
+    res.writeHead(statusCode, withSecurityHeaders({
         'Content-Type': 'application/json; charset=utf-8',
         'Cache-Control': 'no-store'
-    });
+    }));
     res.end(JSON.stringify(payload));
 }
 
@@ -121,7 +133,7 @@ function serveStatic(reqPath, res, rawPath = reqPath) {
 
         const ext = path.extname(filePath).toLowerCase();
         const mimeType = MIME_TYPES[ext] || 'application/octet-stream';
-        res.writeHead(200, { 'Content-Type': mimeType });
+        res.writeHead(200, withSecurityHeaders({ 'Content-Type': mimeType }));
         res.end(data);
     });
 }

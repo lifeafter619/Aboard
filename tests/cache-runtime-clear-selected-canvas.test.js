@@ -36,9 +36,15 @@ function createBlockedStorageStub(initialEntries = {}, blockedMethods = []) {
 
   return {
     get length() {
+      if (blocked.has('length')) {
+        throw new Error('Blocked length');
+      }
       return storage.length;
     },
     key(index) {
+      if (blocked.has('key')) {
+        throw new Error(`Blocked key for ${index}`);
+      }
       return storage.key(index);
     },
     getItem(key) {
@@ -138,6 +144,7 @@ async function testCanvasClearRemovesExtendedBoardStateKeys() {
     backgroundImageConfirmed: 'true',
     uploadedImages: '[{"id":"img-1","data":"data:image/png;base64,abc"}]',
     pageScenes: '{"1":{"strokes":[]}}',
+    canvasViewStateVersion: '1',
     themeColor: '#336699'
   });
   const sessionStorage = createStorageStub({
@@ -186,6 +193,7 @@ async function testCanvasClearRemovesExtendedBoardStateKeys() {
   assert.equal(localStorage.getItem('backgroundImageConfirmed'), null);
   assert.equal(localStorage.getItem('uploadedImages'), null);
   assert.equal(localStorage.getItem('pageScenes'), null);
+  assert.equal(localStorage.getItem('canvasViewStateVersion'), null);
   assert.equal(sessionStorage.getItem('backgroundImageData'), null);
   assert.equal(sessionStorage.getItem('imageTransform'), null);
   assert.equal(sessionStorage.getItem('uploadedImages'), null);
@@ -277,10 +285,69 @@ async function testClearAllLocalDataSurvivesBlockedLocalStorageClear() {
   assert.equal(board.isClearingLocalData, false);
 }
 
+async function testCacheSizeSummarySurvivesBlockedStorageEnumeration() {
+  const localStorage = createBlockedStorageStub({
+    themeColor: '#336699',
+    pageScenes: '{"1":{"strokes":[]}}'
+  }, ['length']);
+  const sessionStorage = createBlockedStorageStub({
+    uploadedImages: '[{"id":"img-1"}]'
+  }, ['key']);
+  const runtime = loadCacheRuntime(localStorage, sessionStorage);
+
+  const board = {
+    cacheStorageSizeSnapshotKey: 'aboardCacheStorageSnapshot',
+    getCacheKeyGroups() {
+      return runtime.getCacheKeyGroups(this);
+    },
+    getStorageEntrySize(key, value) {
+      return runtime.getStorageEntrySize(this, key, value);
+    },
+    clearCacheStorageSizeSnapshot() {},
+    setCacheStorageSizeSnapshot() {},
+    getCacheStorageSizeSnapshot() {
+      return runtime.getCacheStorageSizeSnapshot(this);
+    },
+    async buildCacheStorageFingerprint() {
+      return 'empty';
+    },
+    async measureExactCacheStorageUsage() {
+      return 0;
+    },
+    getExactCacheStorageUsage() {
+      return runtime.getExactCacheStorageUsage(this);
+    },
+    withTimeout(promise, timeoutMs, fallbackValue) {
+      return runtime.withTimeout(this, promise, timeoutMs, fallbackValue);
+    },
+    waitForServiceWorkerCacheReady: async () => true,
+    scheduleCacheSizeRetryWhenReady() {},
+    storageManager: {
+      getSessionSizeEstimate() {
+        return 0;
+      },
+      async loadSession() {
+        return null;
+      },
+      setSessionSizeEstimate() {}
+    }
+  };
+
+  await assert.doesNotReject(async () => {
+    const summary = await runtime.getCacheSizeSummary(board);
+    assert.deepEqual(
+      JSON.parse(JSON.stringify(summary)),
+      { settings: 0, canvas: 0, other: 0 },
+      'blocked storage enumeration should fall back to a zero storage summary instead of rejecting'
+    );
+  });
+}
+
 (async function main() {
   await testCanvasClearRemovesExtendedBoardStateKeys();
   await testCanvasClearSurvivesBlockedLocalStorageRemoval();
   await testClearAllLocalDataSurvivesBlockedLocalStorageClear();
+  await testCacheSizeSummarySurvivesBlockedStorageEnumeration();
   console.log('cache-runtime-clear-selected-canvas.test: all assertions passed');
 })().catch((error) => {
   console.error(error);
