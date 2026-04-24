@@ -56,7 +56,7 @@ function createDisplayStub() {
   };
 }
 
-function loadTimerRuntime() {
+function loadTimerRuntime(translate = (key) => key) {
   const sandbox = {
     console,
     Math,
@@ -88,7 +88,7 @@ function loadTimerRuntime() {
       play() { return Promise.resolve(); }
     },
     window: {
-      i18n: { t: (key) => key },
+      i18n: { t: translate },
       drawingBoard: { settingsManager: { toastManager: { show() {} } } },
       requestAnimationFrame(callback) { callback(); },
       innerWidth: 1280,
@@ -149,6 +149,41 @@ function testCreateDisplayElementEscapesTitle() {
   assert.ok(!display.innerHTML.includes(maliciousTitle), 'timer widget should not inject raw title HTML');
 }
 
+function testCreateDisplayElementEscapesTranslatedLabels() {
+  const maliciousLabel = '<svg onload="window.__timerLabelXss=1"></svg>';
+  const { TimerInstance, sandbox } = loadTimerRuntime(() => maliciousLabel);
+  const proto = TimerInstance.prototype;
+  const display = createDisplayStub();
+  sandbox.document.createElement = () => display;
+  sandbox.document.body.appendChild = () => {};
+
+  const timer = {
+    id: 1,
+    title: '',
+    mode: 'countdown',
+    textColor: '#000000',
+    bgColor: '#ffffff',
+    remainingTime: 0,
+    countdownDuration: 0,
+    displayElement: null,
+    setupEventListeners() {},
+    setupDragging() {},
+    refreshLocalizedUI() {},
+    displayTime() {}
+  };
+
+  proto.createDisplayElement.call(timer);
+
+  assert.ok(
+    !display.innerHTML.includes(maliciousLabel),
+    'timer widget should not inject raw translated labels into the initial template'
+  );
+  assert.ok(
+    display.innerHTML.includes('&lt;svg'),
+    'timer widget should escape translated labels in the initial template'
+  );
+}
+
 function testFullscreenDisplayEscapesTitle() {
   const { TimerInstance } = loadTimerRuntime();
   const proto = TimerInstance.prototype;
@@ -180,8 +215,44 @@ function testFullscreenDisplayEscapesTitle() {
   assert.ok(!fullscreenContent.innerHTML.includes(maliciousTitle), 'fullscreen timer view should not inject raw title HTML');
 }
 
+function testFullscreenDisplayEscapesTranslatedMode() {
+  const maliciousMode = '<img src=x onerror="window.__timerModeXss=1">';
+  const { TimerInstance } = loadTimerRuntime(() => maliciousMode);
+  const proto = TimerInstance.prototype;
+  const fullscreenContent = createStubNode();
+  const fullscreenModal = {
+    style: {},
+    querySelector() {
+      return null;
+    }
+  };
+
+  const timer = {
+    title: '',
+    mode: 'countdown',
+    remainingTime: 0,
+    showTime: true,
+    showDate: false,
+    fullscreenFontSizePercent: 15,
+    fullscreenTitleFontSizePercent: 5,
+    fullscreenTextColor: '#ffffff',
+    fullscreenBgColor: '#000000',
+    fullscreenContent,
+    fullscreenModal
+  };
+
+  proto.updateFullscreenDisplay.call(timer);
+
+  assert.ok(
+    !fullscreenContent.innerHTML.includes(maliciousMode),
+    'fullscreen timer view should not inject raw translated mode HTML'
+  );
+}
+
 (function main() {
   testCreateDisplayElementEscapesTitle();
+  testCreateDisplayElementEscapesTranslatedLabels();
   testFullscreenDisplayEscapesTitle();
+  testFullscreenDisplayEscapesTranslatedMode();
   console.log('timer-title-escaping.test: all assertions passed');
 })();

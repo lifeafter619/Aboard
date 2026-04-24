@@ -1,6 +1,15 @@
 // Teaching Tools Module - Ruler and Set Square for classroom use
 // Allows inserting, moving, rotating, and resizing rulers and set squares
 
+function escapeTeachingToolsHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 class TeachingToolsManager {
     constructor(canvas, ctx, historyManager) {
         this.canvas = canvas;
@@ -115,7 +124,7 @@ class TeachingToolsManager {
             <div class="modal-content teaching-tools-modal-content">
                 <div class="modal-header">
                     <h2 id="teaching-tools-modal-title" data-i18n="teachingTools.title">Teaching Tools</h2>
-                    <button id="teaching-tools-close-btn" class="modal-close-btn" type="button" data-i18n-title="common.close" title="${closeTitle}" aria-label="${closeTitle}">
+                    <button id="teaching-tools-close-btn" class="modal-close-btn" type="button" data-i18n-title="common.close" title="${escapeTeachingToolsHtml(closeTitle)}" aria-label="${escapeTeachingToolsHtml(closeTitle)}">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>

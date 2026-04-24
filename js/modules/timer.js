@@ -313,16 +313,16 @@ class TimerInstance {
 
         display.innerHTML = `
             <div class="timer-display-header">
-                <div class="timer-display-mode">${modeText}</div>
+                <div class="timer-display-mode">${escapeTimerHtml(modeText)}</div>
                 <div class="timer-display-header-actions">
-                    <button class="timer-help-btn" type="button" data-help-key="help.features.timer" data-i18n-title="common.help" aria-label="${helpLabel}" title="${helpLabel}">
+                    <button class="timer-help-btn" type="button" data-help-key="help.features.timer" data-i18n-title="common.help" aria-label="${escapeTimerHtml(helpLabel)}" title="${escapeTimerHtml(helpLabel)}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
                             <line x1="12" y1="17" x2="12" y2="17"></line>
                         </svg>
                     </button>
-                    <button class="timer-close-btn" type="button" title="${closeLabel}" aria-label="${closeLabel}">
+                    <button class="timer-close-btn" type="button" title="${escapeTimerHtml(closeLabel)}" aria-label="${escapeTimerHtml(closeLabel)}">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -333,49 +333,49 @@ class TimerInstance {
             ${titleHTML}
             <div class="timer-display-time">00:00:00</div>
             <div class="timer-display-controls">
-                <button class="timer-control-btn timer-play-pause-btn" title="${pauseLabel}" aria-label="${pauseLabel}">
+                <button class="timer-control-btn timer-play-pause-btn" title="${escapeTimerHtml(pauseLabel)}" aria-label="${escapeTimerHtml(pauseLabel)}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="6" y="4" width="4" height="16"></rect>
                         <rect x="14" y="4" width="4" height="16"></rect>
                     </svg>
-                    <span class="timer-play-pause-label">${pauseLabel}</span>
+                    <span class="timer-play-pause-label">${escapeTimerHtml(pauseLabel)}</span>
                 </button>
-                <button class="timer-control-btn timer-reset-btn" title="${resetLabel}" aria-label="${resetLabel}">
+                <button class="timer-control-btn timer-reset-btn" title="${escapeTimerHtml(resetLabel)}" aria-label="${escapeTimerHtml(resetLabel)}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
                         <path d="M21 3v5h-5"></path>
                         <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
                         <path d="M3 21v-5h5"></path>
                     </svg>
-                    <span class="timer-reset-label">${resetLabel}</span>
+                    <span class="timer-reset-label">${escapeTimerHtml(resetLabel)}</span>
                 </button>
             </div>
             <div class="timer-display-actions">
-                <button class="timer-action-btn timer-minimal-btn" title="${minimalTitle}" aria-label="${minimalTitle}">
+                <button class="timer-action-btn timer-minimal-btn" title="${escapeTimerHtml(minimalTitle)}" aria-label="${escapeTimerHtml(minimalTitle)}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                         <line x1="9" y1="9" x2="15" y2="15"></line>
                         <line x1="15" y1="9" x2="9" y2="15"></line>
                     </svg>
-                    <span class="timer-minimal-label">${minimalLabel}</span>
+                    <span class="timer-minimal-label">${escapeTimerHtml(minimalLabel)}</span>
                 </button>
-                <button class="timer-action-btn timer-adjust-btn" title="${adjustLabel}" aria-label="${adjustLabel}">
+                <button class="timer-action-btn timer-adjust-btn" title="${escapeTimerHtml(adjustLabel)}" aria-label="${escapeTimerHtml(adjustLabel)}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="3"></circle>
                         <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"></path>
                     </svg>
-                    <span class="timer-adjust-label">${adjustLabel}</span>
+                    <span class="timer-adjust-label">${escapeTimerHtml(adjustLabel)}</span>
                 </button>
-                <button class="timer-action-btn timer-fullscreen-btn" title="${fullscreenLabel}" aria-label="${fullscreenLabel}">
+                <button class="timer-action-btn timer-fullscreen-btn" title="${escapeTimerHtml(fullscreenLabel)}" aria-label="${escapeTimerHtml(fullscreenLabel)}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
                     </svg>
-                    <span class="timer-fullscreen-label">${fullscreenLabel}</span>
+                    <span class="timer-fullscreen-label">${escapeTimerHtml(fullscreenLabel)}</span>
                 </button>
             </div>
             <div class="timer-font-size-control">
-                <label><span class="timer-font-size-label">${fontSizeLabel}</span></label>
-                <input type="range" class="timer-font-size-slider" min="16" max="60" value="32" step="2" aria-label="${fontSizeLabel}" title="${fontSizeLabel}">
+                <label><span class="timer-font-size-label">${escapeTimerHtml(fontSizeLabel)}</span></label>
+                <input type="range" class="timer-font-size-slider" min="16" max="60" value="32" step="2" aria-label="${escapeTimerHtml(fontSizeLabel)}" title="${escapeTimerHtml(fontSizeLabel)}">
             </div>
         `;
         
@@ -1071,7 +1071,7 @@ class TimerInstance {
             : '';
         
         this.fullscreenContent.innerHTML = `
-            <div class="timer-fullscreen-mode" style="font-size: ${modeFontSize}px; color: ${fsTextColor};">${modeText}</div>
+            <div class="timer-fullscreen-mode" style="font-size: ${modeFontSize}px; color: ${fsTextColor};">${escapeTimerHtml(modeText)}</div>
             ${titleHTML}
             <div class="timer-fullscreen-time" style="font-size: ${timeFontSize}px; color: ${fsTextColor};">${timeString}</div>
         `;
