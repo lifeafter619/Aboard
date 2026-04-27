@@ -261,6 +261,16 @@ function createBoard(paginationRuntime) {
   };
 }
 
+async function withSuppressedConsoleWarn(callback) {
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  try {
+    return await callback();
+  } finally {
+    console.warn = originalWarn;
+  }
+}
+
 async function testPageBackgroundImportResetsStaleEnhancedState() {
   const { ProjectManager, paginationRuntime } = loadProjectImportRuntime();
   const board = createBoard(paginationRuntime);
@@ -526,17 +536,19 @@ async function testImportStillRestoresStateWhenLocalStorageIsBlocked() {
     }
   };
 
-  await assert.doesNotReject(async () => {
-    await manager.applyImportedProjectState({
-      settings: {},
-      uploadedImages,
-      globalBackground: null,
-      pageBackgrounds,
-      pagesImageData: [{ blank: true }],
-      currentPage: 1,
-      pageCount: 1
-    });
-  }, 'project import should not fail when localStorage writes are blocked');
+  await withSuppressedConsoleWarn(async () => {
+    await assert.doesNotReject(async () => {
+      await manager.applyImportedProjectState({
+        settings: {},
+        uploadedImages,
+        globalBackground: null,
+        pageBackgrounds,
+        pagesImageData: [{ blank: true }],
+        currentPage: 1,
+        pageCount: 1
+      });
+    }, 'project import should not fail when localStorage writes are blocked');
+  });
 
   assert.deepEqual(board.uploadedImages, uploadedImages);
   assert.deepEqual(board.pageBackgrounds, pageBackgrounds);

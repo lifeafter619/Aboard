@@ -93,8 +93,21 @@ function showBootstrapFailure(message) {
   console.error(message);
 }
 
+function bindPortraitOrientationContinue() {
+  const continueButton = document.getElementById('portrait-orientation-continue-btn');
+  if (!continueButton || continueButton.dataset.bound === 'true') {
+    return;
+  }
+
+  continueButton.dataset.bound = 'true';
+  continueButton.addEventListener('click', () => {
+    document.body?.classList.add('portrait-orientation-dismissed');
+  });
+}
+
 async function startAboard() {
   try {
+    bindPortraitOrientationContinue();
     await createApp();
   } catch (error) {
     console.error('Aboard bootstrap failed:', error);

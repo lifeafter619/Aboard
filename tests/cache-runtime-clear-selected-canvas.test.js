@@ -126,6 +126,16 @@ function loadCacheRuntime(localStorage, sessionStorage) {
   return context.window.AboardCacheRuntime;
 }
 
+async function withSuppressedConsoleWarn(callback) {
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  try {
+    return await callback();
+  } finally {
+    console.warn = originalWarn;
+  }
+}
+
 async function testCanvasClearRemovesExtendedBoardStateKeys() {
   const localStorage = createStorageStub({
     pageBackgrounds: '{"1":{"backgroundPattern":"image"}}',
@@ -232,13 +242,15 @@ async function testCanvasClearSurvivesBlockedLocalStorageRemoval() {
     }
   };
 
-  await assert.doesNotReject(async () => {
-    await runtime.clearSelectedCache(board, {
-      canvas: true,
-      settings: false,
-      other: false
-    });
-  }, 'canvas cache clear should not reject when localStorage removals are blocked');
+  await withSuppressedConsoleWarn(async () => {
+    await assert.doesNotReject(async () => {
+      await runtime.clearSelectedCache(board, {
+        canvas: true,
+        settings: false,
+        other: false
+      });
+    }, 'canvas cache clear should not reject when localStorage removals are blocked');
+  });
 
   assert.equal(clearSessionDataCalls, 1);
   assert.equal(
@@ -275,9 +287,11 @@ async function testClearAllLocalDataSurvivesBlockedLocalStorageClear() {
     setCacheStorageSizeSnapshot() {}
   };
 
-  await assert.doesNotReject(async () => {
-    await runtime.clearAllLocalData(board);
-  }, 'clear-all flow should not reject when localStorage.clear is blocked');
+  await withSuppressedConsoleWarn(async () => {
+    await assert.doesNotReject(async () => {
+      await runtime.clearAllLocalData(board);
+    }, 'clear-all flow should not reject when localStorage.clear is blocked');
+  });
 
   assert.equal(clearSessionDataCalls, 1);
   assert.equal(closeDbCalls, 1);
@@ -333,13 +347,15 @@ async function testCacheSizeSummarySurvivesBlockedStorageEnumeration() {
     }
   };
 
-  await assert.doesNotReject(async () => {
-    const summary = await runtime.getCacheSizeSummary(board);
-    assert.deepEqual(
-      JSON.parse(JSON.stringify(summary)),
-      { settings: 0, canvas: 0, other: 0 },
-      'blocked storage enumeration should fall back to a zero storage summary instead of rejecting'
-    );
+  await withSuppressedConsoleWarn(async () => {
+    await assert.doesNotReject(async () => {
+      const summary = await runtime.getCacheSizeSummary(board);
+      assert.deepEqual(
+        JSON.parse(JSON.stringify(summary)),
+        { settings: 0, canvas: 0, other: 0 },
+        'blocked storage enumeration should fall back to a zero storage summary instead of rejecting'
+      );
+    });
   });
 }
 
