@@ -256,7 +256,13 @@ class TimeDisplayManager {
     formatDate(date) {
         // Use translated weekday names from i18n
         const weekdayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        const weekday = window.i18n ? window.i18n.t(`days.${weekdayKeys[date.getDay()]}`) : ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][date.getDay()];
+        const fallbackWeekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        const getWeekdayText = (weekdayIndex) => (
+            window.i18n
+                ? window.i18n.t(`days.${weekdayKeys[weekdayIndex]}`)
+                : fallbackWeekdays[weekdayIndex]
+        );
+        let weekday = getWeekdayText(date.getDay());
         
         // Handle "auto" format using Intl.DateTimeFormat
         if (this.dateFormat === 'auto') {
@@ -300,6 +306,18 @@ class TimeDisplayManager {
                 });
                 
                 if (tzYear && tzMonth && tzDay) {
+                    const weekdayParts = new Intl.DateTimeFormat('en-US', {
+                        timeZone: this.timezone,
+                        weekday: 'long'
+                    }).formatToParts(date);
+                    const weekdayPart = weekdayParts.find(part => part.type === 'weekday');
+                    const weekdayIndex = weekdayPart
+                        ? ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(weekdayPart.value)
+                        : -1;
+                    if (weekdayIndex >= 0) {
+                        weekday = getWeekdayText(weekdayIndex);
+                    }
+
                     switch (this.dateFormat) {
                         case 'yyyy-mm-dd':
                             return `${tzYear}-${this.padZero(tzMonth)}-${this.padZero(tzDay)} ${weekday}`;
@@ -413,16 +431,22 @@ class TimeDisplayManager {
     }
 
     setFullscreenOpacity(opacity) {
-        this.fullscreenOpacity = opacity;
-        safeTimeDisplayStorageSetItem('timeDisplayFullscreenOpacity', opacity);
+        const numericOpacity = parseInt(opacity, 10);
+        this.fullscreenOpacity = Number.isNaN(numericOpacity)
+            ? this.fullscreenOpacity
+            : Math.max(0, Math.min(100, numericOpacity));
+        safeTimeDisplayStorageSetItem('timeDisplayFullscreenOpacity', this.fullscreenOpacity);
         if (this.isFullscreen) {
             this.updateFullscreenDisplay();
         }
     }
     
     setFontSize(size) {
-        this.fontSize = size;
-        safeTimeDisplayStorageSetItem('timeDisplayFontSize', size);
+        const numericSize = parseInt(size, 10);
+        this.fontSize = Number.isNaN(numericSize)
+            ? this.fontSize
+            : Math.max(12, Math.min(48, numericSize));
+        safeTimeDisplayStorageSetItem('timeDisplayFontSize', this.fontSize);
         this.applySettings();
         if (this.enabled) {
             this.updateDisplay();
@@ -430,8 +454,11 @@ class TimeDisplayManager {
     }
     
     setOpacity(opacity) {
-        this.opacity = opacity;
-        safeTimeDisplayStorageSetItem('timeDisplayOpacity', opacity);
+        const numericOpacity = parseInt(opacity, 10);
+        this.opacity = Number.isNaN(numericOpacity)
+            ? this.opacity
+            : Math.max(0, Math.min(100, numericOpacity));
+        safeTimeDisplayStorageSetItem('timeDisplayOpacity', this.opacity);
         this.applySettings();
     }
     

@@ -83,7 +83,23 @@ function createDocumentStub(elements) {
   };
 }
 
-function loadTimeDisplayManager({ localStorage, warnings = [] }) {
+function createIntlStub(localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone) {
+  function DateTimeFormat(locale, options) {
+    const formatter = new Intl.DateTimeFormat(locale, options);
+    const originalResolvedOptions = formatter.resolvedOptions.bind(formatter);
+    formatter.resolvedOptions = () => ({
+      ...originalResolvedOptions(),
+      timeZone: localTimeZone
+    });
+    return formatter;
+  }
+
+  return {
+    DateTimeFormat
+  };
+}
+
+function loadTimeDisplayManager({ localStorage, warnings = [], localTimeZone } = {}) {
   const source = fs.readFileSync(
     path.join(__dirname, '..', 'js', 'time-display.js'),
     'utf8'
@@ -132,7 +148,7 @@ function loadTimeDisplayManager({ localStorage, warnings = [] }) {
       return timers.length;
     },
     clearInterval() {},
-    Intl,
+    Intl: createIntlStub(localTimeZone),
     Date,
     Math,
     Number,
@@ -264,6 +280,67 @@ function testTimeDisplayManagerSurvivesBlockedLocalStorage() {
   );
 }
 
+function testTimeDisplayDateUsesTargetTimezoneWeekday() {
+  const storage = {
+    getItem() {
+      return null;
+    },
+    setItem() {},
+    removeItem() {}
+  };
+  const { TimeDisplayManager } = loadTimeDisplayManager({
+    localStorage: storage,
+    localTimeZone: 'UTC'
+  });
+
+  const manager = new TimeDisplayManager({ controlPosition: 'top-right' });
+  manager.dateFormat = 'yyyy-mm-dd';
+  manager.timezone = 'Pacific/Honolulu';
+
+  const formatted = manager.formatDate(new Date('2024-01-02T01:30:00Z'));
+
+  assert.equal(
+    formatted,
+    '2024-01-01 days.monday',
+    'weekday should be calculated in the selected timezone when the date crosses a day boundary'
+  );
+}
+
+function testTimeDisplaySettersClampRuntimeNumericSettings() {
+  const savedValues = new Map();
+  const storage = {
+    getItem() {
+      return null;
+    },
+    setItem(key, value) {
+      savedValues.set(key, String(value));
+    },
+    removeItem() {}
+  };
+  const { TimeDisplayManager, elements } = loadTimeDisplayManager({
+    localStorage: storage
+  });
+
+  const manager = new TimeDisplayManager({ controlPosition: 'top-right' });
+
+  manager.setFontSize(200);
+  manager.setOpacity(-20);
+  manager.setFullscreenOpacity(150);
+
+  assert.equal(manager.fontSize, 48, 'runtime font size changes should respect the configured maximum');
+  assert.equal(savedValues.get('timeDisplayFontSize'), '48');
+  assert.match(
+    elements['time-display'].innerHTML,
+    /font-size: 57\.599999999999994px|font-size: 57\.6px/,
+    'rendered time display should use the clamped font size'
+  );
+  assert.equal(manager.opacity, 0, 'runtime opacity changes should respect the configured minimum');
+  assert.equal(savedValues.get('timeDisplayOpacity'), '0');
+  assert.equal(elements['time-display'].style.opacity, 0);
+  assert.equal(manager.fullscreenOpacity, 100, 'runtime fullscreen opacity changes should respect the configured maximum');
+  assert.equal(savedValues.get('timeDisplayFullscreenOpacity'), '100');
+}
+
 function testAnnouncementManagerSurvivesBlockedLocalStorage() {
   const warnings = [];
   const throwingStorage = {
@@ -310,6 +387,8 @@ function testAnnouncementManagerSurvivesBlockedLocalStorage() {
 
 (function main() {
   testTimeDisplayManagerSurvivesBlockedLocalStorage();
+  testTimeDisplayDateUsesTargetTimezoneWeekday();
+  testTimeDisplaySettersClampRuntimeNumericSettings();
   testAnnouncementManagerSurvivesBlockedLocalStorage();
   console.log('optional-ui-resilience.test: all assertions passed');
 })()
