@@ -4,6 +4,10 @@
 
 const PROJECT_PACKAGE_MIME = 'application/vnd.aboard.project+zip';
 const PROJECT_PACKAGE_SCHEMA_VERSION = 1;
+const PROJECT_IMPORT_MAX_BYTES = 100 * 1024 * 1024;
+const PROJECT_IMPORT_MAX_PAGES = 300;
+const PROJECT_IMPORT_MAX_ASSET_BYTES = 25 * 1024 * 1024;
+const PROJECT_IMPORT_MAX_TOTAL_ASSET_BYTES = 150 * 1024 * 1024;
 const ZIP_LIBRARY_SCRIPT = 'js/libs/fflate.min.js';
 const LEGACY_PROJECT_COMPAT_SCRIPT = 'js/modules/project-legacy-compat.js';
 
@@ -785,6 +789,58 @@ class ProjectManager {
         return 'application/octet-stream';
     }
 
+    validateProjectFileSize(file) {
+        const size = Number(file?.size || 0);
+        if (Number.isFinite(size) && size > PROJECT_IMPORT_MAX_BYTES) {
+            throw new Error(this.t('projectPackage.fileTooLarge', 'Project file is too large. Please import a file under 100 MB.'));
+        }
+    }
+
+    validateProjectPackagePath(packagePath, { label = 'path', allowedPrefixes = null } = {}) {
+        const normalizedPath = String(packagePath || '').replace(/\\/g, '/').trim();
+        if (!normalizedPath
+            || normalizedPath.startsWith('/')
+            || /^[a-zA-Z]:\//.test(normalizedPath)
+            || normalizedPath.split('/').some(segment => segment === '.' || segment === '..')) {
+            throw new Error(this.t('projectPackage.unsafePath', 'Unsafe project package path: {path}', { path: normalizedPath || label }));
+        }
+
+        if (Array.isArray(allowedPrefixes) && allowedPrefixes.length > 0
+            && !allowedPrefixes.some(prefix => (prefix.endsWith('/')
+                ? normalizedPath.startsWith(prefix)
+                : normalizedPath === prefix))) {
+            throw new Error(this.t('projectPackage.unsafePath', 'Unsafe project package path: {path}', { path: normalizedPath }));
+        }
+
+        return normalizedPath;
+    }
+
+    validateProjectPackageStructure(documentPayload, archive) {
+        if (!Array.isArray(documentPayload?.pages) || documentPayload.pages.length === 0) {
+            throw new Error(this.t('projectPackage.missingPages', 'The project package does not contain page data.'));
+        }
+
+        if (documentPayload.pages.length > PROJECT_IMPORT_MAX_PAGES) {
+            throw new Error(this.t('projectPackage.tooManyPages', 'The project package contains too many pages.'));
+        }
+
+        let totalAssetBytes = 0;
+        Object.entries(archive || {}).forEach(([entryPath, bytes]) => {
+            const normalizedPath = this.validateProjectPackagePath(entryPath, { label: 'archive entry' });
+            const byteLength = Number(bytes?.byteLength || bytes?.length || 0);
+            if (normalizedPath.startsWith('assets/')) {
+                if (byteLength > PROJECT_IMPORT_MAX_ASSET_BYTES) {
+                    throw new Error(this.t('projectPackage.assetTooLarge', 'The project package contains an asset that is too large: {path}', { path: normalizedPath }));
+                }
+                totalAssetBytes += byteLength;
+            }
+        });
+
+        if (totalAssetBytes > PROJECT_IMPORT_MAX_TOTAL_ASSET_BYTES) {
+            throw new Error(this.t('projectPackage.assetsTooLarge', 'The project package contains too many embedded assets.'));
+        }
+    }
+
     async importProject(file) {
         if (!file) return;
 
@@ -800,6 +856,8 @@ class ProjectManager {
                 const legacyCompat = await this.ensureLegacyCompat();
                 return legacyCompat.importLegacyProject(this, file);
             }
+
+            this.validateProjectFileSize(file);
 
             return this.importZipProject(file);
         } catch (error) {
@@ -827,36 +885,41 @@ class ProjectManager {
         }
 
         const manifestBytes = archive['manifest.json'];
-        const documentPath = manifestBytes
-            ? (JSON.parse(zipLib.strFromU8(manifestBytes)).document || 'document.json')
-            : 'document.json';
+        const documentPath = this.validateProjectPackagePath(
+            manifestBytes
+                ? (JSON.parse(zipLib.strFromU8(manifestBytes)).document || 'document.json')
+                : 'document.json',
+            { label: 'document path', allowedPrefixes: ['document.json', 'documents/'] }
+        );
         const documentBytes = archive[documentPath];
         if (!documentBytes) {
             throw new Error(this.t('projectPackage.missingDocument', 'The project package is missing document.json.'));
         }
 
         const documentPayload = JSON.parse(zipLib.strFromU8(documentBytes));
-        if (!Array.isArray(documentPayload.pages) || documentPayload.pages.length === 0) {
-            throw new Error(this.t('projectPackage.missingPages', 'The project package does not contain page data.'));
-        }
+        this.validateProjectPackageStructure(documentPayload, archive);
 
         const assetCache = new Map();
         const resolveAssetDataUrl = (assetRef) => {
             if (!assetRef?.path) {
                 return null;
             }
-            if (assetCache.has(assetRef.path)) {
-                return assetCache.get(assetRef.path);
+            const assetPath = this.validateProjectPackagePath(assetRef.path, {
+                label: 'asset path',
+                allowedPrefixes: ['assets/']
+            });
+            if (assetCache.has(assetPath)) {
+                return assetCache.get(assetPath);
             }
-            const assetBytes = archive[assetRef.path];
+            const assetBytes = archive[assetPath];
             if (!assetBytes) {
                 throw new Error(this.t('projectPackage.missingAsset', 'The project package is missing asset file: {path}', {
-                    path: assetRef.path
+                    path: assetPath
                 }));
             }
-            const mime = assetRef.mime || this.getAssetMimeFromPath(assetRef.path);
+            const mime = assetRef.mime || this.getAssetMimeFromPath(assetPath);
             const dataUrl = this.bytesToDataUrl(assetBytes, mime);
-            assetCache.set(assetRef.path, dataUrl);
+            assetCache.set(assetPath, dataUrl);
             return dataUrl;
         };
 
@@ -865,10 +928,14 @@ class ProjectManager {
         let pageCount = 0;
 
         for (const pageEntry of documentPayload.pages) {
-            const pageBytes = archive[pageEntry.path];
+            const pagePath = this.validateProjectPackagePath(pageEntry.path, {
+                label: 'page path',
+                allowedPrefixes: ['pages/']
+            });
+            const pageBytes = archive[pagePath];
             if (!pageBytes) {
                 throw new Error(this.t('projectPackage.missingPageFile', 'The project package is missing page file: {path}', {
-                    path: pageEntry.path
+                    path: pagePath
                 }));
             }
             const pagePayload = JSON.parse(zipLib.strFromU8(pageBytes));

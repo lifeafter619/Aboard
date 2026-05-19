@@ -1,11 +1,110 @@
 import { spawn } from 'node:child_process';
-import { mkdir, rm } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { access, mkdir, readdir, rm } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 
 const PORT = process.env.PORT || '18080';
 const DEBUG_PORT = process.env.DEBUG_PORT || '18081';
 const BASE_URL = `http://127.0.0.1:${PORT}`;
-const EDGE_PATH = process.env.EDGE_PATH || 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+const CHROME_PATH = process.env.CHROME_PATH || '';
+const EDGE_PATH = process.env.EDGE_PATH || '';
+const PLAYWRIGHT_BROWSERS_PATH = process.env.PLAYWRIGHT_BROWSERS_PATH || '';
+const WINDOWS_BROWSER_CANDIDATES = [
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
+];
+
+function createFatalCdpError(message, cause = null) {
+  const error = new Error(message);
+  error.code = 'CDP_CONNECTION_CLOSED';
+  if (cause) {
+    error.cause = cause;
+  }
+  return error;
+}
+
+function shouldRetryWaitUntilError(error) {
+  return error?.code !== 'CDP_CONNECTION_CLOSED';
+}
+
+async function pathExists(filePath) {
+  if (!filePath) {
+    return false;
+  }
+
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getPlaywrightBrowserRoots() {
+  const roots = [];
+  if (PLAYWRIGHT_BROWSERS_PATH && PLAYWRIGHT_BROWSERS_PATH !== '0') {
+    roots.push(PLAYWRIGHT_BROWSERS_PATH);
+  }
+  if (process.env.LOCALAPPDATA) {
+    roots.push(join(process.env.LOCALAPPDATA, 'ms-playwright'));
+  }
+  if (process.env.USERPROFILE) {
+    roots.push(join(process.env.USERPROFILE, '.cache', 'ms-playwright'));
+  }
+  return [...new Set(roots)];
+}
+
+async function collectPlaywrightChromiumCandidates() {
+  const candidates = [];
+  const executableSuffixes = [
+    ['chrome-win64', 'chrome.exe'],
+    ['chrome-win', 'chrome.exe'],
+    ['chrome-linux', 'chrome'],
+    ['chrome-mac', 'Chromium.app', 'Contents', 'MacOS', 'Chromium']
+  ];
+
+  for (const root of getPlaywrightBrowserRoots()) {
+    let entries;
+    try {
+      entries = await readdir(root, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    const chromiumDirs = entries
+      .filter((entry) => entry.isDirectory() && entry.name.startsWith('chromium-'))
+      .map((entry) => entry.name)
+      .sort()
+      .reverse();
+
+    for (const directory of chromiumDirs) {
+      for (const suffix of executableSuffixes) {
+        candidates.push(join(root, directory, ...suffix));
+      }
+    }
+  }
+
+  return candidates;
+}
+
+async function resolveBrowserPath() {
+  const candidates = [
+    process.env.BROWSER_PATH,
+    CHROME_PATH,
+    EDGE_PATH,
+    ...(await collectPlaywrightChromiumCandidates()),
+    ...WINDOWS_BROWSER_CANDIDATES
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (await pathExists(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error('No Chromium-compatible browser found. Set BROWSER_PATH, CHROME_PATH, or EDGE_PATH to run the smoke test.');
+}
 
 function wait(ms) {
   return new Promise(resolveWait => setTimeout(resolveWait, ms));
@@ -19,6 +118,9 @@ async function waitUntil(fn, { timeoutMs = 15000, intervalMs = 100 } = {}) {
       const result = await fn();
       if (result) return result;
     } catch (error) {
+      if (!shouldRetryWaitUntilError(error)) {
+        throw error;
+      }
       lastError = error;
     }
     await wait(intervalMs);
@@ -56,11 +158,33 @@ function connectWebSocket(url) {
 
 function createCdpClient(socket) {
   let id = 0;
+  let closed = false;
   const pending = new Map();
   const eventHandlers = new Map();
 
+  function rejectPendingCommands(error) {
+    pending.forEach(({ rejectCommand }) => rejectCommand(error));
+    pending.clear();
+  }
+
+  function markClosed(reason, cause = null) {
+    if (closed) {
+      return;
+    }
+    closed = true;
+    rejectPendingCommands(createFatalCdpError(reason, cause));
+  }
+
   socket.addEventListener('message', event => {
-    const message = JSON.parse(event.data);
+    let message;
+    try {
+      message = JSON.parse(event.data);
+    } catch (error) {
+      markClosed('CDP socket closed after receiving malformed protocol data', error);
+      socket.close();
+      return;
+    }
+
     if (message.id && pending.has(message.id)) {
       const { resolveCommand, rejectCommand } = pending.get(message.id);
       pending.delete(message.id);
@@ -79,12 +203,29 @@ function createCdpClient(socket) {
     }
   });
 
+  socket.addEventListener('close', () => {
+    markClosed('CDP socket closed');
+  });
+
+  socket.addEventListener('error', event => {
+    markClosed('CDP socket closed after an error', event?.error || event);
+  });
+
   return {
     send(method, params = {}) {
+      if (closed || socket.readyState !== WebSocket.OPEN) {
+        return Promise.reject(createFatalCdpError(`CDP socket closed before ${method}`));
+      }
+
       const commandId = ++id;
-      socket.send(JSON.stringify({ id: commandId, method, params }));
       return new Promise((resolveCommand, rejectCommand) => {
         pending.set(commandId, { resolveCommand, rejectCommand });
+        try {
+          socket.send(JSON.stringify({ id: commandId, method, params }));
+        } catch (error) {
+          pending.delete(commandId);
+          rejectCommand(createFatalCdpError(`CDP socket closed while sending ${method}`, error));
+        }
       });
     },
     on(method, handler) {
@@ -94,6 +235,7 @@ function createCdpClient(socket) {
       eventHandlers.get(method).add(handler);
     },
     close() {
+      markClosed('CDP socket closed by test cleanup');
       socket.close();
     }
   };
@@ -270,6 +412,7 @@ async function findDrawableCanvasPoint(cdp, xRatio = 0.2, yRatio = 0.2) {
 async function main() {
   const profileDir = resolve('.tmp', `cdp-profile-${Date.now()}`);
   await mkdir(profileDir, { recursive: true });
+  const browserPath = await resolveBrowserPath();
 
   const server = spawn(process.execPath, ['server.js'], {
     cwd: process.cwd(),
@@ -277,12 +420,20 @@ async function main() {
     stdio: ['ignore', 'pipe', 'pipe']
   });
 
-  const browser = spawn(EDGE_PATH, [
+  console.log(`drawing-smoke-cdp: using browser ${browserPath}`);
+  const browser = spawn(browserPath, [
     `--remote-debugging-port=${DEBUG_PORT}`,
     `--user-data-dir=${profileDir}`,
     '--headless=new',
     '--window-size=1280,900',
     '--disable-gpu',
+    '--disable-gpu-sandbox',
+    '--disable-gpu-compositing',
+    '--no-sandbox',
+    '--disable-background-networking',
+    '--disable-component-update',
+    '--disable-sync',
+    '--metrics-recording-only',
     '--no-first-run',
     '--no-default-browser-check',
     'about:blank'

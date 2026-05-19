@@ -341,6 +341,36 @@ function testTimeDisplaySettersClampRuntimeNumericSettings() {
   assert.equal(savedValues.get('timeDisplayFullscreenOpacity'), '100');
 }
 
+function testAnnouncementManagerDoesNotBlockStartupWhenStorageIsAvailable() {
+  const storage = {
+    getItem() {
+      return null;
+    },
+    setItem() {},
+    removeItem() {}
+  };
+  const { AnnouncementManager, elements } = loadAnnouncementManager({
+    localStorage: storage
+  });
+
+  const manager = new AnnouncementManager();
+
+  assert.equal(
+    elements['announcement-modal'].classList.contains('show'),
+    false,
+    'announcement modal should not block first paint/startup by default'
+  );
+  assert.doesNotThrow(
+    () => manager.showFromSettings(),
+    'manual announcement display from settings should still work'
+  );
+  assert.equal(
+    elements['announcement-modal'].classList.contains('show'),
+    true,
+    'manual announcement display should reveal the modal'
+  );
+}
+
 function testAnnouncementManagerSurvivesBlockedLocalStorage() {
   const warnings = [];
   const throwingStorage = {
@@ -363,8 +393,8 @@ function testAnnouncementManagerSurvivesBlockedLocalStorage() {
 
   assert.equal(
     elements['announcement-modal'].classList.contains('show'),
-    true,
-    'announcement modal should still be shown when storage cannot be read'
+    false,
+    'announcement modal should not block startup even when storage cannot be read'
   );
   assert.doesNotThrow(
     () => elements['announcement-no-show-btn'].trigger('click'),
@@ -389,6 +419,7 @@ function testAnnouncementManagerSurvivesBlockedLocalStorage() {
   testTimeDisplayManagerSurvivesBlockedLocalStorage();
   testTimeDisplayDateUsesTargetTimezoneWeekday();
   testTimeDisplaySettersClampRuntimeNumericSettings();
+  testAnnouncementManagerDoesNotBlockStartupWhenStorageIsAvailable();
   testAnnouncementManagerSurvivesBlockedLocalStorage();
   console.log('optional-ui-resilience.test: all assertions passed');
 })()

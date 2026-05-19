@@ -78,11 +78,9 @@ export class AnnouncementManager {
   }
 
   checkAndShowAnnouncement() {
-    const hideAnnouncement = safeAnnouncementStorageGetItem('hideAnnouncement');
-
-    if (!hideAnnouncement && this.win.i18n) {
-      this.showModal();
-    }
+    // Keep startup open for classroom use. Announcements remain available from
+    // Settings, but they no longer block first paint or the first drawing action.
+    safeAnnouncementStorageGetItem('hideAnnouncement');
   }
 
   showModal() {

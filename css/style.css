@@ -2033,8 +2033,10 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .page-nav-btn {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
+    min-width: var(--touch-target-size);
+    min-height: var(--touch-target-size);
     border: none;
     border-radius: 8px;
     background-color: #f0f0f0;
@@ -2056,8 +2058,9 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .page-input {
-    width: 50px;
-    height: 36px;
+    width: 56px;
+    height: 44px;
+    min-height: var(--touch-target-size);
     border: 1px solid #ddd;
     border-radius: 8px;
     background-color: #ffffff;
@@ -2233,7 +2236,8 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 /* Announcement modal styles */
 .announcement-modal-content {
     max-width: 500px;
-    width: min(500px, 100%);
+    width: min(500px, calc(100vw - 24px));
+    min-width: min(320px, calc(100vw - 24px));
     height: auto;
     display: flex;
     flex-direction: column;
@@ -2406,6 +2410,12 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 
     .modal-content {
         min-width: 280px;
+    }
+
+    .announcement-modal-content {
+        min-width: 0;
+        width: calc(100vw - 24px);
+        max-width: calc(100vw - 24px);
     }
 }
 
@@ -4591,6 +4601,12 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 
 /* Extra small screens (phones in portrait) */
 @media (max-width: 480px) {
+    .announcement-modal-content {
+        min-width: 0;
+        width: calc(100vw - 24px);
+        max-width: calc(100vw - 24px);
+    }
+
     #toolbar {
         gap: 4px;
         padding: 8px 12px;

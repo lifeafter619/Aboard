@@ -63,12 +63,12 @@ class AnnouncementManager {
     }
     
     checkAndShowAnnouncement() {
-        // Check if user has chosen not to show the announcement
-        const hideAnnouncement = localStorage.getItem('hideAnnouncement');
-        
-        if (!hideAnnouncement && window.i18n) {
-            // Show announcement on first visit
-            this.showModal();
+        // Keep startup open for classroom use. Announcements remain available
+        // from Settings, but they no longer block first paint.
+        try {
+            localStorage.getItem('hideAnnouncement');
+        } catch (error) {
+            console.warn('Failed to read announcement localStorage key "hideAnnouncement":', error);
         }
     }
     

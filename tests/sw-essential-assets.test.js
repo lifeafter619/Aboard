@@ -59,6 +59,18 @@ function readEssentialCoreAssets() {
   );
 }
 
+function readCoreAssets() {
+  const source = readText('sw.js');
+  const match = source.match(/const CORE_ASSETS = \[(.*?)\];/s);
+  assert.ok(match, 'CORE_ASSETS should exist in sw.js');
+
+  return new Set(
+    [...match[1].matchAll(/'([^']+)'/g)].map(([, assetPath]) =>
+      assetPath.replace(/^\.\//, '')
+    )
+  );
+}
+
 function readLegacyManifestArray(arrayName) {
   const source = readText('js/app/legacy-manifest.js');
   const match = source.match(new RegExp(`export const ${arrayName} = \\[(.*?)\\];`, 's'));
@@ -91,9 +103,29 @@ function testEssentialCacheCoversVisibleCoreLegacyStartupAssets() {
   );
 }
 
+function testCorePrecacheExcludesLargeLazyAssets() {
+  const coreAssets = readCoreAssets();
+  const largeLazyAssets = [
+    'js/libs/xlsx.full.min.js',
+    'js/libs/fflate.min.js',
+    'sounds/class-bell.MP3',
+    'sounds/exam-end.MP3',
+    'sounds/gentle-alarm.MP3',
+    'sounds/digital-beep.MP3'
+  ];
+  const stillPrecached = largeLazyAssets.filter((asset) => coreAssets.has(asset));
+
+  assert.deepEqual(
+    stillPrecached,
+    [],
+    `Large lazy assets should be runtime-cached on demand, not core-precached: ${stillPrecached.join(', ')}`
+  );
+}
+
 function run() {
   testEssentialCacheCoversOfflineBootstrapImportClosure();
   testEssentialCacheCoversVisibleCoreLegacyStartupAssets();
+  testCorePrecacheExcludesLargeLazyAssets();
   console.log('sw-essential-assets.test: all assertions passed');
 }
 

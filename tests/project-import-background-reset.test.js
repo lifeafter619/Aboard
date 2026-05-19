@@ -560,6 +560,71 @@ async function testImportStillRestoresStateWhenLocalStorageIsBlocked() {
   );
 }
 
+async function testOversizedProjectImportIsRejectedBeforeZipLibraryLoads() {
+  const { ProjectManager, paginationRuntime } = loadProjectImportRuntime();
+  const board = createBoard(paginationRuntime);
+  const manager = new ProjectManager(board);
+  let zipLibraryLoaded = false;
+  manager.ensureZipLibrary = async () => {
+    zipLibraryLoaded = true;
+    throw new Error('ZIP library should not load for oversized files');
+  };
+
+  const result = await manager.importProject({
+    name: 'too-large.zip',
+    size: 101 * 1024 * 1024
+  });
+
+  assert.equal(result, false, 'oversized project imports should fail gracefully');
+  assert.equal(zipLibraryLoaded, false, 'oversized project imports should be rejected before loading the ZIP library');
+}
+
+function testProjectPackagePathValidationRejectsUnsafePaths() {
+  const { ProjectManager, paginationRuntime } = loadProjectImportRuntime();
+  const board = createBoard(paginationRuntime);
+  const manager = new ProjectManager(board);
+
+  assert.throws(
+    () => manager.validateProjectPackagePath('../document.json', { label: 'document path' }),
+    /Unsafe project package path/,
+    'project package paths should reject parent traversal'
+  );
+  assert.throws(
+    () => manager.validateProjectPackagePath('/document.json', { label: 'document path' }),
+    /Unsafe project package path/,
+    'project package paths should reject absolute paths'
+  );
+  assert.throws(
+    () => manager.validateProjectPackagePath('document.json.bak', {
+      label: 'document path',
+      allowedPrefixes: ['document.json', 'documents/']
+    }),
+    /Unsafe project package path/,
+    'project package paths should not treat exact file names as arbitrary prefixes'
+  );
+  assert.equal(
+    manager.validateProjectPackagePath('pages/page-0001.json', { label: 'page path', allowedPrefixes: ['pages/'] }),
+    'pages/page-0001.json',
+    'project package paths should allow expected page entries'
+  );
+}
+
+function testProjectPackagePageLimitRejectsUnboundedImports() {
+  const { ProjectManager, paginationRuntime } = loadProjectImportRuntime();
+  const board = createBoard(paginationRuntime);
+  const manager = new ProjectManager(board);
+  const tooManyPages = Array.from({ length: 301 }, (_, index) => ({
+    path: `pages/page-${String(index + 1).padStart(4, '0')}.json`,
+    index: index + 1
+  }));
+
+  assert.throws(
+    () => manager.validateProjectPackageStructure({ pages: tooManyPages }, {}),
+    /too many pages/i,
+    'project package imports should reject excessive page counts before rendering'
+  );
+}
+
 (async function main() {
   await testPageBackgroundImportResetsStaleEnhancedState();
   await testGlobalBackgroundImportResetsStaleEnhancedState();
@@ -568,6 +633,9 @@ async function testImportStillRestoresStateWhenLocalStorageIsBlocked() {
   await testPageBackgroundImportNormalizesLegacyScaledImageTransform();
   await testGlobalBackgroundImportClearsPausedGifRuntimeState();
   await testImportStillRestoresStateWhenLocalStorageIsBlocked();
+  await testOversizedProjectImportIsRejectedBeforeZipLibraryLoads();
+  testProjectPackagePathValidationRejectsUnsafePaths();
+  testProjectPackagePageLimitRejectsUnboundedImports();
   console.log('project-import-background-reset.test: all assertions passed');
 })().catch((error) => {
   console.error(error);

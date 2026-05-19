@@ -3,7 +3,7 @@
 // resources from older releases could survive a core-cache rotation and
 // serve stale JS/CSS alongside new code. Keeping a single SW_VERSION
 // guarantees activate() clears both via the existing whitelist check.
-const SW_VERSION = 'v38';
+const SW_VERSION = '2.4.3';
 const CORE_CACHE_NAME = `aboard-core-${SW_VERSION}`;
 const RUNTIME_CACHE_NAME = `aboard-runtime-${SW_VERSION}`;
 const RUNTIME_CACHE_MAX_ENTRIES = 24;
@@ -128,18 +128,11 @@ const CORE_ASSETS = [
   './js/modules/random-picker.js',
   './js/modules/scoreboard.js',
   './js/modules/project-legacy-compat.js',
-  './js/modules/libgif.js',
   './js/modules/settings-manager.js',
   './js/modules/i18n.js',
   './js/modules/help-system.js',
   './js/modules/storage-manager.js',
   './js/modules/pwa-manager.js',
-  './js/libs/fflate.min.js',
-  './js/libs/xlsx.full.min.js',
-  './sounds/class-bell.MP3',
-  './sounds/exam-end.MP3',
-  './sounds/gentle-alarm.MP3',
-  './sounds/digital-beep.MP3',
   './js/main.js',
   ...LOCALE_ASSETS
 ];

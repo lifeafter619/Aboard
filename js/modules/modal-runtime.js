@@ -39,6 +39,7 @@ function getResizableModalConfigs() {
             key: 'announcementModal',
             selector: '#announcement-modal .announcement-modal-content',
             minWidth: 420,
+            responsiveMinWidth: 320,
             minHeight: 280
         },
         {
@@ -93,6 +94,7 @@ function registerResizableModal(board, config) {
     content.dataset.modalResizeRegistered = 'true';
     content.dataset.modalResizeKey = config.key;
     content.dataset.modalResizeMinWidth = String(config.minWidth || MODAL_RESIZE_MIN_WIDTH);
+    content.dataset.modalResizeResponsiveMinWidth = String(config.responsiveMinWidth || config.minWidth || MODAL_RESIZE_MIN_WIDTH);
     content.dataset.modalResizeMinHeight = String(config.minHeight || MODAL_RESIZE_MIN_HEIGHT);
     content.dataset.defaultInlineWidth = content.style.width || '';
     content.dataset.defaultInlineHeight = content.style.height || '';
@@ -328,7 +330,9 @@ function updateModalHeaderActionButtons(board, content) {
 function getModalLayoutBounds(content) {
     const availableWidth = Math.max(260, window.innerWidth - MODAL_RESIZE_EDGE_MARGIN * 2);
     const availableHeight = Math.max(220, window.innerHeight - MODAL_RESIZE_EDGE_MARGIN * 2);
-    const configuredMinWidth = Math.max(MODAL_RESIZE_MIN_WIDTH, parseFloat(content.dataset.modalResizeMinWidth) || MODAL_RESIZE_MIN_WIDTH);
+    const responsiveMinWidth = parseFloat(content.dataset.modalResizeResponsiveMinWidth) || MODAL_RESIZE_MIN_WIDTH;
+    const desktopMinWidth = parseFloat(content.dataset.modalResizeMinWidth) || responsiveMinWidth;
+    const configuredMinWidth = window.innerWidth <= 480 ? responsiveMinWidth : Math.max(responsiveMinWidth, desktopMinWidth);
     const configuredMinHeight = Math.max(MODAL_RESIZE_MIN_HEIGHT, parseFloat(content.dataset.modalResizeMinHeight) || MODAL_RESIZE_MIN_HEIGHT);
     const maxWidth = availableWidth;
     const maxHeight = availableHeight;
