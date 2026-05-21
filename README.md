@@ -135,11 +135,11 @@ graph LR
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/lifeafter619/Aboard)
 
 ### 部署到 GitHub Pages
-1. Fork 本仓库到你的 GitHub 账号
-2. 进入仓库设置 (Settings)
-3. 在 Pages 选项中，选择 Source 为 `main` 分支
-4. 点击 Save，等待部署完成
-5. 访问 `https://你的用户名.github.io/Aboard`
+1. Fork 本仓库到你的 GitHub 账号。
+2. 进入仓库设置 (Settings)。
+3. 在 Pages 选项中，选择 Source 为 `main` 分支。
+4. 点击 Save，等待部署完成。
+5. 访问 `https://你的用户名.github.io/Aboard`。
 
 
 ### 部署到 Cloudflare Pages
