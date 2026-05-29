@@ -28,11 +28,70 @@ function cloneSerializable(value) {
     }
 }
 
+function toFiniteNumber(value, fallback = 0) {
+    const normalized = Number(value);
+    return Number.isFinite(normalized) ? normalized : fallback;
+}
+
+function toFiniteOptionalNumber(value, fallback = null) {
+    if (value === null || typeof value === 'undefined') {
+        return fallback;
+    }
+    return toFiniteNumber(value, fallback);
+}
+
+function normalizePoint(point) {
+    if (!point || typeof point !== 'object') {
+        return null;
+    }
+
+    const x = Number(point.x);
+    const y = Number(point.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        return null;
+    }
+
+    return { x, y };
+}
+
+function normalizeOptionalPoint(point) {
+    return normalizePoint(point);
+}
+
+function normalizeTextObject(textObj) {
+    if (!textObj || typeof textObj !== 'object') {
+        return null;
+    }
+
+    const normalized = { ...textObj };
+    const numericFields = {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        fontSize: 48,
+        decorationWidth: 2,
+        rotation: 0,
+        scale: 1,
+        layerOrder: 0
+    };
+
+    Object.entries(numericFields).forEach(([field, fallback]) => {
+        if (Object.prototype.hasOwnProperty.call(normalized, field)) {
+            normalized[field] = toFiniteNumber(normalized[field], fallback);
+        }
+    });
+
+    return normalized;
+}
+
 function serializeStroke(stroke, drawingEngine) {
     if (!stroke) return null;
 
     return {
-        points: (stroke.points || []).map((point) => ({ x: point.x, y: point.y })),
+        points: Array.isArray(stroke.points)
+            ? stroke.points.map((point) => normalizePoint(point)).filter(Boolean)
+            : [],
         color: stroke.color,
         size: stroke.size,
         penType: stroke.penType,
@@ -86,10 +145,20 @@ function normalizeStroke(stroke) {
     return {
         ...stroke,
         points: Array.isArray(stroke.points)
-            ? stroke.points.map((point) => ({ x: point.x, y: point.y }))
+            ? stroke.points.map((point) => normalizePoint(point)).filter(Boolean)
             : [],
+        size: toFiniteOptionalNumber(stroke.size, 0),
         lineStyle: stroke.lineStyle || 'solid',
-        dashDensity: stroke.dashDensity || 10,
+        dashDensity: toFiniteOptionalNumber(stroke.dashDensity, 10),
+        shapeStart: normalizeOptionalPoint(stroke.shapeStart),
+        shapeEnd: normalizeOptionalPoint(stroke.shapeEnd),
+        shapeDashDensity: toFiniteOptionalNumber(stroke.shapeDashDensity, null),
+        shapeWaveDensity: toFiniteOptionalNumber(stroke.shapeWaveDensity, null),
+        shapeMultiLineCount: toFiniteOptionalNumber(stroke.shapeMultiLineCount, null),
+        shapeMultiLineSpacing: toFiniteOptionalNumber(stroke.shapeMultiLineSpacing, null),
+        arrowSize: toFiniteOptionalNumber(stroke.arrowSize, null),
+        rotation: toFiniteNumber(stroke.rotation, 0),
+        layerOrder: toFiniteNumber(stroke.layerOrder, 0),
         groupId: stroke.groupId || null
     };
 }
@@ -100,6 +169,14 @@ function normalizeStampedImage(img) {
         ...img,
         imageSrc: img.imageSrc || img.src || null,
         imageElement: img.imageElement || null,
+        x: toFiniteNumber(img.x, 0),
+        y: toFiniteNumber(img.y, 0),
+        width: toFiniteNumber(img.width, 0),
+        height: toFiniteNumber(img.height, 0),
+        rotation: toFiniteNumber(img.rotation, 0),
+        flipHorizontal: !!img.flipHorizontal,
+        flipVertical: !!img.flipVertical,
+        layerOrder: toFiniteNumber(img.layerOrder, 0),
         groupId: img.groupId || null
     };
 }
@@ -123,19 +200,26 @@ function capturePageScene(pageNumber = this.currentPage, options = {}) {
     const includeImageElements = options.includeImageElements !== false;
     const drawingEngine = this.drawingEngine;
     const insertTextManager = this.insertTextManager;
+    const textObjects = insertTextManager?.getTextObjects?.() || insertTextManager?.textObjects || [];
 
     const scene = {
         pageNumber: normalizedPage,
-        objectGroups: cloneSerializable(drawingEngine?.objectGroups || []),
-        textObjects: insertTextManager
-            ? cloneSerializable(insertTextManager.getTextObjects?.() || insertTextManager.textObjects || [])
+        objectGroups: Array.isArray(drawingEngine?.objectGroups)
+            ? cloneSerializable(drawingEngine.objectGroups)
             : [],
-        strokes: (drawingEngine?.strokes || [])
-            .map((stroke) => serializeStroke(stroke, drawingEngine))
-            .filter(Boolean),
-        stampedImages: (drawingEngine?.stampedImages || [])
-            .map((img) => serializeStampedImage(img, { includeImageElement: includeImageElements }))
-            .filter(Boolean)
+        textObjects: insertTextManager
+            ? cloneSerializable(Array.isArray(textObjects) ? textObjects : [])
+            : [],
+        strokes: Array.isArray(drawingEngine?.strokes)
+            ? drawingEngine.strokes
+                .map((stroke) => serializeStroke(stroke, drawingEngine))
+                .filter(Boolean)
+            : [],
+        stampedImages: Array.isArray(drawingEngine?.stampedImages)
+            ? drawingEngine.stampedImages
+                .map((img) => serializeStampedImage(img, { includeImageElement: includeImageElements }))
+                .filter(Boolean)
+            : []
     };
 
     if (!includeEmpty && !hasSceneContent(scene)) {
@@ -185,10 +269,18 @@ function serializeScene(scene) {
 
     const serialized = {
         pageNumber: normalizePageNumber(scene.pageNumber, 1),
-        objectGroups: cloneSerializable(scene.objectGroups || []),
-        textObjects: cloneSerializable(scene.textObjects || []),
-        strokes: (scene.strokes || []).map((stroke) => serializeStroke(stroke)).filter(Boolean),
-        stampedImages: (scene.stampedImages || []).map((img) => serializeStampedImage(img, { includeImageElement: false })).filter(Boolean)
+        objectGroups: Array.isArray(scene.objectGroups)
+            ? cloneSerializable(scene.objectGroups)
+            : [],
+        textObjects: Array.isArray(scene.textObjects)
+            ? scene.textObjects.map((textObj) => normalizeTextObject(textObj)).filter(Boolean)
+            : [],
+        strokes: Array.isArray(scene.strokes)
+            ? scene.strokes.map((stroke) => serializeStroke(stroke)).filter(Boolean)
+            : [],
+        stampedImages: Array.isArray(scene.stampedImages)
+            ? scene.stampedImages.map((img) => serializeStampedImage(img, { includeImageElement: false })).filter(Boolean)
+            : []
     };
 
     return hasSceneContent(serialized) ? serialized : null;
@@ -258,7 +350,7 @@ function restorePageScene(pageNumber = this.currentPage, options = {}) {
         if (!this.insertTextManager?.setTextObjects) {
             console.warn('InsertTextManager is not ready; text objects cannot be restored yet for page', normalizedPage);
         } else {
-            this.insertTextManager.setTextObjects(cloneSerializable(scene.textObjects));
+            this.insertTextManager.setTextObjects(scene.textObjects.map((textObj) => normalizeTextObject(textObj)).filter(Boolean));
             this.selectionManager?.setTextManager?.(this.insertTextManager);
         }
     }
@@ -298,8 +390,12 @@ async function hydrateSerializedScene(scene) {
 
     const normalizedScene = {
         pageNumber: normalizePageNumber(scene.pageNumber, 1),
-        objectGroups: cloneSerializable(scene.objectGroups || []),
-        textObjects: cloneSerializable(scene.textObjects || []),
+        objectGroups: Array.isArray(scene.objectGroups)
+            ? cloneSerializable(scene.objectGroups)
+            : [],
+        textObjects: Array.isArray(scene.textObjects)
+            ? scene.textObjects.map((textObj) => normalizeTextObject(textObj)).filter(Boolean)
+            : [],
         strokes: Array.isArray(scene.strokes)
             ? scene.strokes.map((stroke) => normalizeStroke(stroke)).filter(Boolean)
             : [],

@@ -130,7 +130,8 @@ class ProjectManager {
     }
 
     t(key, fallback = '', replacements = null) {
-        const translated = window.i18n?.t?.(key) || fallback;
+        const translatedValue = window.i18n?.t?.(key);
+        const translated = translatedValue && translatedValue !== key ? translatedValue : fallback;
         if (!replacements || typeof translated !== 'string') {
             return translated;
         }
@@ -139,6 +140,23 @@ class ProjectManager {
             (message, [name, value]) => message.replaceAll(`{${name}}`, String(value ?? '')),
             translated
         );
+    }
+
+    normalizeImportedPageNumber(value, fallback = 1) {
+        const rawValue = value ?? fallback;
+        const normalized = Number(typeof rawValue === 'string' ? rawValue.trim() : rawValue);
+        if (!Number.isInteger(normalized) || normalized < 1 || normalized > PROJECT_IMPORT_MAX_PAGES) {
+            throw new Error(this.t('projectPackage.tooManyPages', 'The project package contains too many pages.'));
+        }
+        return normalized;
+    }
+
+    normalizeImportedPageKeys(pageMap = {}) {
+        if (!pageMap || typeof pageMap !== 'object') {
+            return [];
+        }
+
+        return Object.keys(pageMap).map((pageNumber) => this.normalizeImportedPageNumber(pageNumber));
     }
 
     async ensureZipLibrary() {
@@ -565,7 +583,8 @@ class ProjectManager {
     }
 
     async serializeUploadedImagesForPackage(uploadedImages, assetStore) {
-        return Promise.all((uploadedImages || []).map(async (image, index) => {
+        const imageEntries = Array.isArray(uploadedImages) ? uploadedImages : [];
+        return Promise.all(imageEntries.map(async (image, index) => {
             const asset = await this.registerDataUrlAsset(assetStore, image?.data, image?.name || `library-image-${index + 1}`);
             return {
                 id: image?.id || `uploaded-${index + 1}`,
@@ -580,7 +599,8 @@ class ProjectManager {
     }
 
     inflateUploadedImagesFromPackage(uploadedImages, resolveAssetDataUrl) {
-        return (uploadedImages || []).map((image, index) => ({
+        const imageEntries = Array.isArray(uploadedImages) ? uploadedImages : [];
+        return imageEntries.map((image, index) => ({
             id: image?.id || `uploaded-${index + 1}`,
             name: image?.name || `Image ${index + 1}`,
             data: image?.asset ? resolveAssetDataUrl(image.asset) : null
@@ -593,7 +613,8 @@ class ProjectManager {
         }
 
         const serialized = this.cloneSerializable(scene);
-        serialized.stampedImages = await Promise.all((scene.stampedImages || []).map(async (image, index) => {
+        const stampedImages = Array.isArray(scene.stampedImages) ? scene.stampedImages : [];
+        serialized.stampedImages = await Promise.all(stampedImages.map(async (image, index) => {
             const nextImage = this.cloneSerializable(image);
             const imageSrc = image?.imageSrc || image?.src || null;
             if (imageSrc) {
@@ -621,7 +642,8 @@ class ProjectManager {
         }
 
         const inflated = this.cloneSerializable(scene);
-        inflated.stampedImages = (inflated.stampedImages || []).map((image) => {
+        const stampedImages = Array.isArray(inflated.stampedImages) ? inflated.stampedImages : [];
+        inflated.stampedImages = stampedImages.map((image) => {
             const nextImage = this.cloneSerializable(image);
             if (nextImage.imageAsset) {
                 nextImage.imageSrc = resolveAssetDataUrl(nextImage.imageAsset);
@@ -824,6 +846,16 @@ class ProjectManager {
             throw new Error(this.t('projectPackage.tooManyPages', 'The project package contains too many pages.'));
         }
 
+        if (Object.prototype.hasOwnProperty.call(documentPayload, 'currentPage')) {
+            this.normalizeImportedPageNumber(documentPayload.currentPage);
+        }
+
+        documentPayload.pages.forEach((pageEntry) => {
+            if (pageEntry && Object.prototype.hasOwnProperty.call(pageEntry, 'index')) {
+                this.normalizeImportedPageNumber(pageEntry.index);
+            }
+        });
+
         let totalAssetBytes = 0;
         Object.entries(archive || {}).forEach(([entryPath, bytes]) => {
             const normalizedPath = this.validateProjectPackagePath(entryPath, { label: 'archive entry' });
@@ -939,7 +971,7 @@ class ProjectManager {
                 }));
             }
             const pagePayload = JSON.parse(zipLib.strFromU8(pageBytes));
-            const pageIndex = parseInt(pagePayload.index ?? pageEntry.index, 10) || (pageCount + 1);
+            const pageIndex = this.normalizeImportedPageNumber(pagePayload.index ?? pageEntry.index, pageCount + 1);
             pageCount = Math.max(pageCount, pageIndex);
 
             if (pagePayload.background) {
@@ -956,7 +988,7 @@ class ProjectManager {
             globalBackground: this.inflateBackgroundFromPackage(documentPayload.globalBackground || null, resolveAssetDataUrl),
             pageBackgrounds,
             pageScenes,
-            currentPage: parseInt(documentPayload.currentPage, 10) || 1,
+            currentPage: this.normalizeImportedPageNumber(documentPayload.currentPage, 1),
             pageCount
         });
 
@@ -988,6 +1020,22 @@ class ProjectManager {
         currentPage = 1,
         pageCount = 1
     } = {}) {
+        const normalizedCurrentPage = this.normalizeImportedPageNumber(currentPage, 1);
+        const normalizedExplicitPageCount = this.normalizeImportedPageNumber(pageCount, 1);
+        const pageBackgroundNumbers = this.normalizeImportedPageKeys(pageBackgrounds);
+        const pageSceneNumbers = this.normalizeImportedPageKeys(pageScenes);
+        const pagesImageDataCount = Array.isArray(pagesImageData) && pagesImageData.length > 0
+            ? this.normalizeImportedPageNumber(pagesImageData.length)
+            : 0;
+        const normalizedPageCount = Math.max(
+            1,
+            normalizedExplicitPageCount,
+            pagesImageDataCount,
+            ...pageBackgroundNumbers,
+            ...pageSceneNumbers,
+            normalizedCurrentPage
+        );
+
         // 1. Restore settings
         if (settings.canvasWidth && settings.canvasHeight) {
             this.drawingBoard.settingsManager.setCanvasSize(settings.canvasWidth, settings.canvasHeight);
@@ -1025,14 +1073,6 @@ class ProjectManager {
         await this.drawingBoard.applySerializedPageScenes(pageScenes || {});
 
         // 4. Restore page raster cache
-        const normalizedPageCount = Math.max(
-            1,
-            pageCount || 1,
-            Object.keys(this.drawingBoard.pageBackgrounds || {}).length,
-            Object.keys(this.drawingBoard.pageScenes || {}).length,
-            parseInt(currentPage, 10) || 1
-        );
-
         if (Array.isArray(pagesImageData) && pagesImageData.length > 0) {
             this.drawingBoard.pages = [...pagesImageData];
             while (this.drawingBoard.pages.length < normalizedPageCount) {
@@ -1047,7 +1087,7 @@ class ProjectManager {
         }
 
         const importedCurrentPage = Math.min(
-            Math.max(parseInt(currentPage, 10) || 1, 1),
+            Math.max(normalizedCurrentPage, 1),
             this.drawingBoard.pages.length
         );
 

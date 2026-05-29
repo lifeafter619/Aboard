@@ -625,6 +625,108 @@ function testProjectPackagePageLimitRejectsUnboundedImports() {
   );
 }
 
+async function testProjectPackageRejectsOutOfRangePageIndexes() {
+  const { ProjectManager, paginationRuntime } = loadProjectImportRuntime();
+  const board = createBoard(paginationRuntime);
+  const manager = new ProjectManager(board);
+
+  assert.throws(
+    () => manager.validateProjectPackageStructure({
+      currentPage: 301,
+      pages: [{ path: 'pages/page-0001.json', index: 1 }]
+    }, {}),
+    /page/i,
+    'project package imports should reject currentPage values beyond the supported page limit'
+  );
+
+  assert.throws(
+    () => manager.validateProjectPackageStructure({
+      currentPage: 1,
+      pages: [{ path: 'pages/page-0001.json', index: 301 }]
+    }, {}),
+    /page/i,
+    'project package imports should reject document page indexes beyond the supported page limit'
+  );
+
+  const encodeJson = (value) => Buffer.from(JSON.stringify(value), 'utf8');
+  manager.ensureZipLibrary = async () => ({
+    unzipSync() {
+      return {
+        'document.json': encodeJson({
+          currentPage: 1,
+          pages: [{ path: 'pages/page-0001.json', index: 1 }]
+        }),
+        'pages/page-0001.json': encodeJson({
+          index: 301,
+          background: null,
+          scene: null
+        })
+      };
+    },
+    strFromU8(bytes) {
+      return Buffer.from(bytes).toString('utf8');
+    }
+  });
+  manager.confirmImportOverwrite = async () => true;
+
+  await assert.rejects(
+    () => manager.importZipProject({
+      async arrayBuffer() {
+        return Buffer.from('zip');
+      }
+    }),
+    /page/i,
+    'project package imports should reject page payload indexes beyond the supported page limit'
+  );
+}
+
+async function testProjectPackageHelpersIgnoreMalformedCollections() {
+  const { ProjectManager, paginationRuntime } = loadProjectImportRuntime();
+  const board = createBoard(paginationRuntime);
+  const manager = new ProjectManager(board);
+  const assetStore = manager.createAssetStore();
+
+  let serializedImages = null;
+  await assert.doesNotReject(async () => {
+    serializedImages = await manager.serializeUploadedImagesForPackage({ invalid: true }, assetStore);
+  }, 'project export should ignore malformed uploaded image collections instead of crashing');
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(serializedImages)),
+    [],
+    'malformed uploaded image collections should export as an empty list'
+  );
+
+  let serializedScene = null;
+  await assert.doesNotReject(async () => {
+    serializedScene = await manager.serializeSceneForPackage({ stampedImages: { invalid: true } }, assetStore);
+  }, 'project export should ignore malformed stamped image collections instead of crashing');
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(serializedScene.stampedImages)),
+    [],
+    'malformed stamped image collections should export as an empty list'
+  );
+
+  let inflatedImages = null;
+  assert.doesNotThrow(() => {
+    inflatedImages = manager.inflateUploadedImagesFromPackage({ invalid: true }, () => 'data:image/png;base64,ok');
+  }, 'project import should ignore malformed uploaded image collections instead of crashing');
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(inflatedImages)),
+    [],
+    'malformed uploaded image import collections should restore as an empty list'
+  );
+
+  let inflatedScene = null;
+  assert.doesNotThrow(() => {
+    inflatedScene = manager.inflateSceneFromPackage({ stampedImages: { invalid: true } }, () => 'data:image/png;base64,ok');
+  }, 'project import should ignore malformed stamped image collections instead of crashing');
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(inflatedScene.stampedImages)),
+    [],
+    'malformed stamped image import collections should restore as an empty list'
+  );
+}
+
 (async function main() {
   await testPageBackgroundImportResetsStaleEnhancedState();
   await testGlobalBackgroundImportResetsStaleEnhancedState();
@@ -636,6 +738,8 @@ function testProjectPackagePageLimitRejectsUnboundedImports() {
   await testOversizedProjectImportIsRejectedBeforeZipLibraryLoads();
   testProjectPackagePathValidationRejectsUnsafePaths();
   testProjectPackagePageLimitRejectsUnboundedImports();
+  await testProjectPackageRejectsOutOfRangePageIndexes();
+  await testProjectPackageHelpersIgnoreMalformedCollections();
   console.log('project-import-background-reset.test: all assertions passed');
 })().catch((error) => {
   console.error(error);

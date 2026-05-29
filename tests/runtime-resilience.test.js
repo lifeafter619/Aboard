@@ -144,7 +144,19 @@ function loadPageSceneRuntime({ warnings = [] } = {}) {
     Set,
     Map,
     JSON,
-    Math
+    Math,
+    Image: class FakeImage {
+      set src(value) {
+        this._src = value;
+        if (typeof this.onload === 'function') {
+          this.onload();
+        }
+      }
+
+      get src() {
+        return this._src;
+      }
+    }
   };
 
   sandbox.globalThis = sandbox;
@@ -618,6 +630,159 @@ async function testPageSceneRestoreSurvivesFailingLazyTextManager() {
   );
 }
 
+async function testPageSceneRestoreNormalizesImportedSceneNumbers() {
+  const pageSceneRuntime = loadPageSceneRuntime();
+  const board = {};
+  const serializedScenes = {
+    1: {
+      pageNumber: 1,
+      textObjects: [{
+        id: 'text-1',
+        text: 'Safe text',
+        x: '10" onload="alert(1)',
+        y: '20',
+        fontSize: 'not-a-number',
+        rotation: '15',
+        decorationWidth: '4'
+      }],
+      strokes: [{
+        points: [
+          { x: '10', y: '20' },
+          { x: '0" onload="alert(1)', y: 30 }
+        ],
+        size: '12',
+        rotation: 'bad',
+        layerOrder: '7'
+      }],
+      stampedImages: [{
+        imageSrc: 'data:image/png;base64,aW1hZ2U=',
+        x: '5" onload="alert(1)',
+        y: '15',
+        width: '100',
+        height: 'oops',
+        rotation: '45',
+        layerOrder: '3'
+      }],
+      objectGroups: []
+    }
+  };
+
+  await pageSceneRuntime.applySerializedPageScenes(board, serializedScenes);
+
+  const scene = board.pageScenes['1'];
+  assert.equal(scene.strokes.length, 1, 'valid imported strokes should be retained');
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(scene.strokes[0].points)),
+    [{ x: 10, y: 20 }],
+    'non-finite or attribute-like stroke point coordinates should be discarded before SVG rendering'
+  );
+  assert.equal(scene.strokes[0].size, 12, 'numeric stroke sizes should be normalized from import payloads');
+  assert.equal(scene.strokes[0].rotation, 0, 'invalid stroke rotation should fall back to a finite number');
+  assert.equal(scene.strokes[0].layerOrder, 7, 'numeric layer order should be normalized from import payloads');
+
+  assert.equal(scene.stampedImages.length, 1, 'valid imported images should be retained');
+  assert.equal(scene.stampedImages[0].x, 0, 'invalid image x coordinate should fall back to a finite number');
+  assert.equal(scene.stampedImages[0].y, 15, 'numeric image y coordinate should be normalized');
+  assert.equal(scene.stampedImages[0].width, 100, 'numeric image width should be normalized');
+  assert.equal(scene.stampedImages[0].height, 0, 'invalid image height should fall back to a finite number');
+  assert.equal(scene.stampedImages[0].rotation, 45, 'numeric image rotation should be normalized');
+
+  assert.equal(scene.textObjects.length, 1, 'text objects should remain restorable after numeric normalization');
+  assert.equal(scene.textObjects[0].x, 0, 'invalid text x coordinate should fall back to a finite number');
+  assert.equal(scene.textObjects[0].y, 20, 'numeric text y coordinate should be normalized');
+  assert.equal(scene.textObjects[0].fontSize, 48, 'invalid text font size should use the default finite size');
+  assert.equal(scene.textObjects[0].rotation, 15, 'numeric text rotation should be normalized');
+  assert.equal(scene.textObjects[0].decorationWidth, 4, 'numeric text decoration width should be normalized');
+}
+
+function testPageSceneSerializationSurvivesMalformedStoredSceneCollections() {
+  const pageSceneRuntime = loadPageSceneRuntime();
+  const board = {
+    currentPage: 2,
+    pageScenes: {
+      1: {
+        pageNumber: 1,
+        objectGroups: 'not-an-array',
+        textObjects: 'not-an-array',
+        strokes: { invalid: true },
+        stampedImages: { invalid: true }
+      }
+    }
+  };
+
+  let serializedScenes = null;
+  assert.doesNotThrow(() => {
+    serializedScenes = pageSceneRuntime.getSerializedPageScenes(board, null, { includeCurrentPage: false });
+  }, 'page scene serialization should ignore malformed stored scene collections instead of crashing');
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(serializedScenes)),
+    {},
+    'malformed stored page scene collections should not be serialized as renderable scene content'
+  );
+}
+
+async function testPageSceneHydrationIgnoresMalformedOnlyScenes() {
+  const pageSceneRuntime = loadPageSceneRuntime();
+  const board = {};
+
+  await pageSceneRuntime.applySerializedPageScenes(board, {
+    1: {
+      pageNumber: 1,
+      objectGroups: 'not-an-array',
+      textObjects: 'not-an-array',
+      strokes: { invalid: true },
+      stampedImages: { invalid: true }
+    }
+  });
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(board.pageScenes)),
+    {},
+    'malformed-only imported scenes should not be preserved as renderable page content'
+  );
+}
+
+function testPageSceneCaptureSurvivesMalformedRuntimeCollections() {
+  const pageSceneRuntime = loadPageSceneRuntime();
+  const board = {
+    currentPage: 1,
+    drawingEngine: {
+      objectGroups: 'not-an-array',
+      strokes: [{
+        points: { invalid: true },
+        size: '7',
+        color: '#000000'
+      }],
+      stampedImages: { invalid: true },
+      getNextObjectId() {
+        return 'obj-1';
+      }
+    },
+    insertTextManager: {
+      getTextObjects() {
+        return 'not-an-array';
+      }
+    }
+  };
+
+  let scene = null;
+  assert.doesNotThrow(() => {
+    scene = pageSceneRuntime.capturePageScene(board, 1, { includeEmpty: true, includeImageElements: false });
+  }, 'capturing the current page scene should tolerate malformed runtime collections');
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(scene.strokes[0].points)),
+    [],
+    'malformed runtime stroke point collections should serialize as an empty point list'
+  );
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(scene.stampedImages)),
+    [],
+    'malformed runtime stamped image collections should serialize as an empty image list'
+  );
+}
+
 function testToolSelectionSurvivesMissingSelectionManager() {
   const toolRuntime = loadToolRuntime();
 
@@ -1004,6 +1169,10 @@ function testHistoryManagerUsesSmallerDefaultMemoryCap() {
   await testCreateBoardDependenciesFallsBackForTimeDisplayFailures();
   testLegacyBoardConstructionFallsBackForOptionalManagers();
   await testPageSceneRestoreSurvivesFailingLazyTextManager();
+  await testPageSceneRestoreNormalizesImportedSceneNumbers();
+  testPageSceneSerializationSurvivesMalformedStoredSceneCollections();
+  await testPageSceneHydrationIgnoresMalformedOnlyScenes();
+  testPageSceneCaptureSurvivesMalformedRuntimeCollections();
   testToolSelectionSurvivesMissingSelectionManager();
   await testStorageManagerGracefullyHandlesMissingIndexedDb();
   await testStorageManagerFallsBackWhenCanvasToBlobIsUnavailable();
