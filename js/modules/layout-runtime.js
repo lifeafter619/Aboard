@@ -60,6 +60,22 @@ function positionConfigArea(board) {
     const isVertical = toolbar.classList.contains('vertical');
     const tool = board.drawingEngine.currentTool;
     const gap = TOOL_CONFIG_PANEL_GAP;
+    const isNarrowViewport = window.innerWidth <= 480;
+    if (isNarrowViewport && !isVertical) {
+        const edgeSpacing = 10;
+        const toolbarGap = 8;
+        const maxPanelHeight = Math.max(160, toolbarRect.top - edgeSpacing - toolbarGap);
+        configArea.style.left = `${edgeSpacing}px`;
+        configArea.style.right = `${edgeSpacing}px`;
+        configArea.style.top = 'auto';
+        configArea.style.bottom = `${Math.max(edgeSpacing, window.innerHeight - toolbarRect.top + toolbarGap)}px`;
+        configArea.style.width = `calc(100vw - ${edgeSpacing * 2}px)`;
+        configArea.style.maxWidth = 'none';
+        configArea.style.maxHeight = `${maxPanelHeight}px`;
+        configArea.style.transform = 'none';
+        configArea.style.transformOrigin = 'center bottom';
+        return;
+    }
     let toolButtonId = null;
     if (!tool) {
         console.warn('No active tool found for toolbar mapping.');
@@ -118,10 +134,13 @@ function positionConfigArea(board) {
         configArea.style.transform = `translateY(-50%) scale(${scale})`;
     } else {
         const referenceCenterX = referenceRect.left + referenceRect.width / 2;
-        const referenceTop = referenceRect.top;
+        const referenceTop = Math.min(referenceRect.top, toolbarRect.top);
+        const availableAboveToolbar = Math.max(160, toolbarRect.top - 12 - gap);
+        const scaledMaxPanelHeight = availableAboveToolbar / Math.max(scale, 0.01);
         configArea.style.left = `${referenceCenterX}px`;
         configArea.style.bottom = `${window.innerHeight - referenceTop + gap}px`;
         configArea.style.top = 'auto';
+        configArea.style.maxHeight = `${scaledMaxPanelHeight}px`;
         configArea.style.transformOrigin = 'center bottom';
         configArea.style.transform = `translateX(-50%) scale(${scale})`;
     }

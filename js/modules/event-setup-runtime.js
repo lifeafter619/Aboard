@@ -363,6 +363,11 @@ function setupEventListeners() {
                     this.isPointerPinching = false;
                 }
             }
+            if (e.isPrimary) {
+                this.stopDraggingCoordinateOrigin();
+                this.handleDrawingComplete();
+                this.drawingEngine.stopPanning();
+            }
             this.scheduleRenderQualityUpdate();
             // Hide eraser cursor when pointer is cancelled
             if (this.drawingEngine.currentTool === 'eraser') {

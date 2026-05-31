@@ -42,20 +42,29 @@ function testScriptsDirectoryIsNotGloballyIgnored() {
 
 function testPackageExposesBrowserSmokeScript() {
   const packageJson = JSON.parse(readText('package.json'));
-  assert.equal(packageJson.scripts?.['test:smoke'], 'node tests/drawing-smoke-cdp.mjs');
+  assert.match(packageJson.scripts?.['test:smoke'] || '', /node tests\/drawing-smoke-cdp\.mjs/, 'test:smoke should include drawing persistence browser coverage');
+  assert.match(packageJson.scripts?.['test:smoke'] || '', /node tests\/responsive-layout-smoke\.mjs/, 'test:smoke should include responsive layout browser coverage');
   assert.match(packageJson.scripts?.test || '', /test:smoke|drawing-smoke-cdp\.mjs/, 'npm test should include the browser smoke coverage');
 }
 
-function testPaginationControlsUseTouchSizedTargets() {
+function testPaginationControlsUseCompactTargets() {
   const css = readText('css/style.css');
+  const paginationRule = css.match(/#pagination-controls\s*\{(?<body>[\s\S]*?)\}/);
   const pageNavRule = css.match(/\.page-nav-btn\s*\{(?<body>[\s\S]*?)\}/);
   const pageInputRule = css.match(/\.page-input\s*\{(?<body>[\s\S]*?)\}/);
 
+  assert.ok(paginationRule, 'style.css should define #pagination-controls');
   assert.ok(pageNavRule, 'style.css should define .page-nav-btn');
   assert.ok(pageInputRule, 'style.css should define .page-input');
-  assert.match(pageNavRule.groups.body, /min-width:\s*var\(--touch-target-size\)/, 'pagination buttons should keep a 44px touch width');
-  assert.match(pageNavRule.groups.body, /min-height:\s*var\(--touch-target-size\)/, 'pagination buttons should keep a 44px touch height');
-  assert.match(pageInputRule.groups.body, /min-height:\s*var\(--touch-target-size\)/, 'pagination input should keep a 44px touch height');
+  assert.match(paginationRule.groups.body, /gap:\s*6px/, 'pagination controls should use compact spacing');
+  assert.match(paginationRule.groups.body, /padding:\s*6px\s+8px/, 'pagination controls should use compact padding');
+  assert.match(pageNavRule.groups.body, /width:\s*40px/, 'pagination buttons should be visually compact');
+  assert.match(pageNavRule.groups.body, /height:\s*40px/, 'pagination buttons should be visually compact');
+  assert.doesNotMatch(pageNavRule.groups.body, /min-width:\s*var\(--touch-target-size\)/, 'pagination buttons should not force the global 44px target size');
+  assert.doesNotMatch(pageNavRule.groups.body, /min-height:\s*var\(--touch-target-size\)/, 'pagination buttons should not force the global 44px target size');
+  assert.match(pageInputRule.groups.body, /width:\s*48px/, 'pagination input should be narrower');
+  assert.match(pageInputRule.groups.body, /height:\s*40px/, 'pagination input should be visually compact');
+  assert.doesNotMatch(pageInputRule.groups.body, /min-height:\s*var\(--touch-target-size\)/, 'pagination input should not force the global 44px target size');
 }
 
 function testAnnouncementModalFitsNarrowViewports() {
@@ -111,7 +120,7 @@ function run() {
   testPortraitOverlayHasContinuePath();
   testScriptsDirectoryIsNotGloballyIgnored();
   testPackageExposesBrowserSmokeScript();
-  testPaginationControlsUseTouchSizedTargets();
+  testPaginationControlsUseCompactTargets();
   testAnnouncementModalFitsNarrowViewports();
   testAnnouncementModalResponsiveMinimumWidthIsApplied();
   console.log('project-quality-guards.test: all assertions passed');

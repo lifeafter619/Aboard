@@ -660,6 +660,7 @@ class SettingsManager {
         const PORTRAIT_TOUCH_MAX_BUTTON_SIZE = 46;
         const LANDSCAPE_TOUCH_MAX_BUTTON_SIZE = 52;
         const TOUCH_TOOLBAR_SAFE_MARGIN = 12;
+        const NARROW_VIEWPORT_THRESHOLD = 900;
         
         // Square buttons with dynamic sizing based on toolbarSize
         // All proportions scale with buttonSize for consistent appearance
@@ -679,12 +680,16 @@ class SettingsManager {
             ? window.matchMedia('(pointer: coarse)').matches
             : hasTouchPoints;
         const shortestSide = Math.min(window.innerWidth, window.innerHeight);
+        const isNarrowViewport = window.innerWidth <= NARROW_VIEWPORT_THRESHOLD;
         const touchMaxButtonSize = shortestSide <= TOUCH_SMALL_SCREEN_THRESHOLD
             ? (window.innerHeight > window.innerWidth ? PORTRAIT_TOUCH_MAX_BUTTON_SIZE : LANDSCAPE_TOUCH_MAX_BUTTON_SIZE)
             : this.toolbarSize;
+        const viewportMaxButtonSize = window.innerHeight > window.innerWidth
+            ? PORTRAIT_TOUCH_MAX_BUTTON_SIZE
+            : LANDSCAPE_TOUCH_MAX_BUTTON_SIZE;
         const buttonSize = isTouchDevice
             ? Math.min(this.toolbarSize, touchMaxButtonSize)
-            : this.toolbarSize;
+            : (isNarrowViewport ? Math.min(this.toolbarSize, viewportMaxButtonSize) : this.toolbarSize);
         const buttonPadding = Math.max(2, buttonSize * BUTTON_PADDING_RATIO);
         const iconSize = buttonSize * ICON_SIZE_RATIO;
         const fontSize = Math.max(6, buttonSize * FONT_SIZE_RATIO);
@@ -703,7 +708,7 @@ class SettingsManager {
             ? `${toolbarPadding}px ${toolbarPaddingSecondary}px` 
             : `${toolbarPaddingSecondary}px ${toolbarPadding}px`;
         toolbar.style.gap = `${toolbarGap}px`;
-        if (isTouchDevice) {
+        if (isTouchDevice || isNarrowViewport) {
             toolbar.style.maxWidth = `calc(100vw - ${TOUCH_TOOLBAR_SAFE_MARGIN}px)`;
             toolbar.style.overflowX = isVertical ? 'hidden' : 'auto';
             toolbar.style.overflowY = isVertical ? 'auto' : 'hidden';

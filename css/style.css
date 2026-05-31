@@ -241,6 +241,7 @@ body.vector-preview-active #off-canvas-image-layer {
     bottom: 100px; /* Position above toolbar (toolbar is at bottom: 20px + estimated height ~60px + gap 20px) */
     transform: translateX(-50%);
     z-index: 2000; /* Ensure it's above image controls overlay */
+    box-sizing: border-box;
     padding: 10px 12px;
     background-color: #ffffff;
     border-radius: 14px;
@@ -2004,10 +2005,10 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     display: none;
     cursor: move;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
+    gap: 6px;
+    padding: 6px 8px;
     background-color: #ffffff;
-    border-radius: 12px;
+    border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -2033,12 +2034,10 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .page-nav-btn {
-    width: 44px;
-    height: 44px;
-    min-width: var(--touch-target-size);
-    min-height: var(--touch-target-size);
+    width: 40px;
+    height: 40px;
     border: none;
-    border-radius: 8px;
+    border-radius: 7px;
     background-color: #f0f0f0;
     cursor: pointer;
     display: flex;
@@ -2058,11 +2057,10 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 .page-input {
-    width: 56px;
-    height: 44px;
-    min-height: var(--touch-target-size);
+    width: 48px;
+    height: 40px;
     border: 1px solid #ddd;
-    border-radius: 8px;
+    border-radius: 7px;
     background-color: #ffffff;
     text-align: center;
     font-size: 14px;
@@ -4632,6 +4630,7 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
         min-width: auto;
         width: calc(100vw - 20px);
         max-width: none;
+        max-height: calc(100vh - 190px);
         padding: 10px 12px;
         bottom: 80px;
         left: 10px;
@@ -4660,6 +4659,12 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
         gap: 4px;
         flex-wrap: wrap;
         max-width: 180px;
+    }
+
+    #pagination-controls {
+        top: 112px;
+        right: 8px;
+        max-width: calc(100vw - 16px);
     }
     
     .history-btn {

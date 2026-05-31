@@ -7,6 +7,37 @@ class TimeDisplayControls {
         this.timeDisplayArea = document.getElementById('time-display-area');
         this.setupEventListeners();
     }
+
+    clampTimeDisplayAreaToViewport(edgeSpacing = 12) {
+        if (!this.timeDisplayArea) {
+            return;
+        }
+
+        const rect = this.timeDisplayArea.getBoundingClientRect();
+        let left = rect.left;
+        let top = rect.top;
+
+        if (rect.right > window.innerWidth - edgeSpacing) {
+            left = window.innerWidth - rect.width - edgeSpacing;
+        }
+        if (left < edgeSpacing) {
+            left = edgeSpacing;
+        }
+        if (rect.bottom > window.innerHeight - edgeSpacing) {
+            top = window.innerHeight - rect.height - edgeSpacing;
+        }
+        if (top < edgeSpacing) {
+            top = edgeSpacing;
+        }
+
+        if (left !== rect.left || top !== rect.top) {
+            this.timeDisplayArea.style.left = `${left}px`;
+            this.timeDisplayArea.style.top = `${top}px`;
+            this.timeDisplayArea.style.right = 'auto';
+            this.timeDisplayArea.style.bottom = 'auto';
+            this.timeDisplayArea.style.transform = 'none';
+        }
+    }
     
     setupEventListeners() {
         // Time display toggle button
@@ -87,6 +118,7 @@ class TimeDisplayControls {
                 this.timeDisplayArea.style.transform = 'translate(-50%, -100%)';
             }
         }
+        this.clampTimeDisplayAreaToViewport();
         
         // Also show the time display if not already shown
         if (!this.timeDisplayManager.enabled) {

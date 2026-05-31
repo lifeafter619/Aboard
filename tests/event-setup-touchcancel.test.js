@@ -79,6 +79,7 @@ function createBoard(canvasTarget) {
   let pinchEndCalls = 0;
   let touchPinchStartCalls = 0;
   let pointerPinchStartCalls = 0;
+  let drawingCompleteCalls = 0;
 
   return {
     canvas: {
@@ -97,7 +98,9 @@ function createBoard(canvasTarget) {
       clearStrokes() {},
       clearVectorScene() {},
       setVectorPreviewVisible() {},
-      startDrawing() {},
+      startDrawing() {
+        this.isDrawing = true;
+      },
       startPanning() {},
       stopPanning() {},
       pan() {},
@@ -167,7 +170,13 @@ function createBoard(canvasTarget) {
       this.isPinching = false;
       this.hasTwoFingers = false;
     },
-    handleDrawingComplete() {},
+    handleDrawingComplete() {
+      drawingCompleteCalls += 1;
+      this.drawingEngine.isDrawing = false;
+    },
+    discardCurrentStroke() {
+      this.drawingEngine.isDrawing = false;
+    },
     stopDraggingCoordinateOrigin() {},
     scheduleRenderQualityUpdate() {},
     updateEraserCursor() {},
@@ -193,6 +202,9 @@ function createBoard(canvasTarget) {
     },
     get pointerPinchStartCalls() {
       return pointerPinchStartCalls;
+    },
+    get drawingCompleteCalls() {
+      return drawingCompleteCalls;
     }
   };
 }
@@ -308,10 +320,51 @@ function testPenAndTouchPinchUsesPointerPath() {
   assert.equal(board.pointerPinchStartCalls, 1);
 }
 
+function testPrimaryPointerCancelCompletesActiveDrawing() {
+  const { runtime, canvasTarget, documentTarget } = loadEventSetupRuntime();
+  const board = createBoard(canvasTarget);
+
+  runtime.setupEventListeners(board);
+
+  const pointerDownHandler = documentTarget.listeners.get('pointerdown');
+  const pointerCancelHandler = documentTarget.listeners.get('pointercancel');
+  const target = {
+    closest() {
+      return null;
+    }
+  };
+
+  pointerDownHandler({
+    pointerType: 'pen',
+    pointerId: 1,
+    clientX: 10,
+    clientY: 10,
+    isPrimary: true,
+    button: 0,
+    shiftKey: false,
+    target
+  });
+
+  assert.equal(board.drawingEngine.isDrawing, true);
+
+  pointerCancelHandler({
+    pointerType: 'pen',
+    pointerId: 1,
+    clientX: 20,
+    clientY: 20,
+    isPrimary: true,
+    target
+  });
+
+  assert.equal(board.drawingCompleteCalls, 1);
+  assert.equal(board.drawingEngine.isDrawing, false);
+}
+
 function run() {
   testTouchCancelEndsPinchGestureAndClearsFlags();
   testPureTouchPinchUsesTouchPathOnly();
   testPenAndTouchPinchUsesPointerPath();
+  testPrimaryPointerCancelCompletesActiveDrawing();
   console.log('event-setup-touchcancel.test: all assertions passed');
 }
 
