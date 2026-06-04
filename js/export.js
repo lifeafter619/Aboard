@@ -327,10 +327,6 @@ class ExportManager {
         this.exportModal.classList.remove('show');
     }
 
-    sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
     loadImage(source) {
         return new Promise((resolve, reject) => {
             const img = new Image();
