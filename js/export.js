@@ -480,11 +480,9 @@ class ExportManager {
         try {
             for (let pageNum = 1; pageNum <= this.drawingBoard.pages.length; pageNum++) {
                 if (this.drawingBoard.currentPage !== pageNum) {
-                    this.drawingBoard.goToPage(pageNum);
+                    await this.drawingBoard.goToPageAsync(pageNum);
                 }
-                await this.sleep(160);
                 await this.exportSinglePage(`${baseFilename}-${pageNum}`, format, quality);
-                await this.sleep(80);
             }
         } finally {
             if (currentPage !== this.drawingBoard.currentPage) {
@@ -512,11 +510,9 @@ class ExportManager {
         try {
             for (const pageNum of selectedPages) {
                 if (this.drawingBoard.currentPage !== pageNum) {
-                    this.drawingBoard.goToPage(pageNum);
+                    await this.drawingBoard.goToPageAsync(pageNum);
                 }
-                await this.sleep(160);
                 await this.exportSinglePage(`${baseFilename}-${pageNum}`, format, quality);
-                await this.sleep(80);
             }
         } finally {
             if (currentPage !== this.drawingBoard.currentPage) {

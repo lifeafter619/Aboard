@@ -6260,6 +6260,21 @@ class DrawingBoard {
         this.updatePaginationUI();
     }
     
+    /**
+     * Async version of goToPage() that waits for background rendering to complete.
+     * Use this when the page must be fully rendered before capturing the canvas
+     * (e.g. multi-page export).
+     */
+    async goToPageAsync(pageNumber) {
+        this.goToPage(pageNumber);
+        // goToPage → loadPage → restorePageBackground runs synchronously.
+        // restorePageBackground now returns a Promise; loadPage stores it in
+        // this._pendingBackgroundPromise so we can await it here.
+        if (this._pendingBackgroundPromise) {
+            await this._pendingBackgroundPromise;
+        }
+    }
+    
     loadPage(pageNumber) {
         if (pageNumber > 0 && pageNumber <= this.pages.length && this.pages[pageNumber - 1]) {
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -6273,7 +6288,8 @@ class DrawingBoard {
         this.historyManager.saveState();
         
         // Restore page-specific background if exists
-        this.restorePageBackground(pageNumber);
+        // Store the Promise so callers (e.g. goToPageAsync) can await it
+        this._pendingBackgroundPromise = this.restorePageBackground(pageNumber);
         this.drawingEngine.updateOffCanvasImageMirrors(this.insertTextManager?.textObjects || []);
 
         // Save session state (current page change)
@@ -6304,48 +6320,58 @@ class DrawingBoard {
     }
     
     restorePageBackground(pageNumber) {
-        // Restore background settings for this page
-        if (this.pageBackgrounds[pageNumber]) {
-            const bg = this.pageBackgrounds[pageNumber];
-            this.backgroundManager.backgroundColor = bg.backgroundColor;
-            this.backgroundManager.backgroundPattern = bg.backgroundPattern;
-            this.backgroundManager.bgOpacity = bg.bgOpacity;
-            this.backgroundManager.patternIntensity = bg.patternIntensity;
-            this.backgroundManager.patternDensity = bg.patternDensity;
-            this.backgroundManager.backgroundImageData = bg.backgroundImageData;
-            this.backgroundManager.imageSize = bg.imageSize;
-            
-            // Restore enhanced background state
-            if (typeof bg.coordinateOriginX !== 'undefined') {
-                this.backgroundManager.coordinateOriginX = bg.coordinateOriginX;
-                this.backgroundManager.coordinateOriginY = bg.coordinateOriginY;
-            }
-            this.backgroundManager.setCoordinateOverlayState(bg.coordinateOverlayState, { persist: false, redraw: false });
-            if (bg.imageTransform) this.backgroundManager.imageTransform = bg.imageTransform;
-            if (typeof bg.gifLoopCount !== 'undefined') this.backgroundManager.gifLoopCount = bg.gifLoopCount;
-            if (typeof bg.backgroundOutsideLayerOrder !== 'undefined') {
-                this.backgroundManager.backgroundOutsideLayerOrder = bg.backgroundOutsideLayerOrder;
-            }
+        // Restore background settings for this page.
+        // Returns a Promise that resolves when the background is fully rendered
+        // (including any asynchronous image loading).
+        return new Promise((resolve) => {
+            if (this.pageBackgrounds[pageNumber]) {
+                const bg = this.pageBackgrounds[pageNumber];
+                this.backgroundManager.backgroundColor = bg.backgroundColor;
+                this.backgroundManager.backgroundPattern = bg.backgroundPattern;
+                this.backgroundManager.bgOpacity = bg.bgOpacity;
+                this.backgroundManager.patternIntensity = bg.patternIntensity;
+                this.backgroundManager.patternDensity = bg.patternDensity;
+                this.backgroundManager.backgroundImageData = bg.backgroundImageData;
+                this.backgroundManager.imageSize = bg.imageSize;
+                
+                // Restore enhanced background state
+                if (typeof bg.coordinateOriginX !== 'undefined') {
+                    this.backgroundManager.coordinateOriginX = bg.coordinateOriginX;
+                    this.backgroundManager.coordinateOriginY = bg.coordinateOriginY;
+                }
+                this.backgroundManager.setCoordinateOverlayState(bg.coordinateOverlayState, { persist: false, redraw: false });
+                if (bg.imageTransform) this.backgroundManager.imageTransform = bg.imageTransform;
+                if (typeof bg.gifLoopCount !== 'undefined') this.backgroundManager.gifLoopCount = bg.gifLoopCount;
+                if (typeof bg.backgroundOutsideLayerOrder !== 'undefined') {
+                    this.backgroundManager.backgroundOutsideLayerOrder = bg.backgroundOutsideLayerOrder;
+                }
 
-            // Load image if exists
-            if (bg.backgroundImageData && bg.backgroundPattern === 'image') {
-                const img = new Image();
-                img.onload = () => {
-                    this.backgroundManager.backgroundImage = img;
+                // Load image if exists
+                if (bg.backgroundImageData && bg.backgroundPattern === 'image') {
+                    const img = new Image();
+                    img.onload = () => {
+                        this.backgroundManager.backgroundImage = img;
+                        this.backgroundManager.drawBackground();
+                        this.updateBackgroundUI();
+                        resolve();
+                    };
+                    img.onerror = () => {
+                        this.updateBackgroundUI();
+                        resolve();
+                    };
+                    img.src = bg.backgroundImageData;
+                } else {
                     this.backgroundManager.drawBackground();
-                };
-                img.src = bg.backgroundImageData;
+                    this.updateBackgroundUI();
+                    resolve();
+                }
             } else {
+                // Use default/global background settings
                 this.backgroundManager.drawBackground();
+                this.updateBackgroundUI();
+                resolve();
             }
-            
-            // Update UI to reflect current page background
-            this.updateBackgroundUI();
-        } else {
-            // Use default/global background settings
-            this.backgroundManager.drawBackground();
-            this.updateBackgroundUI();
-        }
+        });
     }
 
     renderCoordinatePlotList(currentPattern) {
