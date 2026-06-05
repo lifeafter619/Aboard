@@ -1061,6 +1061,9 @@ class DrawingBoard {
     goToPage(pageNumber) {
         return paginationRuntime.goToPage?.(this, pageNumber);
     }
+    goToPageAsync(pageNumber) {
+        return paginationRuntime.goToPageAsync?.(this, pageNumber);
+    }
     loadPage(pageNumber) {
         return paginationRuntime.loadPage?.(this, pageNumber);
     }
