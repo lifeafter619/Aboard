@@ -17,6 +17,30 @@ function loadLazyManagerRuntime({
   const alertMessages = [];
   const errors = [];
   const warnings = [];
+  const appendedLinks = [];
+  const document = {
+    head: {
+      appendChild(element) {
+        appendedLinks.push(element);
+      }
+    },
+    createElement(tagName) {
+      return {
+        tagName: tagName.toUpperCase(),
+        rel: '',
+        as: '',
+        href: '',
+        fetchPriority: ''
+      };
+    },
+    querySelector(selector) {
+      const hrefMatch = selector.match(/href="([^"]+)"/);
+      if (!hrefMatch) {
+        return null;
+      }
+      return appendedLinks.find((link) => link.href === hrefMatch[1]) || null;
+    }
+  };
   const window = {
     ScriptLoader: {
       async load(src) {
@@ -36,11 +60,13 @@ function loadLazyManagerRuntime({
         alertMessages.push({ message, type });
       }
     },
+    document,
     ...windowOverrides
   };
 
   const context = {
     window,
+    document: window.document,
     console: {
       error(...args) {
         errors.push(args);
@@ -50,6 +76,8 @@ function loadLazyManagerRuntime({
       }
     },
     Error,
+    Array,
+    Set,
     Promise
   };
 
@@ -71,6 +99,7 @@ function loadLazyManagerRuntime({
     },
     toastMessages,
     alertMessages,
+    appendedLinks,
     errors,
     warnings
   };
@@ -88,12 +117,36 @@ async function testManagerLoadFailureRejectsWithoutUserNotification() {
   assert.deepEqual(alertMessages, []);
 }
 
-async function testPreloadFailuresStaySilentToUsers() {
-  const { runtime, board, toastMessages, alertMessages, warnings } = loadLazyManagerRuntime();
+async function testPreloadPrefetchesScriptsWithoutInstantiatingManagers() {
+  const loadedScripts = [];
+  const { runtime, board, toastMessages, alertMessages, appendedLinks, warnings } = loadLazyManagerRuntime({
+    loadImpl: async (src, runtimeWindow) => {
+      loadedScripts.push(src);
+      runtimeWindow[src] = class UnexpectedManager {};
+    }
+  });
 
   await runtime.preloadMoreFeatureManagers(board);
 
-  assert.equal(warnings.length, 7);
+  assert.deepEqual(loadedScripts, [], 'preload should not execute lazy feature scripts');
+  assert.equal(board.timerManager, undefined, 'preload should not instantiate timer manager');
+  assert.equal(board.insertTextManager, undefined, 'preload should not instantiate insert text manager');
+  assert.equal(board.projectManager, undefined, 'preload should not instantiate project manager');
+  assert.deepEqual(
+    appendedLinks.map((link) => [link.rel, link.as, link.href]),
+    [
+      ['prefetch', 'script', 'js/insert-image.js'],
+      ['prefetch', 'script', 'js/modules/insert-text-manager.js'],
+      ['prefetch', 'script', 'js/modules/timer.js'],
+      ['prefetch', 'script', 'js/modules/random-picker.js'],
+      ['prefetch', 'script', 'js/modules/scoreboard.js'],
+      ['prefetch', 'script', 'js/export.js'],
+      ['prefetch', 'script', 'js/modules/project-manager.js']
+    ]
+  );
+  await runtime.preloadMoreFeatureManagers(board);
+  assert.equal(appendedLinks.length, 7, 'repeated preloads should reuse existing prefetch links');
+  assert.deepEqual(warnings, []);
   assert.deepEqual(toastMessages, []);
   assert.deepEqual(alertMessages, []);
 }
@@ -131,7 +184,7 @@ async function testInsertTextManagerSurvivesMissingSelectionManager() {
 
 async function run() {
   await testManagerLoadFailureRejectsWithoutUserNotification();
-  await testPreloadFailuresStaySilentToUsers();
+  await testPreloadPrefetchesScriptsWithoutInstantiatingManagers();
   await testInsertTextManagerSurvivesMissingSelectionManager();
   console.log('lazy-manager-runtime.test: all assertions passed');
 }

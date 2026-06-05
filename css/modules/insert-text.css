@@ -6,6 +6,14 @@
     min-width: 280px;
     width: 85%;
     padding: 18px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.text-input-modal-content .modal-body {
+    min-height: 0;
+    overflow-y: auto;
 }
 
 .text-input-area {
@@ -196,6 +204,12 @@
     .text-input-area {
         min-height: 90px;
         font-size: 15px;
+    }
+}
+
+@media (max-height: 720px), (max-width: 480px) {
+    .text-input-modal-content {
+        min-width: 0;
     }
 }
 

@@ -1,0 +1,259 @@
+.font-management-list {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.font-management-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+.font-reset-defaults-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.font-management-item {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 10px;
+    border: 1px solid #dfe3ea;
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #fff;
+}
+
+.font-management-item .drag-handle {
+    color: #999;
+    cursor: grab;
+    user-select: none;
+}
+
+.font-management-item.dragging {
+    opacity: 0.6;
+}
+
+.font-management-item-header {
+    display: contents;
+}
+
+.font-display-name {
+    font-size: 13px;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 32px;
+}
+
+.font-action-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.font-action-btn {
+    border: 1px solid #d1d1d6;
+    border-radius: 6px;
+    background: #f7f7fa;
+    color: #333;
+    font-size: 12px;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.font-action-btn.danger-btn {
+    color: #b42318;
+    border-color: #f0c7c2;
+    background: #fff7f6;
+}
+
+.font-action-btn.active {
+    border-color: var(--theme-color);
+    color: var(--theme-color);
+    background: rgba(0, 122, 255, 0.08);
+}
+
+.font-alias-editor,
+.font-preview-panel {
+    grid-column: 1 / -1;
+}
+
+.font-alias-editor {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.font-preview-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #e4e7ec;
+    background: #fafbfc;
+}
+
+.font-preview-panel[hidden],
+.font-alias-editor[hidden] {
+    display: none !important;
+}
+
+.font-preview-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 10px 12px;
+    align-items: end;
+}
+
+.font-preview-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.font-preview-field > span {
+    font-size: 12px;
+    color: #667085;
+}
+
+.font-preview-text-input,
+.font-alias-input {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid #d1d1d6;
+    border-radius: 8px;
+    height: 34px;
+    font-size: 13px;
+    padding: 6px 10px;
+    background: #fff;
+}
+
+.font-preview-size-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.font-preview-size-row .slider {
+    width: 100%;
+}
+
+.font-preview-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.font-preview-inline-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+.font-alias-editor .button-primary,
+.font-alias-editor .button-secondary,
+.font-preview-size-editor .button-secondary {
+    padding: 8px 12px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.font-preview-sample {
+    min-height: 132px;
+    padding: 18px 20px;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid #dde3ea;
+    color: #101828;
+    font-size: 48px;
+    line-height: 1.25;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.font-preview-modal-content {
+    width: min(880px, calc(100vw - 40px));
+    max-width: 880px;
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.font-preview-modal-content .modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.font-preview-modal-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+}
+
+.font-preview-size-editor {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+    gap: 10px;
+    align-items: end;
+}
+
+.font-preview-modal-stage {
+    flex: 1;
+    min-height: 240px;
+    padding: 16px;
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+    background: #f8fafc;
+    overflow: auto;
+}
+
+.font-preview-modal-sample {
+    min-height: 100%;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px dashed #cfd6df;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.25;
+    color: #111827;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+@media (max-width: 860px) {
+    .font-preview-toolbar,
+    .font-preview-size-editor {
+        grid-template-columns: 1fr;
+    }
+
+    .font-preview-size-row {
+        grid-template-columns: 1fr;
+    }
+
+    .font-action-group {
+        justify-content: flex-start;
+    }
+
+    .font-preview-modal-content {
+        width: min(100vw - 24px, 880px);
+    }
+}

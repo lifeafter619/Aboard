@@ -8,6 +8,16 @@ const LAZY_MANAGER_SCRIPTS = {
     ScoreboardManager: 'js/modules/scoreboard.js'
 };
 
+const LAZY_MANAGER_PREFETCH_SCRIPTS = [
+    LAZY_MANAGER_SCRIPTS.InsertImageManager,
+    LAZY_MANAGER_SCRIPTS.InsertTextManager,
+    LAZY_MANAGER_SCRIPTS.TimerManager,
+    LAZY_MANAGER_SCRIPTS.RandomPickerManager,
+    LAZY_MANAGER_SCRIPTS.ScoreboardManager,
+    LAZY_MANAGER_SCRIPTS.ExportManager,
+    LAZY_MANAGER_SCRIPTS.ProjectManager
+];
+
 async function loadManagerConstructor(board, name) {
     const existingCtor = window[name];
     if (typeof existingCtor === 'function') {
@@ -131,27 +141,47 @@ function scheduleMoreFeaturePreload(board) {
     afterFirstPaint();
 }
 
-async function preloadMoreFeatureManagers(board) {
-    const preloadTasks = [
-        () => getInsertImageManager(board),
-        () => getInsertTextManager(board),
-        () => getTimerManager(board),
-        () => getRandomPickerManager(board),
-        () => getScoreboardManager(board),
-        () => getExportManager(board),
-        () => getProjectManager(board)
-    ];
+function getPrefetchDocument() {
+    if (window.document?.createElement) {
+        return window.document;
+    }
+    if (typeof document !== 'undefined' && document.createElement) {
+        return document;
+    }
+    return null;
+}
 
-    const results = await Promise.allSettled(preloadTasks.map(preload => preload()));
-    results.forEach((result) => {
-        if (result.status === 'rejected') {
-            console.warn('Silent more-feature preload failed:', result.reason);
-        }
-    });
+function hasScriptPrefetch(doc, src) {
+    if (!doc.querySelector) {
+        return false;
+    }
+    return Boolean(doc.querySelector(`link[rel="prefetch"][as="script"][href="${src}"]`));
+}
+
+function prefetchLazyManagerScript(src) {
+    const doc = getPrefetchDocument();
+    if (!doc?.head?.appendChild || hasScriptPrefetch(doc, src)) {
+        return null;
+    }
+
+    const link = doc.createElement('link');
+    link.rel = 'prefetch';
+    link.as = 'script';
+    link.href = src;
+    if ('fetchPriority' in link) {
+        link.fetchPriority = 'low';
+    }
+    doc.head.appendChild(link);
+    return link;
+}
+
+async function preloadMoreFeatureManagers() {
+    return LAZY_MANAGER_PREFETCH_SCRIPTS.map(prefetchLazyManagerScript).filter(Boolean);
 }
 
 window.AboardLazyManagerRuntime = {
     LAZY_MANAGER_SCRIPTS,
+    LAZY_MANAGER_PREFETCH_SCRIPTS,
     loadManagerConstructor,
     showLazyLoadError,
     getExportManager,

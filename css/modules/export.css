@@ -1,8 +1,16 @@
 /* Export Module Styles */
 
 .export-modal-content {
-    width: 500px;
-    max-width: 90vw;
+    max-width: 500px;
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.export-modal-content .modal-body {
+    min-height: 0;
+    overflow-y: auto;
 }
 
 .export-options {

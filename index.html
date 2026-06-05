@@ -14,27 +14,33 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/modules/time-display.css">
     <link rel="stylesheet" href="css/modules/feature-area.css">
+    <link rel="stylesheet" href="css/modules/pagination.css">
+    <link rel="stylesheet" href="css/modules/coordinate-tools.css">
+    <link rel="stylesheet" href="css/modules/selection-controls.css">
+    <link rel="stylesheet" href="css/modules/dialogs.css">
     <link rel="stylesheet" href="css/modules/shape.css">
-    <link rel="preload" as="style" href="css/modules/export.css" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" as="style" href="css/modules/export.css" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="css/modules/export.css"></noscript>
-    <link rel="preload" as="style" href="css/modules/timer.css" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" as="style" href="css/modules/timer.css" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="css/modules/timer.css"></noscript>
-    <link rel="preload" as="style" href="css/modules/teaching-tools.css" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" as="style" href="css/modules/teaching-tools.css" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="css/modules/teaching-tools.css"></noscript>
-    <link rel="preload" as="style" href="css/modules/line-style-modal.css" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" as="style" href="css/modules/line-style-modal.css" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="css/modules/line-style-modal.css"></noscript>
-    <link rel="preload" as="style" href="css/modules/random-picker.css" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" as="style" href="css/modules/random-picker.css" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="css/modules/random-picker.css"></noscript>
-    <link rel="preload" as="style" href="css/modules/scoreboard.css" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" as="style" href="css/modules/scoreboard.css" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="css/modules/scoreboard.css"></noscript>
-    <link rel="preload" as="style" href="css/modules/insert-image.css" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" as="style" href="css/modules/insert-image.css" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="css/modules/insert-image.css"></noscript>
-    <link rel="preload" as="style" href="css/modules/insert-text.css" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" as="style" href="css/modules/insert-text.css" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="css/modules/insert-text.css"></noscript>
-    <link rel="preload" as="style" href="css/modules/project.css" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" as="style" href="css/modules/project.css" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="css/modules/project.css"></noscript>
+    <link rel="preload" as="style" href="css/modules/font-management.css" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="css/modules/font-management.css"></noscript>
     <link rel="stylesheet" href="css/modules/toast.css">
-    <link rel="preload" as="style" href="css/modules/diff.css" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" as="style" href="css/modules/diff.css" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="css/modules/diff.css"></noscript>
 </head>
 <body>
@@ -2239,6 +2245,8 @@
         </div>
     </div>
 
+    <script src="js/modules/browser-check.js"></script>
+    <script>window.BrowserCheck && window.BrowserCheck.init();</script>
     <script type="module" src="js/app/bootstrap.js"></script>
 </body>
 </html>

@@ -20,6 +20,7 @@ function createClassList() {
 
 function createElement(ownerDocument, id = '') {
   const listeners = new Map();
+  const children = [];
   return {
     ownerDocument,
     id,
@@ -30,10 +31,28 @@ function createElement(ownerDocument, id = '') {
     textContent: '',
     value: '',
     tabIndex: 0,
+    children,
+    type: '',
+    appendChild(child) {
+      children.push(child);
+      child.parentElement = this;
+      return child;
+    },
+    remove() {},
+    querySelectorAll() {
+      return [];
+    },
+    querySelector() {
+      return null;
+    },
+    closest() {
+      return null;
+    },
     setAttribute(name, value) {
       this.attributes[name] = String(value);
       if (name === 'id') {
         this.id = String(value);
+        ownerDocument.registerElement(this);
       }
     },
     getAttribute(name) {
@@ -68,9 +87,33 @@ function createDocumentStub() {
   const document = {
     activeElement: null,
     body: null,
+    createElement(tagName) {
+      const element = createElement(document);
+      element.tagName = String(tagName).toUpperCase();
+      Object.defineProperty(element, 'innerHTML', {
+        get() {
+          return this._innerHTML || '';
+        },
+        set(value) {
+          this._innerHTML = String(value);
+          for (const [, id] of this._innerHTML.matchAll(/\sid="([^"]+)"/g)) {
+            document.registerElement(createElement(document, id));
+          }
+        }
+      });
+      return element;
+    },
     getElementById(id) {
       return elements.get(id) || null;
     },
+    querySelector() {
+      return null;
+    },
+    querySelectorAll() {
+      return [];
+    },
+    addEventListener() {},
+    removeEventListener() {},
     registerElement(element) {
       if (element?.id) {
         elements.set(element.id, element);
@@ -86,17 +129,30 @@ function createDocumentStub() {
 function loadTeachingToolsManagerPrototype() {
   const source = `${fs.readFileSync(path.join(__dirname, '..', 'js', 'modules', 'teaching-tools.js'), 'utf8')}\nwindow.__TeachingToolsManager = TeachingToolsManager;`;
   const document = createDocumentStub();
+  const imageSources = [];
+  class FakeImage {
+    set src(value) {
+      imageSources.push(value);
+      this._src = value;
+    }
+    get src() {
+      return this._src || '';
+    }
+  }
   const sandbox = {
     console,
     window: {
       requestAnimationFrame(callback) {
         callback();
       },
+      addEventListener() {},
+      removeEventListener() {},
       i18n: {
         applyTranslations() {}
       }
     },
     document,
+    Image: FakeImage,
     Math,
     Number,
     String,
@@ -122,6 +178,7 @@ function loadTeachingToolsManagerPrototype() {
 
   return {
     document,
+    imageSources,
     TeachingToolsManager: sandbox.window.__TeachingToolsManager
   };
 }
@@ -213,8 +270,26 @@ function testTeachingToolsModalBackdropDismissalRestoresFocus() {
   assert.equal(document.activeElement, trigger, 'backdrop dismissal should restore focus to the opener');
 }
 
+function testTeachingToolsConstructorDefersHeavyImagesUntilUse() {
+  const { imageSources, TeachingToolsManager } = loadTeachingToolsManagerPrototype();
+  const canvas = {
+    getBoundingClientRect() {
+      return { left: 0, top: 0, right: 1280, bottom: 720 };
+    }
+  };
+
+  new TeachingToolsManager(canvas, {}, {});
+
+  assert.deepEqual(
+    imageSources,
+    [],
+    'constructing teaching tools should not request ruler or set-square images before the feature is opened'
+  );
+}
+
 (function main() {
   testTeachingToolsModalSupportsDialogSemanticsAndRestoresFocusOnEscape();
   testTeachingToolsModalBackdropDismissalRestoresFocus();
+  testTeachingToolsConstructorDefersHeavyImagesUntilUse();
   console.log('teaching-tools-modal-ux.test: all assertions passed');
 })();

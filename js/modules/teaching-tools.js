@@ -65,10 +65,7 @@ class TeachingToolsManager {
         this.controlOverlay = null;
         this.modal = null;
         this.modalPreviouslyFocusedElement = null;
-        
-        this.loadImages();
-        this.createModal();
-        this.setupEventListeners();
+
         this.localeChangeHandler = () => {
             this.updateCounterButtonLabels();
         };
@@ -76,6 +73,10 @@ class TeachingToolsManager {
     }
     
     loadImages() {
+        if (this.rulerImage1 && this.rulerImage2 && this.setSquareImage1 && this.setSquareImage2) {
+            return;
+        }
+
         let loadedCount = 0;
         const totalImages = 4;
         const checkLoaded = () => {
@@ -113,8 +114,37 @@ class TeachingToolsManager {
         this.rulerImage = this.rulerImage1;
         this.setSquareImage = this.setSquareImage1;
     }
+
+    ensureImagesLoaded() {
+        if (!this.rulerImage1 || !this.rulerImage2 || !this.setSquareImage1 || !this.setSquareImage2) {
+            this.loadImages();
+        }
+    }
+
+    ensureModalReady() {
+        const existingModal = this.modal || document.getElementById('teaching-tools-modal');
+        if (existingModal) {
+            this.modal = existingModal;
+            this.configureModalAccessibility();
+            return existingModal;
+        }
+
+        this.createModal();
+        return this.modal;
+    }
+
+    ensureInteractionListeners() {
+        if (!this._boundHandlers) {
+            this.setupEventListeners();
+        }
+    }
     
     createModal() {
+        if (this.modal || document.getElementById('teaching-tools-modal')) {
+            this.modal = this.modal || document.getElementById('teaching-tools-modal');
+            return;
+        }
+
         const closeTitle = window.i18n?.t?.('common.close') || 'Close';
         // Create the modal HTML
         const modal = document.createElement('div');
@@ -550,6 +580,7 @@ class TeachingToolsManager {
     
     // Add a new tool of a specific type
     addToolOfType(type, variant = 1) {
+        this.ensureImagesLoaded();
         const rect = this.canvas.getBoundingClientRect();
         const scaleFactor = this.canvasScaleFactor;
         // Get canvas dimensions in unscaled coordinates
@@ -718,6 +749,10 @@ class TeachingToolsManager {
     }
     
     setupEventListeners() {
+        if (this._boundHandlers) {
+            return;
+        }
+
         // Store bound handlers for cleanup
         this._boundHandlers = {
             mouseMove: (e) => this.handleMouseMove(e),
@@ -915,6 +950,8 @@ class TeachingToolsManager {
     }
     
     showModal() {
+        this.ensureImagesLoaded?.();
+        this.ensureModalReady?.();
         const modal = this.modal || document.getElementById('teaching-tools-modal');
         if (!modal) {
             return;
@@ -975,6 +1012,7 @@ class TeachingToolsManager {
     }
     
     insertTools() {
+        this.ensureImagesLoaded?.();
         const canvasRect = this.canvas.getBoundingClientRect();
         const scaleFactor = this.canvasScaleFactor;
         // Get canvas dimensions in unscaled coordinates
@@ -1063,6 +1101,7 @@ class TeachingToolsManager {
     }
     
     addTool(tool) {
+        this.ensureInteractionListeners?.();
         tool.id = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         this.tools.push(tool);
         this.createToolOverlay(tool);

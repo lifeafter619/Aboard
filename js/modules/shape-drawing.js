@@ -62,9 +62,6 @@ class ShapeDrawingManager {
         // Canvas CSS scale factor (updated in syncPreviewCanvas)
         this.canvasCssScale = 1.0;
         
-        // Create preview canvas for live shape preview
-        this.createPreviewCanvas();
-        
         // Load saved settings
         this.loadSettings();
     }
@@ -129,6 +126,10 @@ class ShapeDrawingManager {
     }
     
     createPreviewCanvas() {
+        if (this.previewCanvas && this.previewCtx) {
+            return;
+        }
+
         // Create an overlay canvas for shape preview
         this.previewCanvas = document.createElement('canvas');
         this.previewCanvas.id = 'shape-preview-canvas';
@@ -150,8 +151,16 @@ class ShapeDrawingManager {
         this.cachedDpr = window.devicePixelRatio || 1;
         this.lastCanvasRect = null;
     }
+
+    ensurePreviewCanvas() {
+        if (!this.previewCanvas || !this.previewCtx) {
+            this.createPreviewCanvas();
+        }
+    }
     
     syncPreviewCanvas() {
+        this.ensurePreviewCanvas();
+
         // Sync preview canvas size with main canvas position and size on screen
         const rect = this.canvas.getBoundingClientRect();
         const dpr = this.cachedDpr;
@@ -209,6 +218,7 @@ class ShapeDrawingManager {
     }
     
     startDrawing(e) {
+        this.ensurePreviewCanvas();
         this.isDrawing = true;
         window.drawingBoard?.syncVectorPreviewState?.();
         // Store both screen coordinates (for preview) and canvas coordinates (for final drawing)
@@ -282,6 +292,10 @@ class ShapeDrawingManager {
     }
     
     clearPreview() {
+        if (!this.previewCanvas || !this.previewCtx) {
+            return;
+        }
+
         // Optimized clear: just clear the rect without resetting transform.
         // 
         // Coordinate system note:

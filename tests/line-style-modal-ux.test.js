@@ -12,6 +12,15 @@ function createClassList() {
     remove(...values) {
       values.forEach((value) => tokens.delete(value));
     },
+    toggle(value, force) {
+      const shouldAdd = force === undefined ? !tokens.has(value) : Boolean(force);
+      if (shouldAdd) {
+        tokens.add(value);
+      } else {
+        tokens.delete(value);
+      }
+      return shouldAdd;
+    },
     contains(value) {
       return tokens.has(value);
     }
@@ -84,6 +93,7 @@ function createCanvasElement(ownerDocument, id) {
 function createDocumentStub() {
   const elements = new Map();
   const selectors = new Map();
+  const selectorLists = new Map();
   const document = {
     activeElement: null,
     body: null,
@@ -92,6 +102,9 @@ function createDocumentStub() {
     },
     querySelector(selector) {
       return selectors.get(selector) || null;
+    },
+    querySelectorAll(selector) {
+      return selectorLists.get(selector) || [];
     },
     registerElement(element) {
       if (element?.id) {
@@ -102,12 +115,67 @@ function createDocumentStub() {
     setSelector(selector, element) {
       selectors.set(selector, element);
       return element;
+    },
+    setSelectorAll(selector, list) {
+      selectorLists.set(selector, list);
+      return list;
     }
   };
 
   document.body = createElement(document, 'body');
   document.body.insertAdjacentHTML = () => {};
   return document;
+}
+
+function registerLineStyleModalElements(document) {
+  const modal = document.registerElement(createElement(document, 'line-style-modal'));
+  const closeBtn = document.registerElement(createElement(document, 'line-style-modal-close'));
+  const applyBtn = document.registerElement(createElement(document, 'line-style-modal-apply'));
+  const previewContainer = document.registerElement(createElement(document, 'line-style-preview-container'));
+  const previewCanvas = document.registerElement(createCanvasElement(document, 'line-style-preview-canvas'));
+  const expandBtn = document.registerElement(createElement(document, 'preview-expand-btn'));
+  const settings = document.registerElement(createElement(document, 'modal-line-style-settings'));
+  const dashSetting = document.registerElement(createElement(document, 'modal-dash-density-setting'));
+  const waveSetting = document.registerElement(createElement(document, 'modal-wave-density-setting'));
+  const lineCountSetting = document.registerElement(createElement(document, 'modal-line-count-setting'));
+  const lineSpacingSetting = document.registerElement(createElement(document, 'modal-line-spacing-setting'));
+  const dashSlider = document.registerElement(createElement(document, 'modal-dash-density-slider'));
+  const dashValue = document.registerElement(createElement(document, 'modal-dash-density-value'));
+  const waveSlider = document.registerElement(createElement(document, 'modal-wave-density-slider'));
+  const waveValue = document.registerElement(createElement(document, 'modal-wave-density-value'));
+  const lineCountSlider = document.registerElement(createElement(document, 'modal-line-count-slider'));
+  const lineCountValue = document.registerElement(createElement(document, 'modal-line-count-value'));
+  const lineSpacingSlider = document.registerElement(createElement(document, 'modal-line-spacing-slider'));
+  const lineSpacingValue = document.registerElement(createElement(document, 'modal-line-spacing-value'));
+  const styleButtons = ['solid', 'dashed', 'dotted', 'wavy', 'multi'].map((style) => {
+    const button = createElement(document, `line-style-${style}-btn`);
+    button.dataset.modalLineStyle = style;
+    return button;
+  });
+
+  dashSlider.value = '50';
+  waveSlider.value = '10';
+  lineCountSlider.value = '2';
+  lineSpacingSlider.value = '10';
+
+  document.setSelectorAll('#modal-line-style-grid .line-style-type-btn', styleButtons);
+  document.setSelector('#modal-line-style-grid .line-style-type-btn.active', styleButtons[0]);
+  document.setSelector('#modal-line-style-grid .line-style-type-btn[data-modal-line-style="wavy"]', styleButtons[3]);
+
+  return {
+    modal,
+    closeBtn,
+    applyBtn,
+    previewContainer,
+    previewCanvas,
+    expandBtn,
+    settings,
+    dashSetting,
+    waveSetting,
+    lineCountSetting,
+    lineSpacingSetting,
+    styleButtons
+  };
 }
 
 function loadLineStyleModalClass() {
@@ -182,6 +250,9 @@ function testMainLineStyleDialogRestoresFocusOnEscape() {
     scheduleDialogFrame: proto.scheduleDialogFrame,
     configureDialog: proto.configureDialog,
     bindDialogDismissal: proto.bindDialogDismissal,
+    ensureModalReady() {
+      return modal;
+    },
     show: proto.show,
     hide: proto.hide
   };
@@ -207,6 +278,51 @@ function testMainLineStyleDialogRestoresFocusOnEscape() {
   assert.equal(escapeEvent.defaultPrevented, true, 'Escape should prevent default browser handling');
   assert.equal(modal.classList.contains('show'), false, 'Escape should close the line style dialog');
   assert.equal(document.activeElement, trigger, 'closing should restore focus to the opener');
+}
+
+function testLineStyleModalDefersDomUntilShown() {
+  const { document, LineStyleModal } = loadLineStyleModalClass();
+  let insertedCount = 0;
+  document.body.insertAdjacentHTML = () => {
+    insertedCount += 1;
+    registerLineStyleModalElements(document);
+  };
+
+  const manager = new LineStyleModal(
+    {
+      penLineStyle: 'solid',
+      penDashDensity: 50,
+      penMultiLineSpacing: 10,
+      penMultiLineCount: 2,
+      penSize: 5
+    },
+    {
+      lineStyle: 'solid',
+      dashDensity: 50,
+      waveDensity: 10,
+      multiLineSpacing: 10,
+      multiLineCount: 2,
+      drawingEngine: {
+        penSize: 5
+      }
+    }
+  );
+
+  assert.equal(insertedCount, 0, 'constructor should not insert the line style modal DOM');
+  assert.equal(document.getElementById('line-style-modal'), null, 'constructor should not create modal elements');
+  assert.equal(manager.previewCanvas, null, 'constructor should not request preview canvas references');
+
+  manager.show('pen');
+
+  assert.equal(insertedCount, 1, 'show should create the modal on first use');
+  assert.equal(manager.modal, document.getElementById('line-style-modal'));
+  assert.ok(manager.previewCanvas, 'show should initialize the preview canvas');
+  assert.equal(manager.modal.classList.contains('show'), true, 'show should reveal the lazily-created modal');
+
+  manager.hide();
+  manager.show('shape');
+
+  assert.equal(insertedCount, 1, 'subsequent show calls should reuse the same modal DOM');
 }
 
 function testExpandedPreviewDialogRestoresFocusOnEscape() {
@@ -277,6 +393,7 @@ function testExpandedPreviewDialogRestoresFocusOnEscape() {
 
 (function main() {
   testMainLineStyleDialogRestoresFocusOnEscape();
+  testLineStyleModalDefersDomUntilShown();
   testExpandedPreviewDialogRestoresFocusOnEscape();
   console.log('line-style-modal-ux.test: all assertions passed');
 })();

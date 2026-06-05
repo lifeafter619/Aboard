@@ -44,6 +44,7 @@ function createModernWindow(evalSpy) {
       callback();
     },
     eval: evalSpy,
+    navigator: { userAgent: 'Modern Test Browser' },
     i18n: { t: (key) => key }
   };
 }
@@ -112,6 +113,31 @@ function loadLegacyBrowserCheck(evalSpy) {
   };
 }
 
+function testIndexLoadsLegacyBrowserCheckBeforeModuleBootstrap() {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const legacyCheckIndex = html.indexOf('src="js/modules/browser-check.js"');
+  const moduleBootstrapIndex = html.indexOf('type="module" src="js/app/bootstrap.js"');
+
+  assert.notEqual(legacyCheckIndex, -1, 'index.html should load the legacy browser check before module startup');
+  assert.notEqual(moduleBootstrapIndex, -1, 'index.html should load the module bootstrap');
+  assert.ok(
+    legacyCheckIndex < moduleBootstrapIndex,
+    'legacy browser check should run before module parsing can fail in older browsers'
+  );
+}
+
+function testLegacyBrowserCheckUsesLegacyParseableSyntax() {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'js', 'modules', 'browser-check.js'),
+    'utf8'
+  );
+
+  assert.doesNotMatch(source, /\?\.|\?\?/, 'legacy browser check must avoid optional chaining and nullish coalescing');
+  assert.doesNotMatch(source, /=>/, 'legacy browser check must avoid arrow functions');
+  assert.doesNotMatch(source, /\b(?:class|const|let)\b/, 'legacy browser check must avoid ES2015-only declarations');
+  assert.doesNotMatch(source, /\bstatic\s+\w+/, 'legacy browser check must avoid class static method syntax');
+}
+
 function testInfraBrowserCheckAvoidsEvalAndDetectsMissingModernApis() {
   const BrowserCheck = loadInfraBrowserCheck();
   let evalCalls = 0;
@@ -166,8 +192,32 @@ function testLegacyBrowserCheckAvoidsEvalAndDetectsMissingModernApis() {
   );
 }
 
+function testLegacyBrowserCheckWarnsWhenModuleSyntaxIsTooOld() {
+  let warnings = null;
+  const evalSpy = () => {
+    throw new Error('eval should not run');
+  };
+  const { BrowserCheck, window } = loadLegacyBrowserCheck(evalSpy);
+  window.navigator.userAgent = 'Mozilla/5.0 AppleWebKit/537.36 Chrome/79.0.3945.130 Safari/537.36';
+
+  BrowserCheck.showWarning = (missingFeatures) => {
+    warnings = missingFeatures;
+  };
+
+  BrowserCheck.init();
+
+  assert.equal(
+    Array.from(warnings, (warning) => warning.key).join(','),
+    'modernSyntax',
+    'legacy browser check should warn before module startup on browsers without optional chaining syntax support'
+  );
+}
+
 (function main() {
+  testIndexLoadsLegacyBrowserCheckBeforeModuleBootstrap();
+  testLegacyBrowserCheckUsesLegacyParseableSyntax();
   testInfraBrowserCheckAvoidsEvalAndDetectsMissingModernApis();
   testLegacyBrowserCheckAvoidsEvalAndDetectsMissingModernApis();
+  testLegacyBrowserCheckWarnsWhenModuleSyntaxIsTooOld();
   console.log('browser-check-no-eval.test: all assertions passed');
 })();

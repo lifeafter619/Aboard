@@ -1,0 +1,247 @@
+/* Confirm modal */
+.confirm-modal-content {
+    max-width: 400px;
+    width: min(400px, 100%);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.confirm-modal-content .modal-body {
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.confirm-message {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.confirm-message.compact {
+    margin-bottom: 0;
+}
+
+.app-confirm-options {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.app-confirm-options.show {
+    display: flex;
+}
+
+.app-confirm-input-container {
+    display: none;
+}
+
+.app-confirm-input-container.show {
+    display: block;
+}
+
+.app-confirm-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-confirm-input-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+.app-confirm-input {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid #d7d7dc;
+    border-radius: 10px;
+    font-size: 15px;
+    color: #222;
+    background: #fff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-confirm-input:focus {
+    outline: none;
+    border-color: #007aff;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.16);
+}
+
+.app-confirm-option {
+    align-items: flex-start;
+    padding: 10px 12px;
+    border: 1px solid #e5e5ea;
+    border-radius: 10px;
+    background: #fafafa;
+}
+
+.app-confirm-footer {
+    display: none;
+    margin-bottom: 0;
+    font-size: 14px;
+}
+
+.app-confirm-footer.show {
+    display: block;
+}
+
+.confirm-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.confirm-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cancel-btn {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.cancel-btn:hover {
+    background-color: #e0e0e0;
+}
+
+.ok-btn {
+    background-color: #FF3B30;
+    color: #ffffff;
+}
+
+.ok-btn:hover {
+    background-color: #E02020;
+}
+
+/* Announcement modal */
+.announcement-modal-content {
+    max-width: 500px;
+    width: min(500px, calc(100vw - 24px));
+    min-width: min(320px, calc(100vw - 24px));
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.announcement-modal-content .modal-body {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.announcement-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    font-size: 15px;
+    color: #333;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    overflow-y: auto;
+}
+
+.announcement-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid #eee;
+    background-color: #ffffff;
+    flex-shrink: 0;
+}
+
+.announcement-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.announcement-btn.ok-btn {
+    background-color: var(--theme-color);
+    color: #ffffff;
+}
+
+.announcement-btn.ok-btn:hover {
+    opacity: 0.9;
+}
+
+.announcement-btn.no-show-btn {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.announcement-btn.no-show-btn:hover {
+    background-color: #e0e0e0;
+}
+
+.announcement-install-btn {
+    margin-right: auto;
+}
+
+#pwa-announcement-status {
+    flex-shrink: 0;
+}
+
+.settings-announcement-content {
+    font-size: 15px;
+    color: #333;
+    line-height: 1.8;
+    white-space: pre-wrap;
+}
+
+.announcement-info {
+    padding: 16px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+    .announcement-modal-content {
+        min-width: 0;
+        width: calc(100vw - 24px);
+        max-width: calc(100vw - 24px);
+    }
+}
+
+@media (max-height: 720px), (max-width: 480px) {
+    .announcement-content,
+    .settings-announcement-content {
+        font-size: 14px;
+        line-height: 1.65;
+    }
+
+    .announcement-buttons {
+        gap: 10px;
+        padding-top: 12px;
+    }
+
+    .announcement-btn {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .announcement-modal-content {
+        min-width: 0;
+        width: calc(100vw - 24px);
+        max-width: calc(100vw - 24px);
+    }
+}

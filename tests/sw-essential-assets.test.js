@@ -108,6 +108,10 @@ function testCorePrecacheExcludesLargeLazyAssets() {
   const largeLazyAssets = [
     'js/libs/xlsx.full.min.js',
     'js/libs/fflate.min.js',
+    'img/ruler_1.png',
+    'img/ruler_2.png',
+    'img/set_square_1.png',
+    'img/set_square_2.png',
     'sounds/class-bell.MP3',
     'sounds/exam-end.MP3',
     'sounds/gentle-alarm.MP3',
@@ -122,10 +126,40 @@ function testCorePrecacheExcludesLargeLazyAssets() {
   );
 }
 
+function testCorePrecacheCoversIndexClassicScripts() {
+  const html = readText('index.html');
+  const coreAssets = readCoreAssets();
+  const scriptSources = [...html.matchAll(/<script\s+(?![^>]*type=["']module["'])[^>]*src=["']([^"']+)["']/gi)]
+    .map(([, assetPath]) => assetPath.replace(/^\.\//, ''));
+  const missingAssets = scriptSources.filter((assetPath) => !coreAssets.has(assetPath));
+
+  assert.deepEqual(
+    missingAssets,
+    [],
+    `CORE_ASSETS is missing classic script entries used by index.html: ${missingAssets.join(', ')}`
+  );
+}
+
+function testCorePrecacheCoversIndexStylesheets() {
+  const html = readText('index.html');
+  const coreAssets = readCoreAssets();
+  const stylesheetSources = [...html.matchAll(/<link\s+[^>]*(?:rel=["']stylesheet["'][^>]*href=["']([^"']+)["']|href=["']([^"']+)["'][^>]*rel=["']stylesheet["'])/gi)]
+    .map(([, hrefAfterRel, hrefBeforeRel]) => (hrefAfterRel || hrefBeforeRel).replace(/^\.\//, ''));
+  const missingAssets = stylesheetSources.filter((assetPath) => !coreAssets.has(assetPath));
+
+  assert.deepEqual(
+    missingAssets,
+    [],
+    `CORE_ASSETS is missing stylesheet entries used by index.html: ${missingAssets.join(', ')}`
+  );
+}
+
 function run() {
   testEssentialCacheCoversOfflineBootstrapImportClosure();
   testEssentialCacheCoversVisibleCoreLegacyStartupAssets();
   testCorePrecacheExcludesLargeLazyAssets();
+  testCorePrecacheCoversIndexClassicScripts();
+  testCorePrecacheCoversIndexStylesheets();
   console.log('sw-essential-assets.test: all assertions passed');
 }
 

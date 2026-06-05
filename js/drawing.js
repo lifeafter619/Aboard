@@ -111,7 +111,6 @@ class DrawingEngine {
         this.liveEraserPreviewPendingDraw = false;
         this.liveEraserPreviewRafId = null;
         this.liveEraserPreviewMaskId = 'vector-scene-live-eraser-mask';
-        this.createLivePreviewCanvas();
     }
 
     cancelPendingViewStatePersistence() {
@@ -163,6 +162,10 @@ class DrawingEngine {
     }
 
     createLivePreviewCanvas() {
+        if (this.livePreviewCanvas && this.livePreviewCtx) {
+            return;
+        }
+
         this.livePreviewCanvas = document.createElement('canvas');
         this.livePreviewCanvas.id = 'pen-live-preview-canvas';
         this.livePreviewCanvas.style.position = 'fixed';
@@ -179,14 +182,26 @@ class DrawingEngine {
         });
     }
 
+    ensureLivePreviewCanvas() {
+        if (!this.livePreviewCanvas || !this.livePreviewCtx) {
+            this.createLivePreviewCanvas();
+        }
+    }
+
     canUseLiveStrokePreview() {
-        return this.currentTool === 'pen' && !!this.livePreviewCanvas && !!this.livePreviewCtx;
+        return this.currentTool === 'pen';
     }
 
     shouldUseLiveStrokePreview() {
-        return this.isDrawing &&
+        const shouldUse = this.isDrawing &&
             this.canUseLiveStrokePreview() &&
             !!window.drawingBoard?.shouldShowLiveStrokePreview?.();
+
+        if (shouldUse) {
+            this.ensureLivePreviewCanvas();
+        }
+
+        return shouldUse && !!this.livePreviewCanvas && !!this.livePreviewCtx;
     }
 
     canUseLiveEraserPreview() {

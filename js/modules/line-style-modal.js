@@ -28,10 +28,9 @@ class LineStyleModal {
         
         // Constants for preview overflow detection
         this.PREVIEW_OVERFLOW_HEIGHT_THRESHOLD = 60;
-        
-        // Create modal elements
-        this.createModal();
-        this.setupEventListeners();
+
+        this.modal = null;
+        this.arrowType = 'none';
     }
     
     // Helper method to check if arrow drawing should be used
@@ -48,6 +47,18 @@ class LineStyleModal {
     }
     
     createModal() {
+        const existingModal = document.getElementById('line-style-modal');
+        if (existingModal) {
+            this.modal = existingModal;
+            this.previewCanvas = document.getElementById('line-style-preview-canvas');
+            this.previewCtx = this.previewCanvas?.getContext?.('2d') || null;
+            this.configureDialog(this.modal, {
+                labelledBy: 'line-style-modal-title',
+                describedBy: 'line-style-preview-container'
+            });
+            return;
+        }
+
         const closeLabel = window.i18n?.t?.('common.close') || 'Close';
         const expandPreviewLabel = window.i18n?.t?.('settings.general.expandPreview') || 'Expand';
         const modalHTML = `
@@ -165,6 +176,14 @@ class LineStyleModal {
         this.arrowType = 'none';
     }
 
+    ensureModalReady() {
+        if (!this.modal || !document.getElementById('line-style-modal')) {
+            this.createModal();
+        }
+        this.setupEventListeners();
+        return this.modal;
+    }
+
     getFocusableElement() {
         return document.activeElement && document.activeElement !== document.body
             ? document.activeElement
@@ -218,17 +237,21 @@ class LineStyleModal {
     }
     
     setupEventListeners() {
+        if (!this.modal) {
+            return;
+        }
+
         this.bindDialogDismissal(this.modal, () => {
             this.hide();
         }, 'lineStyleBindingsInitialized');
 
         // Close button
-        document.getElementById('line-style-modal-close').addEventListener('click', () => {
+        document.getElementById('line-style-modal-close')?.addEventListener('click', () => {
             this.hide();
         });
         
         // Apply button
-        document.getElementById('line-style-modal-apply').addEventListener('click', () => {
+        document.getElementById('line-style-modal-apply')?.addEventListener('click', () => {
             this.applySettings();
             this.hide();
         });
@@ -244,33 +267,34 @@ class LineStyleModal {
         });
         
         // Slider event listeners
-        document.getElementById('modal-dash-density-slider').addEventListener('input', (e) => {
+        document.getElementById('modal-dash-density-slider')?.addEventListener('input', (e) => {
             document.getElementById('modal-dash-density-value').textContent = e.target.value;
             this.updatePreview();
         });
         
-        document.getElementById('modal-wave-density-slider').addEventListener('input', (e) => {
+        document.getElementById('modal-wave-density-slider')?.addEventListener('input', (e) => {
             document.getElementById('modal-wave-density-value').textContent = e.target.value;
             this.updatePreview();
         });
         
-        document.getElementById('modal-line-count-slider').addEventListener('input', (e) => {
+        document.getElementById('modal-line-count-slider')?.addEventListener('input', (e) => {
             document.getElementById('modal-line-count-value').textContent = e.target.value;
             this.updatePreview();
         });
         
-        document.getElementById('modal-line-spacing-slider').addEventListener('input', (e) => {
+        document.getElementById('modal-line-spacing-slider')?.addEventListener('input', (e) => {
             document.getElementById('modal-line-spacing-value').textContent = e.target.value;
             this.updatePreview();
         });
         
         // Preview expand button
-        document.getElementById('preview-expand-btn').addEventListener('click', () => {
+        document.getElementById('preview-expand-btn')?.addEventListener('click', () => {
             this.showExpandedPreview();
         });
     }
     
     show(mode = 'pen') {
+        this.ensureModalReady();
         this.currentMode = mode;
         
         // Hide wavy line option for pen mode (pen doesn't support wavy)
@@ -301,6 +325,10 @@ class LineStyleModal {
     }
     
     hide() {
+        if (!this.modal) {
+            return;
+        }
+
         this.modal.classList.remove('show');
         const restoreFocusTarget = this.mainModalPreviouslyFocusedElement;
         this.mainModalPreviouslyFocusedElement = null;

@@ -21,7 +21,9 @@ const VIEWPORTS = [
   { name: 'tablet-portrait', width: 768, height: 1024, mobile: false, deviceScaleFactor: 1 },
   { name: 'small-window', width: 620, height: 375, mobile: false, deviceScaleFactor: 1 },
   { name: 'classroom-laptop', width: 1366, height: 768, mobile: false, deviceScaleFactor: 1 },
-  { name: 'full-hd', width: 1920, height: 1080, mobile: false, deviceScaleFactor: 1 }
+  { name: 'full-hd', width: 1920, height: 1080, mobile: false, deviceScaleFactor: 1 },
+  { name: 'ultrawide-classroom', width: 3440, height: 1440, mobile: false, deviceScaleFactor: 1 },
+  { name: 'large-4k', width: 3840, height: 2160, mobile: false, deviceScaleFactor: 1 }
 ];
 
 const STATES = [

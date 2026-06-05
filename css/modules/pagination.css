@@ -1,0 +1,91 @@
+/* Pagination controls */
+#pagination-controls {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 1000;
+    display: none;
+    cursor: move;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#pagination-controls.show {
+    display: flex;
+}
+
+#pagination-controls.top-left {
+    right: auto;
+    left: 20px;
+}
+
+#pagination-controls.bottom-right {
+    top: auto;
+    bottom: 170px;  /* Position above the history controls */
+}
+
+#pagination-controls.bottom-left {
+    top: auto;
+    bottom: 170px;  /* Position above the history controls */
+    right: auto;
+    left: 20px;
+}
+
+.page-nav-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 7px;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    color: #333;
+}
+
+.page-nav-btn:hover {
+    background-color: #e0e0e0;
+}
+
+.page-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.page-input {
+    width: 48px;
+    height: 40px;
+    border: 1px solid #ddd;
+    border-radius: 7px;
+    background-color: #ffffff;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    padding: 0 8px;
+}
+
+.page-input:focus {
+    outline: none;
+    border-color: var(--theme-color);
+}
+
+#page-total {
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+}
+
+@media (max-width: 480px) {
+    #pagination-controls {
+        top: 112px;
+        right: 8px;
+        max-width: calc(100vw - 16px);
+    }
+}

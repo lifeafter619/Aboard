@@ -36,6 +36,53 @@
     overflow-x: hidden;
 }
 
+#time-display-area.vertical .config-group {
+    max-width: 100%;
+}
+
+#time-display-area.vertical label {
+    font-size: 11px;
+}
+
+#time-display-area .config-group label {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+    display: block;
+    margin-bottom: 8px;
+}
+
+/* Panel drag handle - a visible area for dragging panels */
+.panel-drag-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 40px; /* Leave room for close button */
+    height: 24px;
+    cursor: move;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.02), transparent);
+    border-radius: 16px 0 0 0;
+}
+
+.panel-drag-handle .drag-handle-dots {
+    color: #999;
+    font-size: 12px;
+    letter-spacing: 2px;
+    user-select: none;
+    pointer-events: none;
+}
+
+.panel-drag-handle:hover {
+    background: linear-gradient(to bottom, rgba(0,0,0,0.05), transparent);
+}
+
+.panel-drag-handle:hover .drag-handle-dots {
+    color: #666;
+}
+
 /* Time display area specific checkbox styling - narrower width */
 #time-display-area .checkbox-label {
     max-width: fit-content;
