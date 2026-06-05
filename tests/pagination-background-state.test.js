@@ -66,6 +66,7 @@ function loadPaginationRuntime(localStorage) {
     path.join(__dirname, '..', 'js', 'modules', 'pagination-runtime.js'),
     'utf8'
   );
+  const loadedImages = [];
 
   const context = {
     window: {
@@ -88,7 +89,16 @@ function loadPaginationRuntime(localStorage) {
     Map,
     Date,
     Promise,
-    Image: class {}
+    Image: class FakeImage {
+      set src(value) {
+        this._src = value;
+        loadedImages.push(this);
+      }
+
+      get src() {
+        return this._src;
+      }
+    }
   };
 
   context.globalThis = context;
@@ -99,7 +109,9 @@ function loadPaginationRuntime(localStorage) {
 
   vm.createContext(context);
   vm.runInContext(source, context, { filename: 'pagination-runtime.js' });
-  return context.window.AboardPaginationRuntime;
+  const runtime = context.window.AboardPaginationRuntime;
+  runtime.__loadedImages = loadedImages;
+  return runtime;
 }
 
 function createInheritanceBoard(runtime, localStorage) {
@@ -230,6 +242,12 @@ function createGifResetBoard(runtime, localStorage) {
     updateBackgroundUI() {},
     insertTextManager: null,
     localStorage,
+    loadPage(pageNumber) {
+      return runtime.loadPage(this, pageNumber);
+    },
+    savePageBackground(pageNumber) {
+      return runtime.savePageBackground(this, pageNumber);
+    },
     restorePageBackground(pageNumber) {
       return runtime.restorePageBackground(this, pageNumber);
     }
@@ -324,9 +342,49 @@ function testRestorePageBackgroundClearsPausedGifRuntimeState() {
   );
 }
 
-(function main() {
+async function testGoToPageAsyncWaitsForBackgroundImageLoad() {
+  const localStorage = createStorageStub();
+  const runtime = loadPaginationRuntime(localStorage);
+  const board = createGifResetBoard(runtime, localStorage);
+  let drawCount = 0;
+  let uiUpdateCount = 0;
+
+  board.backgroundManager.drawBackground = () => {
+    drawCount += 1;
+  };
+  board.updateBackgroundUI = () => {
+    uiUpdateCount += 1;
+  };
+
+  const pageReady = runtime.goToPageAsync(board, 2);
+  let resolved = false;
+  pageReady.then(() => {
+    resolved = true;
+  });
+
+  assert.equal(board.currentPage, 2);
+  assert.equal(runtime.__loadedImages.length, 1, 'page switch should start loading the page image');
+  await Promise.resolve();
+  assert.equal(resolved, false, 'page readiness should wait for the background image load event');
+  assert.equal(drawCount, 0, 'background should not draw until the image is loaded');
+
+  runtime.__loadedImages[0].onload();
+  await pageReady;
+
+  assert.equal(resolved, true);
+  assert.equal(drawCount, 1, 'background should draw after image load');
+  assert.equal(uiUpdateCount, 1, 'background controls should update after the image-backed state is ready');
+}
+
+async function main() {
   testAddPageSnapshotsInheritedBackground();
   testGoToPageSnapshotsInheritedBackgroundForIntermediatePages();
   testRestorePageBackgroundClearsPausedGifRuntimeState();
+  await testGoToPageAsyncWaitsForBackgroundImageLoad();
   console.log('pagination-background-state.test: all assertions passed');
-})();
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
