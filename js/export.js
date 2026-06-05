@@ -327,10 +327,6 @@ class ExportManager {
         this.exportModal.classList.remove('show');
     }
 
-    sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
     loadImage(source) {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -469,6 +465,17 @@ class ExportManager {
         await this.renderCurrentPageToCanvas(tempCanvas, tempCtx);
         this.downloadCanvas(tempCanvas, filename, format, quality);
     }
+
+    async goToExportPage(pageNum) {
+        if (typeof this.drawingBoard?.goToPageAsync === 'function') {
+            await this.drawingBoard.goToPageAsync(pageNum);
+            return;
+        }
+
+        if (this.drawingBoard?.currentPage !== pageNum) {
+            this.drawingBoard?.goToPage?.(pageNum);
+        }
+    }
     
     async exportAllPages(baseFilename, format, quality) {
         if (!this.drawingBoard || !this.drawingBoard.pages || this.drawingBoard.pages.length === 0) {
@@ -479,16 +486,12 @@ class ExportManager {
         const currentPage = this.drawingBoard.currentPage;
         try {
             for (let pageNum = 1; pageNum <= this.drawingBoard.pages.length; pageNum++) {
-                if (this.drawingBoard.currentPage !== pageNum) {
-                    this.drawingBoard.goToPage(pageNum);
-                }
-                await this.sleep(160);
+                await this.goToExportPage(pageNum);
                 await this.exportSinglePage(`${baseFilename}-${pageNum}`, format, quality);
-                await this.sleep(80);
             }
         } finally {
             if (currentPage !== this.drawingBoard.currentPage) {
-                this.drawingBoard.goToPage(currentPage);
+                await this.goToExportPage(currentPage);
             }
         }
     }
@@ -511,16 +514,12 @@ class ExportManager {
 
         try {
             for (const pageNum of selectedPages) {
-                if (this.drawingBoard.currentPage !== pageNum) {
-                    this.drawingBoard.goToPage(pageNum);
-                }
-                await this.sleep(160);
+                await this.goToExportPage(pageNum);
                 await this.exportSinglePage(`${baseFilename}-${pageNum}`, format, quality);
-                await this.sleep(80);
             }
         } finally {
             if (currentPage !== this.drawingBoard.currentPage) {
-                this.drawingBoard.goToPage(currentPage);
+                await this.goToExportPage(currentPage);
             }
         }
     }

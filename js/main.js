@@ -6259,6 +6259,13 @@ class DrawingBoard {
         this.loadPage(this.currentPage);
         this.updatePaginationUI();
     }
+
+    async goToPageAsync(pageNumber) {
+        this.goToPage(pageNumber);
+        if (this._pendingBackgroundPromise) {
+            await this._pendingBackgroundPromise;
+        }
+    }
     
     loadPage(pageNumber) {
         if (pageNumber > 0 && pageNumber <= this.pages.length && this.pages[pageNumber - 1]) {
@@ -6272,8 +6279,8 @@ class DrawingBoard {
         }
         this.historyManager.saveState();
         
-        // Restore page-specific background if exists
-        this.restorePageBackground(pageNumber);
+        // Restore page-specific background if exists; async callers can await it.
+        this._pendingBackgroundPromise = Promise.resolve(this.restorePageBackground(pageNumber));
         this.drawingEngine.updateOffCanvasImageMirrors(this.insertTextManager?.textObjects || []);
 
         // Save session state (current page change)
@@ -6304,7 +6311,8 @@ class DrawingBoard {
     }
     
     restorePageBackground(pageNumber) {
-        // Restore background settings for this page
+        // Restore background settings for this page.
+        // Returns a Promise that resolves after async image backgrounds render.
         if (this.pageBackgrounds[pageNumber]) {
             const bg = this.pageBackgrounds[pageNumber];
             this.backgroundManager.backgroundColor = bg.backgroundColor;
@@ -6329,23 +6337,31 @@ class DrawingBoard {
 
             // Load image if exists
             if (bg.backgroundImageData && bg.backgroundPattern === 'image') {
-                const img = new Image();
-                img.onload = () => {
-                    this.backgroundManager.backgroundImage = img;
-                    this.backgroundManager.drawBackground();
-                };
-                img.src = bg.backgroundImageData;
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        this.backgroundManager.backgroundImage = img;
+                        this.backgroundManager.drawBackground();
+                        this.updateBackgroundUI();
+                        resolve();
+                    };
+                    img.onerror = () => {
+                        this.updateBackgroundUI();
+                        resolve();
+                    };
+                    img.src = bg.backgroundImageData;
+                });
             } else {
                 this.backgroundManager.drawBackground();
+                this.updateBackgroundUI();
             }
-            
-            // Update UI to reflect current page background
-            this.updateBackgroundUI();
         } else {
             // Use default/global background settings
             this.backgroundManager.drawBackground();
             this.updateBackgroundUI();
         }
+
+        return Promise.resolve();
     }
 
     renderCoordinatePlotList(currentPattern) {
