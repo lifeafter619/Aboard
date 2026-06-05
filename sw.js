@@ -3,7 +3,7 @@
 // resources from older releases could survive a core-cache rotation and
 // serve stale JS/CSS alongside new code. Keeping a single SW_VERSION
 // guarantees activate() clears both via the existing whitelist check.
-const SW_VERSION = '2.4.3';
+const SW_VERSION = '2.4.4';
 const CORE_CACHE_NAME = `aboard-core-${SW_VERSION}`;
 const RUNTIME_CACHE_NAME = `aboard-runtime-${SW_VERSION}`;
 const RUNTIME_CACHE_MAX_ENTRIES = 24;

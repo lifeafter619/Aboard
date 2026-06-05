@@ -8,7 +8,7 @@
 
 [![Demo](https://img.shields.io/badge/Demo-Online-22c55e?style=for-the-badge&labelColor=111827&logo=googlechrome&logoColor=fff)](https://aboard.pp.ua)
 <!-- version-badge:start -->
-[![Version](https://img.shields.io/badge/Version-2.4.3-f59e0b?style=for-the-badge&labelColor=111827)](version.txt)
+[![Version](https://img.shields.io/badge/Version-2.4.4-f59e0b?style=for-the-badge&labelColor=111827)](version.txt)
 <!-- version-badge:end -->
 [![License](https://img.shields.io/badge/License-MIT-3b82f6?style=for-the-badge&labelColor=111827&logo=open-source-initiative&logoColor=fff)](LICENSE)
 [![PWA](https://img.shields.io/badge/PWA-Ready-8b5cf6?style=for-the-badge&labelColor=111827&logo=pwa&logoColor=fff)](manifest.json)
