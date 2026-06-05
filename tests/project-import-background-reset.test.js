@@ -579,6 +579,26 @@ async function testOversizedProjectImportIsRejectedBeforeZipLibraryLoads() {
   assert.equal(zipLibraryLoaded, false, 'oversized project imports should be rejected before loading the ZIP library');
 }
 
+async function testOversizedLegacyProjectImportIsRejectedBeforeCompatLoads() {
+  const { ProjectManager, paginationRuntime } = loadProjectImportRuntime();
+  const board = createBoard(paginationRuntime);
+  board.settingsManager.legacyProjectImportEnabled = true;
+  const manager = new ProjectManager(board);
+  let legacyCompatLoaded = false;
+  manager.ensureLegacyCompat = async () => {
+    legacyCompatLoaded = true;
+    throw new Error('legacy compatibility should not load for oversized files');
+  };
+
+  const result = await manager.importProject({
+    name: 'too-large.aboard',
+    size: 101 * 1024 * 1024
+  });
+
+  assert.equal(result, false, 'oversized legacy imports should fail gracefully');
+  assert.equal(legacyCompatLoaded, false, 'oversized legacy imports should be rejected before loading legacy compatibility');
+}
+
 function testProjectPackagePathValidationRejectsUnsafePaths() {
   const { ProjectManager, paginationRuntime } = loadProjectImportRuntime();
   const board = createBoard(paginationRuntime);
@@ -736,6 +756,7 @@ async function testProjectPackageHelpersIgnoreMalformedCollections() {
   await testGlobalBackgroundImportClearsPausedGifRuntimeState();
   await testImportStillRestoresStateWhenLocalStorageIsBlocked();
   await testOversizedProjectImportIsRejectedBeforeZipLibraryLoads();
+  await testOversizedLegacyProjectImportIsRejectedBeforeCompatLoads();
   testProjectPackagePathValidationRejectsUnsafePaths();
   testProjectPackagePageLimitRejectsUnboundedImports();
   await testProjectPackageRejectsOutOfRangePageIndexes();

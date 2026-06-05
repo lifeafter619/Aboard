@@ -207,7 +207,8 @@ function createDocumentStub() {
 function loadTimerManagerPrototype(document, {
   windowOverrides = {},
   localStorage,
-  FileReader
+  FileReader,
+  fileValidation
 } = {}) {
   const sandboxConsole = {
     log() {},
@@ -254,7 +255,8 @@ function loadTimerManagerPrototype(document, {
       addEventListener() {},
       removeEventListener() {},
       innerWidth: 1280,
-      innerHeight: 720
+      innerHeight: 720,
+      AboardFileValidation: fileValidation
     },
     document,
     localStorage: localStorage || {
@@ -279,6 +281,20 @@ function loadTimerManagerPrototype(document, {
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox, { filename: 'timer.js' });
   return sandbox.window.__TimerManager.prototype;
+}
+
+function createRejectingFileValidation(toasts) {
+  return {
+    validateAudioFile(file) {
+      if (file?.size > 10) {
+        throw new Error('Selected audio file is too large.');
+      }
+    },
+    showValidationError(error, { toast } = {}) {
+      (toast || { show() {} }).show(error.message, 'error');
+      toasts.push(error.message);
+    }
+  };
 }
 
 function testCustomSoundRowsUseSeparateActionButtons() {
@@ -454,10 +470,58 @@ function testRemoveCustomSoundKeepsExistingEntryWhenStorageWriteFails() {
   );
 }
 
+function testOversizedCustomSoundIsRejectedBeforeFileReaderRuns() {
+  const document = createDocumentStub();
+  const toasts = [];
+  let readCalls = 0;
+  const proto = loadTimerManagerPrototype(document, {
+    fileValidation: createRejectingFileValidation(toasts),
+    windowOverrides: {
+      toastManager: {
+        show(message, type) {
+          toasts.push(`${type}:${message}`);
+        }
+      }
+    },
+    FileReader: class FakeFileReader {
+      readAsDataURL() {
+        readCalls += 1;
+      }
+    }
+  });
+
+  let renderCalls = 0;
+  const manager = {
+    customSounds: [],
+    saveCustomSounds(customSounds) {
+      this.customSounds = customSounds;
+      return true;
+    },
+    renderCustomSounds() {
+      renderCalls += 1;
+    }
+  };
+
+  proto.addCustomSound.call(manager, {
+    name: 'huge-alarm.mp3',
+    type: 'audio/mpeg',
+    size: 11
+  });
+
+  assert.equal(readCalls, 0, 'oversized custom sounds should be rejected before FileReader reads them');
+  assert.equal(manager.customSounds.length, 0, 'oversized custom sounds should not be added to memory');
+  assert.equal(renderCalls, 0, 'oversized custom sounds should not repaint the custom sound list');
+  assert.ok(
+    toasts.some((entry) => entry.includes('Selected audio file is too large.')),
+    'oversized custom sounds should show a validation error'
+  );
+}
+
 function main() {
   testCustomSoundRowsUseSeparateActionButtons();
   testAddCustomSoundDoesNotMutateUiWhenStorageWriteFails();
   testRemoveCustomSoundKeepsExistingEntryWhenStorageWriteFails();
+  testOversizedCustomSoundIsRejectedBeforeFileReaderRuns();
   console.log('timer-custom-sound-list-ux.test: all assertions passed');
 }
 

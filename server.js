@@ -31,7 +31,10 @@ const MIME_TYPES = {
 
 const SECURITY_HEADERS = Object.freeze({
     'X-Content-Type-Options': 'nosniff',
-    'Referrer-Policy': 'strict-origin-when-cross-origin'
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Content-Security-Policy': "object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+    'X-Frame-Options': 'SAMEORIGIN'
 });
 
 function withSecurityHeaders(headers = {}) {

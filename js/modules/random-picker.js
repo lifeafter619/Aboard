@@ -857,6 +857,14 @@ class RandomPickerManager {
     }
 
     async importFile(file) {
+        const validation = window.AboardFileValidation;
+        try {
+            validation?.validateSpreadsheetFile?.(file);
+        } catch (error) {
+            validation?.showValidationError?.(error, { dialog: window.appDialog });
+            return;
+        }
+
         if (!window.XLSX) {
             try {
                 if (window.ScriptLoader) {

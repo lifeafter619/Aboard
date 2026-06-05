@@ -242,6 +242,15 @@ class InsertImageManager {
     }
 
     loadImage(file) {
+        const validation = window.AboardFileValidation;
+        const toast = window.drawingBoard?.settingsManager?.toastManager || window.toastManager;
+        try {
+            validation?.validateImageFile?.(file);
+        } catch (error) {
+            validation?.showValidationError?.(error, { toast, dialog: window.appDialog });
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = (event) => {
             const img = new Image();
@@ -257,7 +266,6 @@ class InsertImageManager {
         reader.onerror = () => {
             console.warn('Failed to read image file:', reader.error);
             const msg = window.i18n?.t?.('errors.fileReadFailed') || 'Failed to read the selected file.';
-            const toast = window.drawingBoard?.settingsManager?.toastManager || window.toastManager;
             toast?.show?.(msg, 'error');
         };
         reader.readAsDataURL(file);

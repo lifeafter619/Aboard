@@ -1,5 +1,6 @@
 export const VISIBLE_CORE_SERVICE_SCRIPTS = [
-  'js/modules/i18n.js'
+  'js/modules/i18n.js',
+  'js/modules/file-validation.js'
 ];
 
 export const POST_VISIBLE_SERVICE_SCRIPTS = [

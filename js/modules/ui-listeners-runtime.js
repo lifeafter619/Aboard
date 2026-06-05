@@ -537,6 +537,15 @@ function setupBackgroundToolConfigListeners() {
         bindIfPresent(document.getElementById('bg-image-upload'), 'change', (e) => {
             const file = e.target.files[0];
             if (file) {
+                const validation = window.AboardFileValidation;
+                const toast = this.settingsManager?.toastManager || window.toastManager;
+                try {
+                    validation?.validateImageFile?.(file);
+                } catch (error) {
+                    validation?.showValidationError?.(error, { toast, dialog: window.appDialog });
+                    e.target.value = '';
+                    return;
+                }
                 const reader = new FileReader();
                 reader.onload = async (event) => {
                     const imageData = event.target.result;
@@ -560,7 +569,6 @@ function setupBackgroundToolConfigListeners() {
                 reader.onerror = () => {
                     console.warn('Failed to read background image file:', reader.error);
                     const msg = window.i18n?.t?.('errors.fileReadFailed') || 'Failed to read the selected file.';
-                    const toast = this.settingsManager?.toastManager || window.toastManager;
                     toast?.show?.(msg, 'error');
                 };
                 reader.readAsDataURL(file);

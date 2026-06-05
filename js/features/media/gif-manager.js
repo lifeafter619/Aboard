@@ -72,6 +72,19 @@ export class GifManager {
   }
 
   addFloatingGif(fileOrUrl, options = {}) {
+    const FileConstructor = this.win.File || (typeof File !== 'undefined' ? File : null);
+    const isFileInput = Boolean(FileConstructor && fileOrUrl instanceof FileConstructor);
+    if (isFileInput) {
+      const validation = this.win.AboardFileValidation;
+      const toast = this.win.drawingBoard?.settingsManager?.toastManager || this.win.toastManager;
+      try {
+        validation?.validateGifFile?.(fileOrUrl);
+      } catch (error) {
+        validation?.showValidationError?.(error, { toast, dialog: this.win.appDialog });
+        return null;
+      }
+    }
+
     const id = `gif-${this.nextId++}`;
     const container = this.doc.createElement('div');
     container.id = id;
@@ -95,7 +108,7 @@ export class GifManager {
     img.style.display = 'block';
 
     let src = '';
-    if (fileOrUrl instanceof File) {
+    if (isFileInput) {
       const reader = new FileReader();
       reader.onload = (event) => {
         img.src = event.target.result;

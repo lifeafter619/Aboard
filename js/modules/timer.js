@@ -1401,6 +1401,15 @@ class TimerManager {
     }
     
     addCustomSound(file) {
+        const validation = window.AboardFileValidation;
+        const toast = window.drawingBoard?.settingsManager?.toastManager || window.toastManager;
+        try {
+            validation?.validateAudioFile?.(file);
+        } catch (error) {
+            validation?.showValidationError?.(error, { toast, dialog: window.appDialog });
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = (e) => {
             const dataUrl = e.target.result;
@@ -1420,7 +1429,6 @@ class TimerManager {
         reader.onerror = () => {
             console.warn('Failed to read custom sound file:', reader.error);
             const msg = getTimerText('errors.fileReadFailed', 'Failed to read the selected file.');
-            const toast = window.drawingBoard?.settingsManager?.toastManager || window.toastManager;
             try {
                 toast?.show?.(msg, 'error');
             } catch (toastError) {

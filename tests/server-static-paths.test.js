@@ -3,6 +3,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
+const EXPECTED_SECURITY_HEADERS = Object.freeze({
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Content-Security-Policy': "object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+  'X-Frame-Options': 'SAMEORIGIN'
+});
+
 function loadServerHarness() {
   const source = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   let requestHandler = null;
@@ -87,8 +95,9 @@ function createResponseRecorder() {
 }
 
 function assertSecurityHeaders(headers) {
-  assert.equal(headers?.['X-Content-Type-Options'], 'nosniff');
-  assert.equal(headers?.['Referrer-Policy'], 'strict-origin-when-cross-origin');
+  Object.entries(EXPECTED_SECURITY_HEADERS).forEach(([name, value]) => {
+    assert.equal(headers?.[name], value, `${name} should be set on every response`);
+  });
 }
 
 async function testDirectoryRequestReturnsNotFoundInsteadOfServerError() {
@@ -161,10 +170,21 @@ async function testStaticResponseIncludesSecurityHeaders() {
   assert.equal(res.headers?.['Content-Type'], 'text/html; charset=utf-8');
 }
 
+function testVercelConfigDefinesMatchingSecurityHeaders() {
+  const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'vercel.json'), 'utf8'));
+  const globalHeaders = config.headers?.find((entry) => entry.source === '/(.*)')?.headers || [];
+  const headerMap = Object.fromEntries(globalHeaders.map((entry) => [entry.key, entry.value]));
+
+  Object.entries(EXPECTED_SECURITY_HEADERS).forEach(([name, value]) => {
+    assert.equal(headerMap[name], value, `vercel.json should set ${name}`);
+  });
+}
+
 async function run() {
   await testDirectoryRequestReturnsNotFoundInsteadOfServerError();
   await testMalformedRequestUrlReturnsBadRequestInsteadOfThrowing();
   await testStaticResponseIncludesSecurityHeaders();
+  testVercelConfigDefinesMatchingSecurityHeaders();
   console.log('server-static-paths.test: all assertions passed');
 }
 

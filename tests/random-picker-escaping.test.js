@@ -187,7 +187,10 @@ function createDocumentStub() {
   return document;
 }
 
-function loadRandomPickerClasses(translate) {
+function loadRandomPickerClasses(translate, {
+  windowOverrides = {},
+  sandboxOverrides = {}
+} = {}) {
   const document = createDocumentStub();
   const sandbox = {
     console,
@@ -201,7 +204,8 @@ function loadRandomPickerClasses(translate) {
       removeEventListener() {},
       requestAnimationFrame(callback) {
         callback();
-      }
+      },
+      ...windowOverrides
     },
     document,
     setInterval() {
@@ -222,7 +226,9 @@ function loadRandomPickerClasses(translate) {
     WeakMap,
     WeakSet,
     JSON,
-    parseInt
+    parseInt,
+    Uint8Array,
+    ...sandboxOverrides
   };
 
   sandbox.globalThis = sandbox;
@@ -276,8 +282,81 @@ function testRandomPickerSettingsDoesNotInjectTranslatedHtml() {
   );
 }
 
-(function main() {
+async function testOversizedSpreadsheetImportIsRejectedBeforeFileReaderRuns() {
+  const toasts = [];
+  let readCalls = 0;
+  let xlsxReadCalls = 0;
+  const fileValidation = {
+    validateSpreadsheetFile(file) {
+      if (file?.size > 10) {
+        throw new Error('Selected spreadsheet is too large.');
+      }
+    },
+    showValidationError(error) {
+      toasts.push(error.message);
+    }
+  };
+  const { RandomPickerManager } = loadRandomPickerClasses((key) => key, {
+    windowOverrides: {
+      AboardFileValidation: fileValidation,
+      XLSX: {
+        read() {
+          xlsxReadCalls += 1;
+          return { SheetNames: [], Sheets: {} };
+        },
+        utils: {
+          sheet_to_json() {
+            return [];
+          }
+        }
+      },
+      appDialog: {
+        showAlert(message, type) {
+          toasts.push(`${type}:${message}`);
+        }
+      }
+    },
+    sandboxOverrides: {
+      XLSX: {
+        read() {
+          xlsxReadCalls += 1;
+          return { SheetNames: [], Sheets: {} };
+        },
+        utils: {
+          sheet_to_json() {
+            return [];
+          }
+        }
+      },
+      FileReader: class FakeFileReader {
+        readAsArrayBuffer() {
+          readCalls += 1;
+        }
+      }
+    }
+  });
+
+  const manager = new RandomPickerManager();
+  await manager.importFile({
+    name: 'huge.xlsx',
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    size: 11
+  });
+
+  assert.equal(readCalls, 0, 'oversized spreadsheet imports should be rejected before FileReader reads them');
+  assert.equal(xlsxReadCalls, 0, 'oversized spreadsheet imports should not enter XLSX parsing');
+  assert.ok(
+    toasts.some((message) => message.includes('Selected spreadsheet is too large.')),
+    'oversized spreadsheet imports should show a validation error'
+  );
+}
+
+(async function main() {
   testRandomPickerWidgetDoesNotInjectTranslatedHtml();
   testRandomPickerSettingsDoesNotInjectTranslatedHtml();
+  await testOversizedSpreadsheetImportIsRejectedBeforeFileReaderRuns();
   console.log('random-picker-escaping.test: all assertions passed');
-})();
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

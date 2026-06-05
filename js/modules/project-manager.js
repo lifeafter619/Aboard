@@ -877,6 +877,8 @@ class ProjectManager {
         if (!file) return;
 
         try {
+            this.validateProjectFileSize(file);
+
             const importKind = await this.detectImportKind(file);
             if (importKind === 'legacy') {
                 if (!this.drawingBoard.settingsManager?.legacyProjectImportEnabled) {
@@ -888,8 +890,6 @@ class ProjectManager {
                 const legacyCompat = await this.ensureLegacyCompat();
                 return legacyCompat.importLegacyProject(this, file);
             }
-
-            this.validateProjectFileSize(file);
 
             return this.importZipProject(file);
         } catch (error) {

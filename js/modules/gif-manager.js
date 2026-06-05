@@ -78,6 +78,19 @@ class GifManager {
     // --- Floating GIF Management ---
 
     addFloatingGif(fileOrUrl, options = {}) {
+        const FileConstructor = window.File || (typeof File !== 'undefined' ? File : null);
+        const isFileInput = Boolean(FileConstructor && fileOrUrl instanceof FileConstructor);
+        if (isFileInput) {
+            const validation = window.AboardFileValidation;
+            const toast = window.drawingBoard?.settingsManager?.toastManager || window.toastManager;
+            try {
+                validation?.validateGifFile?.(fileOrUrl);
+            } catch (error) {
+                validation?.showValidationError?.(error, { toast, dialog: window.appDialog });
+                return null;
+            }
+        }
+
         const id = `gif-${this.nextId++}`;
         const container = document.createElement('div');
         container.id = id;
@@ -104,7 +117,7 @@ class GifManager {
 
         // Handle File object or URL string
         let src = '';
-        if (fileOrUrl instanceof File) {
+        if (isFileInput) {
             const reader = new FileReader();
             reader.onload = (e) => {
                 img.src = e.target.result;
