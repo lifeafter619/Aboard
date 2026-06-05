@@ -80,6 +80,8 @@ function createBoard(canvasTarget) {
   let touchPinchStartCalls = 0;
   let pointerPinchStartCalls = 0;
   let drawingCompleteCalls = 0;
+  let drawCalls = 0;
+  const drawBatchCalls = [];
 
   return {
     canvas: {
@@ -104,8 +106,12 @@ function createBoard(canvasTarget) {
       startPanning() {},
       stopPanning() {},
       pan() {},
-      draw() {},
-      drawBatch() {}
+      draw() {
+        drawCalls += 1;
+      },
+      drawBatch(events) {
+        drawBatchCalls.push(events);
+      }
     },
     settingsManager: {
       updateToolbarTextVisibility() {}
@@ -205,6 +211,12 @@ function createBoard(canvasTarget) {
     },
     get drawingCompleteCalls() {
       return drawingCompleteCalls;
+    },
+    get drawCalls() {
+      return drawCalls;
+    },
+    get drawBatchCalls() {
+      return drawBatchCalls;
     }
   };
 }
@@ -360,11 +372,54 @@ function testPrimaryPointerCancelCompletesActiveDrawing() {
   assert.equal(board.drawingEngine.isDrawing, false);
 }
 
+function testPointerMoveFallsBackWhenCoalescedEventsAreEmpty() {
+  const { runtime, canvasTarget, documentTarget } = loadEventSetupRuntime();
+  const board = createBoard(canvasTarget);
+
+  runtime.setupEventListeners(board);
+
+  const pointerDownHandler = documentTarget.listeners.get('pointerdown');
+  const pointerMoveHandler = documentTarget.listeners.get('pointermove');
+  const target = {
+    closest() {
+      return null;
+    }
+  };
+
+  pointerDownHandler({
+    pointerType: 'mouse',
+    pointerId: 1,
+    clientX: 10,
+    clientY: 10,
+    isPrimary: true,
+    button: 0,
+    shiftKey: false,
+    target
+  });
+
+  pointerMoveHandler({
+    pointerType: 'mouse',
+    pointerId: 1,
+    clientX: 30,
+    clientY: 30,
+    isPrimary: true,
+    buttons: 1,
+    target,
+    getCoalescedEvents() {
+      return [];
+    }
+  });
+
+  assert.equal(board.drawCalls, 1, 'empty coalesced event lists should fall back to drawing the current pointer event');
+  assert.equal(board.drawBatchCalls.length, 0, 'empty coalesced event lists should not be sent to drawBatch');
+}
+
 function run() {
   testTouchCancelEndsPinchGestureAndClearsFlags();
   testPureTouchPinchUsesTouchPathOnly();
   testPenAndTouchPinchUsesPointerPath();
   testPrimaryPointerCancelCompletesActiveDrawing();
+  testPointerMoveFallsBackWhenCoalescedEventsAreEmpty();
   console.log('event-setup-touchcancel.test: all assertions passed');
 }
 

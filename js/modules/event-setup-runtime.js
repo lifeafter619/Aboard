@@ -300,8 +300,12 @@ function setupEventListeners() {
                 // Pointer events provide coalesced events for higher precision (smoother curves)
                 if (e.getCoalescedEvents) {
                     const events = e.getCoalescedEvents();
-                    // Use optimized batch drawing
-                    this.drawingEngine.drawBatch(events);
+                    if (events.length > 0) {
+                        // Use optimized batch drawing
+                        this.drawingEngine.drawBatch(events);
+                    } else {
+                        this.drawingEngine.draw(e);
+                    }
                 } else {
                     this.drawingEngine.draw(e);
                 }
