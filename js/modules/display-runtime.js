@@ -89,7 +89,7 @@ function updatePatternGrid() {
         patternGrid.querySelectorAll('.pattern-option-btn[data-pattern]').forEach(btn => {
             const pattern = btn.dataset.pattern;
             if (patterns[pattern]) {
-                btn.style.display = 'block';
+                btn.style.display = 'inline-flex';
             } else {
                 btn.style.display = 'none';
             }

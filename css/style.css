@@ -344,12 +344,17 @@ body.vector-preview-active #off-canvas-image-layer {
 /* Background config panel: center content vertically */
 #background-config.active {
     display: grid;
-    grid-template-columns: 158px minmax(0, 1fr);
+    grid-template-columns: 150px minmax(0, 1fr);
     align-items: start;
-    gap: 8px;
+    gap: 10px;
     padding-top: 2px;
     padding-right: 6px;
-    width: min(492px, calc(100vw - 44px));
+    width: min(532px, calc(100vw - 44px));
+}
+
+#background-config.coordinate-pattern-active.active {
+    grid-template-columns: 142px minmax(0, 1fr);
+    width: min(604px, calc(100vw - 44px));
 }
 
 #background-config .config-group,
@@ -416,17 +421,19 @@ body.vector-preview-active #off-canvas-image-layer {
 
 #background-coordinate-actions {
     display: none;
-    flex-direction: column;
-    gap: 6px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
     margin-top: 6px;
 }
 
 #background-coordinate-actions .pattern-option-btn {
     width: 100%;
-    min-height: 32px;
-    padding: 6px 8px;
-    font-size: 12px;
-    font-weight: 500;
+    min-height: 31px;
+    padding: 6px 9px;
+    border-width: 2px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
     justify-content: flex-start;
     gap: 6px;
     white-space: nowrap;
@@ -447,35 +454,69 @@ body.vector-preview-active #off-canvas-image-layer {
 
 #background-config .pattern-grid-compact {
     gap: 5px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+#background-config.coordinate-pattern-active .pattern-grid-compact {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 #background-config .compact-sliders {
     margin-top: 8px;
 }
 
-#background-config .pattern-grid-compact .pattern-option-btn {
+#background-config.coordinate-pattern-active .compact-sliders {
+    margin-top: 5px;
+}
+
+#background-config .pattern-grid-compact .pattern-choice-btn {
     min-width: 0;
-    min-height: 34px;
-    padding: 7px 8px;
+    min-height: 32px;
+    padding: 6px 7px;
+    border-width: 2px;
+    border-radius: 6px;
     font-size: 11px;
     line-height: 1.15;
     gap: 6px;
     white-space: nowrap;
     overflow: hidden;
+    align-items: center;
+    justify-content: flex-start;
 }
 
-#background-config .pattern-grid-compact .pattern-option-btn span {
+#background-config.coordinate-pattern-active .pattern-grid-compact .pattern-choice-btn {
+    min-height: 30px;
+    padding: 5px 6px;
+    font-size: 10.5px;
+    gap: 5px;
+}
+
+#background-config .pattern-grid-compact .pattern-choice-btn span {
     min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-#background-config .pattern-grid-compact .pattern-option-btn svg {
-    width: 15px;
-    height: 15px;
+#background-config .pattern-grid-compact .pattern-choice-btn svg {
+    width: 14px;
+    height: 14px;
     flex-shrink: 0;
+}
+
+#background-config.coordinate-pattern-active .pattern-grid-compact .pattern-choice-btn svg {
+    width: 13px;
+    height: 13px;
+}
+
+#background-config .pattern-grid-compact .pattern-coordinate-choice {
+    background-color: #f8fbff;
+    border-color: #d6e3ef;
+}
+
+#background-config .pattern-grid-compact .pattern-coordinate-choice.active {
+    background-color: rgba(0, 122, 255, 0.08);
+    border-color: var(--theme-color);
 }
 
 #pattern-grid .pattern-option-btn[data-pattern] {
@@ -507,13 +548,53 @@ body.vector-preview-active #off-canvas-image-layer {
     font-size: 12px;
 }
 
+#background-config.coordinate-pattern-active #pattern-density-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin-top: 0;
+}
+
+#background-config.coordinate-pattern-active #pattern-density-group > label {
+    flex: 0 0 auto;
+    margin: 0;
+    white-space: nowrap;
+}
+
+#background-config.coordinate-pattern-active #pattern-density-group > div {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#background-config.coordinate-pattern-active #pattern-density-slider {
+    width: 100%;
+    min-width: 0;
+}
+
 #config-area.vertical #background-config.active {
     display: flex;
     width: 100%;
 }
 
+#config-area.vertical #background-config.coordinate-pattern-active.active {
+    width: 100%;
+}
+
 #config-area.vertical #background-config .pattern-grid-compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#config-area.vertical #background-config.coordinate-pattern-active .pattern-grid-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#config-area.vertical #background-coordinate-actions {
+    grid-template-columns: 1fr;
+}
+
+#config-area.vertical #background-config.coordinate-pattern-active #pattern-density-group {
+    flex-direction: column;
+    align-items: stretch;
 }
 
 .config-group {
@@ -2138,6 +2219,24 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     .pattern-grid-compact {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+
+    #background-config.active {
+        grid-template-columns: 136px minmax(0, 1fr);
+        width: min(500px, calc(100vw - 44px));
+    }
+
+    #background-config.coordinate-pattern-active.active {
+        grid-template-columns: 132px minmax(0, 1fr);
+        width: min(524px, calc(100vw - 44px));
+    }
+
+    #background-config .pattern-grid-compact {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    #background-config.coordinate-pattern-active .pattern-grid-compact {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
     
     #history-controls {
         gap: 6px;
@@ -2444,6 +2543,29 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
         left: 10px;
         right: 10px;
         transform: none;
+    }
+
+    #background-config.active {
+        grid-template-columns: 1fr;
+        width: 100%;
+    }
+
+    #background-config.coordinate-pattern-active.active {
+        grid-template-columns: 1fr;
+        width: 100%;
+    }
+
+    #background-config .pattern-grid-compact {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    #background-config.coordinate-pattern-active .pattern-grid-compact {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    #background-config.coordinate-pattern-active #pattern-density-group {
+        flex-direction: column;
+        align-items: stretch;
     }
     
     .config-panel.active {

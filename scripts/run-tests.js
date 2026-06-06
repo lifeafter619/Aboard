@@ -26,6 +26,7 @@ const CORE_TESTS = [
   'tests/deep-clone-fallback.test.js',
   'tests/storage-fallback-resilience.test.js',
   'tests/startup-storage-resilience.test.js',
+  'tests/background-pattern-panel-layout.test.js',
   'tests/main-startup-storage-resilience.test.js'
 ];
 
@@ -57,6 +58,7 @@ const FULL_TESTS = [
   'tests/selection-coordinate-position-modal-ux.test.js',
   'tests/selection-layer-menu-ux.test.js',
   'tests/selection-color-popover-ux.test.js',
+  'tests/background-pattern-panel-layout.test.js',
   'tests/background-ui-plot-color-escaping.test.js',
   'tests/background-ui-empty-state-escaping.test.js',
   'tests/background-coordinate-overlay-color-escaping.test.js',

@@ -218,6 +218,7 @@ function updateBackgroundUI() {
         const coordinateSettingsToggleBtn = document.getElementById('coordinate-settings-toggle-btn');
         const coordinatePointToggleBtn = document.getElementById('coordinate-point-toggle-btn');
         const backgroundCoordinateActions = document.getElementById('background-coordinate-actions');
+        const backgroundConfig = document.getElementById('background-config');
         const coordinateToolsModal = document.getElementById('coordinate-tools-modal');
         const coordinatePointModal = document.getElementById('coordinate-point-modal');
         const coordinateToolsGroup = document.getElementById('coordinate-tools-group');
@@ -231,7 +232,11 @@ function updateBackgroundUI() {
         }
 
         if (backgroundCoordinateActions) {
-            backgroundCoordinateActions.style.display = supportsCoordinateTools ? 'flex' : 'none';
+            backgroundCoordinateActions.style.display = supportsCoordinateTools ? 'grid' : 'none';
+        }
+
+        if (backgroundConfig) {
+            backgroundConfig.classList.toggle('coordinate-pattern-active', supportsCoordinateTools);
         }
 
         if (coordinateSettingsToggleBtn) {

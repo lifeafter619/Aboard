@@ -355,6 +355,89 @@
                     </svg>
                     <input type="color" id="custom-bg-color-picker" class="custom-color-picker-input" value="#ffffff">
                 </label>
+            </div>
+            <div class="config-group config-group-compact">
+                <label data-i18n="background.pattern">背景图案</label>
+                <div class="button-size-options pattern-grid-compact" id="pattern-grid">
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn active" data-pattern="blank">
+                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                            <rect x="4.5" y="5" width="15" height="14" rx="2"></rect>
+                        </svg>
+                        <span class="pattern-option-label" data-i18n="background.blank">空白</span>
+                    </button>
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="dots">
+                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <circle cx="7" cy="7" r="1.5"></circle>
+                            <circle cx="12" cy="7" r="1.5"></circle>
+                            <circle cx="17" cy="7" r="1.5"></circle>
+                            <circle cx="7" cy="12" r="1.5"></circle>
+                            <circle cx="12" cy="12" r="1.5"></circle>
+                            <circle cx="17" cy="12" r="1.5"></circle>
+                            <circle cx="7" cy="17" r="1.5"></circle>
+                            <circle cx="12" cy="17" r="1.5"></circle>
+                            <circle cx="17" cy="17" r="1.5"></circle>
+                        </svg>
+                        <span class="pattern-option-label" data-i18n="background.dots">点阵</span>
+                    </button>
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="grid">
+                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                            <rect x="4.5" y="4.5" width="15" height="15" rx="1.5"></rect>
+                            <path d="M9.5 4.5v15M14.5 4.5v15M4.5 9.5h15M4.5 14.5h15"></path>
+                        </svg>
+                        <span class="pattern-option-label" data-i18n="background.grid">方格</span>
+                    </button>
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="tianzige">
+                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                            <rect x="4.5" y="4.5" width="15" height="15" rx="1.5"></rect>
+                            <path d="M12 4.5v15M4.5 12h15"></path>
+                        </svg>
+                        <span class="pattern-option-label" data-i18n="background.tianzige">田字格</span>
+                    </button>
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="english-lines">
+                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                            <path d="M4 6.5h16M4 10h16"></path>
+                            <path d="M4 13.5h16" stroke-dasharray="2.2 2.2"></path>
+                            <path d="M4 17h16"></path>
+                        </svg>
+                        <span class="pattern-option-label" data-i18n="background.english4line">四线格</span>
+                    </button>
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="music-staff">
+                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                            <path d="M4 6h16M4 9h16M4 12h16M4 15h16M4 18h16"></path>
+                            <path d="M13.5 7.5v7"></path>
+                            <ellipse cx="11.2" cy="14.8" rx="2.3" ry="1.8" fill="currentColor" stroke="none"></ellipse>
+                        </svg>
+                        <span class="pattern-option-label" data-i18n="background.musicStaff">五线谱</span>
+                    </button>
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn pattern-coordinate-choice" data-pattern="coordinate">
+                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                            <path d="M5 19.5h14M5 19.5V5"></path>
+                            <path d="M16 8l3-3 3 3"></path>
+                            <path d="M16 5h3v3"></path>
+                            <path d="M16 16l3 3 3-3"></path>
+                            <path d="M19 16v3h-3"></path>
+                        </svg>
+                        <span class="pattern-option-label" data-i18n="background.coordinate">坐标系</span>
+                    </button>
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn pattern-coordinate-choice" data-pattern="polar">
+                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                            <circle cx="12" cy="12" r="2.5"></circle>
+                            <circle cx="12" cy="12" r="5.5"></circle>
+                            <circle cx="12" cy="12" r="8.5"></circle>
+                            <path d="M12 3.5v17M3.5 12h17M5.6 5.6l12.8 12.8"></path>
+                        </svg>
+                        <span class="pattern-option-label" data-i18n="background.polar">极坐标</span>
+                    </button>
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="image" id="image-pattern-btn">
+                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                            <rect x="4" y="5" width="16" height="14" rx="2"></rect>
+                            <circle cx="9" cy="10" r="1.5"></circle>
+                            <path d="M7 16l3.2-3.2a1 1 0 0 1 1.4 0L14 15l2.2-2.2a1 1 0 0 1 1.4 0L19 14.2"></path>
+                        </svg>
+                        <span class="pattern-option-label upload-text" data-i18n="background.upload">上传</span>
+                    </button>
+                    <input type="file" id="bg-image-upload" accept="image/*" style="display: none;">
+                </div>
                 <div id="background-coordinate-actions" class="background-coordinate-actions">
                     <button id="coordinate-settings-toggle-btn" type="button" class="pattern-option-btn coordinate-settings-toggle-btn" aria-expanded="false" style="display: none;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -373,89 +456,6 @@
                         </svg>
                         <span data-i18n="background.drawPointLine">绘制点线</span>
                     </button>
-                </div>
-            </div>
-            <div class="config-group config-group-compact">
-                <label data-i18n="background.pattern">背景图案</label>
-                <div class="button-size-options pattern-grid-compact" id="pattern-grid">
-                    <button class="pattern-option-btn icon-label-option-btn active" data-pattern="blank">
-                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                            <rect x="4.5" y="5" width="15" height="14" rx="2"></rect>
-                        </svg>
-                        <span class="pattern-option-label" data-i18n="background.blank">空白</span>
-                    </button>
-                    <button class="pattern-option-btn icon-label-option-btn" data-pattern="dots">
-                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <circle cx="7" cy="7" r="1.5"></circle>
-                            <circle cx="12" cy="7" r="1.5"></circle>
-                            <circle cx="17" cy="7" r="1.5"></circle>
-                            <circle cx="7" cy="12" r="1.5"></circle>
-                            <circle cx="12" cy="12" r="1.5"></circle>
-                            <circle cx="17" cy="12" r="1.5"></circle>
-                            <circle cx="7" cy="17" r="1.5"></circle>
-                            <circle cx="12" cy="17" r="1.5"></circle>
-                            <circle cx="17" cy="17" r="1.5"></circle>
-                        </svg>
-                        <span class="pattern-option-label" data-i18n="background.dots">点阵</span>
-                    </button>
-                    <button class="pattern-option-btn icon-label-option-btn" data-pattern="grid">
-                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-                            <rect x="4.5" y="4.5" width="15" height="15" rx="1.5"></rect>
-                            <path d="M9.5 4.5v15M14.5 4.5v15M4.5 9.5h15M4.5 14.5h15"></path>
-                        </svg>
-                        <span class="pattern-option-label" data-i18n="background.grid">方格</span>
-                    </button>
-                    <button class="pattern-option-btn icon-label-option-btn" data-pattern="tianzige">
-                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
-                            <rect x="4.5" y="4.5" width="15" height="15" rx="1.5"></rect>
-                            <path d="M12 4.5v15M4.5 12h15"></path>
-                        </svg>
-                        <span class="pattern-option-label" data-i18n="background.tianzige">田字格</span>
-                    </button>
-                    <button class="pattern-option-btn icon-label-option-btn" data-pattern="english-lines">
-                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
-                            <path d="M4 6.5h16M4 10h16"></path>
-                            <path d="M4 13.5h16" stroke-dasharray="2.2 2.2"></path>
-                            <path d="M4 17h16"></path>
-                        </svg>
-                        <span class="pattern-option-label" data-i18n="background.english4line">四线格</span>
-                    </button>
-                    <button class="pattern-option-btn icon-label-option-btn" data-pattern="music-staff">
-                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-                            <path d="M4 6h16M4 9h16M4 12h16M4 15h16M4 18h16"></path>
-                            <path d="M13.5 7.5v7"></path>
-                            <ellipse cx="11.2" cy="14.8" rx="2.3" ry="1.8" fill="currentColor" stroke="none"></ellipse>
-                        </svg>
-                        <span class="pattern-option-label" data-i18n="background.musicStaff">五线谱</span>
-                    </button>
-                    <button class="pattern-option-btn icon-label-option-btn" data-pattern="coordinate">
-                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                            <path d="M5 19.5h14M5 19.5V5"></path>
-                            <path d="M16 8l3-3 3 3"></path>
-                            <path d="M16 5h3v3"></path>
-                            <path d="M16 16l3 3 3-3"></path>
-                            <path d="M19 16v3h-3"></path>
-                        </svg>
-                        <span class="pattern-option-label" data-i18n="background.coordinate">坐标系</span>
-                    </button>
-                    <button class="pattern-option-btn icon-label-option-btn" data-pattern="polar">
-                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-                            <circle cx="12" cy="12" r="2.5"></circle>
-                            <circle cx="12" cy="12" r="5.5"></circle>
-                            <circle cx="12" cy="12" r="8.5"></circle>
-                            <path d="M12 3.5v17M3.5 12h17M5.6 5.6l12.8 12.8"></path>
-                        </svg>
-                        <span class="pattern-option-label" data-i18n="background.polar">极坐标</span>
-                    </button>
-                    <button class="pattern-option-btn icon-label-option-btn" data-pattern="image" id="image-pattern-btn">
-                        <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
-                            <rect x="4" y="5" width="16" height="14" rx="2"></rect>
-                            <circle cx="9" cy="10" r="1.5"></circle>
-                            <path d="M7 16l3.2-3.2a1 1 0 0 1 1.4 0L14 15l2.2-2.2a1 1 0 0 1 1.4 0L19 14.2"></path>
-                        </svg>
-                        <span class="pattern-option-label upload-text" data-i18n="background.upload">上传</span>
-                    </button>
-                    <input type="file" id="bg-image-upload" accept="image/*" style="display: none;">
                 </div>
                 <div class="compact-sliders">
                     <div class="compact-slider-item" id="pattern-density-group" style="display: none;">

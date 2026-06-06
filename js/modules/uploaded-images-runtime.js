@@ -97,7 +97,7 @@ function updateUploadedImagesButtons() {
         // Add buttons for each uploaded image
         this.uploadedImages.forEach((image, index) => {
             const btn = document.createElement('button');
-            btn.className = 'pattern-option-btn uploaded-image-btn';
+            btn.className = 'pattern-option-btn pattern-choice-btn uploaded-image-btn';
             btn.dataset.imageId = image.id;
             btn.textContent = image.name;
             btn.addEventListener('click', async () => {

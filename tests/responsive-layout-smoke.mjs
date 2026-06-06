@@ -54,6 +54,46 @@ const STATES = [
     nonOverlap: [['#config-area', '#toolbar']]
   },
   {
+    name: 'background-coordinate-config',
+    setup: `async () => {
+      const board = window.drawingBoard;
+      board?.setTool?.('background', true);
+      board?.backgroundManager?.setBackgroundPattern?.('coordinate');
+      board?.updateBackgroundUI?.();
+    }`,
+    selectors: [
+      '#toolbar',
+      '#history-controls',
+      '#pagination-controls',
+      '#config-area',
+      '#background-config.coordinate-pattern-active',
+      '#background-coordinate-actions',
+      '#pattern-density-group',
+      '#move-origin-btn'
+    ],
+    nonOverlap: [['#config-area', '#toolbar']]
+  },
+  {
+    name: 'background-polar-config',
+    setup: `async () => {
+      const board = window.drawingBoard;
+      board?.setTool?.('background', true);
+      board?.backgroundManager?.setBackgroundPattern?.('polar');
+      board?.updateBackgroundUI?.();
+    }`,
+    selectors: [
+      '#toolbar',
+      '#history-controls',
+      '#pagination-controls',
+      '#config-area',
+      '#background-config.coordinate-pattern-active',
+      '#background-coordinate-actions',
+      '#pattern-density-group',
+      '#move-origin-btn'
+    ],
+    nonOverlap: [['#config-area', '#toolbar']]
+  },
+  {
     name: 'more-panel',
     setup: `async () => {
       window.drawingBoard?.setTool?.('more', true);
@@ -182,6 +222,44 @@ async function resolveBrowserPath() {
 
 function wait(ms) {
   return new Promise(resolveWait => setTimeout(resolveWait, ms));
+}
+
+function waitForProcessExit(processRef, timeoutMs = 3000) {
+  if (!processRef || processRef.exitCode !== null || processRef.signalCode !== null) {
+    return Promise.resolve();
+  }
+
+  return new Promise(resolveWait => {
+    const timeout = setTimeout(resolveWait, timeoutMs);
+    processRef.once('exit', () => {
+      clearTimeout(timeout);
+      resolveWait();
+    });
+  });
+}
+
+async function stopProcess(processRef) {
+  if (!processRef || processRef.exitCode !== null || processRef.signalCode !== null) {
+    return;
+  }
+
+  processRef.kill();
+  await waitForProcessExit(processRef);
+}
+
+async function removeDirectoryWithRetry(directoryPath, { attempts = 8, delayMs = 250 } = {}) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await rm(directoryPath, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      const retryable = error?.code === 'EBUSY' || error?.code === 'EPERM' || error?.code === 'ENOTEMPTY';
+      if (!retryable || attempt === attempts) {
+        throw error;
+      }
+      await wait(delayMs * attempt);
+    }
+  }
 }
 
 async function waitUntil(fn, { timeoutMs = 15000, intervalMs = 100 } = {}) {
@@ -496,10 +574,11 @@ async function main() {
     console.log(`responsive-layout-smoke: ${VIEWPORTS.length} viewports x ${STATES.length} states passed`);
   } finally {
     cdp?.close();
-    browser.kill();
-    server.kill();
-    await wait(200);
-    await rm(profileDir, { recursive: true, force: true });
+    await Promise.all([
+      stopProcess(browser),
+      stopProcess(server)
+    ]);
+    await removeDirectoryWithRetry(profileDir);
   }
 }
 
