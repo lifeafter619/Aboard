@@ -29,11 +29,24 @@ function normalizeRandomPickerNumberRange(minValue, maxValue) {
     return { min, max };
 }
 
+function normalizeRandomPickerConfig(config) {
+    const normalizedConfig = { ...config };
+    if (normalizedConfig.mode === 'number') {
+        const normalizedRange = normalizeRandomPickerNumberRange(
+            normalizedConfig.min,
+            normalizedConfig.max
+        );
+        normalizedConfig.min = normalizedRange.min;
+        normalizedConfig.max = normalizedRange.max;
+    }
+    return normalizedConfig;
+}
+
 class RandomPickerInstance {
     constructor(id, manager, config = {}) {
         this.id = id;
         this.manager = manager;
-        this.config = {
+        this.config = normalizeRandomPickerConfig({
             mode: 'name', // 'name' or 'number'
             names: [], // Array of names
             min: 1,
@@ -41,7 +54,7 @@ class RandomPickerInstance {
             allowRepeats: true,
             title: '',
             ...config
-        };
+        });
 
         // State
         this.isAnimating = false;
@@ -311,8 +324,7 @@ class RandomPickerInstance {
             }
         } else {
             // Number mode
-            const min = parseInt(this.config.min, 10);
-            const max = parseInt(this.config.max, 10);
+            const { min, max } = normalizeRandomPickerNumberRange(this.config.min, this.config.max);
 
             if (!this.config.allowRepeats) {
                 if (this.remainingNumbers.length === 0) {
@@ -378,10 +390,10 @@ class RandomPickerInstance {
         } else {
             // Number mode
             if (this.config.allowRepeats) {
-                const min = parseInt(this.config.min, 10);
-                const max = parseInt(this.config.max, 10);
+                const { min, max } = normalizeRandomPickerNumberRange(this.config.min, this.config.max);
                 result = Math.floor(Math.random() * (max - min + 1)) + min;
             } else {
+                const { min } = normalizeRandomPickerNumberRange(this.config.min, this.config.max);
                 if (this.remainingNumbers.length === 0) {
                     this.resetRemainingNumbers();
                 }
@@ -393,7 +405,7 @@ class RandomPickerInstance {
                     this.remainingNumbers.splice(index, 1);
                 } else {
                     // Fallback should range cover empty?
-                    result = this.config.min;
+                    result = min;
                 }
             }
         }
@@ -422,7 +434,7 @@ class RandomPickerInstance {
             // But we can check newConfig values
         }
 
-        this.config = { ...this.config, ...newConfig };
+        this.config = normalizeRandomPickerConfig({ ...this.config, ...newConfig });
 
         // Check if we need to reset numbers (after config update)
         // If we are in number mode, or just switched to it, reset to be safe if range changed
@@ -495,12 +507,7 @@ class RandomPickerInstance {
     }
 
     resetRemainingNumbers() {
-        const min = parseInt(this.config.min, 10);
-        const max = parseInt(this.config.max, 10);
-        if (Number.isNaN(min) || Number.isNaN(max) || min > max) {
-            this.remainingNumbers = [];
-            return;
-        }
+        const { min, max } = normalizeRandomPickerNumberRange(this.config.min, this.config.max);
 
         // Prevent massive arrays
         if (max - min > 10000) {

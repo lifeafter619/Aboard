@@ -99,7 +99,12 @@ function createIntlStub(localTimeZone = Intl.DateTimeFormat().resolvedOptions().
   };
 }
 
-function loadTimeDisplayManager({ localStorage, warnings = [], localTimeZone } = {}) {
+function loadTimeDisplayManager({
+  localStorage,
+  warnings = [],
+  localTimeZone,
+  translate = (key) => key
+} = {}) {
   const source = fs.readFileSync(
     path.join(__dirname, '..', 'js', 'time-display.js'),
     'utf8'
@@ -129,7 +134,7 @@ function loadTimeDisplayManager({ localStorage, warnings = [], localTimeZone } =
     window: {
       i18n: {
         t(key) {
-          return key;
+          return translate(key);
         },
         getCurrentLocale() {
           return 'zh-CN';
@@ -341,6 +346,47 @@ function testTimeDisplaySettersClampRuntimeNumericSettings() {
   assert.equal(savedValues.get('timeDisplayFullscreenOpacity'), '100');
 }
 
+function testTimeDisplayEscapesTranslatedDateText() {
+  const maliciousWeekday = '<img src=x onerror="window.__timeDisplayXss=1">';
+  const storage = {
+    getItem() {
+      return null;
+    },
+    setItem() {},
+    removeItem() {}
+  };
+  const { TimeDisplayManager, elements } = loadTimeDisplayManager({
+    localStorage: storage,
+    translate(key) {
+      return key === 'days.monday' ? maliciousWeekday : key;
+    }
+  });
+
+  const manager = new TimeDisplayManager({ controlPosition: 'top-right' });
+  manager.showTime = false;
+  manager.showDate = true;
+  manager.dateFormat = 'yyyy-mm-dd';
+  manager.getCurrentTime = () => new Date('2024-01-01T12:00:00Z');
+  manager.updateDisplay();
+  manager.updateFullscreenDisplay();
+
+  assert.doesNotMatch(
+    elements['time-display'].innerHTML,
+    /<img/i,
+    'time display should not inject translated weekday HTML'
+  );
+  assert.match(
+    elements['time-display'].innerHTML,
+    /&lt;img/,
+    'time display should render translated weekday markup as text'
+  );
+  assert.doesNotMatch(
+    elements['time-fullscreen-content'].innerHTML,
+    /<img/i,
+    'fullscreen time display should not inject translated weekday HTML'
+  );
+}
+
 function testAnnouncementManagerDoesNotBlockStartupWhenStorageIsAvailable() {
   const storage = {
     getItem() {
@@ -419,6 +465,7 @@ function testAnnouncementManagerSurvivesBlockedLocalStorage() {
   testTimeDisplayManagerSurvivesBlockedLocalStorage();
   testTimeDisplayDateUsesTargetTimezoneWeekday();
   testTimeDisplaySettersClampRuntimeNumericSettings();
+  testTimeDisplayEscapesTranslatedDateText();
   testAnnouncementManagerDoesNotBlockStartupWhenStorageIsAvailable();
   testAnnouncementManagerSurvivesBlockedLocalStorage();
   console.log('optional-ui-resilience.test: all assertions passed');

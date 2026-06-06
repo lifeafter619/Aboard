@@ -38,6 +38,15 @@ function safeTimeDisplayStorageSetItem(key, value) {
     }
 }
 
+function escapeTimeDisplayHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 class TimeDisplayManager {
     constructor(settingsManager) {
         this.settingsManager = settingsManager;
@@ -173,8 +182,8 @@ class TimeDisplayManager {
         }
 
         const now = this.getCurrentTime();
-        const timeString = this.formatTime(now);
-        const dateString = this.formatDate(now);
+        const timeString = escapeTimeDisplayHtml(this.formatTime(now));
+        const dateString = escapeTimeDisplayHtml(this.formatDate(now));
         
         let html = '';
         if (this.showTime) {
@@ -681,8 +690,8 @@ class TimeDisplayManager {
         }
 
         const now = this.getCurrentTime();
-        const timeString = this.formatTime(now);
-        const dateString = this.formatDate(now);
+        const timeString = escapeTimeDisplayHtml(this.formatTime(now));
+        const dateString = escapeTimeDisplayHtml(this.formatDate(now));
         
         // Use the configurable fullscreen font sizes
         const vmin = Math.min(window.innerWidth, window.innerHeight);

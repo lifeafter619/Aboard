@@ -4,9 +4,17 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 function createScoreboardElementStub() {
+  const appendedScoreColumns = [];
+  const content = {
+    innerHTML: '',
+    appendedScoreColumns,
+    appendChild(child) {
+      appendedScoreColumns.push(child);
+    }
+  };
   const nodes = {
     '.scoreboard-title': { textContent: '' },
-    '.scoreboard-content': { innerHTML: '', appendChild() {} },
+    '.scoreboard-content': content,
     '.scoreboard-add-team-btn': { title: '', setAttribute() {} },
     '.scoreboard-reset-btn': { title: '', setAttribute() {} },
     '.scoreboard-help-btn': { title: '', setAttribute() {} },
@@ -30,8 +38,41 @@ function createScoreboardElementStub() {
   };
 }
 
-function loadScoreboardInstanceClass() {
+function createScoreColumnStub() {
+  const nodes = {
+    '.score-team-name': {
+      textContent: '',
+      addEventListener() {}
+    },
+    '.score-btn.minus': {
+      addEventListener() {}
+    },
+    '.score-btn.plus': {
+      addEventListener() {}
+    },
+    '.score-remove-btn': {
+      addEventListener() {}
+    }
+  };
+
+  return {
+    className: '',
+    dataset: {},
+    innerHTML: '',
+    appendChild() {},
+    addEventListener() {},
+    querySelector(selector) {
+      return nodes[selector] || null;
+    },
+    querySelectorAll() {
+      return [];
+    }
+  };
+}
+
+function loadScoreboardInstanceClass({ rootFirst = true } = {}) {
   let lastCreatedElement = null;
+  let shouldCreateRoot = rootFirst;
   const sandbox = {
     console,
     Math,
@@ -65,8 +106,12 @@ function loadScoreboardInstanceClass() {
       },
       activeElement: null,
       createElement() {
-        lastCreatedElement = createScoreboardElementStub();
-        return lastCreatedElement;
+        if (shouldCreateRoot) {
+          shouldCreateRoot = false;
+          lastCreatedElement = createScoreboardElementStub();
+          return lastCreatedElement;
+        }
+        return createScoreColumnStub();
       },
       getElementById() {
         return null;
@@ -118,7 +163,35 @@ function testCreateElementEscapesCustomTitleHtml() {
   );
 }
 
+function testRenderTeamsDoesNotInjectScoreHtmlFromSavedState() {
+  const { ScoreboardInstance } = loadScoreboardInstanceClass({ rootFirst: false });
+  const maliciousScore = '<img src=x onerror="window.__scoreboardScoreXss=1">';
+  const root = createScoreboardElementStub();
+  const scoreboard = {
+    element: root,
+    config: {
+      teams: [
+        {
+          name: 'Team A',
+          score: maliciousScore
+        }
+      ]
+    },
+    refreshLocalizedUI() {}
+  };
+
+  ScoreboardInstance.prototype.renderTeams.call(scoreboard);
+
+  const appended = root.querySelector('.scoreboard-content').appendedScoreColumns;
+  assert.equal(appended.length, 1, 'scoreboard should render one score column');
+  assert.ok(
+    !appended[0].innerHTML.includes(maliciousScore),
+    'scoreboard should not inject raw score HTML from persisted state'
+  );
+}
+
 (function main() {
   testCreateElementEscapesCustomTitleHtml();
+  testRenderTeamsDoesNotInjectScoreHtmlFromSavedState();
   console.log('scoreboard-title-escaping.test: all assertions passed');
 })();

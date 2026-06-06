@@ -282,6 +282,29 @@ function testRandomPickerSettingsDoesNotInjectTranslatedHtml() {
   );
 }
 
+function testNumberModeInvalidRangeFallsBackToFiniteDefaults() {
+  const { RandomPickerInstance } = loadRandomPickerClasses((key) => key);
+  const manager = {
+    currentInstance: null,
+    remove() {},
+    showSettings() {}
+  };
+
+  const instance = new RandomPickerInstance(1, manager, {
+    mode: 'number',
+    min: 'not-a-number',
+    max: 'also-bad',
+    allowRepeats: true
+  });
+
+  instance.startPick();
+  instance.stopAnimation();
+
+  const result = Number(instance.resultElement.textContent);
+  assert.ok(Number.isInteger(result), 'number picker should not render NaN for invalid imported ranges');
+  assert.ok(result >= 1 && result <= 50, 'invalid imported ranges should fall back to the default 1-50 range');
+}
+
 async function testOversizedSpreadsheetImportIsRejectedBeforeFileReaderRuns() {
   const toasts = [];
   let readCalls = 0;
@@ -354,6 +377,7 @@ async function testOversizedSpreadsheetImportIsRejectedBeforeFileReaderRuns() {
 (async function main() {
   testRandomPickerWidgetDoesNotInjectTranslatedHtml();
   testRandomPickerSettingsDoesNotInjectTranslatedHtml();
+  testNumberModeInvalidRangeFallsBackToFiniteDefaults();
   await testOversizedSpreadsheetImportIsRejectedBeforeFileReaderRuns();
   console.log('random-picker-escaping.test: all assertions passed');
 })().catch((error) => {

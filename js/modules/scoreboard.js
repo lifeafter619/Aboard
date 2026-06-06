@@ -21,6 +21,21 @@ function escapeScoreboardHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+function normalizeScoreboardScore(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? Math.trunc(numeric) : 0;
+}
+
+function normalizeScoreboardTeams(teams) {
+    return Array.isArray(teams)
+        ? teams.map((team) => ({
+            ...team,
+            name: String(team?.name ?? ''),
+            score: normalizeScoreboardScore(team?.score)
+        }))
+        : [];
+}
+
 function safeScoreboardStorageGetItem(key) {
     try {
         return localStorage.getItem(key);
@@ -128,6 +143,7 @@ class ScoreboardInstance {
             teams: initialTeams || config.teams,
             ...config
         };
+        this.config.teams = normalizeScoreboardTeams(this.config.teams);
 
         // UI
         this.element = null;
@@ -252,6 +268,9 @@ class ScoreboardInstance {
         container.innerHTML = '';
 
         this.config.teams.forEach((team, index) => {
+            const score = normalizeScoreboardScore(team.score);
+            team.score = score;
+
             const col = document.createElement('div');
             col.className = 'score-column';
             col.dataset.index = index;
@@ -265,7 +284,7 @@ class ScoreboardInstance {
                     </svg>
                 </button>
                 <div class="score-team-name" contenteditable="true"></div>
-                <div class="score-value">${team.score}</div>
+                <div class="score-value">${score}</div>
                 <div class="score-controls">
                     <button class="score-btn minus" title="Decrease score" aria-label="Decrease score">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
