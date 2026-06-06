@@ -355,6 +355,9 @@ function hasVectorPreviewContent() {
 
 function shouldUseVectorPreview() {
         const finalScale = this.canvasFitScale * this.drawingEngine.canvasScale;
+        const hasStoredMarkerStroke = this.drawingEngine?.strokes?.some?.((stroke) =>
+            stroke?.tool !== 'eraser' && stroke?.penType === 'marker'
+        ) || false;
         const hasLiveDrawingPreview = !!(
             this.drawingEngine?.shouldUseLiveStrokePreview?.() ||
             this.drawingEngine?.shouldUseLiveEraserPreview?.()
@@ -370,6 +373,7 @@ function shouldUseVectorPreview() {
 
         return finalScale > 1.05 &&
             this.hasVectorPreviewContent() &&
+            !hasStoredMarkerStroke &&
             !hasBlockingTransientOverlay;
     
 }

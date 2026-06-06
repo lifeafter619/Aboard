@@ -204,6 +204,46 @@ function loadToolRuntime() {
   return sandbox.window.AboardToolRuntime;
 }
 
+function loadInteractionRuntime() {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'js', 'modules', 'interaction-runtime.js'),
+    'utf8'
+  );
+
+  const sandbox = {
+    window: {
+      AboardBoardHelpersRuntime: {
+        persistViewState() {}
+      }
+    },
+    document: {
+      getElementById() {
+        return null;
+      }
+    },
+    console: {
+      warn() {},
+      log() {},
+      error() {}
+    },
+    Promise,
+    Object,
+    String,
+    Number,
+    Boolean,
+    Array,
+    Set,
+    Map,
+    Math
+  };
+
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox, { filename: 'interaction-runtime.js' });
+
+  return sandbox.window.AboardInteractionRuntime;
+}
+
 function loadHistoryManager() {
   const source = fs.readFileSync(
     path.join(__dirname, '..', 'js', 'history.js'),
@@ -840,6 +880,67 @@ function testToolSelectionSurvivesMissingSelectionManager() {
   assert.equal(enteringSelectBoard.drawingEngine.currentTool, 'select');
 }
 
+function testSelectToolUsesDefaultCanvasCursor() {
+  const toolRuntime = loadToolRuntime();
+  const board = {
+    canvas: { style: {} },
+    drawingEngine: {
+      currentTool: 'select'
+    },
+    historyManager: {
+      canUndo() {
+        return false;
+      },
+      canRedo() {
+        return false;
+      }
+    },
+    positionFeatureArea() {},
+    syncEraserSizeControls() {}
+  };
+
+  toolRuntime.updateUI(board);
+
+  assert.equal(board.canvas.style.cursor, 'default', 'select mode should keep the normal pointer cursor');
+}
+
+function testVectorPreviewStaysOffForMarkerStrokes() {
+  const interactionRuntime = loadInteractionRuntime();
+  const board = {
+    canvasFitScale: 1,
+    drawingEngine: {
+      canvasScale: 2,
+      strokes: [{ tool: 'pen', penType: 'marker', points: [{ x: 1, y: 1 }, { x: 2, y: 2 }] }],
+      stampedImages: [],
+      isDrawing: false,
+      shouldUseLiveStrokePreview() {
+        return false;
+      },
+      shouldUseLiveEraserPreview() {
+        return false;
+      }
+    },
+    insertTextManager: null,
+    insertImageManager: null,
+    shapeDrawingManager: null,
+    selectionManager: {
+      hasSelection() {
+        return false;
+      }
+    },
+    strokeControls: null,
+    hasVectorPreviewContent() {
+      return interactionRuntime.hasVectorPreviewContent(board);
+    }
+  };
+
+  assert.equal(
+    interactionRuntime.shouldUseVectorPreview(board),
+    false,
+    'stored marker strokes should remain on the raster canvas so their translucent overlap does not fade at high zoom'
+  );
+}
+
 async function testStorageManagerGracefullyHandlesMissingIndexedDb() {
   const warnings = [];
   const StorageManager = loadStorageManager({ indexedDB: undefined, warnings });
@@ -1174,6 +1275,8 @@ function testHistoryManagerUsesSmallerDefaultMemoryCap() {
   await testPageSceneHydrationIgnoresMalformedOnlyScenes();
   testPageSceneCaptureSurvivesMalformedRuntimeCollections();
   testToolSelectionSurvivesMissingSelectionManager();
+  testSelectToolUsesDefaultCanvasCursor();
+  testVectorPreviewStaysOffForMarkerStrokes();
   await testStorageManagerGracefullyHandlesMissingIndexedDb();
   await testStorageManagerFallsBackWhenCanvasToBlobIsUnavailable();
   await testStorageManagerFallsBackWhenCreateImageBitmapIsUnavailable();

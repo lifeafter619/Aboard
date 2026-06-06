@@ -724,7 +724,38 @@ async function main() {
       throw new Error(`Zoomed pen did not persist drawing: ${JSON.stringify({ zoomPenBefore, zoomPenSample, zoomPenPoint })}`);
     }
 
-    console.log('drawing-smoke-cdp: pen, shape, and zoomed pen persisted visible canvas content');
+    await evaluate(cdp, `(() => {
+      window.drawingBoard?.setTool?.('pen', false);
+      window.drawingBoard?.drawingEngine?.setPenType?.('marker');
+    })()`);
+    const markerPoint = await findDrawableCanvasPoint(cdp, 0.25, 0.72);
+    await dispatchDrag(
+      cdp,
+      { x: markerPoint.x, y: markerPoint.y },
+      {
+        x: markerPoint.x + markerPoint.rect.width * 0.16,
+        y: markerPoint.y - markerPoint.rect.height * 0.08
+      }
+    );
+    const markerZoomState = await evaluate(cdp, `(() => ({
+      strokes: window.drawingBoard?.drawingEngine?.strokes?.length ?? -1,
+      vectorPreviewActive: document.body.classList.contains('vector-preview-active'),
+      canvasOpacity: getComputedStyle(document.getElementById('canvas')).opacity,
+      vectorDisplay: document.getElementById('vector-scene-svg')
+        ? getComputedStyle(document.getElementById('vector-scene-svg')).display
+        : 'missing'
+    }))()`);
+    if (markerZoomState.vectorPreviewActive || markerZoomState.canvasOpacity === '0') {
+      throw new Error(`Marker strokes should stay on the visible raster canvas at high zoom: ${JSON.stringify(markerZoomState)}`);
+    }
+
+    await evaluate(cdp, `window.drawingBoard?.setTool?.('select', false)`);
+    const selectCursor = await evaluate(cdp, `getComputedStyle(document.getElementById('canvas')).cursor`);
+    if (selectCursor !== 'default') {
+      throw new Error(`Select tool should use the default cursor, got ${JSON.stringify(selectCursor)}`);
+    }
+
+    console.log('drawing-smoke-cdp: pen, shape, zoomed pen, marker zoom, and select cursor checks passed');
   } finally {
     cdp?.close();
     browser.kill();

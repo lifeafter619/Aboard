@@ -139,7 +139,7 @@ function updateUI() {
     } else if (tool === 'select') {
         addClassIfPresent(getElement('select-btn'), 'active');
         addClassIfPresent(getElement('select-config'), 'active');
-        this.canvas.style.cursor = 'crosshair';
+        this.canvas.style.cursor = 'default';
     } else if (tool === 'eraser') {
         addClassIfPresent(getElement('eraser-btn'), 'active');
         addClassIfPresent(getElement('eraser-config'), 'active');
