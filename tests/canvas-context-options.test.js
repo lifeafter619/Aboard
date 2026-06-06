@@ -4,7 +4,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { pathToFileURL } = require('node:url');
 
-async function testModularBoardDependenciesUseReadbackFriendlyContextOptions() {
+async function testModularBoardDependenciesUseVisibleReadbackFriendlyContextOptions() {
   const moduleUrl = pathToFileURL(
     path.join(__dirname, '..', 'js', 'app', 'create-board-runtime-dependencies.js')
   ).href;
@@ -38,7 +38,7 @@ async function testModularBoardDependenciesUseReadbackFriendlyContextOptions() {
 
   assert.equal(canvasCalls.length, 1);
   assert.equal(canvasCalls[0].type, '2d');
-  assert.equal(canvasCalls[0].options?.desynchronized, true);
+  assert.notEqual(canvasCalls[0].options?.desynchronized, true);
   assert.equal(canvasCalls[0].options?.alpha, true);
   assert.equal(canvasCalls[0].options?.willReadFrequently, true);
   assert.equal(dependencies.ctx?.kind, 'main-context');
@@ -253,7 +253,7 @@ function loadDrawingBoard() {
   return DrawingBoard;
 }
 
-function testLegacyDrawingBoardUsesReadbackFriendlyContextOptions() {
+function testLegacyDrawingBoardUsesVisibleReadbackFriendlyContextOptions() {
   const DrawingBoard = loadDrawingBoard();
   const canvasCalls = [];
   const canvas = {
@@ -306,15 +306,15 @@ function testLegacyDrawingBoardUsesReadbackFriendlyContextOptions() {
 
   assert.equal(canvasCalls.length, 1);
   assert.equal(canvasCalls[0].type, '2d');
-  assert.equal(canvasCalls[0].options?.desynchronized, true);
+  assert.notEqual(canvasCalls[0].options?.desynchronized, true);
   assert.equal(canvasCalls[0].options?.alpha, true);
   assert.equal(canvasCalls[0].options?.willReadFrequently, true);
 }
 
 async function run() {
-  await testModularBoardDependenciesUseReadbackFriendlyContextOptions();
+  await testModularBoardDependenciesUseVisibleReadbackFriendlyContextOptions();
   await testModularBoardDependenciesSurviveOptionalUiManagerFailures();
-  testLegacyDrawingBoardUsesReadbackFriendlyContextOptions();
+  testLegacyDrawingBoardUsesVisibleReadbackFriendlyContextOptions();
   console.log('canvas-context-options.test: all assertions passed');
 }
 

@@ -431,6 +431,44 @@ async function getCanvasSample(cdp) {
   })()`);
 }
 
+async function getVisibleCanvasDarkPixelSample(cdp, rect) {
+  const screenshot = await cdp.send('Page.captureScreenshot', { format: 'png' });
+  return evaluate(cdp, `(async () => {
+    const payload = ${JSON.stringify({ data: screenshot.data, rect })};
+    const image = new Image();
+    image.src = 'data:image/png;base64,' + payload.data;
+    await image.decode();
+
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(image, 0, 0);
+
+    const scaleX = image.naturalWidth / window.innerWidth;
+    const scaleY = image.naturalHeight / window.innerHeight;
+    const sampleRect = {
+      x: Math.max(0, Math.floor(payload.rect.x * scaleX)),
+      y: Math.max(0, Math.floor(payload.rect.y * scaleY)),
+      width: Math.max(1, Math.floor(payload.rect.width * scaleX)),
+      height: Math.max(1, Math.floor(payload.rect.height * scaleY))
+    };
+    const data = ctx.getImageData(sampleRect.x, sampleRect.y, sampleRect.width, sampleRect.height).data;
+    let darkPixels = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] > 0 && data[i] < 80 && data[i + 1] < 80 && data[i + 2] < 80) {
+        darkPixels += 1;
+      }
+    }
+    return {
+      darkPixels,
+      imageSize: { width: image.naturalWidth, height: image.naturalHeight },
+      scale: { x: scaleX, y: scaleY },
+      sampleRect
+    };
+  })()`);
+}
+
 async function findDrawableCanvasPoint(cdp, xRatio = 0.2, yRatio = 0.2) {
   return evaluate(cdp, `(() => {
     const canvas = document.getElementById('canvas');
@@ -604,6 +642,13 @@ async function main() {
     const penSample = await getCanvasSample(cdp);
     if (penSample.strokes < 1 || penSample.alphaPixels < 1) {
       throw new Error(`Pen did not persist drawing: ${JSON.stringify(penSample)}`);
+    }
+    const visiblePenSample = await getVisibleCanvasDarkPixelSample(cdp, rect);
+    if (visiblePenSample.darkPixels < 1) {
+      throw new Error(`Pen updated canvas data but was not visible in the page screenshot: ${JSON.stringify({
+        penSample,
+        visiblePenSample
+      })}`);
     }
 
     const moreRect = await evaluate(cdp, `(() => {

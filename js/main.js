@@ -128,9 +128,10 @@ class DrawingBoard {
     constructor(options = {}) {
         // Canvas setup
         this.canvas = options.canvas || document.getElementById('canvas');
-        this.ctx = options.ctx || this.canvas.getContext('2d', { 
-            desynchronized: true,
+        this.ctx = options.ctx || this.canvas.getContext('2d', {
             alpha: true,
+            // Required for frequent history/page readbacks. Avoid pairing this
+            // with desynchronized because Chromium may not composite live ink.
             willReadFrequently: true
         });
         

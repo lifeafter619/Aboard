@@ -38,8 +38,10 @@ export function createBoardRuntimeDependencies({ win = window, doc = document, b
   }
 
   const ctx = getCanvasContext(canvas, {
-    desynchronized: true,
     alpha: true,
+    // Keep readback-friendly storage for history/page snapshots. Do not combine
+    // this with desynchronized; Chromium can update readback without compositing
+    // the visible canvas.
     willReadFrequently: true
   });
   const bgCtx = getCanvasContext(bgCanvas);
