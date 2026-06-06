@@ -238,6 +238,33 @@ async function testEncodingQZeroIsRespected() {
   assert.equal(res.rawBody.toString('utf8'), originalBody.toString('utf8'));
 }
 
+async function testEncodingQPreferenceSelectsBestSupportedEncoding() {
+  const harness = loadServerHarness();
+  const originalBody = Buffer.from('const payload = "Aboard";\n'.repeat(160));
+  harness.setReadFileImpl((filePath, callback) => {
+    assert.match(filePath, /[\\/]js[\\/]drawing\.js$/);
+    callback(null, originalBody);
+  });
+
+  const res = createResponseRecorder();
+  harness.requestHandler(
+    {
+      url: '/js/drawing.js',
+      headers: {
+        host: 'localhost:8080',
+        'accept-encoding': 'br;q=0.25, gzip;q=1'
+      }
+    },
+    res
+  );
+
+  await res.ended;
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.headers?.['Content-Encoding'], 'gzip');
+  assert.equal(zlib.gunzipSync(res.rawBody).toString('utf8'), originalBody.toString('utf8'));
+}
+
 function testVercelConfigDefinesMatchingSecurityHeaders() {
   const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'vercel.json'), 'utf8'));
   const globalHeaders = config.headers?.find((entry) => entry.source === '/(.*)')?.headers || [];
@@ -254,6 +281,7 @@ async function run() {
   await testStaticResponseIncludesSecurityHeaders();
   await testTextStaticResponseUsesGzipWhenAccepted();
   await testEncodingQZeroIsRespected();
+  await testEncodingQPreferenceSelectsBestSupportedEncoding();
   testVercelConfigDefinesMatchingSecurityHeaders();
   console.log('server-static-paths.test: all assertions passed');
 }

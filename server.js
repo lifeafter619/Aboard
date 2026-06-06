@@ -70,29 +70,30 @@ function parseAcceptEncoding(headerValue) {
     return preferences;
 }
 
-function acceptsEncoding(req, encoding) {
-    const header = String(req?.headers?.['accept-encoding'] || '').toLowerCase();
-    const preferences = parseAcceptEncoding(header);
+function getEncodingPreference(preferences, encoding) {
     if (preferences.has(encoding)) {
-        return preferences.get(encoding) > 0;
+        return preferences.get(encoding);
     }
     if (preferences.has('*')) {
-        return preferences.get('*') > 0;
+        return preferences.get('*');
     }
-    return false;
+    return 0;
 }
 
 function selectCompressionEncoding(req, ext, data) {
     if (!COMPRESSIBLE_EXTENSIONS.has(ext) || data.length < COMPRESSION_MIN_BYTES) {
         return null;
     }
-    if (acceptsEncoding(req, 'br')) {
-        return 'br';
-    }
-    if (acceptsEncoding(req, 'gzip')) {
-        return 'gzip';
-    }
-    return null;
+
+    const header = String(req?.headers?.['accept-encoding'] || '').toLowerCase();
+    const preferences = parseAcceptEncoding(header);
+    return ['br', 'gzip']
+        .map((encoding) => ({
+            encoding,
+            q: getEncodingPreference(preferences, encoding)
+        }))
+        .filter((candidate) => candidate.q > 0)
+        .sort((a, b) => b.q - a.q)[0]?.encoding || null;
 }
 
 function compressData(data, encoding, callback) {
