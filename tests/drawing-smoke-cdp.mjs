@@ -4,7 +4,9 @@ import { join, resolve } from 'node:path';
 
 const PORT = process.env.PORT || '18080';
 const DEBUG_PORT = process.env.DEBUG_PORT || '18081';
-const BASE_URL = `http://127.0.0.1:${PORT}`;
+const TARGET_URL = process.env.TARGET_URL || '';
+const BASE_URL = TARGET_URL || `http://127.0.0.1:${PORT}`;
+const STATIC_ROOT = process.env.STATIC_ROOT || '';
 const CHROME_PATH = process.env.CHROME_PATH || '';
 const EDGE_PATH = process.env.EDGE_PATH || '';
 const PLAYWRIGHT_BROWSERS_PATH = process.env.PLAYWRIGHT_BROWSERS_PATH || '';
@@ -110,6 +112,83 @@ function wait(ms) {
   return new Promise(resolveWait => setTimeout(resolveWait, ms));
 }
 
+function createStaticServerScript() {
+  return `
+    const http = require('node:http');
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const root = path.resolve(process.argv[1]);
+    const port = Number(process.argv[2]);
+    const types = {
+      '.html': 'text/html; charset=utf-8',
+      '.js': 'application/javascript; charset=utf-8',
+      '.css': 'text/css; charset=utf-8',
+      '.json': 'application/json; charset=utf-8',
+      '.svg': 'image/svg+xml',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.ico': 'image/x-icon',
+      '.txt': 'text/plain; charset=utf-8',
+      '.mp3': 'audio/mpeg',
+      '.wav': 'audio/wav',
+      '.woff': 'font/woff',
+      '.woff2': 'font/woff2',
+      '.ttf': 'font/ttf',
+      '.otf': 'font/otf'
+    };
+
+    function isInsideRoot(filePath) {
+      const relative = path.relative(root, filePath);
+      return !relative.startsWith('..') && !path.isAbsolute(relative);
+    }
+
+    http.createServer((req, res) => {
+      const url = new URL(req.url, 'http://127.0.0.1:' + port);
+      const requestPath = url.pathname === '/' ? '/index.html' : url.pathname;
+      const filePath = path.normalize(path.join(root, requestPath));
+      if (!isInsideRoot(filePath)) {
+        res.writeHead(403);
+        res.end('forbidden');
+        return;
+      }
+      fs.readFile(filePath, (error, data) => {
+        if (error) {
+          res.writeHead(404);
+          res.end('not found');
+          return;
+        }
+        res.writeHead(200, { 'Content-Type': types[path.extname(filePath).toLowerCase()] || 'application/octet-stream' });
+        res.end(data);
+      });
+    }).listen(port, '127.0.0.1', () => {
+      console.log('Aboard server running at http://127.0.0.1:' + port);
+    });
+  `;
+}
+
+function spawnLocalServer() {
+  if (TARGET_URL) {
+    return null;
+  }
+
+  if (!STATIC_ROOT) {
+    return spawn(process.execPath, ['server.js'], {
+      cwd: process.cwd(),
+      env: { ...process.env, PORT },
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+  }
+
+  return spawn(process.execPath, ['-e', createStaticServerScript(), resolve(STATIC_ROOT), PORT], {
+    cwd: process.cwd(),
+    env: { ...process.env, PORT },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+}
+
 async function waitUntil(fn, { timeoutMs = 15000, intervalMs = 100 } = {}) {
   const deadline = Date.now() + timeoutMs;
   let lastError;
@@ -130,6 +209,11 @@ async function waitUntil(fn, { timeoutMs = 15000, intervalMs = 100 } = {}) {
 
 function waitForServer(processRef) {
   return new Promise((resolveWait, reject) => {
+    if (!processRef) {
+      resolveWait();
+      return;
+    }
+
     const timeout = setTimeout(() => {
       reject(new Error('Timed out waiting for local server to start'));
     }, 15000);
@@ -409,16 +493,38 @@ async function findDrawableCanvasPoint(cdp, xRatio = 0.2, yRatio = 0.2) {
   })()`);
 }
 
+async function getToolbarHitTarget(cdp) {
+  return evaluate(cdp, `(() => {
+    const button = document.querySelector('#toolbar .tool-btn, #history-controls button');
+    if (!button) {
+      return null;
+    }
+
+    const rect = button.getBoundingClientRect();
+    const x = rect.x + rect.width / 2;
+    const y = rect.y + rect.height / 2;
+    const element = document.elementFromPoint(x, y);
+    return {
+      x,
+      y,
+      expectedId: button.id || null,
+      expectedClassName: String(button.className || ''),
+      target: {
+        tagName: element?.tagName || null,
+        id: element?.id || null,
+        className: String(element?.className || ''),
+        insideToolbar: !!element?.closest?.('#toolbar, #history-controls')
+      }
+    };
+  })()`);
+}
+
 async function main() {
   const profileDir = resolve('.tmp', `cdp-profile-${Date.now()}`);
   await mkdir(profileDir, { recursive: true });
   const browserPath = await resolveBrowserPath();
 
-  const server = spawn(process.execPath, ['server.js'], {
-    cwd: process.cwd(),
-    env: { ...process.env, PORT },
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
+  const server = spawnLocalServer();
 
   console.log(`drawing-smoke-cdp: using browser ${browserPath}`);
   const browser = spawn(browserPath, [
@@ -441,7 +547,7 @@ async function main() {
     stdio: ['ignore', 'ignore', 'pipe']
   });
 
-  server.stderr.on('data', data => process.stderr.write(data));
+  server?.stderr.on('data', data => process.stderr.write(data));
   browser.stderr.on('data', data => process.stderr.write(data));
 
   let cdp;
@@ -474,12 +580,20 @@ async function main() {
     });
     await cdp.send('Page.navigate', { url: BASE_URL });
 
-    await waitUntil(() => evaluate(cdp, 'location.href.startsWith("http://127.0.0.1") && document.readyState === "complete"'), { timeoutMs: 15000 });
+    await waitUntil(() => evaluate(cdp, `location.href.startsWith(${JSON.stringify(BASE_URL)}) && document.readyState === "complete"`), { timeoutMs: 15000 });
     await waitUntil(() => evaluate(cdp, '!!window.drawingBoard?.drawingEngine'), { timeoutMs: 15000 });
     await wait(500);
     await dismissBlockingModals(cdp);
 
+    const toolbarHitTarget = await getToolbarHitTarget(cdp);
+    if (!toolbarHitTarget?.target?.insideToolbar) {
+      throw new Error(`Toolbar control was blocked by another layer: ${JSON.stringify(toolbarHitTarget)}`);
+    }
+
     const penPoint = await findDrawableCanvasPoint(cdp, 0.35, 0.35);
+    if (penPoint.target.id !== 'canvas') {
+      throw new Error(`Drawable point did not target the canvas: ${JSON.stringify(penPoint)}`);
+    }
     const rect = penPoint.rect;
 
     await dispatchDrag(
@@ -544,11 +658,32 @@ async function main() {
       throw new Error(`Shape did not persist drawing: ${JSON.stringify({ penSample, shapeSample })}`);
     }
 
-    console.log('drawing-smoke-cdp: pen and shape persisted visible canvas content');
+    await evaluate(cdp, `(() => {
+      window.drawingBoard?.setTool?.('pen', false);
+      window.drawingBoard?.setZoom?.('200');
+    })()`);
+    await wait(350);
+
+    const zoomPenBefore = await getCanvasSample(cdp);
+    const zoomPenPoint = await findDrawableCanvasPoint(cdp, 0.72, 0.28);
+    await dispatchDrag(
+      cdp,
+      { x: zoomPenPoint.x, y: zoomPenPoint.y },
+      {
+        x: zoomPenPoint.x + zoomPenPoint.rect.width * 0.08,
+        y: zoomPenPoint.y + zoomPenPoint.rect.height * 0.08
+      }
+    );
+    const zoomPenSample = await getCanvasSample(cdp);
+    if (zoomPenSample.strokes <= zoomPenBefore.strokes || zoomPenSample.alphaPixels <= zoomPenBefore.alphaPixels) {
+      throw new Error(`Zoomed pen did not persist drawing: ${JSON.stringify({ zoomPenBefore, zoomPenSample, zoomPenPoint })}`);
+    }
+
+    console.log('drawing-smoke-cdp: pen, shape, and zoomed pen persisted visible canvas content');
   } finally {
     cdp?.close();
     browser.kill();
-    server.kill();
+    server?.kill();
     await wait(200);
     await rm(profileDir, { recursive: true, force: true });
   }

@@ -81,11 +81,15 @@ function createBoard(canvasTarget) {
   let pointerPinchStartCalls = 0;
   let drawingCompleteCalls = 0;
   let drawCalls = 0;
+  const capturedPointers = [];
   const drawBatchCalls = [];
 
   return {
     canvas: {
       addEventListener: canvasTarget.addEventListener.bind(canvasTarget),
+      setPointerCapture(pointerId) {
+        capturedPointers.push(pointerId);
+      },
       getBoundingClientRect() {
         return { left: 0, top: 0 };
       },
@@ -217,6 +221,9 @@ function createBoard(canvasTarget) {
     },
     get drawBatchCalls() {
       return drawBatchCalls;
+    },
+    get capturedPointers() {
+      return capturedPointers;
     }
   };
 }
@@ -414,12 +421,40 @@ function testPointerMoveFallsBackWhenCoalescedEventsAreEmpty() {
   assert.equal(board.drawBatchCalls.length, 0, 'empty coalesced event lists should not be sent to drawBatch');
 }
 
+function testPenPointerDownCapturesPointerToCanvas() {
+  const { runtime, canvasTarget, documentTarget } = loadEventSetupRuntime();
+  const board = createBoard(canvasTarget);
+
+  runtime.setupEventListeners(board);
+
+  const pointerDownHandler = documentTarget.listeners.get('pointerdown');
+  const target = {
+    closest() {
+      return null;
+    }
+  };
+
+  pointerDownHandler({
+    pointerType: 'mouse',
+    pointerId: 7,
+    clientX: 10,
+    clientY: 10,
+    isPrimary: true,
+    button: 0,
+    shiftKey: false,
+    target
+  });
+
+  assert.deepEqual(board.capturedPointers, [7], 'pen drawing should capture the active pointer on the canvas');
+}
+
 function run() {
   testTouchCancelEndsPinchGestureAndClearsFlags();
   testPureTouchPinchUsesTouchPathOnly();
   testPenAndTouchPinchUsesPointerPath();
   testPrimaryPointerCancelCompletesActiveDrawing();
   testPointerMoveFallsBackWhenCoalescedEventsAreEmpty();
+  testPenPointerDownCapturesPointerToCanvas();
   console.log('event-setup-touchcancel.test: all assertions passed');
 }
 

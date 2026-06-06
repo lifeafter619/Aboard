@@ -74,6 +74,19 @@ function getEventTargetClosest(target) {
             : () => null;
 }
 
+function captureCanvasPointer(board, event) {
+        if (event?.pointerId === undefined || typeof board?.canvas?.setPointerCapture !== 'function') {
+            return;
+        }
+
+        try {
+            board.canvas.setPointerCapture(event.pointerId);
+        } catch {
+            // Some browsers only allow capture when the canvas is the original
+            // pointerdown target. Drawing still falls back to document listeners.
+        }
+}
+
 function setupEventListeners() {
         const shouldUsePointerPinch = () => this.isPointerPinching
             || Array.from(this.activePointers.values()).some(pointer => pointer.pointerType === 'pen');
@@ -159,6 +172,7 @@ function setupEventListeners() {
                         this.historyManager.saveState();
                     }
                     this.setTool('pen', false);
+                    captureCanvasPointer(this, e);
                     // Continue with pen drawing by calling startDrawing
                     this.drawingEngine.startDrawing(e);
                     return;
@@ -235,6 +249,7 @@ function setupEventListeners() {
                 if (this.teachingToolsManager && this.teachingToolsManager.isInteracting) {
                     return;
                 }
+                captureCanvasPointer(this, e);
                 this.shapeDrawingManager.startDrawing(e);
                 this.scheduleRenderQualityUpdate();
             } else if (this.drawingEngine.currentTool === 'pen' || this.drawingEngine.currentTool === 'eraser') {
@@ -242,6 +257,7 @@ function setupEventListeners() {
                 if (this.teachingToolsManager && this.teachingToolsManager.isInteracting) {
                     return;
                 }
+                captureCanvasPointer(this, e);
                 this.drawingEngine.startDrawing(e);
                 this.scheduleRenderQualityUpdate();
                 // Show eraser cursor only when actually erasing on canvas
