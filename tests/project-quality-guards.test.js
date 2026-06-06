@@ -227,6 +227,62 @@ function testDeferredStylePreloadsUseLowFetchPriority() {
   );
 }
 
+function testNonFirstPaintCssModulesAreDeferred() {
+  const html = readText('index.html');
+  const htmlWithoutNoscript = html.replace(/<noscript>[\s\S]*?<\/noscript>/gi, '');
+  const nonFirstPaintModules = [
+    'coordinate-tools',
+    'selection-controls',
+    'shape'
+  ];
+
+  nonFirstPaintModules.forEach((moduleName) => {
+    assert.doesNotMatch(
+      htmlWithoutNoscript,
+      new RegExp(`<link\\s+[^>]*rel="stylesheet"[^>]*href="css/modules/${moduleName}\\.css"`),
+      `${moduleName}.css should not block first paint`
+    );
+    assert.match(
+      html,
+      new RegExp(`<link\\s+[^>]*rel="preload"[^>]*as="style"[^>]*href="css/modules/${moduleName}\\.css"[^>]*fetchpriority="low"`),
+      `${moduleName}.css should be applied through a low-priority deferred style preload`
+    );
+  });
+}
+
+function collectJsSourceFiles(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === 'libs') {
+        return [];
+      }
+      return collectJsSourceFiles(entryPath);
+    }
+    return entry.isFile() && entry.name.endsWith('.js') ? [entryPath] : [];
+  });
+}
+
+function testProductionSourcesAvoidReplaceAllForLegacyWebViews() {
+  const jsRoot = path.join(REPO_ROOT, 'js');
+  const offenders = collectJsSourceFiles(jsRoot).flatMap((filePath) => {
+    const relativePath = path.relative(REPO_ROOT, filePath).replace(/\\/g, '/');
+    return fs.readFileSync(filePath, 'utf8')
+      .split(/\r?\n/)
+      .flatMap((line, index) => (
+        line.includes('.replaceAll(')
+          ? [`${relativePath}:${index + 1}`]
+          : []
+      ));
+  });
+
+  assert.deepEqual(
+    offenders,
+    [],
+    `production JS should avoid String.prototype.replaceAll for older WebView/Safari compatibility: ${offenders.join(', ')}`
+  );
+}
+
 function loadModalRuntimeForViewport({ innerWidth, innerHeight }) {
   const sandbox = {
     console,
@@ -268,6 +324,8 @@ function run() {
   testInsertTextModalStylesLiveInModule();
   testFontManagementStylesLiveInModule();
   testDeferredStylePreloadsUseLowFetchPriority();
+  testNonFirstPaintCssModulesAreDeferred();
+  testProductionSourcesAvoidReplaceAllForLegacyWebViews();
   testAnnouncementModalResponsiveMinimumWidthIsApplied();
   console.log('project-quality-guards.test: all assertions passed');
 }

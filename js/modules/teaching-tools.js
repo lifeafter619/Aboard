@@ -406,7 +406,7 @@ class TeachingToolsManager {
         }
 
         return Object.entries(replacements).reduce(
-            (message, [name, replacement]) => message.replaceAll(`{${name}}`, String(replacement ?? '')),
+            (message, [name, replacement]) => message.split(`{${name}}`).join(String(replacement ?? '')),
             value
         );
     }

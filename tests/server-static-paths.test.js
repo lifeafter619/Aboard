@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const zlib = require('node:zlib');
 const vm = require('node:vm');
 
 const EXPECTED_SECURITY_HEADERS = Object.freeze({
@@ -43,6 +44,8 @@ function loadServerHarness() {
         return path;
       case 'url':
         return require('node:url');
+      case 'zlib':
+        return require('node:zlib');
       default:
         throw new Error(`Unsupported module: ${moduleName}`);
     }
@@ -83,13 +86,21 @@ function createResponseRecorder() {
     statusCode: null,
     headers: null,
     body: '',
+    chunks: [],
     writeHead(statusCode, headers) {
       this.statusCode = statusCode;
       this.headers = headers;
     },
     end(chunk = '') {
-      this.body += chunk;
+      if (chunk !== '') {
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
+        this.chunks.push(buffer);
+        this.body += Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk);
+      }
       resolveEnd();
+    },
+    get rawBody() {
+      return Buffer.concat(this.chunks);
     }
   };
 }
@@ -170,6 +181,63 @@ async function testStaticResponseIncludesSecurityHeaders() {
   assert.equal(res.headers?.['Content-Type'], 'text/html; charset=utf-8');
 }
 
+async function testTextStaticResponseUsesGzipWhenAccepted() {
+  const harness = loadServerHarness();
+  const originalBody = Buffer.from('const payload = "Aboard";\n'.repeat(160));
+  harness.setReadFileImpl((filePath, callback) => {
+    assert.match(filePath, /[\\/]js[\\/]drawing\.js$/);
+    callback(null, originalBody);
+  });
+
+  const res = createResponseRecorder();
+  harness.requestHandler(
+    {
+      url: '/js/drawing.js',
+      headers: {
+        host: 'localhost:8080',
+        'accept-encoding': 'gzip'
+      }
+    },
+    res
+  );
+
+  await res.ended;
+
+  assert.equal(res.statusCode, 200);
+  assertSecurityHeaders(res.headers);
+  assert.equal(res.headers?.['Content-Type'], 'application/javascript; charset=utf-8');
+  assert.equal(res.headers?.['Content-Encoding'], 'gzip');
+  assert.equal(res.headers?.Vary, 'Accept-Encoding');
+  assert.equal(zlib.gunzipSync(res.rawBody).toString('utf8'), originalBody.toString('utf8'));
+}
+
+async function testEncodingQZeroIsRespected() {
+  const harness = loadServerHarness();
+  const originalBody = Buffer.from('const payload = "Aboard";\n'.repeat(160));
+  harness.setReadFileImpl((filePath, callback) => {
+    assert.match(filePath, /[\\/]js[\\/]drawing\.js$/);
+    callback(null, originalBody);
+  });
+
+  const res = createResponseRecorder();
+  harness.requestHandler(
+    {
+      url: '/js/drawing.js',
+      headers: {
+        host: 'localhost:8080',
+        'accept-encoding': 'br;q=0, gzip;q=0, *;q=1'
+      }
+    },
+    res
+  );
+
+  await res.ended;
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.headers?.['Content-Encoding'], undefined);
+  assert.equal(res.rawBody.toString('utf8'), originalBody.toString('utf8'));
+}
+
 function testVercelConfigDefinesMatchingSecurityHeaders() {
   const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'vercel.json'), 'utf8'));
   const globalHeaders = config.headers?.find((entry) => entry.source === '/(.*)')?.headers || [];
@@ -184,6 +252,8 @@ async function run() {
   await testDirectoryRequestReturnsNotFoundInsteadOfServerError();
   await testMalformedRequestUrlReturnsBadRequestInsteadOfThrowing();
   await testStaticResponseIncludesSecurityHeaders();
+  await testTextStaticResponseUsesGzipWhenAccepted();
+  await testEncodingQZeroIsRespected();
   testVercelConfigDefinesMatchingSecurityHeaders();
   console.log('server-static-paths.test: all assertions passed');
 }

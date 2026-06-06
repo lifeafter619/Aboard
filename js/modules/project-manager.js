@@ -137,7 +137,7 @@ class ProjectManager {
         }
 
         return Object.entries(replacements).reduce(
-            (message, [name, value]) => message.replaceAll(`{${name}}`, String(value ?? '')),
+            (message, [name, value]) => message.split(`{${name}}`).join(String(value ?? '')),
             translated
         );
     }

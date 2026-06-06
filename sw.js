@@ -7,6 +7,7 @@ const SW_VERSION = '2.4.5';
 const CORE_CACHE_NAME = `aboard-core-${SW_VERSION}`;
 const RUNTIME_CACHE_NAME = `aboard-runtime-${SW_VERSION}`;
 const RUNTIME_CACHE_MAX_ENTRIES = 24;
+const OPTIONAL_PRECACHE_CONCURRENCY = 6;
 const RUNTIME_CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'worker', 'image', 'font', 'manifest']);
 const RUNTIME_CACHEABLE_EXTENSIONS = /\.(?:css|gif|ico|jpe?g|js|json|png|svg|webp|woff2?)$/i;
 const LOCALE_ASSETS = [
@@ -294,6 +295,37 @@ const ESSENTIAL_CORE_ASSETS = [
   './js/legacy/runtime-bridge.js'
 ];
 
+async function precacheOptionalAsset(cache, asset) {
+  try {
+    const response = await fetch(asset, { cache: 'reload' });
+    if (!response || !response.ok) {
+      console.warn('Skipping optional asset during install:', asset, response && response.status);
+      return;
+    }
+    await cache.put(asset, response);
+  } catch (error) {
+    console.warn('Failed to precache optional asset:', asset, error);
+  }
+}
+
+async function precacheOptionalAssets(cache, optionalAssets) {
+  if (!optionalAssets.length) {
+    return;
+  }
+
+  let nextAssetIndex = 0;
+  const workerCount = Math.min(OPTIONAL_PRECACHE_CONCURRENCY, optionalAssets.length);
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (nextAssetIndex < optionalAssets.length) {
+      const asset = optionalAssets[nextAssetIndex];
+      nextAssetIndex += 1;
+      await precacheOptionalAsset(cache, asset);
+    }
+  });
+
+  await Promise.all(workers);
+}
+
 async function precacheCoreAssets(cache) {
   // Atomic: essentials must all succeed or the install fails cleanly.
   await cache.addAll(ESSENTIAL_CORE_ASSETS);
@@ -302,20 +334,7 @@ async function precacheCoreAssets(cache) {
   // on instead of poisoning the whole install. First-use traffic will still
   // populate the runtime cache via the fetch handler.
   const optionalAssets = CORE_ASSETS.filter((asset) => !ESSENTIAL_CORE_ASSETS.includes(asset));
-  await Promise.allSettled(
-    optionalAssets.map(async (asset) => {
-      try {
-        const response = await fetch(asset, { cache: 'reload' });
-        if (!response || !response.ok) {
-          console.warn('Skipping optional asset during install:', asset, response && response.status);
-          return;
-        }
-        await cache.put(asset, response);
-      } catch (error) {
-        console.warn('Failed to precache optional asset:', asset, error);
-      }
-    })
-  );
+  await precacheOptionalAssets(cache, optionalAssets);
 }
 
 self.addEventListener('install', event => {

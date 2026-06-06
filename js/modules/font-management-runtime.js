@@ -53,7 +53,7 @@ function getDialogConfirm(board, config) {
 function formatTextWithFallback(key, fallback, replacements = {}) {
         const template = getTextWithFallback(key, fallback);
         return Object.entries(replacements).reduce(
-            (message, [name, value]) => message.replaceAll(`{${name}}`, String(value ?? '')),
+            (message, [name, value]) => message.split(`{${name}}`).join(String(value ?? '')),
             String(template)
         );
 }

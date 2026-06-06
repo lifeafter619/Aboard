@@ -2,6 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { URL } = require('url');
+const zlib = require('zlib');
 
 const parsedPort = Number.parseInt(process.env.PORT, 10);
 const PORT = Number.isNaN(parsedPort) ? 8080 : parsedPort;
@@ -29,6 +30,17 @@ const MIME_TYPES = {
     '.otf': 'font/otf'
 };
 
+const COMPRESSIBLE_EXTENSIONS = new Set([
+    '.css',
+    '.html',
+    '.js',
+    '.json',
+    '.svg',
+    '.txt',
+    '.webmanifest'
+]);
+const COMPRESSION_MIN_BYTES = 1024;
+
 const SECURITY_HEADERS = Object.freeze({
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
@@ -42,6 +54,89 @@ function withSecurityHeaders(headers = {}) {
         ...SECURITY_HEADERS,
         ...headers
     };
+}
+
+function parseAcceptEncoding(headerValue) {
+    const preferences = new Map();
+    String(headerValue || '').toLowerCase().split(',').forEach((entry) => {
+        const [name, ...params] = entry.trim().split(';').map((part) => part.trim());
+        if (!name) {
+            return;
+        }
+        const qParam = params.find((param) => param.startsWith('q='));
+        const qValue = qParam ? Number.parseFloat(qParam.slice(2)) : 1;
+        preferences.set(name, Number.isFinite(qValue) ? qValue : 0);
+    });
+    return preferences;
+}
+
+function acceptsEncoding(req, encoding) {
+    const header = String(req?.headers?.['accept-encoding'] || '').toLowerCase();
+    const preferences = parseAcceptEncoding(header);
+    if (preferences.has(encoding)) {
+        return preferences.get(encoding) > 0;
+    }
+    if (preferences.has('*')) {
+        return preferences.get('*') > 0;
+    }
+    return false;
+}
+
+function selectCompressionEncoding(req, ext, data) {
+    if (!COMPRESSIBLE_EXTENSIONS.has(ext) || data.length < COMPRESSION_MIN_BYTES) {
+        return null;
+    }
+    if (acceptsEncoding(req, 'br')) {
+        return 'br';
+    }
+    if (acceptsEncoding(req, 'gzip')) {
+        return 'gzip';
+    }
+    return null;
+}
+
+function compressData(data, encoding, callback) {
+    if (encoding === 'br') {
+        zlib.brotliCompress(data, {
+            params: {
+                [zlib.constants.BROTLI_PARAM_QUALITY]: 5
+            }
+        }, callback);
+        return;
+    }
+
+    zlib.gzip(data, { level: 6 }, callback);
+}
+
+function sendStaticData(req, res, ext, mimeType, data) {
+    const headers = {
+        'Content-Type': mimeType
+    };
+    if (COMPRESSIBLE_EXTENSIONS.has(ext)) {
+        headers.Vary = 'Accept-Encoding';
+    }
+
+    const encoding = selectCompressionEncoding(req, ext, data);
+    if (!encoding) {
+        res.writeHead(200, withSecurityHeaders(headers));
+        res.end(data);
+        return;
+    }
+
+    compressData(data, encoding, (error, compressedData) => {
+        if (error) {
+            console.warn(`Failed to ${encoding}-compress static response:`, error);
+            res.writeHead(200, withSecurityHeaders(headers));
+            res.end(data);
+            return;
+        }
+
+        res.writeHead(200, withSecurityHeaders({
+            ...headers,
+            'Content-Encoding': encoding
+        }));
+        res.end(compressedData);
+    });
 }
 
 function sendJson(res, statusCode, payload) {
@@ -101,7 +196,7 @@ function containsEncodedTraversal(pathname) {
     }
 }
 
-function serveStatic(reqPath, res, rawPath = reqPath) {
+function serveStatic(req, reqPath, res, rawPath = reqPath) {
     const normalizedRawPath = (rawPath || reqPath || '').replace(/\\/g, '/');
     if (hasDotSegment(normalizedRawPath) || containsEncodedTraversal(normalizedRawPath)) {
         sendJson(res, 403, { error: 'Forbidden' });
@@ -136,8 +231,7 @@ function serveStatic(reqPath, res, rawPath = reqPath) {
 
         const ext = path.extname(filePath).toLowerCase();
         const mimeType = MIME_TYPES[ext] || 'application/octet-stream';
-        res.writeHead(200, withSecurityHeaders({ 'Content-Type': mimeType }));
-        res.end(data);
+        sendStaticData(req, res, ext, mimeType, data);
     });
 }
 
@@ -174,7 +268,7 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    serveStatic(url.pathname, res, req.url || url.pathname);
+    serveStatic(req, url.pathname, res, req.url || url.pathname);
 });
 
 server.listen(PORT, () => {

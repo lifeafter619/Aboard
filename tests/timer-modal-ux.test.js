@@ -123,7 +123,7 @@ function createDocumentStub() {
   return document;
 }
 
-function loadTimerManagerClass() {
+function loadTimerManagerClass({ AudioClass } = {}) {
   const document = createDocumentStub();
   const sandbox = {
     console,
@@ -148,7 +148,7 @@ function loadTimerManagerClass() {
     clearTimeout,
     setInterval,
     clearInterval,
-    Audio: class FakeAudio {
+    Audio: AudioClass || class FakeAudio {
       addEventListener() {}
       pause() {}
       play() {
@@ -194,6 +194,36 @@ function loadTimerManagerClass() {
   return {
     document,
     TimerManager: sandbox.window.__TimerManager
+  };
+}
+
+function createTrackingAudioClass(events) {
+  return class TrackingAudio {
+    constructor(url) {
+      this.url = url;
+      this.paused = true;
+      this.currentTime = 0;
+      events.push({ type: 'construct', url });
+    }
+
+    addEventListener() {}
+
+    load() {
+      events.push({ type: 'load', url: this.url });
+    }
+
+    pause() {
+      this.paused = true;
+    }
+
+    play() {
+      this.paused = false;
+      return Promise.resolve();
+    }
+
+    cloneNode() {
+      return new TrackingAudio(this.url);
+    }
   };
 }
 
@@ -329,8 +359,61 @@ function testTimerAlertModalBackdropDismissalRestoresFocus() {
   assert.equal(document.activeElement, trigger, 'alert backdrop dismissal should restore focus to the opener');
 }
 
+function testTimerPresetSoundsLoadOnlyAfterUserIntent() {
+  const firstAudioEvents = [];
+  const firstLoad = loadTimerManagerClass({
+    AudioClass: createTrackingAudioClass(firstAudioEvents)
+  });
+  const firstDocument = firstLoad.document;
+  firstDocument.registerElement(createElement(firstDocument, 'timer-settings-modal'));
+  const timerSoundCheckbox = firstDocument.registerElement(createElement(firstDocument, 'timer-sound-checkbox'));
+  firstDocument.registerElement(createElement(firstDocument, 'sound-settings-content'));
+
+  new firstLoad.TimerManager();
+
+  assert.deepEqual(
+    firstAudioEvents.filter((event) => event.type === 'load'),
+    [],
+    'TimerManager construction should not download preset sounds before the user asks for sound'
+  );
+
+  timerSoundCheckbox.checked = true;
+  timerSoundCheckbox.trigger('change');
+
+  assert.equal(
+    firstAudioEvents.filter((event) => event.type === 'load').length,
+    4,
+    'enabling timer sound should preload the preset sounds once'
+  );
+
+  timerSoundCheckbox.trigger('change');
+
+  assert.equal(
+    firstAudioEvents.filter((event) => event.type === 'load').length,
+    4,
+    're-enabling timer sound should not reload audio that is already preloaded'
+  );
+
+  const secondAudioEvents = [];
+  const secondLoad = loadTimerManagerClass({
+    AudioClass: createTrackingAudioClass(secondAudioEvents)
+  });
+  secondLoad.document.registerElement(createElement(secondLoad.document, 'timer-settings-modal'));
+  const previewManager = new secondLoad.TimerManager();
+  const previewButton = createElement(secondLoad.document, 'timer-sound-preview-btn');
+
+  previewManager.previewSound('gentle-alarm', previewButton);
+
+  assert.deepEqual(
+    secondAudioEvents.filter((event) => event.type === 'load').map((event) => event.url),
+    ['sounds/gentle-alarm.MP3'],
+    'previewing one preset sound should preload only that audio file'
+  );
+}
+
 (function main() {
   testTimerSettingsModalBackdropDismissalRestoresFocus();
   testTimerAlertModalBackdropDismissalRestoresFocus();
+  testTimerPresetSoundsLoadOnlyAfterUserIntent();
   console.log('timer-modal-ux.test: all assertions passed');
 })();

@@ -1229,9 +1229,8 @@ class TimerManager {
             'digital-beep': 'sounds/digital-beep.MP3'
         };
 
-        // Preload all sounds on initialization
+        // Preset sounds are loaded lazily after explicit user intent.
         this.preloadedAudio = {};
-        this.preloadSounds();
 
         // Load custom sounds from localStorage
         this.customSounds = this.loadCustomSounds();
@@ -1349,9 +1348,14 @@ class TimerManager {
         this.updateTimerColorAccessibility();
     }
 
-    preloadSounds() {
-        // Preload all preset sounds for immediate playback
-        Object.keys(this.sounds).forEach(key => {
+    preloadSounds(soundKey = null) {
+        const soundKeys = soundKey ? [soundKey] : Object.keys(this.sounds);
+
+        soundKeys.forEach(key => {
+            if (!this.sounds[key] || this.preloadedAudio[key]) {
+                return;
+            }
+
             const audio = new Audio(this.sounds[key]);
             audio.preload = 'auto';
             audio.load();
@@ -1538,6 +1542,7 @@ class TimerManager {
             soundCheckbox.addEventListener('change', (e) => {
                 if (e.target.checked) {
                     soundSettingsContent.style.display = 'block';
+                    this.preloadSounds();
                 } else {
                     soundSettingsContent.style.display = 'none';
                 }
@@ -2345,6 +2350,10 @@ class TimerManager {
             this.showAlertModal(getTimerText('timer.alertSetTime', 'Please set the countdown time.'));
             return;
         }
+
+        if (playSound && !customSoundUrl) {
+            this.preloadSounds(selectedSound);
+        }
         
         if (this.adjustingTimer) {
             // Update existing timer
@@ -2406,6 +2415,8 @@ class TimerManager {
         
         // Stop any currently playing preview
         this.stopPreviewAudio();
+
+        this.preloadSounds(soundKey);
         
         // Use preloaded audio for immediate playback
         const preloadedAudio = this.preloadedAudio[soundKey];

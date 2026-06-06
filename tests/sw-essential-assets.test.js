@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const ENTRY_FILES = [
@@ -154,13 +155,70 @@ function testCorePrecacheCoversIndexStylesheets() {
   );
 }
 
-function run() {
+async function testOptionalPrecacheLimitsConcurrentFetches() {
+  const source = `${readText('sw.js')}\n;globalThis.__swTestExports = { precacheCoreAssets, CORE_ASSETS, ESSENTIAL_CORE_ASSETS };`;
+  let activeFetches = 0;
+  let maxActiveFetches = 0;
+  let optionalFetchCount = 0;
+
+  const sandbox = {
+    console: {
+      warn() {}
+    },
+    self: {
+      location: {
+        origin: 'https://example.test'
+      },
+      addEventListener() {}
+    },
+    fetch: async () => {
+      activeFetches += 1;
+      optionalFetchCount += 1;
+      maxActiveFetches = Math.max(maxActiveFetches, activeFetches);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      activeFetches -= 1;
+      return {
+        ok: true,
+        status: 200
+      };
+    },
+    Promise,
+    Set,
+    URL,
+    setTimeout
+  };
+  sandbox.globalThis = sandbox;
+
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox, { filename: 'sw.js' });
+
+  const cache = {
+    async addAll(assets) {
+      assert.deepEqual(assets, sandbox.__swTestExports.ESSENTIAL_CORE_ASSETS);
+    },
+    async put() {}
+  };
+
+  await sandbox.__swTestExports.precacheCoreAssets(cache);
+
+  assert.ok(optionalFetchCount > 6, 'test fixture should exercise more optional assets than the concurrency cap');
+  assert.ok(
+    maxActiveFetches <= 6,
+    `optional service worker precache fetches should be capped at 6 concurrent requests, saw ${maxActiveFetches}`
+  );
+}
+
+async function run() {
   testEssentialCacheCoversOfflineBootstrapImportClosure();
   testEssentialCacheCoversVisibleCoreLegacyStartupAssets();
   testCorePrecacheExcludesLargeLazyAssets();
   testCorePrecacheCoversIndexClassicScripts();
   testCorePrecacheCoversIndexStylesheets();
+  await testOptionalPrecacheLimitsConcurrentFetches();
   console.log('sw-essential-assets.test: all assertions passed');
 }
 
-run();
+run().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
