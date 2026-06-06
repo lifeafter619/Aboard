@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { loadClassicScript } from '../js/app/legacy-script-loader.js';
 
 const scriptLoaderSource = fs.readFileSync(
   path.join(process.cwd(), 'js', 'infra', 'script-loader.js'),
@@ -114,9 +115,21 @@ async function testEquivalentRelativePathsDoNotDuplicateScripts() {
   assert.equal(doc.getAppendCount(), 0);
 }
 
+async function testLegacyExistingLoadedScriptWithoutMarkerResolvesImmediately() {
+  const existingScript = createScriptElement('js/modules/already-loaded.js');
+  const doc = createDocumentStub([existingScript]);
+
+  const result = await raceWithTimeout(loadClassicScript('js/modules/already-loaded.js', { doc }));
+
+  assert.equal(result.status, 'resolved');
+  assert.equal(result.value, existingScript);
+  assert.equal(doc.getAppendCount(), 0);
+}
+
 async function run() {
   await testExistingLoadedScriptWithoutMarkerResolvesImmediately();
   await testEquivalentRelativePathsDoNotDuplicateScripts();
+  await testLegacyExistingLoadedScriptWithoutMarkerResolvesImmediately();
   console.log('script-loader-existing-script.test: all assertions passed');
 }
 

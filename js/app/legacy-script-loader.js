@@ -34,6 +34,11 @@ export function loadClassicScript(src, { doc = document } = {}) {
     return Promise.resolve(existingScript);
   }
 
+  if (existingScript && existingScript.dataset.loaded !== 'false') {
+    existingScript.dataset.loaded = 'true';
+    return Promise.resolve(existingScript);
+  }
+
   if (existingScript?.dataset.loaded === 'false') {
     existingScript.remove();
   }

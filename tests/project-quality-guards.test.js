@@ -42,9 +42,13 @@ function testScriptsDirectoryIsNotGloballyIgnored() {
 
 function testPackageExposesBrowserSmokeScript() {
   const packageJson = JSON.parse(readText('package.json'));
+  const testRunner = readText('scripts/run-tests.js');
   assert.match(packageJson.scripts?.['test:smoke'] || '', /node tests\/drawing-smoke-cdp\.mjs/, 'test:smoke should include drawing persistence browser coverage');
   assert.match(packageJson.scripts?.['test:smoke'] || '', /node tests\/responsive-layout-smoke\.mjs/, 'test:smoke should include responsive layout browser coverage');
-  assert.match(packageJson.scripts?.test || '', /test:smoke|drawing-smoke-cdp\.mjs/, 'npm test should include the browser smoke coverage');
+  assert.match(packageJson.scripts?.test || '', /run-tests\.js core|test:core/, 'npm test should run the lightweight core suite');
+  assert.match(packageJson.scripts?.['test:full'] || '', /run-tests\.js full/, 'test:full should run the complete regression suite');
+  assert.match(testRunner, /tests\/drawing-smoke-cdp\.mjs/, 'full suite runner should include drawing persistence browser coverage');
+  assert.match(testRunner, /tests\/responsive-layout-smoke\.mjs/, 'full suite runner should include responsive layout browser coverage');
 }
 
 function testPaginationControlsUseCompactTargets() {
