@@ -7,6 +7,8 @@ const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
 const styleCss = fs.readFileSync(path.join(rootDir, 'css', 'style.css'), 'utf8');
 const displayRuntime = fs.readFileSync(path.join(rootDir, 'js', 'modules', 'display-runtime.js'), 'utf8');
 const backgroundUiRuntime = fs.readFileSync(path.join(rootDir, 'js', 'modules', 'background-ui-runtime.js'), 'utf8');
+const toolRuntime = fs.readFileSync(path.join(rootDir, 'js', 'modules', 'tool-runtime.js'), 'utf8');
+const layoutRuntime = fs.readFileSync(path.join(rootDir, 'js', 'modules', 'layout-runtime.js'), 'utf8');
 const uploadedImagesRuntime = fs.readFileSync(path.join(rootDir, 'js', 'modules', 'uploaded-images-runtime.js'), 'utf8');
 
 function getPatternButtonMarkup(pattern) {
@@ -77,6 +79,78 @@ function testCssDefinesDensePatternColumnsAndCoordinateRows() {
   );
 }
 
+function testBackgroundColorColumnLeavesRoomForSwatches() {
+  assert.match(
+    styleCss,
+    /--background-color-column-width:\s*168px/,
+    'background config should reserve enough width for two rows of four 36px color swatches'
+  );
+  assert.match(
+    styleCss,
+    /#background-config\.active\s*{[^}]*grid-template-columns:\s*var\(--background-color-column-width\)\s+minmax\(0,\s*1fr\)/s,
+    'background config should use the reserved color column before pattern options'
+  );
+  assert.match(
+    styleCss,
+    /#background-config\.coordinate-pattern-active\.active\s*{[^}]*grid-template-columns:\s*var\(--background-color-column-width\)\s+minmax\(0,\s*1fr\)/s,
+    'coordinate and polar background config should keep the same safe color column width'
+  );
+}
+
+function testBackgroundPanelFitsInsideFloatingConfigArea() {
+  assert.match(
+    styleCss,
+    /#config-area\s*{[^}]*max-width:\s*min\(660px,\s*calc\(100vw - 40px\)\)/s,
+    'floating config area should be wide enough for the full background panel'
+  );
+  assert.match(
+    styleCss,
+    /#config-area\s*{[^}]*overflow-x:\s*hidden/s,
+    'floating config area should not expose a horizontal scrollbar'
+  );
+  assert.match(
+    styleCss,
+    /#background-config\.coordinate-pattern-active\.active\s*{[^}]*width:\s*620px;[^}]*max-width:\s*100%/s,
+    'coordinate and polar background config should fit inside the floating panel instead of forcing horizontal overflow'
+  );
+  assert.match(
+    styleCss,
+    /#config-area\.background-config-mode:not\(\.vertical\)\s*{[^}]*width:\s*min\(660px,\s*calc\(100vw - 40px\)\)/s,
+    'background tool should give the floating config area enough width when it is not side-docked'
+  );
+}
+
+function testNarrowBackgroundLayoutsCollapseToSingleColumn() {
+  assert.match(
+    styleCss,
+    /@media \(max-height:\s*500px\) and \(orientation:\s*landscape\)[\s\S]*#config-area\.background-config-mode:not\(\.vertical\)\s*{[^}]*width:\s*min\(460px,\s*calc\(100vw - 24px\)\)/s,
+    'phone landscape background config should keep enough width for a compact two-column layout'
+  );
+  assert.match(
+    styleCss,
+    /#config-area\.vertical #background-config\.active\s*{[^}]*flex-direction:\s*column/s,
+    'side-docked background config should stay single-column'
+  );
+}
+
+function testBackgroundModeClassAndInlineWidthReset() {
+  assert.match(
+    toolRuntime,
+    /configArea\?\.classList\?\.toggle\('background-config-mode',\s*tool === 'background'\)/,
+    'background tool should mark the config area for background-specific sizing'
+  );
+  assert.match(
+    layoutRuntime,
+    /configArea\.style\.width\s*=\s*''/,
+    'config positioning should clear stale inline width before applying normal layout'
+  );
+  assert.match(
+    layoutRuntime,
+    /configArea\.style\.maxWidth\s*=\s*''/,
+    'config positioning should clear stale inline max-width before applying normal layout'
+  );
+}
+
 function testPatternPreferenceRefreshPreservesFlexRows() {
   assert.match(
     displayRuntime,
@@ -110,6 +184,10 @@ function testUploadedImageButtonsUseCompactChoiceClass() {
   testPatternButtonsUseCompactChoiceClass();
   testCoordinateActionsLiveWithPatternChoices();
   testCssDefinesDensePatternColumnsAndCoordinateRows();
+  testBackgroundColorColumnLeavesRoomForSwatches();
+  testBackgroundPanelFitsInsideFloatingConfigArea();
+  testNarrowBackgroundLayoutsCollapseToSingleColumn();
+  testBackgroundModeClassAndInlineWidthReset();
   testPatternPreferenceRefreshPreservesFlexRows();
   testCoordinateActionRuntimePreservesGridRows();
   testUploadedImageButtonsUseCompactChoiceClass();

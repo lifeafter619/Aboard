@@ -163,6 +163,8 @@ function updateUI() {
         this.canvas.style.cursor = 'default';
     }
 
+    configArea?.classList?.toggle('background-config-mode', tool === 'background');
+
     if (configArea && !configArea.querySelector('.config-panel.active')) {
         configArea.classList.remove('show');
     }

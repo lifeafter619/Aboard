@@ -7,6 +7,7 @@
 :root {
     --theme-color: #007AFF;
     --touch-target-size: 44px;
+    --background-color-column-width: 168px;
 }
 
 body {
@@ -247,9 +248,10 @@ body.vector-preview-active #off-canvas-image-layer {
     border-radius: 14px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     min-width: 280px;
-    max-width: min(550px, calc(100vw - 40px)); /* Responsive: fits within viewport */
+    max-width: min(660px, calc(100vw - 40px)); /* Responsive: fits within viewport */
     max-height: calc(100vh - 120px); /* Prevent touching top - leave space for positioning */
     overflow-y: auto; /* Add scroll if content exceeds max height */
+    overflow-x: hidden;
     display: none;
     cursor: move;
     /* Improved touch device support */
@@ -273,6 +275,10 @@ body.vector-preview-active #off-canvas-image-layer {
     max-height: 80vh;
     overflow-y: auto;
     overflow-x: hidden;
+}
+
+#config-area.background-config-mode:not(.vertical) {
+    width: min(660px, calc(100vw - 40px));
 }
 
 #config-area.vertical .config-panel {
@@ -344,17 +350,19 @@ body.vector-preview-active #off-canvas-image-layer {
 /* Background config panel: center content vertically */
 #background-config.active {
     display: grid;
-    grid-template-columns: 150px minmax(0, 1fr);
+    grid-template-columns: var(--background-color-column-width) minmax(0, 1fr);
     align-items: start;
     gap: 10px;
     padding-top: 2px;
     padding-right: 6px;
-    width: min(532px, calc(100vw - 44px));
+    width: 548px;
+    max-width: 100%;
 }
 
 #background-config.coordinate-pattern-active.active {
-    grid-template-columns: 142px minmax(0, 1fr);
-    width: min(604px, calc(100vw - 44px));
+    grid-template-columns: var(--background-color-column-width) minmax(0, 1fr);
+    width: 620px;
+    max-width: 100%;
 }
 
 #background-config .config-group,
@@ -573,6 +581,7 @@ body.vector-preview-active #off-canvas-image-layer {
 
 #config-area.vertical #background-config.active {
     display: flex;
+    flex-direction: column;
     width: 100%;
 }
 
@@ -590,6 +599,10 @@ body.vector-preview-active #off-canvas-image-layer {
 
 #config-area.vertical #background-coordinate-actions {
     grid-template-columns: 1fr;
+}
+
+#config-area.vertical #background-config .color-picker-main {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 #config-area.vertical #background-config.coordinate-pattern-active #pattern-density-group {
@@ -2221,13 +2234,13 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     }
 
     #background-config.active {
-        grid-template-columns: 136px minmax(0, 1fr);
-        width: min(500px, calc(100vw - 44px));
+        grid-template-columns: var(--background-color-column-width) minmax(0, 1fr);
+        width: min(548px, 100%);
     }
 
     #background-config.coordinate-pattern-active.active {
-        grid-template-columns: 132px minmax(0, 1fr);
-        width: min(524px, calc(100vw - 44px));
+        grid-template-columns: var(--background-color-column-width) minmax(0, 1fr);
+        width: min(620px, 100%);
     }
 
     #background-config .pattern-grid-compact {
@@ -2236,6 +2249,10 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 
     #background-config.coordinate-pattern-active .pattern-grid-compact {
         grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    #config-area.background-config-mode:not(.vertical) {
+        width: min(660px, calc(100vw - 32px));
     }
     
     #history-controls {
@@ -2567,6 +2584,12 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
         flex-direction: column;
         align-items: stretch;
     }
+
+    #background-config.coordinate-pattern-active #pattern-density-group > div {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
     
     .config-panel.active {
         flex-direction: column;
@@ -2662,6 +2685,43 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
         bottom: 60px;
         max-height: calc(100vh - 80px);
         overflow-y: auto;
+    }
+
+    #config-area.background-config-mode:not(.vertical) {
+        width: min(460px, calc(100vw - 24px));
+    }
+
+    #config-area.background-config-mode:not(.vertical) #background-config.active {
+        grid-template-columns: var(--background-color-column-width) minmax(0, 1fr);
+        width: 100%;
+    }
+
+    #config-area.background-config-mode:not(.vertical) #background-config.coordinate-pattern-active.active {
+        grid-template-columns: var(--background-color-column-width) minmax(0, 1fr);
+        width: 100%;
+    }
+
+    #config-area.background-config-mode:not(.vertical) #background-config .pattern-grid-compact {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    #config-area.background-config-mode:not(.vertical) #background-config.coordinate-pattern-active .pattern-grid-compact {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    #config-area.background-config-mode:not(.vertical) #background-coordinate-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #config-area.background-config-mode:not(.vertical) #background-config.coordinate-pattern-active #pattern-density-group {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    #config-area.background-config-mode:not(.vertical) #background-config.coordinate-pattern-active #pattern-density-group > div {
+        display: flex;
+        gap: 8px;
+        align-items: center;
     }
     
     #history-controls {

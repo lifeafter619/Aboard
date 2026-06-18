@@ -449,6 +449,8 @@ async function runState(cdp, viewport, state) {
       && a.top < b.bottom - tolerance
       && a.bottom > b.top + tolerance;
 
+    const hasHorizontalOverflow = (element) => element.scrollWidth > element.clientWidth + 2;
+
     for (const selector of state.selectors) {
       const element = document.querySelector(selector);
       if (!element) {
@@ -480,6 +482,40 @@ async function runState(cdp, viewport, state) {
       const second = measured[secondSelector];
       if (first && second && overlaps(first, second)) {
         issues.push({ type: 'overlap', selectors: [firstSelector, secondSelector], first, second });
+      }
+    }
+
+    if (state.name.startsWith('background')) {
+      ['#config-area', '#background-config', '#pattern-grid', '#background-coordinate-actions'].forEach((selector) => {
+        const element = document.querySelector(selector);
+        if (isVisible(element) && hasHorizontalOverflow(element)) {
+          issues.push({
+            type: 'horizontal-overflow',
+            selector,
+            clientWidth: element.clientWidth,
+            scrollWidth: element.scrollWidth
+          });
+        }
+      });
+
+      const backgroundConfig = document.querySelector('#background-config.active');
+      if (isVisible(backgroundConfig)) {
+        const groups = Array.from(backgroundConfig.children)
+          .filter((child) => child.classList.contains('config-group'));
+        const colorGroup = groups[0];
+        const patternGroup = groups[1];
+        if (isVisible(colorGroup) && isVisible(patternGroup)) {
+          const colorRect = rectFor(colorGroup);
+          const patternRect = rectFor(patternGroup);
+          if (overlaps(colorRect, patternRect)) {
+            issues.push({
+              type: 'background-internal-overlap',
+              selectors: ['#background-config > .config-group:first-child', '#pattern-grid'],
+              first: colorRect,
+              second: patternRect
+            });
+          }
+        }
       }
     }
 

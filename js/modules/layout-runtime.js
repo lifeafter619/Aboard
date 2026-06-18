@@ -96,6 +96,8 @@ function positionConfigArea(board) {
     configArea.style.top = '';
     configArea.style.bottom = '';
     configArea.style.right = '';
+    configArea.style.width = '';
+    configArea.style.maxWidth = '';
     configArea.style.transform = '';
     configArea.style.transformOrigin = '';
 
