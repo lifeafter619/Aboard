@@ -197,9 +197,9 @@ function containsEncodedTraversal(pathname) {
     }
 }
 
-function serveStatic(req, reqPath, res, rawPath = reqPath) {
-    const normalizedRawPath = (rawPath || reqPath || '').replace(/\\/g, '/');
-    if (hasDotSegment(normalizedRawPath) || containsEncodedTraversal(normalizedRawPath)) {
+function serveStatic(req, reqPath, res) {
+    const normalizedReqPath = (reqPath || '').replace(/\\/g, '/');
+    if (hasDotSegment(normalizedReqPath) || containsEncodedTraversal(normalizedReqPath)) {
         sendJson(res, 403, { error: 'Forbidden' });
         return;
     }
@@ -269,7 +269,7 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    serveStatic(req, url.pathname, res, req.url || url.pathname);
+    serveStatic(req, url.pathname, res);
 });
 
 server.listen(PORT, () => {

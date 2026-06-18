@@ -181,6 +181,29 @@ async function testStaticResponseIncludesSecurityHeaders() {
   assert.equal(res.headers?.['Content-Type'], 'text/html; charset=utf-8');
 }
 
+async function testStaticQueryStringDoesNotTriggerTraversalGuard() {
+  const harness = loadServerHarness();
+  harness.setReadFileImpl((filePath, callback) => {
+    assert.match(filePath, /[\\/]index\.html$/);
+    callback(null, Buffer.from('<!doctype html>'));
+  });
+
+  const res = createResponseRecorder();
+  harness.requestHandler(
+    {
+      url: '/index.html?next=%2F..%2FREADME.md',
+      headers: { host: 'localhost:8080' }
+    },
+    res
+  );
+
+  await res.ended;
+
+  assert.equal(res.statusCode, 200);
+  assertSecurityHeaders(res.headers);
+  assert.equal(res.headers?.['Content-Type'], 'text/html; charset=utf-8');
+}
+
 async function testTextStaticResponseUsesGzipWhenAccepted() {
   const harness = loadServerHarness();
   const originalBody = Buffer.from('const payload = "Aboard";\n'.repeat(160));
@@ -279,6 +302,7 @@ async function run() {
   await testDirectoryRequestReturnsNotFoundInsteadOfServerError();
   await testMalformedRequestUrlReturnsBadRequestInsteadOfThrowing();
   await testStaticResponseIncludesSecurityHeaders();
+  await testStaticQueryStringDoesNotTriggerTraversalGuard();
   await testTextStaticResponseUsesGzipWhenAccepted();
   await testEncodingQZeroIsRespected();
   await testEncodingQPreferenceSelectsBestSupportedEncoding();
