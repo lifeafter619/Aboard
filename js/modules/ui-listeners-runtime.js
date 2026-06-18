@@ -391,6 +391,26 @@ function setupMoreFeatureToolConfigListeners() {
             });
         }
 
+        // Classroom Mode Feature Button
+        const classroomModeBtn = document.getElementById('classroom-mode-feature-btn');
+        if (classroomModeBtn) {
+            classroomModeBtn.addEventListener('click', () => {
+                this.exitShapeMode();
+                try {
+                    if (!this.classroomModeManager) {
+                        if (typeof window.AboardClassroomModeManager !== 'function') {
+                            throw new Error('Classroom mode runtime is unavailable');
+                        }
+                        this.classroomModeManager = new window.AboardClassroomModeManager(this);
+                    }
+                    this.classroomModeManager.enter();
+                    this.handleMoreFeaturePanelAfterAction();
+                } catch (error) {
+                    this.showLazyLoadError(getLazyFeatureLabel('features.classroomMode', 'Classroom'), error);
+                }
+            });
+        }
+
         // Insert Text Feature Button
         const insertTextBtn = document.getElementById('insert-text-feature-btn');
         if (insertTextBtn) {

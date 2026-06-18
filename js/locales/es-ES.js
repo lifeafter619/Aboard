@@ -668,7 +668,17 @@ window.translations = {
         randomPicker: 'Selector',
         scoreboard: 'Marcador',
         insertImage: 'Insertar imagen',
-        insertText: 'Insertar texto'
+        insertText: 'Insertar texto',
+        classroomMode: 'Clase'
+    },
+
+    classroom: {
+        prevPage: 'Página anterior',
+        nextPage: 'Página siguiente',
+        startTimer: 'Iniciar temporizador',
+        pauseTimer: 'Pausar temporizador',
+        resetTimer: 'Reiniciar temporizador',
+        exit: 'Salir del modo clase'
     },
 
     // Teaching Tools

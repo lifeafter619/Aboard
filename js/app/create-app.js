@@ -358,13 +358,14 @@ export async function createApp({ win = window, doc = document } = {}) {
       });
     });
     return app;
-  })().catch((error) => {
-    appStartupPromises.delete(win);
-    throw error;
-  }).finally(() => {
+  })().then((app) => {
     if (win.__ABOARD_APP__) {
       appStartupPromises.delete(win);
     }
+    return app;
+  }, (error) => {
+    appStartupPromises.delete(win);
+    throw error;
   });
 
   appStartupPromises.set(win, startupPromise);

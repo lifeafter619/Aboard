@@ -411,14 +411,18 @@ class DrawingBoard {
         
         // Check for saved canvas data and keep the pending promise available so
         // startup update flows can avoid overwriting restorable sessions.
-        this.recoveryCheckPromise = Promise.resolve(this.checkForRecovery())
+        const recoveryCheck = Promise.resolve(this.checkForRecovery())
             .catch((error) => {
                 console.warn('Recovery check failed:', error);
                 return false;
-            })
-            .finally(() => {
-                this.recoveryCheckPromise = null;
             });
+        this.recoveryCheckPromise = recoveryCheck.then((result) => {
+            this.recoveryCheckPromise = null;
+            return result;
+        }, (error) => {
+            this.recoveryCheckPromise = null;
+            throw error;
+        });
     }
 
     async loadManagerConstructor(name) {

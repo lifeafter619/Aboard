@@ -654,7 +654,17 @@ window.translations = {
         randomPicker: '추첨기',
         scoreboard: '점수판',
         insertImage: '이미지 삽입',
-        insertText: '텍스트 삽입'
+        insertText: '텍스트 삽입',
+        classroomMode: '수업'
+    },
+
+    classroom: {
+        prevPage: '이전 페이지',
+        nextPage: '다음 페이지',
+        startTimer: '타이머 시작',
+        pauseTimer: '타이머 일시정지',
+        resetTimer: '타이머 재설정',
+        exit: '수업 모드 종료'
     },
 
     // Teaching Tools

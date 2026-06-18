@@ -8,6 +8,10 @@ const scriptLoaderSource = fs.readFileSync(
   'utf8'
 );
 const scriptLoaderModuleUrl = `data:text/javascript;base64,${Buffer.from(scriptLoaderSource, 'utf8').toString('base64')}`;
+const legacyGlobalScriptLoaderSource = fs.readFileSync(
+  path.join(process.cwd(), 'js', 'modules', 'script-loader.js'),
+  'utf8'
+);
 
 const { ScriptLoader } = await import(scriptLoaderModuleUrl);
 
@@ -83,6 +87,18 @@ function createLoader(doc) {
   return TestScriptLoader;
 }
 
+function createLegacyGlobalLoader(doc) {
+  const win = {};
+  const loaderFactory = new Function(
+    'window',
+    'document',
+    `${legacyGlobalScriptLoaderSource}; return window.ScriptLoader;`
+  );
+  const Loader = loaderFactory(win, doc);
+  Loader.pendingLoads = new Map();
+  return Loader;
+}
+
 async function raceWithTimeout(promise, timeoutMs = 50) {
   return Promise.race([
     promise.then((value) => ({ status: 'resolved', value }), (error) => ({ status: 'rejected', error })),
@@ -126,10 +142,37 @@ async function testLegacyExistingLoadedScriptWithoutMarkerResolvesImmediately() 
   assert.equal(doc.getAppendCount(), 0);
 }
 
+async function testLegacyGlobalExistingLoadedScriptWithoutMarkerResolvesImmediately() {
+  const existingScript = createScriptElement('js/modules/already-loaded-global.js');
+  const doc = createDocumentStub([existingScript]);
+  const Loader = createLegacyGlobalLoader(doc);
+
+  const result = await raceWithTimeout(Loader.load('js/modules/already-loaded-global.js'));
+
+  assert.equal(result.status, 'resolved');
+  assert.equal(result.value, existingScript);
+  assert.equal(doc.getAppendCount(), 0);
+}
+
+async function testLegacyGlobalEquivalentRelativePathsDoNotDuplicateScripts() {
+  const existingScript = createScriptElement('./js/modules/equivalent-global.js');
+  existingScript.dataset.loaded = 'true';
+  const doc = createDocumentStub([existingScript]);
+  const Loader = createLegacyGlobalLoader(doc);
+
+  const result = await raceWithTimeout(Loader.load('js/modules/equivalent-global.js'));
+
+  assert.equal(result.status, 'resolved');
+  assert.equal(result.value, existingScript);
+  assert.equal(doc.getAppendCount(), 0);
+}
+
 async function run() {
   await testExistingLoadedScriptWithoutMarkerResolvesImmediately();
   await testEquivalentRelativePathsDoNotDuplicateScripts();
   await testLegacyExistingLoadedScriptWithoutMarkerResolvesImmediately();
+  await testLegacyGlobalExistingLoadedScriptWithoutMarkerResolvesImmediately();
+  await testLegacyGlobalEquivalentRelativePathsDoNotDuplicateScripts();
   console.log('script-loader-existing-script.test: all assertions passed');
 }
 

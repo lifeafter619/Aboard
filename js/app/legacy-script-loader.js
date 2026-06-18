@@ -43,7 +43,7 @@ export function loadClassicScript(src, { doc = document } = {}) {
     existingScript.remove();
   }
 
-  const loadPromise = new Promise((resolve, reject) => {
+  const promise = new Promise((resolve, reject) => {
     const script = doc.createElement('script');
 
     const cleanup = () => {
@@ -71,10 +71,18 @@ export function loadClassicScript(src, { doc = document } = {}) {
     script.defer = true;
     script.dataset.loaded = 'false';
     doc.head.appendChild(script);
-  }).finally(() => {
+  });
+
+  const loadPromise = promise.then((script) => {
     if (pendingLoads.get(targetUrl) === loadPromise) {
       pendingLoads.delete(targetUrl);
     }
+    return script;
+  }, (error) => {
+    if (pendingLoads.get(targetUrl) === loadPromise) {
+      pendingLoads.delete(targetUrl);
+    }
+    throw error;
   });
 
   pendingLoads.set(targetUrl, loadPromise);

@@ -102,6 +102,17 @@ const STATES = [
     nonOverlap: [['#feature-area', '#toolbar']]
   },
   {
+    name: 'classroom-mode',
+    setup: `async () => {
+      const board = window.drawingBoard;
+      if (!board?.classroomModeManager && typeof window.AboardClassroomModeManager === 'function') {
+        board.classroomModeManager = new window.AboardClassroomModeManager(board);
+      }
+      board?.classroomModeManager?.enter?.();
+    }`,
+    selectors: ['#classroom-mode-bar']
+  },
+  {
     name: 'time-panel',
     setup: `async () => {
       const board = window.drawingBoard;
@@ -519,6 +530,25 @@ async function runState(cdp, viewport, state) {
       }
     }
 
+    if (state.name === 'classroom-mode') {
+      const classroomBar = document.querySelector('#classroom-mode-bar');
+      if (isVisible(classroomBar) && hasHorizontalOverflow(classroomBar)) {
+        issues.push({
+          type: 'horizontal-overflow',
+          selector: '#classroom-mode-bar',
+          clientWidth: classroomBar.clientWidth,
+          scrollWidth: classroomBar.scrollWidth
+        });
+      }
+
+      ['#toolbar', '#history-controls', '#pagination-controls', '#feature-area', '#config-area'].forEach((selector) => {
+        const element = document.querySelector(selector);
+        if (isVisible(element)) {
+          issues.push({ type: 'classroom-ui-not-hidden', selector });
+        }
+      });
+    }
+
     return {
       viewport: viewport.name,
       state: state.name,
@@ -553,6 +583,7 @@ async function runResponsiveChecks(cdp) {
         document.getElementById('config-area')?.classList.remove('show');
         document.getElementById('feature-area')?.classList.remove('show');
         document.getElementById('time-display-area')?.classList.remove('show');
+        window.drawingBoard?.classroomModeManager?.exit?.();
         window.drawingBoard?.setTool?.('pen', false);
         return true;
       })()`);

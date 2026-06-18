@@ -1588,8 +1588,12 @@ class SettingsManager {
         }
 
         if (newSettings.localeSettings) {
-            return this.applyLocaleSettings(newSettings.localeSettings).finally(() => {
+            return this.applyLocaleSettings(newSettings.localeSettings).then((result) => {
                 this.loadSettings();
+                return result;
+            }, (error) => {
+                this.loadSettings();
+                throw error;
             });
         }
 

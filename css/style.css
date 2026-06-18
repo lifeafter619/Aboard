@@ -1339,12 +1339,6 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     min-height: auto;
 }
 
-/* Settings groups with sliders need slightly more space */
-.settings-group.collapsible:not(.collapsed):has(.slider) {
-    padding: 10px 12px;
-    min-height: auto;
-}
-
 /* Collapsed state should be compact */
 .settings-group.collapsible.collapsed {
     padding: 6px 10px;

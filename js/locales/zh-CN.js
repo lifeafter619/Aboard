@@ -710,7 +710,17 @@ window.translations = {
         randomPicker: '点名器',
         scoreboard: '计分板',
         insertImage: '插入图片',
-        insertText: '插入文字'
+        insertText: '插入文字',
+        classroomMode: '课堂'
+    },
+
+    classroom: {
+        prevPage: '上一页',
+        nextPage: '下一页',
+        startTimer: '开始计时',
+        pauseTimer: '暂停计时',
+        resetTimer: '重置计时',
+        exit: '退出课堂模式'
     },
 
     // Random Picker

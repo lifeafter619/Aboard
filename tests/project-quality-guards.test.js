@@ -283,6 +283,70 @@ function testProductionSourcesAvoidReplaceAllForLegacyWebViews() {
   );
 }
 
+function testProductionSourcesAvoidPromiseFinallyForLegacyWebViews() {
+  const jsRoot = path.join(REPO_ROOT, 'js');
+  const offenders = collectJsSourceFiles(jsRoot).flatMap((filePath) => {
+    const relativePath = path.relative(REPO_ROOT, filePath).replace(/\\/g, '/');
+    return fs.readFileSync(filePath, 'utf8')
+      .split(/\r?\n/)
+      .flatMap((line, index) => (
+        line.includes('.finally(')
+          ? [`${relativePath}:${index + 1}`]
+          : []
+      ));
+  });
+
+  assert.deepEqual(
+    offenders,
+    [],
+    `production JS should avoid Promise.prototype.finally for older WebView/Safari compatibility: ${offenders.join(', ')}`
+  );
+}
+
+function testStylesAvoidHasSelectorForLegacyWebViews() {
+  const cssRoot = path.join(REPO_ROOT, 'css');
+  const offenders = fs.readdirSync(cssRoot, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = path.join(cssRoot, entry.name);
+    const files = entry.isDirectory()
+      ? fs.readdirSync(entryPath).map((name) => path.join(entryPath, name))
+      : [entryPath];
+
+    return files
+      .filter((filePath) => filePath.endsWith('.css'))
+      .flatMap((filePath) => {
+        const relativePath = path.relative(REPO_ROOT, filePath).replace(/\\/g, '/');
+        return fs.readFileSync(filePath, 'utf8')
+          .split(/\r?\n/)
+          .flatMap((line, index) => (
+            line.includes(':has(')
+              ? [`${relativePath}:${index + 1}`]
+              : []
+          ));
+      });
+  });
+
+  assert.deepEqual(
+    offenders,
+    [],
+    `CSS should avoid :has() selectors for older WebView/Safari compatibility: ${offenders.join(', ')}`
+  );
+}
+
+function testHtmlAvoidsInlineFixedModalWidths() {
+  const html = readText('index.html');
+  const offenders = [...html.matchAll(/<[^>]*class="[^"]*\bmodal-content\b[^"]*"[^>]*style="[^"]*(?:width|min-width|max-width):\s*[0-9][0-9][0-9]px[^"]*"/gi)]
+    .map((match) => {
+      const line = html.slice(0, match.index).split(/\r?\n/).length;
+      return `index.html:${line}`;
+    });
+
+  assert.deepEqual(
+    offenders,
+    [],
+    `modal content should not use inline fixed widths that override responsive CSS: ${offenders.join(', ')}`
+  );
+}
+
 function loadModalRuntimeForViewport({ innerWidth, innerHeight }) {
   const sandbox = {
     console,
@@ -326,6 +390,9 @@ function run() {
   testDeferredStylePreloadsUseLowFetchPriority();
   testNonFirstPaintCssModulesAreDeferred();
   testProductionSourcesAvoidReplaceAllForLegacyWebViews();
+  testProductionSourcesAvoidPromiseFinallyForLegacyWebViews();
+  testStylesAvoidHasSelectorForLegacyWebViews();
+  testHtmlAvoidsInlineFixedModalWidths();
   testAnnouncementModalResponsiveMinimumWidthIsApplied();
   console.log('project-quality-guards.test: all assertions passed');
 }

@@ -712,7 +712,17 @@ window.translations = {
         randomPicker: 'Picker',
         scoreboard: 'Score',
         insertImage: 'Insert Image',
-        insertText: 'Insert Text'
+        insertText: 'Insert Text',
+        classroomMode: 'Classroom'
+    },
+
+    classroom: {
+        prevPage: 'Previous page',
+        nextPage: 'Next page',
+        startTimer: 'Start timer',
+        pauseTimer: 'Pause timer',
+        resetTimer: 'Reset timer',
+        exit: 'Exit classroom mode'
     },
 
     // Random Picker

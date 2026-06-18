@@ -51,6 +51,7 @@ export const VISIBLE_CORE_STARTUP_SCRIPTS = [
   'js/modules/render-quality-runtime.js',
   'js/modules/board-helpers-runtime.js',
   'js/modules/deferred-init-runtime.js',
+  'js/modules/classroom-mode.js',
   'js/modules/tool-runtime.js',
   'js/modules/ui-listeners-core-runtime.js',
   'js/main.js'

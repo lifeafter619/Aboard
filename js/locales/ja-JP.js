@@ -654,7 +654,17 @@ window.translations = {
         randomPicker: '抽選器',
         scoreboard: 'スコアボード',
         insertImage: '画像を挿入',
-        insertText: 'テキスト挿入'
+        insertText: 'テキスト挿入',
+        classroomMode: '授業'
+    },
+
+    classroom: {
+        prevPage: '前のページ',
+        nextPage: '次のページ',
+        startTimer: 'タイマー開始',
+        pauseTimer: 'タイマー一時停止',
+        resetTimer: 'タイマーリセット',
+        exit: '授業モードを終了'
     },
 
     // Teaching Tools

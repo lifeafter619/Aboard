@@ -69,10 +69,16 @@ export class ScriptLoader {
       }
     });
 
-    const trackedPromise = promise.finally(() => {
+    const trackedPromise = promise.then((script) => {
       if (this.pendingLoads.get(targetUrl) === trackedPromise) {
         this.pendingLoads.delete(targetUrl);
       }
+      return script;
+    }, (error) => {
+      if (this.pendingLoads.get(targetUrl) === trackedPromise) {
+        this.pendingLoads.delete(targetUrl);
+      }
+      throw error;
     });
 
     this.pendingLoads.set(targetUrl, trackedPromise);
