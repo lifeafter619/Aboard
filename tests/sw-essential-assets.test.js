@@ -127,6 +127,49 @@ function testCorePrecacheExcludesLargeLazyAssets() {
   );
 }
 
+function testRuntimeCacheCoversLazyTimerAudioAssets() {
+  const source = `${readText('sw.js')}\n;globalThis.__swTestExports = { isRuntimeCacheableRequest };`;
+  const sandbox = {
+    console: {
+      warn() {}
+    },
+    self: {
+      location: {
+        origin: 'https://example.test'
+      },
+      addEventListener() {}
+    },
+    Set,
+    URL
+  };
+  sandbox.globalThis = sandbox;
+
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox, { filename: 'sw.js' });
+
+  const createRequest = (destination = '') => ({
+    mode: 'cors',
+    destination,
+    headers: {
+      has() {
+        return false;
+      }
+    }
+  });
+  const audioUrl = new URL('https://example.test/sounds/class-bell.MP3');
+
+  assert.equal(
+    sandbox.__swTestExports.isRuntimeCacheableRequest(createRequest('audio'), audioUrl),
+    true,
+    'timer audio requests should be runtime-cacheable when the browser marks destination=audio'
+  );
+  assert.equal(
+    sandbox.__swTestExports.isRuntimeCacheableRequest(createRequest(''), audioUrl),
+    true,
+    'timer audio requests should be runtime-cacheable by file extension when destination is unavailable'
+  );
+}
+
 function testCorePrecacheCoversIndexClassicScripts() {
   const html = readText('index.html');
   const coreAssets = readCoreAssets();
@@ -212,6 +255,7 @@ async function run() {
   testEssentialCacheCoversOfflineBootstrapImportClosure();
   testEssentialCacheCoversVisibleCoreLegacyStartupAssets();
   testCorePrecacheExcludesLargeLazyAssets();
+  testRuntimeCacheCoversLazyTimerAudioAssets();
   testCorePrecacheCoversIndexClassicScripts();
   testCorePrecacheCoversIndexStylesheets();
   await testOptionalPrecacheLimitsConcurrentFetches();

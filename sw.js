@@ -8,8 +8,8 @@ const CORE_CACHE_NAME = `aboard-core-${SW_VERSION}`;
 const RUNTIME_CACHE_NAME = `aboard-runtime-${SW_VERSION}`;
 const RUNTIME_CACHE_MAX_ENTRIES = 24;
 const OPTIONAL_PRECACHE_CONCURRENCY = 6;
-const RUNTIME_CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'worker', 'image', 'font', 'manifest']);
-const RUNTIME_CACHEABLE_EXTENSIONS = /\.(?:css|gif|ico|jpe?g|js|json|png|svg|webp|woff2?)$/i;
+const RUNTIME_CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'worker', 'image', 'font', 'manifest', 'audio']);
+const RUNTIME_CACHEABLE_EXTENSIONS = /\.(?:css|gif|ico|jpe?g|js|json|mp3|png|svg|wav|webp|woff2?)$/i;
 const LOCALE_ASSETS = [
   './js/locales/zh-CN.js',
   './js/locales/zh-TW.js',
