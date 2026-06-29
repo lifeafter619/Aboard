@@ -4,6 +4,13 @@ class ClassroomModeManager {
         this.isActive = false;
         this.isTimerRunning = false;
         this.elapsedSeconds = 0;
+        // Time is tracked from real timestamps rather than counting interval
+        // ticks: backgrounded tabs throttle (or freeze) setInterval, so a
+        // tick-counting timer drifts behind wall-clock whenever the teacher
+        // switches windows or the panel sleeps. accumulatedMs holds completed
+        // run time; runStartTimestamp marks the start of the current run.
+        this.accumulatedMs = 0;
+        this.runStartTimestamp = 0;
         this.timerInterval = null;
         this.bound = false;
 
@@ -144,10 +151,15 @@ class ClassroomModeManager {
         }
 
         this.isTimerRunning = true;
+        this.runStartTimestamp = Date.now();
+        // Tick frequently so the visible display stays smooth, but derive the
+        // shown value from elapsed wall-clock time inside syncElapsedFromClock
+        // so throttled/missed ticks never lose time.
         this.timerInterval = setInterval(() => {
-            this.elapsedSeconds += 1;
+            this.syncElapsedFromClock();
             this.updateTimerDisplay();
-        }, 1000);
+        }, 250);
+        this.syncElapsedFromClock();
         this.updateTimerDisplay();
     }
 
@@ -156,15 +168,32 @@ class ClassroomModeManager {
             return;
         }
 
+        // Fold the current run into the accumulated total before stopping so
+        // resuming continues from the correct elapsed time.
+        this.accumulatedMs += Math.max(0, Date.now() - this.runStartTimestamp);
+        this.runStartTimestamp = 0;
         this.isTimerRunning = false;
         clearInterval(this.timerInterval);
         this.timerInterval = null;
+        this.syncElapsedFromClock();
         this.updateTimerDisplay();
     }
 
     resetTimer() {
+        this.accumulatedMs = 0;
+        this.runStartTimestamp = this.isTimerRunning ? Date.now() : 0;
         this.elapsedSeconds = 0;
         this.updateTimerDisplay();
+    }
+
+    // Recompute elapsedSeconds from real timestamps. Robust to setInterval
+    // throttling in backgrounded tabs and to the device sleeping mid-run.
+    syncElapsedFromClock() {
+        let totalMs = this.accumulatedMs;
+        if (this.isTimerRunning && this.runStartTimestamp) {
+            totalMs += Math.max(0, Date.now() - this.runStartTimestamp);
+        }
+        this.elapsedSeconds = Math.floor(totalMs / 1000);
     }
 
     formatElapsedTime() {

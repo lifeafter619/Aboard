@@ -118,19 +118,52 @@ function createContext() {
     }
   };
 
+  // Controllable clock + interval so tests can simulate background throttling,
+  // where setInterval fires far fewer times than wall-clock seconds elapsed.
+  let now = 0;
+  const intervals = [];
+  const clock = {
+    set(value) {
+      now = value;
+    },
+    advance(ms) {
+      now += ms;
+    },
+    flushIntervals() {
+      intervals.forEach((entry) => {
+        if (entry.handler) {
+          entry.handler();
+        }
+      });
+    }
+  };
+
   const context = {
     window,
     document,
     console,
-    setInterval,
-    clearInterval,
+    setInterval(handler) {
+      const entry = { handler };
+      intervals.push(entry);
+      return entry;
+    },
+    clearInterval(token) {
+      if (token) {
+        token.handler = null;
+      }
+    },
+    Date: {
+      now() {
+        return now;
+      }
+    },
     Math,
     Number,
     String
   };
   context.globalThis = context;
 
-  return { context, elements, bodyClasses };
+  return { context, elements, bodyClasses, clock };
 }
 
 function loadClassroomMode(context) {
@@ -203,7 +236,63 @@ function testEnterExitAndPaginationBehavior() {
   assert.equal(calls.includes('updatePaginationUI'), true, 'exit should refresh regular pagination UI');
 }
 
+function testTimerTracksWallClockNotTicks() {
+  const { context, elements, clock } = createContext();
+  vm.createContext(context);
+  loadClassroomMode(context);
+
+  const board = {
+    currentPage: 1,
+    pages: [{}],
+    exitShapeMode() {},
+    setTool() {},
+    updatePaginationUI() {},
+    toggleCoordinateSettingsPanel() {},
+    toggleCoordinatePointPanel() {}
+  };
+
+  const manager = new context.window.AboardClassroomModeManager(board);
+
+  clock.set(1000);
+  manager.startTimer();
+
+  // Simulate a backgrounded tab: 5 wall-clock seconds pass but the throttled
+  // interval only fires once. A tick-counting timer would show 00:01 here.
+  clock.advance(5000);
+  clock.flushIntervals();
+  assert.equal(elements['classroom-timer-display'].textContent, '00:05',
+    'timer should reflect real elapsed time, not the number of interval ticks');
+
+  // Pause folds the current run into the accumulated total; further wall-clock
+  // time while paused must not advance the display.
+  manager.pauseTimer();
+  assert.equal(elements['classroom-timer-display'].textContent, '00:05',
+    'pausing should freeze the elapsed time');
+  clock.advance(10000);
+  manager.syncElapsedFromClock();
+  manager.updateTimerDisplay();
+  assert.equal(elements['classroom-timer-display'].textContent, '00:05',
+    'paused timer must not accrue time');
+
+  // Resuming continues from the accumulated total rather than restarting at 0.
+  manager.startTimer();
+  clock.advance(3000);
+  clock.flushIntervals();
+  assert.equal(elements['classroom-timer-display'].textContent, '00:08',
+    'resuming should continue from the accumulated elapsed time');
+
+  // Reset clears everything even while running.
+  manager.resetTimer();
+  assert.equal(elements['classroom-timer-display'].textContent, '00:00',
+    'reset should zero the elapsed time');
+  clock.advance(2000);
+  clock.flushIntervals();
+  assert.equal(elements['classroom-timer-display'].textContent, '00:02',
+    'timer should keep running after reset and track time from the reset point');
+}
+
 (function main() {
   testEnterExitAndPaginationBehavior();
+  testTimerTracksWallClockNotTicks();
   console.log('classroom-mode-runtime.test: all assertions passed');
 })();
