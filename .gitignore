@@ -3,6 +3,15 @@ node_modules/
 # Development artifacts
 *.log
 server.log
+.claude/
+.codegraph/
+.npm-cache/
+.playwright-cli/
+.tmp/
+dist/
+output/
+AGENTS.md
+docs/AUDIT_REPORT_*.md
 
 # Backup files
 *.backup

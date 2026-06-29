@@ -45,6 +45,15 @@ class ScoreboardInstance {
         this.createElement();
     }
 
+    static escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     saveState() {
         const data = {
             teams: this.config.teams
@@ -63,18 +72,23 @@ class ScoreboardInstance {
         div.style.top = `${window.innerHeight / 2 - 100 + offset}px`;
 
         const title = this.config.title || window.i18n.t('scoreboard.title');
+        const safeTitle = ScoreboardInstance.escapeHtml(title);
+        const safeAddTeamTitle = ScoreboardInstance.escapeHtml(window.i18n.t('scoreboard.addTeam'));
+        const safeResetTitle = ScoreboardInstance.escapeHtml(window.i18n.t('scoreboard.reset'));
+        const safeHelpTitle = ScoreboardInstance.escapeHtml(window.i18n.t('common.help'));
+        const safeCloseTitle = ScoreboardInstance.escapeHtml(window.i18n.t('common.close'));
 
         div.innerHTML = `
             <div class="scoreboard-header">
-                <span class="scoreboard-title">${title}</span>
+                <span class="scoreboard-title">${safeTitle}</span>
                 <div class="scoreboard-controls-top">
-                    <button class="scoreboard-icon-btn scoreboard-add-team-btn" title="${window.i18n.t('scoreboard.addTeam')}">
+                    <button class="scoreboard-icon-btn scoreboard-add-team-btn" title="${safeAddTeamTitle}">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
                     </button>
-                    <button class="scoreboard-icon-btn scoreboard-reset-btn" title="${window.i18n.t('scoreboard.reset')}">
+                    <button class="scoreboard-icon-btn scoreboard-reset-btn" title="${safeResetTitle}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
                             <path d="M21 3v5h-5"></path>
@@ -82,14 +96,14 @@ class ScoreboardInstance {
                             <path d="M3 21v-5h5"></path>
                         </svg>
                     </button>
-                    <button class="scoreboard-icon-btn scoreboard-help-btn" title="${window.i18n.t('common.help')}">
+                    <button class="scoreboard-icon-btn scoreboard-help-btn" title="${safeHelpTitle}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
                             <line x1="12" y1="17" x2="12" y2="17"></line>
                         </svg>
                     </button>
-                    <button class="scoreboard-icon-btn scoreboard-close-btn" title="${window.i18n.t('common.close')}">
+                    <button class="scoreboard-icon-btn scoreboard-close-btn" title="${safeCloseTitle}">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -160,16 +174,19 @@ class ScoreboardInstance {
             const col = document.createElement('div');
             col.className = 'score-column';
             col.dataset.index = index;
+            const safeRemoveTitle = ScoreboardInstance.escapeHtml(window.i18n.t('scoreboard.removeTeam'));
+            const safeTeamName = ScoreboardInstance.escapeHtml(team.name);
+            const safeScore = ScoreboardInstance.escapeHtml(team.score);
 
             col.innerHTML = `
-                <button class="score-remove-btn" title="${window.i18n.t('scoreboard.removeTeam')}">
+                <button class="score-remove-btn" title="${safeRemoveTitle}">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
                 </button>
-                <div class="score-team-name" contenteditable="true">${team.name}</div>
-                <div class="score-value">${team.score}</div>
+                <div class="score-team-name" contenteditable="true">${safeTeamName}</div>
+                <div class="score-value">${safeScore}</div>
                 <div class="score-controls">
                     <button class="score-btn minus">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">

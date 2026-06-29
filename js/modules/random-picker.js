@@ -35,6 +35,15 @@ class RandomPickerInstance {
         this.createElement();
     }
 
+    static escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     createElement() {
         const div = document.createElement('div');
         div.className = 'random-picker-widget feature-widget';
@@ -48,12 +57,15 @@ class RandomPickerInstance {
         const title = this.config.title || (this.config.mode === 'name' ?
             window.i18n.t('randomPicker.namePicker') :
             window.i18n.t('randomPicker.numberPicker'));
+        const safeTitle = RandomPickerInstance.escapeHtml(title);
+        const safeHelpTitle = RandomPickerInstance.escapeHtml(window.i18n.t('common.help'));
+        const safeStartText = RandomPickerInstance.escapeHtml(window.i18n.t('common.start'));
 
         div.innerHTML = `
             <div class="random-picker-header">
-                <span class="random-picker-title">${title}</span>
+                <span class="random-picker-title">${safeTitle}</span>
                 <div style="display:flex; gap:6px;">
-                    <button class="random-picker-help-btn" title="${window.i18n.t('common.help')}">
+                    <button class="random-picker-help-btn" title="${safeHelpTitle}">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"></path>
@@ -76,7 +88,7 @@ class RandomPickerInstance {
                             <path d="M5 12h14"></path>
                             <path d="M12 5l7 7-7 7"></path>
                         </svg>
-                        <span>${window.i18n.t('common.start')}</span>
+                        <span>${safeStartText}</span>
                     </button>
                     <button class="random-picker-btn random-picker-settings-btn">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

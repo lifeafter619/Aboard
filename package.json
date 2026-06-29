@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "一个简约的web白板，更适合老师体质",
   "scripts": {
-    "test": "node tests/export-page-readiness.test.js",
+    "test": "node tests/export-page-readiness.test.js && node tests/rich-text-parser.test.js && node tests/toast-manager.test.js && node tests/random-picker.test.js && node tests/scoreboard.test.js",
     "start": "node server.js",
     "sync:version-badge": "node scripts/update-version-badge.js"
   },

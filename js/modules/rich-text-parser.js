@@ -10,6 +10,17 @@
  * - Newlines: Converted to line breaks or divs
  */
 class RichTextParser {
+    static isSafeColorValue(value) {
+        const color = String(value || '').trim();
+        return /^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?(?:[0-9a-fA-F]{2})?$/.test(color)
+            || /^[a-zA-Z]+$/.test(color);
+    }
+
+    static isSafeSizeValue(value) {
+        const size = String(value || '').trim();
+        return /^(?:0|[1-9]\d{0,2})(?:\.\d+)?(?:px|em|rem|%)$/.test(size);
+    }
+
     static parse(text) {
         if (!text) return '';
 
@@ -26,47 +37,19 @@ class RichTextParser {
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
 
-        // Bold: **text**
-        result = result.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-
-        // Underline: __text__
-        result = result.replace(/__(.*?)__/g, '<u>$1</u>');
-
-        // Color: [color=red]text[/color] or [color=#ff0000]text[/color]
-        // Regex to capture color value and content
-        result = result.replace(/\[color=([^\]]+)\](.*?)\[\/color\]/g, '<span style="color:$1">$2</span>');
-
-        // Size: [size=20px]text[/size]
-        result = result.replace(/\[size=([^\]]+)\](.*?)\[\/size\]/g, '<span style="font-size:$1">$2</span>');
-
         // Auto-link URLs
-        // We look for http/https URLs.
-        // Note: We already escaped HTML, so we don't need to worry about breaking existing tags (except the ones we just added? No, the regexes above added HTML tags).
-        // Wait, if we added <span style="...">, we inserted HTML characters.
-        // URL replacement should ideally happen *before* we add our HTML tags if there's a risk of matching inside tags,
-        // OR we need to be careful not to match inside attributes.
-        // However, our custom tags [color] etc don't contain http usually.
-        // But the <span> tags do contain attributes.
-        // A simple URL regex might match parts of style="...".
-        // It's safer to do URL linking *before* HTML escaping? No, because we want the link text to be escaped if it contains malicious chars?
-        // Actually, URL itself should be encoded.
-        // Let's do URL linking *after* escaping but *before* adding custom HTML tags to avoid matching inside the tags we generate.
-
-        // Revised order:
-        // 1. Escape HTML
-        // 2. Auto-link URLs
-        // 3. Apply Custom Syntax (Bold, Color, etc)
-        // 4. Handle Newlines
-
-        // Let's re-implement with this safer order.
-
-        // 1. Escape HTML
-        // (Already done above)
-
-        // 2. Auto-link URLs
-        // Regex for URLs.
-        result = result.replace(/(https?:\/\/[^\s]+)/g, (url) => {
-            return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--theme-color, #007AFF); text-decoration: none;">${url}</a>`;
+        result = result.replace(/(https?:\/\/[^\s<>"'\[]+)/g, (match) => {
+            let url = match;
+            let suffix = '';
+            while (url.endsWith('**') || url.endsWith('__')) {
+                suffix = url.slice(-2) + suffix;
+                url = url.slice(0, -2);
+            }
+            while (/[.,!?;:]$/.test(url)) {
+                suffix = url.slice(-1) + suffix;
+                url = url.slice(0, -1);
+            }
+            return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--theme-color, #007AFF); text-decoration: none;">${url}</a>${suffix}`;
         });
 
         // 3. Apply Custom Syntax
@@ -75,9 +58,19 @@ class RichTextParser {
         // Underline
         result = result.replace(/__(.*?)__/g, '<u>$1</u>');
         // Color
-        result = result.replace(/\[color=([^\]]+)\](.*?)\[\/color\]/g, '<span style="color:$1">$2</span>');
+        result = result.replace(/\[color=([^\]]+)\](.*?)\[\/color\]/g, (_match, color, content) => {
+            const safeColor = String(color || '').trim();
+            return RichTextParser.isSafeColorValue(safeColor)
+                ? `<span style="color:${safeColor}">${content}</span>`
+                : content;
+        });
         // Size
-        result = result.replace(/\[size=([^\]]+)\](.*?)\[\/size\]/g, '<span style="font-size:$1">$2</span>');
+        result = result.replace(/\[size=([^\]]+)\](.*?)\[\/size\]/g, (_match, size, content) => {
+            const safeSize = String(size || '').trim();
+            return RichTextParser.isSafeSizeValue(safeSize)
+                ? `<span style="font-size:${safeSize}">${content}</span>`
+                : content;
+        });
 
         // 4. Handle Newlines
         if (result.includes('\n')) {
