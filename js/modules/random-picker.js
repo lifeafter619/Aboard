@@ -77,6 +77,15 @@ class RandomPickerInstance {
         this.createElement();
     }
 
+    static escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     createElement() {
         const div = document.createElement('div');
         div.className = 'random-picker-widget feature-widget';

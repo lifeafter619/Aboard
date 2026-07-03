@@ -157,6 +157,15 @@ class ScoreboardInstance {
         this.createElement();
     }
 
+    static escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     saveState() {
         const data = {
             teams: this.config.teams

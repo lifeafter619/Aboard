@@ -13,7 +13,11 @@ docs/
 # Development artifacts
 *.log
 server.log
+.claude/
+.codegraph/
+.tmp/
 AGENTS.md
+docs/AUDIT_REPORT_*.md
 
 # Backup files
 *.backup

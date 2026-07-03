@@ -79,6 +79,17 @@ function linkifyEscapedText(text) {
  * - Newlines: Converted to line breaks or divs
  */
 class RichTextParser {
+    static isSafeColorValue(value) {
+        const color = String(value || '').trim();
+        return /^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?(?:[0-9a-fA-F]{2})?$/.test(color)
+            || /^[a-zA-Z]+$/.test(color);
+    }
+
+    static isSafeSizeValue(value) {
+        const size = String(value || '').trim();
+        return /^(?:0|[1-9]\d{0,2})(?:\.\d+)?(?:px|em|rem|%)$/.test(size);
+    }
+
     static parse(text) {
         if (!text) return '';
 
@@ -101,13 +112,19 @@ class RichTextParser {
         // 3. Apply Custom Syntax
         result = result.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
         result = result.replace(/__(.*?)__/g, '<u>$1</u>');
-        result = result.replace(/\[color=([^\]]+)\](.*?)\[\/color\]/g, (_, color, text) => {
-            const sanitized = color.replace(/[^a-zA-Z0-9#(),.\s%-]/g, '');
-            return `<span style="color:${sanitized}">${text}</span>`;
+        // Color
+        result = result.replace(/\[color=([^\]]+)\](.*?)\[\/color\]/g, (_match, color, content) => {
+            const safeColor = String(color || '').trim();
+            return RichTextParser.isSafeColorValue(safeColor)
+                ? `<span style="color:${safeColor}">${content}</span>`
+                : content;
         });
-        result = result.replace(/\[size=([^\]]+)\](.*?)\[\/size\]/g, (_, size, text) => {
-            const sanitized = size.replace(/[^a-zA-Z0-9.%-]/g, '');
-            return `<span style="font-size:${sanitized}">${text}</span>`;
+        // Size
+        result = result.replace(/\[size=([^\]]+)\](.*?)\[\/size\]/g, (_match, size, content) => {
+            const safeSize = String(size || '').trim();
+            return RichTextParser.isSafeSizeValue(safeSize)
+                ? `<span style="font-size:${safeSize}">${content}</span>`
+                : content;
         });
 
         // 4. Handle Newlines
