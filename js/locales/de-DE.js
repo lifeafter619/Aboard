@@ -681,6 +681,7 @@ window.translations = {
     },
 
     classroom: {
+        modeActive: 'Unterrichtsmodus',
         prevPage: 'Vorherige Seite',
         nextPage: 'Nächste Seite',
         startTimer: 'Timer starten',

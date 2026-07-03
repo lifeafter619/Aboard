@@ -715,6 +715,7 @@ window.translations = {
     },
 
     classroom: {
+        modeActive: '课堂模式',
         prevPage: '上一页',
         nextPage: '下一页',
         startTimer: '开始计时',

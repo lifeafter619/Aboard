@@ -66,6 +66,7 @@ function createElementStub(id) {
 function createContext() {
   const ids = [
     'classroom-mode-bar',
+    'classroom-mode-status',
     'classroom-prev-page-btn',
     'classroom-page-status',
     'classroom-next-page-btn',
@@ -108,6 +109,7 @@ function createContext() {
       t(key) {
         return {
           'classroom.prevPage': 'Previous page',
+          'classroom.modeActive': 'Classroom mode',
           'classroom.nextPage': 'Next page',
           'classroom.startTimer': 'Start timer',
           'classroom.pauseTimer': 'Pause timer',
@@ -207,6 +209,7 @@ function testEnterExitAndPaginationBehavior() {
   assert.equal(bodyClasses.has('classroom-mode-active'), true, 'enter should add body active class');
   assert.deepEqual(calls[1], ['setTool', 'pen', false], 'enter should return to pen without opening config');
   assert.equal(elements['classroom-page-status'].textContent, '1 / 3');
+  assert.equal(elements['classroom-mode-status'].textContent, 'Classroom mode');
   assert.equal(elements['classroom-prev-page-btn'].disabled, true);
   assert.equal(elements['classroom-next-page-btn'].disabled, false);
 

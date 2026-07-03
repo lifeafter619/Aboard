@@ -673,6 +673,7 @@ window.translations = {
     },
 
     classroom: {
+        modeActive: 'Mode classe',
         prevPage: 'Page précédente',
         nextPage: 'Page suivante',
         startTimer: 'Démarrer le minuteur',

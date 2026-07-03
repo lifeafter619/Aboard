@@ -621,7 +621,7 @@
                     </svg>
                     <span data-i18n="features.timer">Timer</span>
                 </button>
-                <button id="classroom-mode-feature-btn" class="feature-btn" data-i18n-title="features.classroomMode" title="Classroom" aria-label="Classroom">
+                <button id="classroom-mode-feature-btn" class="feature-btn classroom-mode-entry" data-i18n-title="features.classroomMode" title="Classroom" aria-label="Classroom" aria-pressed="false">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="4" width="18" height="12" rx="2"></rect>
                         <path d="M8 20h8"></path>
@@ -680,6 +680,8 @@
 
     <!-- Classroom mode controls -->
     <div id="classroom-mode-bar" aria-live="polite">
+        <span id="classroom-mode-status" class="classroom-mode-status" data-i18n="classroom.modeActive">课堂模式</span>
+        <span class="classroom-divider" aria-hidden="true"></span>
         <button id="classroom-prev-page-btn" class="classroom-control-btn" data-i18n-title="classroom.prevPage" title="上一页" aria-label="上一页">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="15 18 9 12 15 6"></polyline>

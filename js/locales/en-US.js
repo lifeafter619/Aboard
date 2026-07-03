@@ -717,6 +717,7 @@ window.translations = {
     },
 
     classroom: {
+        modeActive: 'Classroom mode',
         prevPage: 'Previous page',
         nextPage: 'Next page',
         startTimer: 'Start timer',

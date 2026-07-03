@@ -16,6 +16,7 @@ class ClassroomModeManager {
 
         this.elements = {
             bar: document.getElementById('classroom-mode-bar'),
+            modeStatus: document.getElementById('classroom-mode-status'),
             prevPageBtn: document.getElementById('classroom-prev-page-btn'),
             pageStatus: document.getElementById('classroom-page-status'),
             nextPageBtn: document.getElementById('classroom-next-page-btn'),
@@ -67,6 +68,7 @@ class ClassroomModeManager {
         this.updatePageStatus();
         this.updateTimerDisplay();
         this.updateLocalizedLabels();
+        this.emitModeChange(true);
         this.elements.timerToggleBtn?.focus?.({ preventScroll: true });
     }
 
@@ -80,6 +82,7 @@ class ClassroomModeManager {
         this.pauseTimer();
         this.updateTimerDisplay();
         this.board.updatePaginationUI?.();
+        this.emitModeChange(false);
     }
 
     toggle() {
@@ -224,7 +227,24 @@ class ClassroomModeManager {
         button.setAttribute('aria-label', label);
     }
 
+    setTextContent(element, key, fallback) {
+        if (!element) {
+            return;
+        }
+        element.textContent = this.getText(key, fallback);
+    }
+
+    emitModeChange(active) {
+        if (typeof window.CustomEvent !== 'function' || typeof window.dispatchEvent !== 'function') {
+            return;
+        }
+        window.dispatchEvent(new window.CustomEvent('classroomModeChanged', {
+            detail: { active }
+        }));
+    }
+
     updateLocalizedLabels() {
+        this.setTextContent(this.elements.modeStatus, 'classroom.modeActive', 'Classroom mode');
         this.setButtonLabel(this.elements.prevPageBtn, 'classroom.prevPage', 'Previous page');
         this.setButtonLabel(this.elements.nextPageBtn, 'classroom.nextPage', 'Next page');
         this.setButtonLabel(

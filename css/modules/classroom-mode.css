@@ -25,6 +25,22 @@ body.classroom-mode-active #classroom-mode-bar {
     display: flex;
 }
 
+.feature-btn.classroom-mode-entry[aria-pressed="true"] {
+    background-color: #202020;
+    border-color: #202020;
+    color: #ffffff;
+}
+
+.feature-btn.classroom-mode-entry[aria-pressed="true"] svg {
+    stroke: #ffffff;
+}
+
+.feature-btn.classroom-mode-entry.classroom-mode-entering {
+    cursor: progress;
+    border-color: #202020;
+    box-shadow: inset 0 0 0 1px #202020;
+}
+
 body.classroom-mode-active #toolbar,
 body.classroom-mode-active #history-controls,
 body.classroom-mode-active #pagination-controls,
@@ -33,6 +49,24 @@ body.classroom-mode-active #feature-area,
 body.classroom-mode-active #time-display-area,
 body.classroom-mode-active #time-display {
     display: none !important;
+}
+
+.classroom-mode-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-width: 86px;
+    height: 44px;
+    padding: 0 12px;
+    border: 1px solid #d8d8d8;
+    border-radius: 8px;
+    background: #202020;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 .classroom-control-btn {
@@ -130,6 +164,13 @@ body.classroom-mode-active #time-display {
         font-size: 14px;
     }
 
+    .classroom-mode-status {
+        min-width: 76px;
+        height: 40px;
+        padding: 0 10px;
+        font-size: 14px;
+    }
+
     .classroom-divider {
         display: none;
     }
@@ -149,6 +190,10 @@ body.classroom-mode-active #time-display {
 
     #classroom-page-status,
     #classroom-timer-display {
+        height: 38px;
+    }
+
+    .classroom-mode-status {
         height: 38px;
     }
 }

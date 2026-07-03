@@ -673,6 +673,7 @@ window.translations = {
     },
 
     classroom: {
+        modeActive: 'Modo clase',
         prevPage: 'Página anterior',
         nextPage: 'Página siguiente',
         startTimer: 'Iniciar temporizador',

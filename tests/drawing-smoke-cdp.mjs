@@ -755,7 +755,43 @@ async function main() {
       throw new Error(`Select tool should use the default cursor, got ${JSON.stringify(selectCursor)}`);
     }
 
-    console.log('drawing-smoke-cdp: pen, shape, zoomed pen, marker zoom, and select cursor checks passed');
+    const classroomMoreRect = await evaluate(cdp, `(() => {
+      const rect = document.getElementById('more-btn').getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    })()`);
+    await click(cdp, classroomMoreRect.x, classroomMoreRect.y);
+    await waitUntil(() => evaluate(cdp, `document.getElementById('feature-area')?.classList.contains('show')`), { timeoutMs: 5000 });
+
+    const classroomRect = await evaluate(cdp, `(() => {
+      const rect = document.getElementById('classroom-mode-feature-btn').getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    })()`);
+    await click(cdp, classroomRect.x, classroomRect.y);
+
+    const classroomState = await waitUntil(async () => {
+      const state = await evaluate(cdp, `(() => {
+        const bar = document.getElementById('classroom-mode-bar');
+        const status = document.getElementById('classroom-mode-status');
+        const entry = document.getElementById('classroom-mode-feature-btn');
+        const style = bar ? getComputedStyle(bar) : null;
+        return {
+          active: document.body.classList.contains('classroom-mode-active'),
+          barVisible: !!bar && style?.display !== 'none' && style?.visibility !== 'hidden',
+          featurePanelHidden: !document.getElementById('feature-area')?.classList.contains('show'),
+          statusText: status?.textContent?.trim() || '',
+          entryPressed: entry?.getAttribute('aria-pressed') === 'true'
+        };
+      })()`);
+      return state.active && state.barVisible ? state : null;
+    }, { timeoutMs: 5000 });
+
+    if (!classroomState.featurePanelHidden || !classroomState.statusText || !classroomState.entryPressed) {
+      throw new Error(`Classroom mode click did not expose clear active feedback: ${JSON.stringify(classroomState)}`);
+    }
+
+    await evaluate(cdp, `window.drawingBoard?.classroomModeManager?.exit?.()`);
+
+    console.log('drawing-smoke-cdp: pen, shape, zoomed pen, marker zoom, select cursor, and classroom entry checks passed');
   } finally {
     cdp?.close();
     browser.kill();

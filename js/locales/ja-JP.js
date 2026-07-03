@@ -659,6 +659,7 @@ window.translations = {
     },
 
     classroom: {
+        modeActive: '授業モード',
         prevPage: '前のページ',
         nextPage: '次のページ',
         startTimer: 'タイマー開始',

@@ -35,6 +35,8 @@ function testMorePanelExposesClassroomMode() {
   const buttonMarkup = getElementMarkup(indexHtml, 'classroom-mode-feature-btn');
 
   assert.match(buttonMarkup, /class="[^"]*\bfeature-btn\b/, 'classroom entry should use the existing More panel feature button style');
+  assert.match(buttonMarkup, /class="[^"]*\bclassroom-mode-entry\b/, 'classroom entry should have a dedicated state hook');
+  assert.match(buttonMarkup, /aria-pressed="false"/, 'classroom entry should expose inactive pressed state');
   assert.match(buttonMarkup, /data-i18n-title="features\.classroomMode"/, 'classroom entry should be translated');
   assert.match(buttonMarkup, /data-i18n="features\.classroomMode"/, 'classroom entry label should be translated');
 }
@@ -46,6 +48,7 @@ function testClassroomControlBarExistsOutsideFeaturePanel() {
   assert.ok(classroomBarIndex > featureAreaIndex, 'classroom control bar should be a standalone surface outside the More panel');
 
   [
+    'classroom-mode-status',
     'classroom-prev-page-btn',
     'classroom-page-status',
     'classroom-next-page-btn',
@@ -56,6 +59,9 @@ function testClassroomControlBarExistsOutsideFeaturePanel() {
   ].forEach((id) => {
     assert.match(indexHtml, new RegExp(`id="${id}"`), `missing #${id}`);
   });
+
+  const statusMarkup = getElementMarkup(indexHtml, 'classroom-mode-status');
+  assert.match(statusMarkup, /data-i18n="classroom\.modeActive"/, 'classroom bar should label the active teaching state');
 }
 
 function testClassroomModeScriptsAndStylesAreLoaded() {
@@ -65,6 +71,8 @@ function testClassroomModeScriptsAndStylesAreLoaded() {
 
 function testMorePanelButtonEntersClassroomMode() {
   assert.match(uiListenersRuntime, /classroom-mode-feature-btn/, 'More panel runtime should bind the classroom mode button');
+  assert.match(uiListenersRuntime, /setClassroomModeButtonState/, 'More panel runtime should keep classroom button state visible');
+  assert.match(uiListenersRuntime, /classroom-mode-entering/, 'clicking classroom mode should expose immediate entering feedback');
   assert.match(uiListenersRuntime, /AboardClassroomModeManager/, 'runtime should create the classroom mode manager when needed');
   assert.match(uiListenersRuntime, /classroomModeManager\.enter\(\)/, 'clicking classroom mode should enter presentation mode');
   assert.match(uiListenersRuntime, /handleMoreFeaturePanelAfterAction\(\)/, 'classroom mode should close or respect the More panel after action');
@@ -76,6 +84,8 @@ function testClassroomRuntimeOwnsModeStatePaginationAndTimer() {
   assert.match(classroomMode, /class ClassroomModeManager/, 'runtime should define a classroom mode manager');
   assert.match(classroomMode, /window\.AboardClassroomModeManager\s*=\s*ClassroomModeManager/, 'runtime should expose the manager on window');
   assert.match(classroomMode, /classroom-mode-active/, 'runtime should toggle the active body class');
+  assert.match(classroomMode, /modeStatus/, 'runtime should own the visible classroom mode status label');
+  assert.match(classroomMode, /classroom\.modeActive/, 'runtime should localize the active classroom mode status');
   assert.match(classroomMode, /goToPage\?\.\(this\.board\.currentPage \+ 1\)/, 'next page should navigate to an existing page without creating a blank page');
   assert.match(classroomMode, /prevPage\?\.\(\)/, 'previous page should reuse board pagination');
   assert.match(classroomMode, /setInterval/, 'timer should tick without depending on the existing timer modal');
@@ -88,6 +98,7 @@ function testClassroomModeLayoutDoesNotOverflowHorizontally() {
   assert.match(css, /#classroom-mode-bar\s*{[^}]*max-width:\s*calc\(100vw - 24px\)/s, 'control bar should fit inside narrow viewports');
   assert.match(css, /#classroom-mode-bar\s*{[^}]*overflow-x:\s*hidden/s, 'control bar should never expose a horizontal scrollbar');
   assert.match(css, /#classroom-mode-bar\s*{[^}]*flex-wrap:\s*wrap/s, 'control bar controls should wrap instead of overflowing');
+  assert.match(css, /\.classroom-mode-status\s*{[^}]*font-weight:\s*600/s, 'active classroom label should be readable on a projector');
   assert.match(css, /body\.classroom-mode-active\s+#toolbar/s, 'classroom mode should hide the normal toolbar');
   assert.match(css, /body\.classroom-mode-active\s+#pagination-controls/s, 'classroom mode should hide normal pagination controls');
   assert.match(css, /@media \(max-width:\s*520px\)[\s\S]*#classroom-mode-bar/s, 'small screens should have a dedicated classroom bar layout');
@@ -102,7 +113,7 @@ function testClassroomModeLocaleKeysExist() {
     const source = fs.readFileSync(path.join(rootDir, 'js', 'locales', fileName), 'utf8');
     assert.match(source, /classroomMode:/, `${fileName} should translate features.classroomMode`);
     assert.match(source, /classroom:\s*{/, `${fileName} should define classroom labels`);
-    ['prevPage', 'nextPage', 'startTimer', 'pauseTimer', 'resetTimer', 'exit'].forEach((key) => {
+    ['modeActive', 'prevPage', 'nextPage', 'startTimer', 'pauseTimer', 'resetTimer', 'exit'].forEach((key) => {
       assert.match(source, new RegExp(`${key}:`), `${fileName} should translate classroom.${key}`);
     });
   }

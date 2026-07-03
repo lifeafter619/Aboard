@@ -375,6 +375,22 @@ function setupSelectToolConfigListeners() {
         });
 }
 
+function setClassroomModeButtonState(button, active, options = {}) {
+        if (!button) {
+            return;
+        }
+
+        const entering = options.entering === true;
+        button.classList.toggle('active', active);
+        button.classList.toggle('classroom-mode-entering', entering);
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        if (entering) {
+            button.setAttribute('aria-busy', 'true');
+        } else {
+            button.removeAttribute('aria-busy');
+        }
+}
+
 function setupMoreFeatureToolConfigListeners() {
         // Timer Feature Button
         const timerFeatureBtn = document.getElementById('timer-feature-btn');
@@ -394,7 +410,12 @@ function setupMoreFeatureToolConfigListeners() {
         // Classroom Mode Feature Button
         const classroomModeBtn = document.getElementById('classroom-mode-feature-btn');
         if (classroomModeBtn) {
+            setClassroomModeButtonState(classroomModeBtn, !!this.classroomModeManager?.isActive);
+            window.addEventListener('classroomModeChanged', (event) => {
+                setClassroomModeButtonState(classroomModeBtn, !!event.detail?.active);
+            });
             classroomModeBtn.addEventListener('click', () => {
+                setClassroomModeButtonState(classroomModeBtn, true, { entering: true });
                 this.exitShapeMode();
                 try {
                     if (!this.classroomModeManager) {
@@ -404,8 +425,10 @@ function setupMoreFeatureToolConfigListeners() {
                         this.classroomModeManager = new window.AboardClassroomModeManager(this);
                     }
                     this.classroomModeManager.enter();
+                    setClassroomModeButtonState(classroomModeBtn, true);
                     this.handleMoreFeaturePanelAfterAction();
                 } catch (error) {
+                    setClassroomModeButtonState(classroomModeBtn, false);
                     this.showLazyLoadError(getLazyFeatureLabel('features.classroomMode', 'Classroom'), error);
                 }
             });

@@ -693,6 +693,7 @@ window.translations = {
     },
 
     classroom: {
+        modeActive: '課堂模式',
         prevPage: '上一頁',
         nextPage: '下一頁',
         startTimer: '開始計時',
