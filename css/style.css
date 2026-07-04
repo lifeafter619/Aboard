@@ -254,8 +254,8 @@ body.vector-preview-active #off-canvas-image-layer {
     overflow-x: hidden;
     display: none;
     cursor: move;
-    /* Improved touch device support */
-    touch-action: none;
+    /* Improved touch device support: allow vertical touch scrolling of overflowing content */
+    touch-action: pan-y;
     /* Performance optimization */
     will-change: transform, left, top;
 }
@@ -325,6 +325,17 @@ body.vector-preview-active #off-canvas-image-layer {
     justify-content: center;
     transition: background-color 0.2s ease, color 0.2s ease;
     color: #666;
+}
+
+/* Extend the touch target to >=44px (visual size stays 28px, layout unaffected) */
+.config-close-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--touch-target-size, 44px);
+    height: var(--touch-target-size, 44px);
+    transform: translate(-50%, -50%);
 }
 
 .config-close-btn:hover {
@@ -916,6 +927,7 @@ body.vector-preview-active #off-canvas-image-layer {
 body.overlay-modal-open #config-area,
 body.overlay-modal-open #feature-area,
 body.overlay-modal-open #time-display-area,
+body.overlay-modal-open #classroom-mode-bar,
 body.overlay-modal-open .feature-widget,
 body.overlay-modal-open .timer-display-widget {
     pointer-events: none !important;

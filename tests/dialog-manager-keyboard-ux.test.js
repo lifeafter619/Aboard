@@ -47,6 +47,7 @@ function createElement(ownerDocument, tagName = 'div') {
     textContent: '',
     value: '',
     checked: false,
+    hidden: false,
     type: '',
     onclick: null,
     appendChild(child) {
@@ -75,6 +76,9 @@ function createElement(ownerDocument, tagName = 'div') {
     },
     getAttribute(name) {
       return this.attributes[name] ?? null;
+    },
+    hasAttribute(name) {
+      return Object.prototype.hasOwnProperty.call(this.attributes, name);
     },
     addEventListener(type, handler, options = {}) {
       if (!listeners.has(type)) {
@@ -112,6 +116,12 @@ function createElement(ownerDocument, tagName = 'div') {
     },
     focus() {
       ownerDocument.activeElement = this;
+    },
+    contains(candidate) {
+      if (candidate === this) {
+        return true;
+      }
+      return this.children.some((child) => child.contains?.(candidate));
     },
     select() {},
     click() {
@@ -183,6 +193,31 @@ function createElement(ownerDocument, tagName = 'div') {
 }
 
 function createSelectorMatcher(selector) {
+  if (selector.includes(',')) {
+    const matchers = selector.split(',').map((part) => createSelectorMatcher(part.trim()));
+    return (element) => matchers.some((matcher) => matcher(element));
+  }
+  if (selector === '[aria-modal="true"]') {
+    return (element) => element.getAttribute('aria-modal') === 'true';
+  }
+  if (selector === 'button:not([disabled])') {
+    return (element) => element.tagName === 'BUTTON' && !element.disabled && !element.hasAttribute('disabled');
+  }
+  if (selector === 'input:not([disabled]):not([type="hidden"])') {
+    return (element) => element.tagName === 'INPUT'
+      && !element.disabled
+      && !element.hasAttribute('disabled')
+      && element.type !== 'hidden';
+  }
+  if (selector === 'select:not([disabled])') {
+    return (element) => element.tagName === 'SELECT' && !element.disabled && !element.hasAttribute('disabled');
+  }
+  if (selector === 'textarea:not([disabled])') {
+    return (element) => element.tagName === 'TEXTAREA' && !element.disabled && !element.hasAttribute('disabled');
+  }
+  if (selector === '[tabindex]:not([tabindex="-1"])') {
+    return (element) => element.hasAttribute('tabindex') && element.getAttribute('tabindex') !== '-1';
+  }
   if (selector.startsWith('.')) {
     const className = selector.slice(1);
     return (element) => element.classList.contains(className);
@@ -242,9 +277,18 @@ function buildConfirmModalTemplate(document, modal) {
 }
 
 function createDocumentStub() {
+  const listeners = new Map();
   const document = {
     activeElement: null,
     body: null,
+    defaultView: {
+      getComputedStyle(element) {
+        return {
+          display: element.hidden || element.style.display === 'none' ? 'none' : (element.style.display || 'block'),
+          visibility: element.style.visibility || 'visible'
+        };
+      }
+    },
     createElement(tagName) {
       return createElement(document, tagName);
     },
@@ -253,6 +297,28 @@ function createDocumentStub() {
     },
     querySelector(selector) {
       return document.body.querySelector(selector);
+    },
+    querySelectorAll(selector) {
+      return document.body.querySelectorAll(selector);
+    },
+    addEventListener(type, handler) {
+      if (!listeners.has(type)) {
+        listeners.set(type, []);
+      }
+      listeners.get(type).push(handler);
+    },
+    trigger(type, event = {}) {
+      const eventObject = {
+        key: '',
+        target: document.body,
+        preventDefault() {
+          this.defaultPrevented = true;
+        },
+        defaultPrevented: false,
+        ...event
+      };
+      (listeners.get(type) || []).forEach((handler) => handler(eventObject));
+      return eventObject;
     }
   };
   document.body = createElement(document, 'body');
@@ -362,7 +428,52 @@ async function testConfirmDialogRebuildsBrokenModalTemplate() {
   assert.equal(result, true, 'rebuilt confirm modal should still resolve the primary action');
 }
 
+async function importDialogManagerWithGlobalDocument(document, suffix) {
+  const originalDocument = global.document;
+  global.document = document;
+  try {
+    await import(`${pathToFileURL(path.join(__dirname, '..', 'js', 'infra', 'dialog-manager.js')).href}?${suffix}`);
+  } finally {
+    if (originalDocument === undefined) {
+      delete global.document;
+    } else {
+      global.document = originalDocument;
+    }
+  }
+}
+
+async function testModalFocusTrapIgnoresHiddenPanelControls() {
+  const document = createDocumentStub();
+  const modal = document.createElement('div');
+  modal.className = 'modal show';
+  modal.setAttribute('aria-modal', 'true');
+
+  const firstButton = document.createElement('button');
+  const lastVisibleButton = document.createElement('button');
+  const hiddenPanel = document.createElement('div');
+  hiddenPanel.hidden = true;
+  const hiddenButton = document.createElement('button');
+
+  hiddenPanel.appendChild(hiddenButton);
+  modal.appendChild(firstButton);
+  modal.appendChild(lastVisibleButton);
+  modal.appendChild(hiddenPanel);
+  document.body.appendChild(modal);
+
+  await importDialogManagerWithGlobalDocument(document, 'focus-trap-hidden-panel-test');
+
+  document.activeElement = lastVisibleButton;
+  const event = document.trigger('keydown', {
+    key: 'Tab',
+    target: lastVisibleButton
+  });
+
+  assert.equal(event.defaultPrevented, true, 'Tab should wrap from the last visible control');
+  assert.equal(document.activeElement, firstButton, 'hidden panel controls should not be included in the tab order');
+}
+
 (async function main() {
+  await testModalFocusTrapIgnoresHiddenPanelControls();
   await testConfirmDialogDefaultsToPrimaryActionAndSupportsEnterKey();
   await testConfirmDialogRebuildsBrokenModalTemplate();
   console.log('dialog-manager-keyboard-ux.test: all assertions passed');

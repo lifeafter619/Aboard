@@ -184,7 +184,7 @@ function setupDraggablePanels(board) {
             ? event.target.closest.bind(event.target)
             : () => null;
         const isDragHandle = closest('.panel-drag-handle');
-        if (!isDragHandle && (closest('button') || closest('input'))) {
+        if (!isDragHandle && closest('button, input, label, select, textarea')) {
             return;
         }
 

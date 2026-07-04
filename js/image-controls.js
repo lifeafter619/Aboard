@@ -267,14 +267,9 @@ class ImageControls {
         
         this.isActive = true;
         this.overlay.style.display = 'block';
-        
-        // Initialize with image data
-        const canvas = this.backgroundManager.bgCanvas;
-        const dpr = window.devicePixelRatio || 1;
-        
+
         // Get logical canvas dimensions (same coordinate system as background manager)
-        const logicalWidth = canvas.width / dpr;
-        const logicalHeight = canvas.height / dpr;
+        const { width: logicalWidth, height: logicalHeight } = this.getLogicalCanvasSize();
         
         // Store original dimensions - use natural image dimensions
         let originalWidth = imageData.width || logicalWidth * 0.4;
@@ -357,9 +352,43 @@ class ImageControls {
 
     copyImageToCanvas() {
         const drawingBoard = window.drawingBoard;
-        const bgImage = this.backgroundManager.backgroundImage;
-        if (!drawingBoard || !bgImage) return false;
+        if (!drawingBoard) return false;
 
+        const bgImage = this.backgroundManager.backgroundImage;
+        if (this.isDrawableBackgroundImage(bgImage)) {
+            this.stampBackgroundImage(drawingBoard, bgImage);
+            return true;
+        }
+
+        // After a refresh backgroundImage may not be a decoded image element yet;
+        // rebuild it from the persisted data URL before stamping.
+        const imageData = this.backgroundManager.backgroundImageData;
+        if (typeof imageData !== 'string' || !imageData) return false;
+
+        const img = new Image();
+        img.onload = () => {
+            this.backgroundManager.backgroundImage = img;
+            this.stampBackgroundImage(drawingBoard, img);
+        };
+        img.onerror = () => {
+            console.warn('Failed to load background image for copy to canvas');
+            const toast = drawingBoard.settingsManager?.toastManager || window.toastManager;
+            const msg = window.i18n?.t?.('errors.fileReadFailed') || 'Failed to read the selected file.';
+            toast?.show?.(msg, 'error');
+        };
+        img.src = imageData;
+        return true;
+    }
+
+    isDrawableBackgroundImage(image) {
+        if (!image || typeof image === 'string') return false;
+        if (typeof HTMLImageElement !== 'undefined' && image instanceof HTMLImageElement) {
+            return image.complete && image.naturalWidth > 0;
+        }
+        return false;
+    }
+
+    stampBackgroundImage(drawingBoard, bgImage) {
         drawingBoard.ctx.save();
         const centerX = this.imagePosition.x + this.imageSize.width / 2;
         const centerY = this.imagePosition.y + this.imageSize.height / 2;
@@ -519,11 +548,9 @@ class ImageControls {
     updateControlBox() {
         const canvas = this.backgroundManager.bgCanvas;
         const rect = canvas.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        
+
         // Get logical canvas dimensions
-        const logicalWidth = canvas.width / dpr;
-        const logicalHeight = canvas.height / dpr;
+        const { width: logicalWidth, height: logicalHeight } = this.getLogicalCanvasSize();
         
         // Calculate scale factor from logical canvas to screen coordinates
         // This accounts for any CSS transforms on the canvas
@@ -571,12 +598,25 @@ class ImageControls {
         return { x: e.clientX, y: e.clientY };
     }
 
+    // Logical (CSS) canvas size. bgCanvas.width includes devicePixelRatio AND the
+    // dynamic render scale (see render-quality-runtime.js), so backing-store
+    // dimensions must never be used to derive logical coordinates.
+    getLogicalCanvasSize() {
+        const canvas = this.backgroundManager.bgCanvas;
+        const dpr = window.devicePixelRatio || 1;
+        const width = canvas.clientWidth ||
+            parseFloat(canvas.style?.width) ||
+            (canvas.width / dpr);
+        const height = canvas.clientHeight ||
+            parseFloat(canvas.style?.height) ||
+            (canvas.height / dpr);
+        return { width, height };
+    }
+
     getControlBoxCenter() {
         const canvas = this.backgroundManager.bgCanvas;
         const rect = canvas.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        const logicalWidth = canvas.width / dpr;
-        const logicalHeight = canvas.height / dpr;
+        const { width: logicalWidth, height: logicalHeight } = this.getLogicalCanvasSize();
         const scaleX = rect.width / logicalWidth;
         const scaleY = rect.height / logicalHeight;
 
@@ -619,16 +659,14 @@ class ImageControls {
         // Get scale factor to convert screen delta to logical canvas delta
         const canvas = this.backgroundManager.bgCanvas;
         const rect = canvas.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        const logicalWidth = canvas.width / dpr;
-        const logicalHeight = canvas.height / dpr;
+        const { width: logicalWidth, height: logicalHeight } = this.getLogicalCanvasSize();
         const scaleX = rect.width / logicalWidth;
         const scaleY = rect.height / logicalHeight;
-        
+
         const pos = this.getClientPos(e);
         const deltaX = (pos.x - this.dragStartPos.x) / scaleX;
         const deltaY = (pos.y - this.dragStartPos.y) / scaleY;
-        
+
         this.imagePosition.x = this.dragStartImagePos.x + deltaX;
         this.imagePosition.y = this.dragStartImagePos.y + deltaY;
         
@@ -655,12 +693,10 @@ class ImageControls {
         // Get scale factor to convert screen delta to logical canvas delta
         const canvas = this.backgroundManager.bgCanvas;
         const rect = canvas.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        const logicalWidth = canvas.width / dpr;
-        const logicalHeight = canvas.height / dpr;
+        const { width: logicalWidth, height: logicalHeight } = this.getLogicalCanvasSize();
         const scaleX = rect.width / logicalWidth;
         const scaleY = rect.height / logicalHeight;
-        
+
         const pos = this.getClientPos(e);
         const deltaX = (pos.x - this.resizeStartPos.x) / scaleX;
         const deltaY = (pos.y - this.resizeStartPos.y) / scaleY;
@@ -765,22 +801,17 @@ class ImageControls {
         this.imageSize.height = this.originalHeight || this.imageSize.height;
         
         // Center the image in logical canvas coordinates
-        const canvas = this.backgroundManager.bgCanvas;
-        const dpr = window.devicePixelRatio || 1;
-        const logicalWidth = canvas.width / dpr;
-        const logicalHeight = canvas.height / dpr;
+        const { width: logicalWidth, height: logicalHeight } = this.getLogicalCanvasSize();
         this.imagePosition.x = (logicalWidth - this.imageSize.width) / 2;
         this.imagePosition.y = (logicalHeight - this.imageSize.height) / 2;
-        
+
         this.updateControlBox();
     }
-    
+
     fitToCanvas() {
         const canvas = this.backgroundManager.bgCanvas;
         const rect = canvas.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        const logicalWidth = canvas.width / dpr;
-        const logicalHeight = canvas.height / dpr;
+        const { width: logicalWidth, height: logicalHeight } = this.getLogicalCanvasSize();
         const scaleX = rect.width / logicalWidth;
         const scaleY = rect.height / logicalHeight;
         

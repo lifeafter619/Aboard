@@ -803,10 +803,12 @@ class TeachingToolsManager {
         if (!this.selectedTool) return;
         
         if (this.isRotating) {
-            const rect = this.canvas.getBoundingClientRect();
+            // Compare the pointer against the tool center in the same
+            // (unscaled) canvas coordinate space used by drag/resize.
+            const canvasCoords = this.screenToCanvasCoords(e.clientX, e.clientY);
             const centerX = this.selectedTool.x + this.selectedTool.width / 2;
             const centerY = this.selectedTool.y + this.selectedTool.height / 2;
-            const angle = Math.atan2(e.clientY - rect.top - centerY, e.clientX - rect.left - centerX);
+            const angle = Math.atan2(canvasCoords.y - centerY, canvasCoords.x - centerX);
             this.selectedTool.rotation += (angle - this.rotateStart) * (180 / Math.PI);
             this.rotateStart = angle;
             this.updateToolOverlay(this.selectedTool);
@@ -879,13 +881,41 @@ class TeachingToolsManager {
         
         // Apply minimum size constraints
         const minSize = 30;
-        if (newWidth >= minSize) {
+        const isProportionalHandle = handle === 'nw' || handle === 'ne' || handle === 'sw' || handle === 'se';
+        if (isProportionalHandle) {
+            // Corner handles keep the aspect ratio: clamp both dimensions
+            // together so the smaller side lands exactly on minSize instead of
+            // letting one side keep shrinking and skewing the ratio.
+            if (newWidth < minSize || newHeight < minSize) {
+                if (aspectRatio >= 1) {
+                    newHeight = minSize;
+                    newWidth = minSize * aspectRatio;
+                } else {
+                    newWidth = minSize;
+                    newHeight = minSize / aspectRatio;
+                }
+                // Recompute the anchored position from the clamped size so the
+                // opposite corner stays fixed.
+                if (handle === 'nw' || handle === 'sw') {
+                    newX = this.resizeStart.x + this.resizeStart.width - newWidth;
+                }
+                if (handle === 'nw' || handle === 'ne') {
+                    newY = this.resizeStart.y + this.resizeStart.height - newHeight;
+                }
+            }
             tool.width = newWidth;
-            tool.x = newX;
-        }
-        if (newHeight >= minSize) {
             tool.height = newHeight;
+            tool.x = newX;
             tool.y = newY;
+        } else {
+            if (newWidth >= minSize) {
+                tool.width = newWidth;
+                tool.x = newX;
+            }
+            if (newHeight >= minSize) {
+                tool.height = newHeight;
+                tool.y = newY;
+            }
         }
         
         this.updateToolOverlay(tool);
@@ -1368,11 +1398,12 @@ class TeachingToolsManager {
             
             this.isRotating = true;
             this.isInteracting = true;
-            
-            const rect = this.canvas.getBoundingClientRect();
+
+            // Use the same (unscaled) canvas coordinate space as handleMouseMove.
+            const canvasCoords = this.screenToCanvasCoords(e.clientX, e.clientY);
             const centerX = tool.x + tool.width / 2;
             const centerY = tool.y + tool.height / 2;
-            this.rotateStart = Math.atan2(e.clientY - rect.top - centerY, e.clientX - rect.left - centerX);
+            this.rotateStart = Math.atan2(canvasCoords.y - centerY, canvasCoords.x - centerX);
         };
         rotateHandle.addEventListener('mousedown', startRotate);
         rotateHandle.addEventListener('pointerdown', startRotate);

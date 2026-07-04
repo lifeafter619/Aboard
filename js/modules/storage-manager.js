@@ -75,12 +75,23 @@ class StorageManager {
 
                 request.onerror = () => {
                     console.warn('Failed to save session:', request.error);
+                };
+
+                // Only report success once the transaction actually commits;
+                // a quota-exceeded abort after request.onsuccess must not count.
+                transaction.oncomplete = () => {
+                    this.setSessionSizeEstimate(StorageManager.estimateSessionSize(sessionData));
+                    resolve(true);
+                };
+
+                transaction.onabort = () => {
+                    console.warn('Session save transaction aborted:', transaction.error);
                     resolve(false);
                 };
 
-                request.onsuccess = () => {
-                    this.setSessionSizeEstimate(StorageManager.estimateSessionSize(sessionData));
-                    resolve(true);
+                transaction.onerror = () => {
+                    console.warn('Session save transaction failed:', transaction.error);
+                    resolve(false);
                 };
             });
         } catch (error) {

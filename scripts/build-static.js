@@ -47,13 +47,33 @@ async function pathExists(targetPath) {
     }
 }
 
+async function readBuildVersion() {
+    return (await fs.readFile(path.join(ROOT_DIR, 'version.txt'), 'utf8')).trim();
+}
+
 async function minifyContent(relativePath, content) {
     const ext = path.extname(relativePath).toLowerCase();
     const normalizedPath = relativePath.split(path.sep).join('/');
 
     if (normalizedPath === 'js/app/bootstrap.js') {
-        const version = (await fs.readFile(path.join(ROOT_DIR, 'version.txt'), 'utf8')).trim();
+        const version = await readBuildVersion();
         content = content.replace(BUILD_VERSION_PLACEHOLDER, version);
+    }
+
+    if (normalizedPath === 'sw.js') {
+        // Guarantee cache busting on release: the dist copy of sw.js always
+        // carries the version from version.txt, even if the source constant
+        // was not bumped by hand.
+        const version = await readBuildVersion();
+        const swVersionPattern = /(const\s+SW_VERSION\s*=\s*')([^']*)(')/;
+        const match = content.match(swVersionPattern);
+        if (!match) {
+            throw new Error('SW_VERSION constant not found in sw.js.');
+        }
+        if (match[2] !== version) {
+            console.warn(`sw.js SW_VERSION (${match[2]}) is out of sync with version.txt (${version}); using ${version} in dist output.`);
+        }
+        content = content.replace(swVersionPattern, `$1${version}$3`);
     }
 
     if (ext === '.html') {

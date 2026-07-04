@@ -845,10 +845,22 @@ class InsertTextManager {
         const italicBtn = document.getElementById('insert-text-italic-btn');
         const underlineBtn = document.getElementById('insert-text-underline-btn');
         const strikethroughBtn = document.getElementById('insert-text-strikethrough-btn');
-        if (boldBtn) boldBtn.classList.remove('active');
-        if (italicBtn) italicBtn.classList.remove('active');
-        if (underlineBtn) underlineBtn.classList.remove('active');
-        if (strikethroughBtn) strikethroughBtn.classList.remove('active');
+        if (boldBtn) {
+            boldBtn.classList.remove('active');
+            boldBtn.setAttribute('aria-pressed', 'false');
+        }
+        if (italicBtn) {
+            italicBtn.classList.remove('active');
+            italicBtn.setAttribute('aria-pressed', 'false');
+        }
+        if (underlineBtn) {
+            underlineBtn.classList.remove('active');
+            underlineBtn.setAttribute('aria-pressed', 'false');
+        }
+        if (strikethroughBtn) {
+            strikethroughBtn.classList.remove('active');
+            strikethroughBtn.setAttribute('aria-pressed', 'false');
+        }
 
         // Reset active color to black
         document.querySelectorAll('#insert-text-modal .color-btn').forEach(b => b.classList.remove('active'));
@@ -906,10 +918,22 @@ class InsertTextManager {
             const italicBtn = document.getElementById('insert-text-italic-btn');
             const underlineBtn = document.getElementById('insert-text-underline-btn');
             const strikethroughBtn = document.getElementById('insert-text-strikethrough-btn');
-            if (boldBtn) boldBtn.classList.toggle('active', this.textConfig.bold);
-            if (italicBtn) italicBtn.classList.toggle('active', this.textConfig.italic);
-            if (underlineBtn) underlineBtn.classList.toggle('active', this.textConfig.underline);
-            if (strikethroughBtn) strikethroughBtn.classList.toggle('active', this.textConfig.strikethrough);
+            if (boldBtn) {
+                boldBtn.classList.toggle('active', this.textConfig.bold);
+                boldBtn.setAttribute('aria-pressed', (!!this.textConfig.bold).toString());
+            }
+            if (italicBtn) {
+                italicBtn.classList.toggle('active', this.textConfig.italic);
+                italicBtn.setAttribute('aria-pressed', (!!this.textConfig.italic).toString());
+            }
+            if (underlineBtn) {
+                underlineBtn.classList.toggle('active', this.textConfig.underline);
+                underlineBtn.setAttribute('aria-pressed', (!!this.textConfig.underline).toString());
+            }
+            if (strikethroughBtn) {
+                strikethroughBtn.classList.toggle('active', this.textConfig.strikethrough);
+                strikethroughBtn.setAttribute('aria-pressed', (!!this.textConfig.strikethrough).toString());
+            }
         }
         this.updateDecorationControlsVisibility();
 
@@ -999,8 +1023,9 @@ class InsertTextManager {
         const cy = window.innerHeight / 2;
 
         const canvasRect = this.canvas.getBoundingClientRect();
-        const scaleX = canvasRect.width / (this.canvas.width / window.devicePixelRatio);
-        const scaleY = canvasRect.height / (this.canvas.height / window.devicePixelRatio);
+        const logicalSize = this.getLogicalCanvasSize();
+        const scaleX = canvasRect.width / logicalSize.width;
+        const scaleY = canvasRect.height / logicalSize.height;
 
         this.textPosition.x = (cx - canvasRect.left) / scaleX;
         this.textPosition.y = (cy - canvasRect.top) / scaleY;
@@ -1020,8 +1045,7 @@ class InsertTextManager {
 
     updateOverlay() {
         const canvasRect = this.canvas.getBoundingClientRect();
-        const logicalWidth = this.canvas.width / window.devicePixelRatio;
-        const logicalHeight = this.canvas.height / window.devicePixelRatio;
+        const { width: logicalWidth, height: logicalHeight } = this.getLogicalCanvasSize();
         const scaleX = canvasRect.width / logicalWidth;
         const scaleY = canvasRect.height / logicalHeight;
 
@@ -1271,12 +1295,26 @@ class InsertTextManager {
         for (let i = this.textObjects.length - 1; i >= 0; i--) {
             const textObj = this.textObjects[i];
             if (!textObj) continue;
-            
+
             const bounds = this.getTextBounds(textObj);
-            
-            // Simple AABB hit test (without rotation for now)
-            if (x >= bounds.x && x <= bounds.x + bounds.width &&
-                y >= bounds.y && y <= bounds.y + bounds.height) {
+            const rotation = textObj.rotation || 0;
+
+            let testX = x;
+            let testY = y;
+            if (rotation !== 0) {
+                // drawTextObject rotates around the bounds center, so rotate the
+                // test point back around the same center before the AABB check
+                const centerX = bounds.x + bounds.width / 2;
+                const centerY = bounds.y + bounds.height / 2;
+                const rad = -rotation * Math.PI / 180;
+                const dx = x - centerX;
+                const dy = y - centerY;
+                testX = centerX + dx * Math.cos(rad) - dy * Math.sin(rad);
+                testY = centerY + dx * Math.sin(rad) + dy * Math.cos(rad);
+            }
+
+            if (testX >= bounds.x && testX <= bounds.x + bounds.width &&
+                testY >= bounds.y && testY <= bounds.y + bounds.height) {
                 return i;
             }
         }
@@ -1457,11 +1495,23 @@ class InsertTextManager {
         return { x: e.clientX, y: e.clientY };
     }
 
+    // Logical (CSS) canvas size. canvas.width includes devicePixelRatio AND the
+    // dynamic render scale (see render-quality-runtime.js), so backing-store
+    // dimensions must never be used to derive logical coordinates.
+    getLogicalCanvasSize() {
+        const dpr = window.devicePixelRatio || 1;
+        const width = this.canvas.clientWidth ||
+            parseFloat(this.canvas.style?.width) ||
+            (this.canvas.width / dpr);
+        const height = this.canvas.clientHeight ||
+            parseFloat(this.canvas.style?.height) ||
+            (this.canvas.height / dpr);
+        return { width, height };
+    }
+
     getCanvasScales() {
         const rect = this.canvas.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        const logicalWidth = this.canvas.width / dpr;
-        const logicalHeight = this.canvas.height / dpr;
+        const { width: logicalWidth, height: logicalHeight } = this.getLogicalCanvasSize();
         return {
             scaleX: rect.width / logicalWidth,
             scaleY: rect.height / logicalHeight

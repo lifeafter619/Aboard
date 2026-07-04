@@ -959,8 +959,20 @@ class DrawingEngine {
         return { svg, logicalWidth, logicalHeight };
     }
 
+    hasComplexShapeStroke() {
+        // Stored shapes whose line style has no SVG equivalent (see
+        // buildSvgShapeMarkup) must fall back to bitmap rendering.
+        const complexShapeLineStyles = ['wavy', 'double', 'triple', 'multi', 'arrow', 'doubleArrow'];
+        return this.strokes.some(stroke => {
+            if (!stroke || stroke.renderMode !== 'shape') return false;
+            // Arrow shapes have dedicated SVG markup support.
+            if (stroke.shapeType === 'arrow' || stroke.shapeType === 'doubleArrow') return false;
+            return complexShapeLineStyles.includes(stroke.shapeLineStyle || stroke.lineStyle || 'solid');
+        });
+    }
+
     setVectorPreviewVisible(visible) {
-        this.vectorPreviewEnabled = !!visible;
+        this.vectorPreviewEnabled = !!visible && !this.hasComplexShapeStroke();
         if (typeof document !== 'undefined' && document.body) {
             document.body.classList.toggle('vector-preview-active', this.vectorPreviewEnabled);
         }
@@ -1546,8 +1558,9 @@ class DrawingEngine {
         
         if (this.currentTool === 'eraser' && this.eraserShape === 'rectangle') {
             this.eraseRectangleAtPoint(pos);
-        } else if (this.penLineStyle === 'dotted' || this.penLineStyle === 'dashed') {
+        } else if (this.currentTool === 'pen' && (this.penLineStyle === 'dotted' || this.penLineStyle === 'dashed')) {
             // For dashed/dotted lines, draw initial dot
+            this.ctx.fillStyle = this.currentColor;
             this.ctx.beginPath();
             this.ctx.arc(pos.x, pos.y, this.penSize / 2, 0, Math.PI * 2);
             this.ctx.fill();
@@ -1620,8 +1633,11 @@ class DrawingEngine {
         }
         
         // Check if we can use batch drawing (Normal pen)
+        // Complex brush/line-style handling only applies to the pen tool;
+        // the eraser must always take the plain batch path (full width, opaque).
         const complexBrushes = ['pencil', 'brush', 'fountain', 'ballpoint', 'marker'];
-        const isComplex = complexBrushes.includes(this.penType) || this.penLineStyle === 'multi';
+        const isComplex = this.currentTool === 'pen' &&
+            (complexBrushes.includes(this.penType) || this.penLineStyle === 'multi');
 
         if (!isComplex) {
             // Optimized batch drawing for Normal pen
@@ -1634,15 +1650,17 @@ class DrawingEngine {
             const startPoint = (startIndex > 0) ? this.points[startIndex - 1] : validPoints[0];
             
             this.ctx.moveTo(startPoint.x, startPoint.y);
-            
+
+            let prevPoint = startPoint;
             for (const p of validPoints) {
                 this.ctx.lineTo(p.x, p.y);
 
-                // Update accumulated distance (approximate)
-                // Not strictly needed for solid lines but good for consistency
-                // const dx = p.x - startPoint.x;
-                // const dy = p.y - startPoint.y;
-                // this.accumulatedDistance += Math.sqrt(dx*dx + dy*dy);
+                // Accumulate stroke length so dashed/dotted phase stays
+                // continuous across batches (applyLineStyle uses it as lineDashOffset)
+                const dx = p.x - prevPoint.x;
+                const dy = p.y - prevPoint.y;
+                this.accumulatedDistance += Math.sqrt(dx * dx + dy * dy);
+                prevPoint = p;
             }
             
             this.ctx.stroke();
@@ -2015,11 +2033,11 @@ class DrawingEngine {
     
     pan(e) {
         if (!this.isPanning || !this.lastPanPoint) return;
-        
-        // Reduce pan sensitivity with a damping factor
-        const dampingFactor = 0.5; // Lower value = less sensitive
-        const dx = (e.clientX - this.lastPanPoint.x) / this.canvasScale * dampingFactor;
-        const dy = (e.clientY - this.lastPanPoint.y) / this.canvasScale * dampingFactor;
+
+        // panOffset is in screen pixels (translate is applied outside scale),
+        // so pointer deltas map 1:1 regardless of zoom level
+        const dx = e.clientX - this.lastPanPoint.x;
+        const dy = e.clientY - this.lastPanPoint.y;
         
         this.panOffset.x += dx;
         this.panOffset.y += dy;
@@ -2044,7 +2062,13 @@ class DrawingEngine {
     }
     
     clearCanvas() {
+        // Reset the transform so the physical-size clear covers the full
+        // buffer even when the context is DPR-scaled (matches the
+        // setTransform + clearRect pattern used for the live preview canvas).
+        this.ctx.save();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.restore();
         this.clearStrokes();
         this.clearStampedImages();
         this.objectGroups = [];

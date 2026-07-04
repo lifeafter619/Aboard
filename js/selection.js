@@ -2241,13 +2241,16 @@ class SelectionManager {
                 height: newBounds.height
             });
         } else if (this.isCompoundSelection()) {
+            // Guard against zero-width/height start bounds producing NaN coordinates
+            const safeStartWidth = Math.max(startBounds.width, 1);
+            const safeStartHeight = Math.max(startBounds.height, 1);
             for (const idx of this.selectedStrokes) {
                 const stroke = this.drawingEngine.strokes[idx];
                 if (stroke) {
                     for (let point of stroke.points) {
                         if (point.originalX !== undefined && point.originalY !== undefined) {
-                            const relX = (point.originalX - startBounds.x) / startBounds.width;
-                            const relY = (point.originalY - startBounds.y) / startBounds.height;
+                            const relX = (point.originalX - startBounds.x) / safeStartWidth;
+                            const relY = (point.originalY - startBounds.y) / safeStartHeight;
                             point.x = newBounds.x + relX * newBounds.width;
                             point.y = newBounds.y + relY * newBounds.height;
                         }
@@ -2258,10 +2261,10 @@ class SelectionManager {
                 for (const start of this.multiImageResizeStart) {
                     const img = this.drawingEngine.stampedImages[start.idx];
                     if (img) {
-                        const relX = (start.x - startBounds.x) / startBounds.width;
-                        const relY = (start.y - startBounds.y) / startBounds.height;
-                        const relW = start.width / startBounds.width;
-                        const relH = start.height / startBounds.height;
+                        const relX = (start.x - startBounds.x) / safeStartWidth;
+                        const relY = (start.y - startBounds.y) / safeStartHeight;
+                        const relW = start.width / safeStartWidth;
+                        const relH = start.height / safeStartHeight;
                         img.x = newBounds.x + relX * newBounds.width;
                         img.y = newBounds.y + relY * newBounds.height;
                         img.width = Math.max(this.MIN_SIZE, relW * newBounds.width);
@@ -2273,9 +2276,9 @@ class SelectionManager {
                 for (const start of this.multiTextResizeStart) {
                     if (this.textManager && this.textManager.textObjects[start.idx]) {
                         const textObj = this.textManager.textObjects[start.idx];
-                        const relX = (start.x - startBounds.x) / startBounds.width;
-                        const relY = (start.y - startBounds.y) / startBounds.height;
-                        const scaleRatio = newBounds.width / startBounds.width;
+                        const relX = (start.x - startBounds.x) / safeStartWidth;
+                        const relY = (start.y - startBounds.y) / safeStartHeight;
+                        const scaleRatio = newBounds.width / safeStartWidth;
                         const minFontSize = (this.textManager && this.textManager.MIN_FONT_SIZE) ? this.textManager.MIN_FONT_SIZE : 12;
                         textObj.x = newBounds.x + relX * newBounds.width;
                         textObj.y = newBounds.y + relY * newBounds.height;
@@ -2715,15 +2718,13 @@ class SelectionManager {
             for (const idx of this.selectedStrokes) {
                 const stroke = this.drawingEngine.strokes[idx];
                 if (stroke) {
+                    // Reuse createStrokeCopy so shape metadata survives, then
+                    // apply the copy offset (shapeStart/shapeEnd move with points).
                     const copiedStroke = {
+                        ...this.createStrokeCopy(stroke),
                         points: stroke.points.map(p => ({ x: p.x + this.COPY_OFFSET, y: p.y + this.COPY_OFFSET })),
-                        color: stroke.color,
-                        size: stroke.size,
-                        penType: stroke.penType,
-                        tool: stroke.tool,
-                        lineStyle: stroke.lineStyle || 'solid',
-                        dashDensity: stroke.dashDensity || 10,
-                        rotation: stroke.rotation || 0,
+                        shapeStart: stroke.shapeStart ? { x: stroke.shapeStart.x + this.COPY_OFFSET, y: stroke.shapeStart.y + this.COPY_OFFSET } : null,
+                        shapeEnd: stroke.shapeEnd ? { x: stroke.shapeEnd.x + this.COPY_OFFSET, y: stroke.shapeEnd.y + this.COPY_OFFSET } : null,
                         layerOrder: this.drawingEngine.getNextLayerOrder(),
                         objectId: this.drawingEngine.getNextObjectId(),
                         groupId: null
@@ -3566,8 +3567,12 @@ class SelectionManager {
     }
     
     redrawCanvas() {
-        // Clear canvas
+        // Clear canvas: reset the transform so the physical-size clear covers
+        // the full buffer even when the context is DPR-scaled.
+        this.ctx.save();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.restore();
         
         // Check if there is vector content to redraw
         const hasVectorContent = this.drawingEngine.strokes.length > 0 ||

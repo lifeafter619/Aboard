@@ -424,6 +424,7 @@ window.translations = {
             renameFont: '名前を変更',
             expandPreview: '拡大',
             confirmDeleteFont: 'カスタムフォント「{font}」を削除してもよろしいですか？',
+            resetFontManagement: '初期状態に戻す',
             resetFontManagementConfirm: 'フォント管理を初期状態に戻すと、アップロード済みフォントが削除され、順序・名称・プレビュー設定もリセットされます。続行しますか？',
             downloadedLanguagePacks: 'ダウンロード済み言語パック',
             dismissedLanguageSuggestion: '言語提案の非表示状態',
@@ -728,7 +729,9 @@ window.translations = {
         transparent: '透明',
         fullscreenDisabled: '無効',
         fullscreenSingle: 'シングルクリック',
-        fullscreenDouble: 'ダブルクリック'
+        fullscreenDouble: 'ダブルクリック',
+        widgetTab: 'ウィジェット表示設定',
+        fullscreenTab: '全画面表示設定'
     },
 
     // Timer
@@ -919,7 +922,12 @@ window.translations = {
         missingAsset: 'プロジェクトパッケージにリソースファイルがありません: {path}',
         missingPageFile: 'プロジェクトパッケージにページファイルがありません: {path}',
         invalidLegacyFormat: '旧版プロジェクトファイルの形式が無効です。',
-        legacyMissingPages: '旧版プロジェクトファイルにページデータがありません。'
+        legacyMissingPages: '旧版プロジェクトファイルにページデータがありません。',
+        fileTooLarge: 'プロジェクトファイルが大きすぎます。100 MB 未満のファイルをインポートしてください。',
+        unsafePath: '安全でないプロジェクトパッケージのパスです：{path}',
+        tooManyPages: 'プロジェクトパッケージに含まれるページ数が多すぎます。',
+        assetTooLarge: 'プロジェクトパッケージに大きすぎるアセットが含まれています：{path}',
+        assetsTooLarge: 'プロジェクトパッケージに埋め込まれたアセットが多すぎます。'
     },
 
     randomPicker: {

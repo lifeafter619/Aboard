@@ -52,6 +52,10 @@ function showConfigDiffModal(diff, newSettings) {
         };
         list.innerHTML = '';
 
+        // Keys missing from the imported file surface as `new === undefined`;
+        // writing them back would blank the current value, so keep them unchanged.
+        diff = diff.filter((item) => item.new !== undefined);
+
         if (diff.length === 0) {
             const noChangeMsg = window.i18n?.t('settings.importNoChange') || 'No configuration changes detected';
             const emptyState = document.createElement('div');

@@ -28,7 +28,7 @@ function setupKeyboardShortcuts() {
             (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable);
         if (e.ctrlKey || e.metaKey) {
             const key = e.key.toLowerCase();
-            if (key === 'z' && !e.shiftKey) {
+            if (!isEditableTarget && key === 'z' && !e.shiftKey) {
                 e.preventDefault();
                 if (this.historyManager.undo()) {
                     this.drawingEngine.clearStrokes();
@@ -40,7 +40,7 @@ function setupKeyboardShortcuts() {
                     this.updateUI();
                     this.saveSessionDebounced();
                 }
-            } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+            } else if (!isEditableTarget && (key === 'y' || (key === 'z' && e.shiftKey))) {
                 e.preventDefault();
                 if (this.historyManager.redo()) {
                     this.drawingEngine.clearStrokes();

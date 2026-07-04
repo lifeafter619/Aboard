@@ -3,6 +3,8 @@ const path = require('node:path');
 
 const rootDir = process.cwd();
 const versionFile = path.join(rootDir, 'version.txt');
+const serviceWorkerFile = path.join(rootDir, 'sw.js');
+const swVersionPattern = /(const\s+SW_VERSION\s*=\s*')[^']*(')/;
 const markerStart = '<!-- version-badge:start -->';
 const markerEnd = '<!-- version-badge:end -->';
 
@@ -126,6 +128,25 @@ function updateReadmeFile(readmeFile, version) {
   return false;
 }
 
+function updateServiceWorkerVersion(version) {
+  if (!fs.existsSync(serviceWorkerFile)) {
+    throw new Error('sw.js not found.');
+  }
+
+  const original = fs.readFileSync(serviceWorkerFile, 'utf8');
+  if (!swVersionPattern.test(original)) {
+    throw new Error('SW_VERSION constant not found in sw.js.');
+  }
+
+  const updated = original.replace(swVersionPattern, `$1${version}$2`);
+  if (updated !== original) {
+    fs.writeFileSync(serviceWorkerFile, updated, 'utf8');
+    return true;
+  }
+
+  return false;
+}
+
 function main() {
   const version = readVersion();
   const readmeFiles = collectReadmeFiles();
@@ -141,12 +162,16 @@ function main() {
     }
   }
 
+  if (updateServiceWorkerVersion(version)) {
+    changedFiles.push(path.relative(rootDir, serviceWorkerFile));
+  }
+
   if (changedFiles.length === 0) {
-    console.log(`Version badge already synced to ${version}.`);
+    console.log(`Version badge and sw.js already synced to ${version}.`);
     return;
   }
 
-  console.log(`Synced version badge to ${version}:`);
+  console.log(`Synced version references to ${version}:`);
   for (const file of changedFiles) {
     console.log(`- ${file}`);
   }

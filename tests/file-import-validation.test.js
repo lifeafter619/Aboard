@@ -265,8 +265,12 @@ function testFloatingGifRejectsInvalidFileBeforeReading() {
   context.self = context;
 
   vm.createContext(context);
+  const gifManagerSource = fs
+    .readFileSync(path.join(__dirname, '..', 'js', 'features', 'media', 'gif-manager.js'), 'utf8')
+    .replace(/^export class GifManager/m, 'class GifManager')
+    .replace(/^export function registerGifManagerGlobal/m, 'function registerGifManagerGlobal');
   vm.runInContext(
-    fs.readFileSync(path.join(__dirname, '..', 'js', 'modules', 'gif-manager.js'), 'utf8'),
+    `${gifManagerSource}\nregisterGifManagerGlobal(window, document);`,
     context,
     { filename: 'gif-manager.js' }
   );

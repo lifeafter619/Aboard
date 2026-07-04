@@ -288,6 +288,9 @@ class TimerInstance {
             const activeTimer = window.__activeTimerFullscreenInstance;
             if (e.key === 'Escape' && activeTimer?.isFullscreen) {
                 e.preventDefault();
+                // Closing the fullscreen overlay consumes this Escape press so
+                // lower layers (e.g. classroom mode) don't also react to it.
+                e.stopImmediatePropagation();
                 activeTimer.exitFullscreen();
             }
         });
@@ -625,6 +628,16 @@ class TimerInstance {
     togglePlayPause() {
         if (this.isPaused) {
             // Resume
+            if (this.mode === 'countdown' && this.remainingTime <= 0) {
+                // A finished countdown must be reset before it can continue,
+                // otherwise the restarted interval would refire timerFinished
+                // (and replay the bell) immediately.
+                return;
+            }
+            // Mark the timer as actively running again so state consumers like
+            // refreshAfterVisibilityRestore() and updateTimerDisplayClass()
+            // treat a reset-then-continued timer the same as a fresh one.
+            this.isRunning = true;
             this.isPaused = false;
             this.startTime = Date.now();
             if (this.intervalId) {
@@ -635,7 +648,16 @@ class TimerInstance {
                 this.updateTimer();
             }, 100);
         } else {
-            // Pause
+            // Pause: settle the partial tick since the last interval fire first
+            // so up to 100ms isn't silently dropped on every pause.
+            if (this.isRunning) {
+                this.updateTimer();
+                if (!this.isRunning) {
+                    // The settle crossed zero and timerFinished() already
+                    // handled the state/button updates.
+                    return;
+                }
+            }
             this.isPaused = true;
             if (this.intervalId) {
                 clearInterval(this.intervalId);
@@ -660,7 +682,7 @@ class TimerInstance {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polygon points="5 3 19 12 5 21 5 3"></polygon>
                     </svg>
-                    <span class="timer-play-pause-label">${label}</span>
+                    <span class="timer-play-pause-label">${escapeTimerHtml(label)}</span>
                 `;
             } else {
                 btn.innerHTML = `
@@ -668,7 +690,7 @@ class TimerInstance {
                         <rect x="6" y="4" width="4" height="16"></rect>
                         <rect x="14" y="4" width="4" height="16"></rect>
                     </svg>
-                    <span class="timer-play-pause-label">${label}</span>
+                    <span class="timer-play-pause-label">${escapeTimerHtml(label)}</span>
                 `;
             }
         }
@@ -805,7 +827,11 @@ class TimerInstance {
         }
 
         this.isRunning = false;
+        // Require an explicit reset before "continue" does anything again;
+        // togglePlayPause() refuses to resume a countdown at zero.
+        this.isPaused = true;
         this.hasFinishedUnnotified = true;
+        this.updatePlayPauseButton();
 
         const timeDisplay = this.displayElement.querySelector('.timer-display-time');
         if (timeDisplay) {
@@ -1146,7 +1172,12 @@ class TimerInstance {
         this.manager.removeTimer(this.id);
     }
     
-    updateSettings(duration, playSound, selectedSound, customSoundUrl, loopSound, loopCount, loopInterval, playbackSpeed, title = '', textColor = null, bgColor = null, fullscreenTextColor = null, fullscreenBgColor = null) {
+    updateSettings(duration, playSound, selectedSound, customSoundUrl, loopSound, loopCount, loopInterval, playbackSpeed, title = '', textColor = null, bgColor = null, fullscreenTextColor = null, fullscreenBgColor = null, mode = null) {
+        if ((mode === 'stopwatch' || mode === 'countdown') && mode !== this.mode) {
+            // The adjust dialog allows switching stopwatch/countdown; apply the
+            // choice so elapsed/remaining semantics and labels follow the mode.
+            this.mode = mode;
+        }
         this.countdownDuration = duration;
         
         if (this.mode === 'stopwatch') {
@@ -1212,6 +1243,9 @@ class TimerInstance {
         
         // Reset timer with new settings
         this.resetTimer();
+        // Refresh the widget's mode label (and other localized text) in case
+        // the mode changed above.
+        this.refreshLocalizedUI();
     }
 }
 
@@ -2356,8 +2390,8 @@ class TimerManager {
         }
         
         if (this.adjustingTimer) {
-            // Update existing timer
-            this.adjustingTimer.updateSettings(duration, playSound, selectedSound, customSoundUrl, loopSound, loopCount, loopInterval, playbackSpeed, title, textColor, bgColor, fsTextColor, fsBgColor);
+            // Update existing timer (including a stopwatch/countdown switch)
+            this.adjustingTimer.updateSettings(duration, playSound, selectedSound, customSoundUrl, loopSound, loopCount, loopInterval, playbackSpeed, title, textColor, bgColor, fsTextColor, fsBgColor, mode);
             this.adjustingTimer = null;
         } else {
             // Create new timer

@@ -421,7 +421,9 @@ async function restoreSession() {
                 });
             }
 
-            if (syncSnapshot?.pageDataUrl) {
+            // Only merge the localStorage snapshot page when it is at least as new
+            // as the IndexedDB session, so stale snapshots cannot overwrite pages.
+            if (shouldMergeSyncSnapshot && syncSnapshot?.pageDataUrl) {
                 const restoredImage = await new Promise((resolve) => {
                     const img = new Image();
                     img.onload = () => resolve(img);
@@ -447,9 +449,7 @@ async function restoreSession() {
                         this.pages[snapshotPageIndex] = snapshotPage;
                     }
 
-                    if (shouldMergeSyncSnapshot || !sessionData?.pages?.length) {
-                        this.currentPage = snapshotPageIndex + 1;
-                    }
+                    this.currentPage = snapshotPageIndex + 1;
                 }
             }
 

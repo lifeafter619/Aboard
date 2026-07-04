@@ -450,6 +450,7 @@ window.translations = {
             renameFont: 'Rename',
             expandPreview: 'Expand',
             confirmDeleteFont: 'Are you sure you want to delete the custom font "{font}"?',
+            resetFontManagement: 'Restore Defaults',
             resetFontManagementConfirm: 'Resetting font management will remove uploaded fonts and restore the default order, names, and preview settings. Continue?',
             downloadedLanguagePacks: 'Downloaded language packs',
             dismissedLanguageSuggestion: 'Dismissed language suggestion state',
@@ -823,7 +824,9 @@ window.translations = {
         transparent: 'Transparent',
         fullscreenDisabled: 'Disabled',
         fullscreenSingle: 'Single Click',
-        fullscreenDouble: 'Double Click'
+        fullscreenDouble: 'Double Click',
+        widgetTab: 'Widget Display Settings',
+        fullscreenTab: 'Fullscreen Display Settings'
     },
 
     // Timer
@@ -947,7 +950,12 @@ window.translations = {
         missingAsset: 'The project package is missing asset file: {path}',
         missingPageFile: 'The project package is missing page file: {path}',
         invalidLegacyFormat: 'Invalid legacy project file format.',
-        legacyMissingPages: 'The legacy project file does not contain page data.'
+        legacyMissingPages: 'The legacy project file does not contain page data.',
+        fileTooLarge: 'Project file is too large. Please import a file under 100 MB.',
+        unsafePath: 'Unsafe project package path: {path}',
+        tooManyPages: 'The project package contains too many pages.',
+        assetTooLarge: 'The project package contains an asset that is too large: {path}',
+        assetsTooLarge: 'The project package contains too many embedded assets.'
     },
 
     gif: {

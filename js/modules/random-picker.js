@@ -425,6 +425,14 @@ class RandomPickerInstance {
                 pool = this.remainingNames;
             }
 
+            if (pool.length === 0) {
+                // Name list is empty (e.g. cleared while animating) — surface a
+                // hint instead of rendering "undefined".
+                this.resultElement.textContent = window.i18n.t('randomPicker.noNames');
+                this.refreshLocalizedUI();
+                return;
+            }
+
             const index = Math.floor(Math.random() * pool.length);
             result = pool[index];
 
@@ -467,6 +475,23 @@ class RandomPickerInstance {
     }
 
     updateConfig(newConfig) {
+        // If a pick animation is still running, stop it the same way
+        // stopAnimation() does (clear interval, restore button/state) without
+        // drawing a result from the soon-to-be-stale pool.
+        if (this.isAnimating) {
+            clearInterval(this.animationInterval);
+            this.animationInterval = null;
+            this.isAnimating = false;
+            this.resultElement.classList.remove('animating');
+
+            const startBtnEl = this.element.querySelector('.random-picker-start-btn');
+            const startBtnSpan = startBtnEl?.querySelector('span');
+            if (startBtnSpan) {
+                startBtnSpan.textContent = window.i18n.t('common.start');
+            }
+            startBtnEl?.classList.remove('is-stop');
+        }
+
         // If mode changed or names changed, reset remaining
         if (newConfig.mode !== this.config.mode ||
             JSON.stringify(newConfig.names) !== JSON.stringify(this.config.names)) {

@@ -96,7 +96,19 @@ class BackgroundManager {
         
         // Load saved image if exists
         if (this.backgroundImageData) {
-            this.backgroundImage = this.backgroundImageData;
+            // Keep backgroundImage null until the data URL is decoded; consumers
+            // (e.g. ImageControls.copyImageToCanvas) expect an HTMLImageElement,
+            // never a raw data-URL string.
+            if (typeof Image === 'function') {
+                const restoredImage = new Image();
+                restoredImage.onload = () => {
+                    this.backgroundImage = restoredImage;
+                };
+                restoredImage.onerror = () => {
+                    console.warn('Failed to restore saved background image');
+                };
+                restoredImage.src = this.backgroundImageData;
+            }
             // Also need to initialize the DOM element if it doesn't exist?
             // The DOM element logic is handled in drawBackgroundPattern/updateBackgroundImageElement
             if (this.backgroundPattern === 'image') {

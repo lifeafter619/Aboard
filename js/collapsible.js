@@ -148,7 +148,18 @@ class CollapsibleManager {
         
         this.syncAccessibilityState(group);
         this.syncContentHeight(group);
-        
+
+        // After the expand transition finishes, release the fixed pixel height so
+        // content growth (or late layout inside a previously hidden modal) is never clipped
+        content.addEventListener('transitionend', (event) => {
+            if (event.target !== content || event.propertyName !== 'max-height') {
+                return;
+            }
+            if (!group.classList.contains('collapsed')) {
+                content.style.maxHeight = 'none';
+            }
+        });
+
         // Add click handler
         header.addEventListener('click', () => {
             this.toggleCollapse(group);
@@ -171,7 +182,9 @@ class CollapsibleManager {
         if (isCollapsed) {
             // Expand
             group.classList.remove('collapsed');
-            content.style.maxHeight = content.scrollHeight + 'px';
+            // scrollHeight is 0 while the surrounding modal is hidden; skip the
+            // animation and remove the height limit so content is never clipped
+            content.style.maxHeight = content.scrollHeight > 0 ? content.scrollHeight + 'px' : 'none';
             this.collapsedState[group.id] = false;
         } else {
             // Collapse
@@ -197,8 +210,11 @@ class CollapsibleManager {
         }
 
         header.setAttribute('aria-controls', content.id);
-        header.setAttribute('aria-expanded', group.classList.contains('collapsed') ? 'false' : 'true');
-        content.setAttribute('aria-hidden', group.classList.contains('collapsed') ? 'true' : 'false');
+        const isCollapsed = group.classList.contains('collapsed');
+        header.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+        content.setAttribute('aria-hidden', isCollapsed ? 'true' : 'false');
+        // Keep controls inside collapsed (aria-hidden) content out of the tab order
+        content.inert = isCollapsed;
     }
 
     syncContentHeight(group) {
@@ -212,16 +228,18 @@ class CollapsibleManager {
             return;
         }
 
-        content.style.maxHeight = content.scrollHeight + 'px';
+        // Expanded state uses no fixed pixel height: measuring scrollHeight inside a
+        // hidden modal yields 0 and a stale pixel value clips growing content
+        content.style.maxHeight = 'none';
     }
-    
+
     // Public method to refresh a specific group's max-height
     refreshGroup(groupId) {
         const group = document.getElementById(groupId);
         if (group && !group.classList.contains('collapsed')) {
             const content = group.querySelector('.settings-group-content');
             if (content) {
-                content.style.maxHeight = content.scrollHeight + 'px';
+                content.style.maxHeight = 'none';
             }
         }
     }

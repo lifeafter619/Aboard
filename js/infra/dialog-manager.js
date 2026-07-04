@@ -1,3 +1,79 @@
+const MODAL_FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])'
+].join(', ');
+
+function isModalElementVisible(element) {
+  if (!element) return false;
+  const view = element.ownerDocument?.defaultView;
+  let current = element;
+  while (current && current.nodeType !== 9) {
+    if (current.hidden || current.getAttribute?.('aria-hidden') === 'true') {
+      return false;
+    }
+    if (typeof view?.getComputedStyle === 'function') {
+      const style = view.getComputedStyle(current);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') {
+        return false;
+      }
+    }
+    current = current.parentElement;
+  }
+
+  if (element.offsetParent != null) return true;
+  if (element.classList?.contains?.('show')) return true;
+  return typeof view?.getComputedStyle === 'function';
+}
+
+function getTopmostVisibleModal(doc) {
+  const modals = doc.querySelectorAll?.('[aria-modal="true"]');
+  if (!modals || modals.length === 0) return null;
+  for (let index = modals.length - 1; index >= 0; index -= 1) {
+    if (isModalElementVisible(modals[index])) {
+      return modals[index];
+    }
+  }
+  return null;
+}
+
+function trapModalTabKey(event) {
+  if (event.key !== 'Tab' || event.defaultPrevented) return;
+  const doc = event.target?.ownerDocument || document;
+  const modal = getTopmostVisibleModal(doc);
+  if (!modal) return;
+
+  const focusable = Array.from(modal.querySelectorAll(MODAL_FOCUSABLE_SELECTOR))
+    .filter((element) => isModalElementVisible(element));
+  if (focusable.length === 0) {
+    event.preventDefault();
+    return;
+  }
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const active = doc.activeElement;
+  const isInsideModal = active && modal.contains?.(active);
+
+  if (event.shiftKey) {
+    if (!isInsideModal || active === first) {
+      event.preventDefault();
+      last.focus?.();
+    }
+  } else if (!isInsideModal || active === last) {
+    event.preventDefault();
+    first.focus?.();
+  }
+}
+
+// Document-level focus trap for aria-modal dialogs; registered once at module load.
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  document.addEventListener('keydown', trapModalTabKey, true);
+}
+
 export class DialogManager {
   constructor(win = window, doc = document) {
     this.win = win;

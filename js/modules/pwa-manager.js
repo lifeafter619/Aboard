@@ -11,6 +11,12 @@ const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:
 const APP_VERSION_URLS = ['version.txt', './version.txt', '/api/version'];
 const UPDATE_PREFERENCE_KEY = 'updatePreference';
 const PWA_PLANNED_UPDATE_RELOAD_KEY = 'aboardPlannedUpdateReload';
+// Reload loop guard: remember automatic update reloads per target version in
+// sessionStorage so a broken update path (e.g. no Service Worker available but
+// version.txt keeps reporting a newer version) cannot reload the page forever.
+const PWA_UPDATE_RELOAD_GUARD_KEY = 'aboardUpdateReloadGuard';
+const UPDATE_RELOAD_GUARD_WINDOW_MS = 10 * 60 * 1000;
+const UPDATE_RELOAD_GUARD_MAX_RELOADS = 2;
 const UPDATE_PREFERENCES = Object.freeze({
     PROMPT: 'prompt',
     AUTO: 'auto'
@@ -53,6 +59,25 @@ function safePwaStorageRemoveItem(key) {
         return true;
     } catch (error) {
         console.warn(`Failed to remove PWA localStorage key "${key}":`, error);
+        return false;
+    }
+}
+
+function safePwaSessionGetItem(key) {
+    try {
+        return sessionStorage.getItem(key);
+    } catch (error) {
+        console.warn(`Failed to read PWA sessionStorage key "${key}":`, error);
+        return null;
+    }
+}
+
+function safePwaSessionSetItem(key, value) {
+    try {
+        sessionStorage.setItem(key, value);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to write PWA sessionStorage key "${key}":`, error);
         return false;
     }
 }
@@ -191,6 +216,7 @@ class PWAManager {
         this.idleUpdatePollStartedAt = 0;
         this.idleUpdateInFlight = false;
         this.controllerChangeListenerRegistered = false;
+        this.lastUpdateActivationReason = null;
         this.observedRegistrations = new WeakSet();
         this.observedWorkers = new WeakSet();
 
@@ -233,6 +259,7 @@ class PWAManager {
                 'checkUpdate': '检查更新',
                 'checking': '正在检查更新...',
                 'latest': '已是最新版本',
+                'manualReloadHint': '自动刷新已暂停以避免循环重载，请手动刷新页面完成更新',
                 'versionUpdateFound': '检测到新版本：{latest}（当前：{current}）'
             },
             'zh-TW': {
@@ -251,6 +278,7 @@ class PWAManager {
                 'checkUpdate': '檢查更新',
                 'checking': '正在檢查更新...',
                 'latest': '已是最新版本',
+                'manualReloadHint': '自動重新整理已暫停以避免循環重載，請手動重新整理頁面完成更新',
                 'versionUpdateFound': '檢測到新版本：{latest}（當前：{current}）'
             },
             'en-US': {
@@ -269,6 +297,7 @@ class PWAManager {
                 'checkUpdate': 'Check for Updates',
                 'checking': 'Checking for updates...',
                 'latest': 'You are on the latest version',
+                'manualReloadHint': 'Automatic refresh paused to avoid a reload loop. Please refresh the page manually to finish updating.',
                 'versionUpdateFound': 'New version detected: {latest} (current: {current}).'
             },
             'ja-JP': {
@@ -287,6 +316,7 @@ class PWAManager {
                 'checkUpdate': 'アップデートを確認',
                 'checking': 'アップデートを確認中...',
                 'latest': '最新バージョンです',
+                'manualReloadHint': 'リロードループを防ぐため自動再読み込みを一時停止しました。手動でページを再読み込みして更新を完了してください。',
                 'versionUpdateFound': '新しいバージョンがあります：{latest}（現在：{current}）'
             },
             'ko-KR': {
@@ -305,6 +335,7 @@ class PWAManager {
                 'checkUpdate': '업데이트 확인',
                 'checking': '업데이트 확인 중...',
                 'latest': '최신 버전입니다',
+                'manualReloadHint': '새로고침 루프를 방지하기 위해 자동 새로고침을 일시 중지했습니다. 페이지를 수동으로 새로고침하여 업데이트를 완료해 주세요.',
                 'versionUpdateFound': '새 버전 감지: {latest} (현재: {current})'
             },
             'fr-FR': {
@@ -323,6 +354,7 @@ class PWAManager {
                 'checkUpdate': 'Vérifier les mises à jour',
                 'checking': 'Vérification des mises à jour...',
                 'latest': 'Vous utilisez la dernière version',
+                'manualReloadHint': 'Actualisation automatique suspendue pour éviter une boucle de rechargement. Veuillez actualiser la page manuellement pour terminer la mise à jour.',
                 'versionUpdateFound': 'Nouvelle version détectée : {latest} (actuelle : {current}).'
             },
             'de-DE': {
@@ -341,6 +373,7 @@ class PWAManager {
                 'checkUpdate': 'Nach Updates suchen',
                 'checking': 'Suche nach Updates...',
                 'latest': 'Sie haben die neueste Version',
+                'manualReloadHint': 'Automatisches Neuladen pausiert, um eine Neuladeschleife zu vermeiden. Bitte laden Sie die Seite manuell neu, um das Update abzuschließen.',
                 'versionUpdateFound': 'Neue Version erkannt: {latest} (aktuell: {current}).'
             },
             'es-ES': {
@@ -359,6 +392,7 @@ class PWAManager {
                 'checkUpdate': 'Buscar actualizaciones',
                 'checking': 'Buscando actualizaciones...',
                 'latest': 'Tienes la última versión',
+                'manualReloadHint': 'Recarga automática pausada para evitar un bucle de recargas. Recarga la página manualmente para completar la actualización.',
                 'versionUpdateFound': 'Nueva versión detectada: {latest} (actual: {current}).'
             }
         };
@@ -648,7 +682,10 @@ class PWAManager {
         const board = this.getDrawingBoard();
         board?.setSuppressBeforeUnloadPrompt?.(true);
 
-        const activated = await this.applyUpdateNow({ timeoutMs });
+        const activated = await this.applyUpdateNow({
+            timeoutMs,
+            reason: intent?.requestedBy || 'update'
+        });
         if (!activated) {
             board?.setSuppressBeforeUnloadPrompt?.(false);
             this.clearPlannedUpdateIntent();
@@ -948,7 +985,9 @@ class PWAManager {
                     this.autoActivateResetTimer = null;
                 }
                 this.autoActivateUpdates = false;
-                window.location.reload();
+                if (!this.requestGuardedUpdateReload(this.lastUpdateActivationReason || 'update')) {
+                    refreshing = false;
+                }
             }
         });
     }
@@ -990,13 +1029,82 @@ class PWAManager {
         return UPDATE_ACTIONS.PROMPT;
     }
 
-    activateWaitingWorker(worker) {
+    readReloadGuardRecord() {
+        const raw = safePwaSessionGetItem(PWA_UPDATE_RELOAD_GUARD_KEY);
+        if (!raw) {
+            return null;
+        }
+
+        try {
+            const record = JSON.parse(raw);
+            return record && typeof record === 'object' ? record : null;
+        } catch (error) {
+            console.warn('Failed to parse update reload guard record:', error);
+            return null;
+        }
+    }
+
+    getReloadGuardTargetVersion() {
+        return this.latestAvailableVersion || this.version || 'unknown';
+    }
+
+    isReloadGuardRecordActive(record, targetVersion) {
+        return Boolean(
+            record
+            && record.version === targetVersion
+            && Number.isFinite(record.timestamp)
+            && (Date.now() - record.timestamp) <= UPDATE_RELOAD_GUARD_WINDOW_MS
+        );
+    }
+
+    isUpdateReloadLoopDetected(targetVersion) {
+        const record = this.readReloadGuardRecord();
+        return this.isReloadGuardRecordActive(record, targetVersion)
+            && Number(record.count) >= UPDATE_RELOAD_GUARD_MAX_RELOADS;
+    }
+
+    recordUpdateReload(targetVersion) {
+        const record = this.readReloadGuardRecord();
+        const isActive = this.isReloadGuardRecordActive(record, targetVersion);
+        safePwaSessionSetItem(PWA_UPDATE_RELOAD_GUARD_KEY, JSON.stringify({
+            version: targetVersion,
+            timestamp: isActive ? record.timestamp : Date.now(),
+            count: isActive ? (Number(record.count) || 0) + 1 : 1
+        }));
+    }
+
+    notifyManualReloadNeeded() {
+        const message = this.getTranslation('manualReloadHint');
+        const toastManager = window.drawingBoard?.settingsManager?.toastManager || null;
+        if (toastManager) {
+            toastManager.show(message, 'warning');
+        }
+    }
+
+    // Reload the page for an update, refusing repeated automatic reloads for
+    // the same target version. Manual user actions are never blocked, but the
+    // attempt is still recorded so a follow-up automatic retry cannot loop.
+    requestGuardedUpdateReload(reason = 'update') {
+        const targetVersion = this.getReloadGuardTargetVersion();
+        if (reason !== 'manual' && this.isUpdateReloadLoopDetected(targetVersion)) {
+            console.warn(`Skipping automatic update reload for version ${targetVersion}: reload loop detected. Please refresh manually.`);
+            this.notifyManualReloadNeeded();
+            return false;
+        }
+
+        this.recordUpdateReload(targetVersion);
+        window.location.reload();
+        return true;
+    }
+
+    activateWaitingWorker(worker, reason = 'update') {
         const targetWorker = worker || this.pendingUpdateWorker || this.serviceWorkerRegistration?.waiting || null;
         if (!targetWorker || typeof targetWorker.postMessage !== 'function') {
             return false;
         }
 
         try {
+            this.lastUpdateActivationReason = reason;
             targetWorker.postMessage({ type: 'SKIP_WAITING' });
             this.shouldReloadOnControllerChange = true;
             this.pendingUpdateWorker = targetWorker;
@@ -1007,20 +1115,19 @@ class PWAManager {
         }
     }
 
-    async applyUpdateNow({ timeoutMs = UPDATE_APPLY_TIMEOUT } = {}) {
+    async applyUpdateNow({ timeoutMs = UPDATE_APPLY_TIMEOUT, reason = 'update' } = {}) {
         this.autoActivateUpdates = true;
         this.scheduleAutoActivateReset(timeoutMs * 2);
 
         const registration = await this.getServiceWorkerRegistration();
         if (!registration) {
             this.shouldReloadOnControllerChange = true;
-            window.location.reload();
-            return true;
+            return this.requestGuardedUpdateReload(reason);
         }
 
         const existingWaitingWorker = registration.waiting || this.pendingUpdateWorker;
         if (existingWaitingWorker) {
-            return this.activateWaitingWorker(existingWaitingWorker);
+            return this.activateWaitingWorker(existingWaitingWorker, reason);
         }
 
         const waitingWorkerPromise = this.waitForWaitingWorker(timeoutMs);
@@ -1032,7 +1139,7 @@ class PWAManager {
 
         const waitingWorker = await waitingWorkerPromise;
         if (waitingWorker) {
-            return this.activateWaitingWorker(waitingWorker);
+            return this.activateWaitingWorker(waitingWorker, reason);
         }
 
         return false;

@@ -4,11 +4,13 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 function loadRichTextParser() {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'modules', 'rich-text-parser.js'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'infra', 'rich-text-parser.js'), 'utf8')
+    .replace(/^export class RichTextParser/m, 'class RichTextParser')
+    .replace(/^export function registerRichTextParserGlobal/m, 'function registerRichTextParserGlobal');
   const sandbox = { window: {} };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
-  vm.runInContext(source, sandbox, { filename: 'rich-text-parser.js' });
+  vm.runInContext(`${source}\nregisterRichTextParserGlobal(window);`, sandbox, { filename: 'rich-text-parser.js' });
   return sandbox.window.RichTextParser;
 }
 

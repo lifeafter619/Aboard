@@ -46,10 +46,22 @@ class ClassroomModeManager {
         window.addEventListener('localeChanged', () => this.updateLocalizedLabels());
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && this.isActive) {
+                if (this.hasBlockingOverlay()) {
+                    // A visible overlay above the classroom bar (fullscreen
+                    // timer/clock, any modal) owns this Escape press; let its
+                    // own handler close it instead of exiting classroom mode.
+                    return;
+                }
                 event.preventDefault();
                 this.exit();
             }
         });
+    }
+
+    hasBlockingOverlay() {
+        return Boolean(document.querySelector?.(
+            '.timer-fullscreen-modal.show, .time-fullscreen-modal.show, .modal.show'
+        ));
     }
 
     enter() {

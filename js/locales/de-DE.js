@@ -422,6 +422,7 @@ window.translations = {
             renameFont: 'Umbenennen',
             expandPreview: 'Vergrößern',
             confirmDeleteFont: 'Möchten Sie die benutzerdefinierte Schriftart "{font}" wirklich löschen?',
+            resetFontManagement: 'Standard wiederherstellen',
             resetFontManagementConfirm: 'Wenn Sie die Schriftverwaltung zurücksetzen, werden hochgeladene Schriftarten entfernt und Reihenfolge, Namen sowie Vorschau-Einstellungen wiederhergestellt. Fortfahren?',
             downloadedLanguagePacks: 'Heruntergeladene Sprachpakete',
             dismissedLanguageSuggestion: 'Status der ausgeblendeten Sprachhinweise',
@@ -744,7 +745,9 @@ window.translations = {
         transparent: 'Transparent',
         fullscreenDisabled: 'Deaktiviert',
         fullscreenSingle: 'Einzelklick',
-        fullscreenDouble: 'Doppelklick'
+        fullscreenDouble: 'Doppelklick',
+        widgetTab: 'Widget-Anzeigeeinstellungen',
+        fullscreenTab: 'Vollbild-Anzeigeeinstellungen'
     },
 
     // Timer
@@ -937,7 +940,12 @@ Viel Spaß bei Ihrer kreativen Arbeit!`,
         missingAsset: 'Im Projektpaket fehlt die Ressourcendatei: {path}',
         missingPageFile: 'Im Projektpaket fehlt die Seitendatei: {path}',
         invalidLegacyFormat: 'Ungültiges altes Projektdateiformat.',
-        legacyMissingPages: 'Die alte Projektdatei enthält keine Seitendaten.'
+        legacyMissingPages: 'Die alte Projektdatei enthält keine Seitendaten.',
+        fileTooLarge: 'Die Projektdatei ist zu groß. Bitte importieren Sie eine Datei unter 100 MB.',
+        unsafePath: 'Unsicherer Pfad im Projektpaket: {path}',
+        tooManyPages: 'Das Projektpaket enthält zu viele Seiten.',
+        assetTooLarge: 'Das Projektpaket enthält eine zu große Ressource: {path}',
+        assetsTooLarge: 'Das Projektpaket enthält zu viele eingebettete Ressourcen.'
     },
 
     randomPicker: {

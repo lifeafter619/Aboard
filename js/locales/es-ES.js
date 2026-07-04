@@ -420,6 +420,7 @@ window.translations = {
             renameFont: 'Renombrar',
             expandPreview: 'Ampliar',
             confirmDeleteFont: '¿Seguro que quieres eliminar la fuente personalizada "{font}"?',
+            resetFontManagement: 'Restaurar valores predeterminados',
             resetFontManagementConfirm: 'Restablecer la gestión de fuentes eliminará las fuentes subidas y restaurará el orden, los nombres y la vista previa predeterminados. ¿Continuar?',
             downloadedLanguagePacks: 'Paquetes de idioma descargados',
             dismissedLanguageSuggestion: 'Estado de descarte de la sugerencia de idioma',
@@ -736,7 +737,9 @@ window.translations = {
         transparent: 'Transparente',
         fullscreenDisabled: 'Desactivado',
         fullscreenSingle: 'Un clic',
-        fullscreenDouble: 'Doble clic'
+        fullscreenDouble: 'Doble clic',
+        widgetTab: 'Configuración del widget',
+        fullscreenTab: 'Configuración de pantalla completa'
     },
 
     // Timer
@@ -916,7 +919,12 @@ Consejos de uso:
         missingAsset: 'El paquete del proyecto no contiene el archivo de recurso: {path}',
         missingPageFile: 'El paquete del proyecto no contiene el archivo de página: {path}',
         invalidLegacyFormat: 'Formato de archivo de proyecto heredado no válido.',
-        legacyMissingPages: 'El archivo de proyecto heredado no contiene datos de páginas.'
+        legacyMissingPages: 'El archivo de proyecto heredado no contiene datos de páginas.',
+        fileTooLarge: 'El archivo de proyecto es demasiado grande. Importa un archivo de menos de 100 MB.',
+        unsafePath: 'Ruta no segura en el paquete de proyecto: {path}',
+        tooManyPages: 'El paquete de proyecto contiene demasiadas páginas.',
+        assetTooLarge: 'El paquete de proyecto contiene un recurso demasiado grande: {path}',
+        assetsTooLarge: 'El paquete de proyecto contiene demasiados recursos incrustados.'
     },
 
     randomPicker: {

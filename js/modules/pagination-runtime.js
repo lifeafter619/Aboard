@@ -1,9 +1,19 @@
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+// Maximum number of pages; keep in sync with PROJECT_IMPORT_MAX_PAGES in project-manager.js.
+const MAX_PAGES = 300;
+
 function normalizePageNumber(pageNumber, fallback = 1) {
         const normalizedPage = parseInt(pageNumber, 10);
-        return Number.isInteger(normalizedPage) && normalizedPage > 0 ? normalizedPage : fallback;
+        if (!Number.isInteger(normalizedPage) || normalizedPage <= 0) {
+            return fallback;
+        }
+        if (normalizedPage > MAX_PAGES) {
+            console.warn(`Page number ${normalizedPage} exceeds the maximum of ${MAX_PAGES} pages; clamping.`);
+            return MAX_PAGES;
+        }
+        return normalizedPage;
 }
 
 function cloneSerializable(value) {
@@ -129,22 +139,29 @@ function resetTransientBackgroundMediaState(backgroundManager) {
 
 function addPage() {
         // Always in pagination mode, no need to check
-        
+
+        if (this.pages.length >= MAX_PAGES) {
+            console.warn(`Cannot add page: maximum of ${MAX_PAGES} pages reached.`);
+            this.updatePaginationUI();
+            return;
+        }
+
         // Save current page
         saveCurrentPageSnapshot.call(this);
-        
+
         // Create new blank page
         this.pages.push(null);
         this.currentPage = this.pages.length;
-        
+
         // Clear canvas for new page
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         snapshotInheritedBackgroundForNewPage.call(this, this.currentPage);
         this.restorePageScene?.(this.currentPage);
+        this.historyManager.reset?.();
         this.historyManager.saveState();
         this.updatePaginationUI();
-    
+
 }
 
 function prevPage() {
@@ -167,10 +184,17 @@ function nextPage() {
         // Go to next page (create new if needed)
         this.currentPage++;
         if (this.currentPage > this.pages.length) {
+            if (this.pages.length >= MAX_PAGES) {
+                console.warn(`Cannot add page: maximum of ${MAX_PAGES} pages reached.`);
+                this.currentPage = this.pages.length;
+                this.updatePaginationUI();
+                return;
+            }
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             this.pages.push(this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height));
             snapshotInheritedBackgroundForNewPage.call(this, this.currentPage);
             this.restorePageScene?.(this.currentPage);
+            this.historyManager.reset?.();
             this.historyManager.saveState();
         } else {
             this.loadPage(this.currentPage);
@@ -185,6 +209,11 @@ function nextOrAddPage() {
         
         // Check if we're on the last page
         if (this.currentPage >= this.pages.length) {
+            if (this.pages.length >= MAX_PAGES) {
+                console.warn(`Cannot add page: maximum of ${MAX_PAGES} pages reached.`);
+                this.updatePaginationUI();
+                return;
+            }
             // Add new page
             this.pages.push(null);
             this.currentPage = this.pages.length;
@@ -192,6 +221,7 @@ function nextOrAddPage() {
             this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
             snapshotInheritedBackgroundForNewPage.call(this, this.currentPage);
             this.restorePageScene?.(this.currentPage);
+            this.historyManager.reset?.();
             this.historyManager.saveState();
         } else {
             // Go to next page
@@ -212,10 +242,14 @@ function goToPage(pageNumber) {
         // Save current page and background
         saveCurrentPageSnapshot.call(this);
         
-        // Create new pages if needed
+        // Create new pages if needed; persist inherited backgrounds once after the batch.
+        const isCreatingPages = normalizedPage > this.pages.length;
         while (normalizedPage > this.pages.length) {
             this.pages.push(null);
-            snapshotInheritedBackgroundForNewPage.call(this, this.pages.length);
+            recordPageBackground.call(this, this.pages.length);
+        }
+        if (isCreatingPages) {
+            persistPageBackgrounds.call(this);
         }
         
         this.currentPage = normalizedPage;
@@ -235,6 +269,8 @@ function loadPage(pageNumber) {
             }
         }
         this.restorePageScene?.(pageNumber);
+        // Reset undo history when switching pages so undo cannot leak pixels across pages.
+        this.historyManager.reset?.();
         this.historyManager.saveState();
         
         // Restore page-specific background if exists; async callers can await it.
@@ -253,8 +289,8 @@ async function goToPageAsync(pageNumber) {
         }
 }
 
-function savePageBackground(pageNumber) {
-        // Save current background settings for this page
+function recordPageBackground(pageNumber) {
+        // Save current background settings for this page (in-memory only)
         this.pageBackgrounds[pageNumber] = {
             backgroundColor: this.backgroundManager.backgroundColor,
             backgroundPattern: this.backgroundManager.backgroundPattern,
@@ -270,17 +306,27 @@ function savePageBackground(pageNumber) {
             gifLoopCount: this.backgroundManager.gifLoopCount,
             backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder
         };
+}
+
+function persistPageBackgrounds() {
         try {
             localStorage.setItem('pageBackgrounds', JSON.stringify(this.pageBackgrounds));
         } catch (e) {
             console.warn('Failed to save page backgrounds to localStorage (quota exceeded?):', e);
         }
+}
+
+function savePageBackground(pageNumber) {
+        recordPageBackground.call(this, pageNumber);
+        persistPageBackgrounds.call(this);
 
 }
 
 function restorePageBackground(pageNumber) {
         // Restore background settings for this page.
         // Returns a Promise that resolves after async image backgrounds render.
+        // Generation token: any newer restore invalidates pending async image loads.
+        const loadToken = (this._backgroundLoadToken = (this._backgroundLoadToken || 0) + 1);
         if (this.pageBackgrounds[pageNumber]) {
             const bg = normalizeBackgroundState(this.backgroundManager, this.pageBackgrounds[pageNumber]);
             resetTransientBackgroundMediaState(this.backgroundManager);
@@ -309,6 +355,11 @@ function restorePageBackground(pageNumber) {
                 return new Promise((resolve) => {
                     const img = new Image();
                     img.onload = () => {
+                        if (loadToken !== this._backgroundLoadToken) {
+                            // A newer page restore started; drop this stale image.
+                            resolve();
+                            return;
+                        }
                         this.backgroundManager.backgroundImage = img;
                         this.backgroundManager.drawBackground();
                         this.updateBackgroundUI();
@@ -316,8 +367,10 @@ function restorePageBackground(pageNumber) {
                     };
                     img.onerror = () => {
                         console.warn('Failed to load page background image');
-                        this.backgroundManager.drawBackground();
-                        this.updateBackgroundUI();
+                        if (loadToken === this._backgroundLoadToken) {
+                            this.backgroundManager.drawBackground();
+                            this.updateBackgroundUI();
+                        }
                         resolve();
                     };
                     img.src = bg.backgroundImageData;

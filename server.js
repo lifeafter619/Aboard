@@ -41,6 +41,51 @@ const COMPRESSIBLE_EXTENSIONS = new Set([
 ]);
 const COMPRESSION_MIN_BYTES = 1024;
 
+// Static asset caching: HTML and version.txt must be revalidated on every
+// load so updates are picked up promptly; other static assets are safe to
+// cache for a short conservative window and revalidate via Last-Modified.
+const LONG_LIVED_EXTENSIONS = new Set([
+    '.js',
+    '.css',
+    '.svg',
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.gif',
+    '.webp',
+    '.ico',
+    '.mp3',
+    '.wav',
+    '.woff',
+    '.woff2',
+    '.ttf',
+    '.otf'
+]);
+
+function getCacheControl(ext) {
+    return LONG_LIVED_EXTENSIONS.has(ext) ? 'public, max-age=3600' : 'no-cache';
+}
+
+function isNotModifiedSince(req, stats) {
+    const ifModifiedSince = Date.parse(req?.headers?.['if-modified-since'] || '');
+    if (Number.isNaN(ifModifiedSince)) {
+        return false;
+    }
+
+    // HTTP dates have one-second resolution; drop sub-second mtime precision.
+    return Math.floor(stats.mtimeMs / 1000) * 1000 <= ifModifiedSince;
+}
+
+// stat is only used to enrich responses with validation headers; degrade
+// gracefully when it is unavailable (e.g. minimal fs shims in tests).
+function statForCaching(filePath, callback) {
+    if (typeof fs.stat !== 'function') {
+        callback(null, null);
+        return;
+    }
+    fs.stat(filePath, callback);
+}
+
 const SECURITY_HEADERS = Object.freeze({
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
@@ -109,9 +154,10 @@ function compressData(data, encoding, callback) {
     zlib.gzip(data, { level: 6 }, callback);
 }
 
-function sendStaticData(req, res, ext, mimeType, data) {
+function sendStaticData(req, res, ext, mimeType, data, cacheHeaders = {}) {
     const headers = {
-        'Content-Type': mimeType
+        'Content-Type': mimeType,
+        ...cacheHeaders
     };
     if (COMPRESSIBLE_EXTENSIONS.has(ext)) {
         headers.Vary = 'Accept-Encoding';
@@ -220,19 +266,35 @@ function serveStatic(req, reqPath, res) {
         return;
     }
 
-    fs.readFile(filePath, (err, data) => {
-        if (err) {
-            if (err.code === 'ENOENT' || err.code === 'EISDIR') {
-                sendJson(res, 404, { error: 'Not Found' });
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeType = MIME_TYPES[ext] || 'application/octet-stream';
+
+    statForCaching(filePath, (statErr, stats) => {
+        const hasFileStats = Boolean(!statErr && stats && typeof stats.isDirectory === 'function' && !stats.isDirectory());
+        const cacheHeaders = {
+            'Cache-Control': getCacheControl(ext)
+        };
+        if (hasFileStats) {
+            cacheHeaders['Last-Modified'] = stats.mtime.toUTCString();
+            if (isNotModifiedSince(req, stats)) {
+                res.writeHead(304, withSecurityHeaders(cacheHeaders));
+                res.end();
                 return;
             }
-            sendJson(res, 500, { error: 'Internal Server Error' });
-            return;
         }
 
-        const ext = path.extname(filePath).toLowerCase();
-        const mimeType = MIME_TYPES[ext] || 'application/octet-stream';
-        sendStaticData(req, res, ext, mimeType, data);
+        fs.readFile(filePath, (err, data) => {
+            if (err) {
+                if (err.code === 'ENOENT' || err.code === 'EISDIR') {
+                    sendJson(res, 404, { error: 'Not Found' });
+                    return;
+                }
+                sendJson(res, 500, { error: 'Internal Server Error' });
+                return;
+            }
+
+            sendStaticData(req, res, ext, mimeType, data, cacheHeaders);
+        });
     });
 }
 

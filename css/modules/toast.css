@@ -4,7 +4,7 @@
     top: max(12px, calc(env(safe-area-inset-top, 0px) + 8px));
     left: 50%;
     transform: translateX(-50%);
-    z-index: 9999;
+    z-index: 10500; /* Above all modals (timer/time fullscreen modals use 10000-10002) */
     display: flex;
     flex-direction: column;
     gap: 10px;

@@ -130,6 +130,7 @@ const CORE_ASSETS = [
   './js/modules/project-manager.js',
   './js/modules/timer.js',
   './js/modules/insert-text-manager.js',
+  './js/modules/libgif.js',
   './js/modules/random-picker.js',
   './js/modules/scoreboard.js',
   './js/modules/project-legacy-compat.js',

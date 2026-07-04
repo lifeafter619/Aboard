@@ -548,10 +548,15 @@ class ShapeDrawingManager {
             waveDensity: this.waveDensity,
             multiLineCount: this.multiLineCount,
             multiLineSpacing: this.multiLineSpacing,
-            arrowSize: this.arrowSize
+            arrowSize: this.arrowSize,
+            enginePenSize: this.drawingEngine ? this.drawingEngine.penSize : null
         };
 
         this.applyStoredShapeSettings(stroke);
+        if (this.drawingEngine && Number.isFinite(stroke.size)) {
+            // Wavy amplitude derives from the engine pen size, so use the stored stroke size.
+            this.drawingEngine.penSize = stroke.size;
+        }
 
         ctx.save();
         ctx.lineCap = 'round';
@@ -588,8 +593,29 @@ class ShapeDrawingManager {
 
         this.applyLineStyle(ctx);
 
+        const styledShapeLineStyles = ['wavy', 'double', 'triple', 'multi', 'arrow', 'doubleArrow'];
+
         if (stroke.shapeType === 'arrow' || stroke.shapeType === 'doubleArrow') {
             this.drawArrowLine(ctx, fallbackStart, fallbackEnd, stroke.shapeType === 'doubleArrow', false);
+        } else if (stroke.shapeType && styledShapeLineStyles.includes(this.lineStyle)) {
+            // Re-run the final drawing path so wavy/double/triple/multi (and
+            // arrow line styles) survive redraw instead of collapsing to a
+            // plain outline. Geometry is derived from the current points so
+            // moved/resized shapes stay in place.
+            const geometry = this.getStoredShapeGeometry(stroke, fallbackStart, fallbackEnd);
+            switch (stroke.shapeType) {
+                case 'rectangle':
+                    this.drawRectangleWithStyle(ctx, geometry.start, geometry.end, false);
+                    break;
+                case 'circle':
+                case 'ellipse':
+                    // drawEllipseWithStyle renders a circle when both radii match.
+                    this.drawEllipseWithStyle(ctx, geometry.start, geometry.end, false);
+                    break;
+                default:
+                    this.drawLineWithStyle(ctx, geometry.start, geometry.end, false);
+                    break;
+            }
         } else if (Array.isArray(stroke.points) && stroke.points.length > 1) {
             ctx.beginPath();
             ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
@@ -611,6 +637,46 @@ class ShapeDrawingManager {
         this.multiLineCount = previousSettings.multiLineCount;
         this.multiLineSpacing = previousSettings.multiLineSpacing;
         this.arrowSize = previousSettings.arrowSize;
+        if (this.drawingEngine && previousSettings.enginePenSize !== null) {
+            this.drawingEngine.penSize = previousSettings.enginePenSize;
+        }
+    }
+
+    /**
+     * Derive the start/end (or center/edge) geometry for redrawing a stored
+     * shape from its current points, so shapes that were moved or resized
+     * keep their position. Falls back to the provided points when the
+     * geometry cannot be derived.
+     */
+    getStoredShapeGeometry(stroke, fallbackStart, fallbackEnd) {
+        const points = Array.isArray(stroke.points) ? stroke.points : [];
+
+        if ((stroke.shapeType === 'rectangle' || stroke.shapeType === 'circle' || stroke.shapeType === 'ellipse') && points.length > 1) {
+            let minX = points[0].x;
+            let minY = points[0].y;
+            let maxX = points[0].x;
+            let maxY = points[0].y;
+            for (const point of points) {
+                minX = Math.min(minX, point.x);
+                minY = Math.min(minY, point.y);
+                maxX = Math.max(maxX, point.x);
+                maxY = Math.max(maxY, point.y);
+            }
+            if (stroke.shapeType === 'rectangle') {
+                return { start: { x: minX, y: minY }, end: { x: maxX, y: maxY } };
+            }
+            // circle/ellipse: center plus an edge point encoding both radii
+            return {
+                start: { x: (minX + maxX) / 2, y: (minY + maxY) / 2 },
+                end: { x: maxX, y: maxY }
+            };
+        }
+
+        if (points.length > 1) {
+            return { start: points[0], end: points[points.length - 1] };
+        }
+
+        return { start: fallbackStart, end: fallbackEnd };
     }
 
     buildSvgShapeMarkup(stroke) {

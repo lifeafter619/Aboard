@@ -72,13 +72,25 @@ const KNOWN_DEFAULT_TEAM_NAME_BASES = new Set([
 
 function extractDefaultTeamSuffix(teamName, knownBases = KNOWN_DEFAULT_TEAM_NAME_BASES) {
     const normalizedName = String(teamName || '').trim();
-    const match = normalizedName.match(/^(.+)\s([A-Z])$/);
+    const match = normalizedName.match(/^(.+)\s([A-Z]+)$/);
     if (!match) {
         return null;
     }
 
     const baseName = match[1].trim();
     return knownBases.has(baseName) ? match[2] : null;
+}
+
+// Convert a 0-based index to a spreadsheet-style letter suffix:
+// 0 -> A, 25 -> Z, 26 -> AA, 27 -> AB, ...
+function scoreboardTeamSuffixFromIndex(index) {
+    let suffix = '';
+    let value = Math.max(0, Math.trunc(index));
+    do {
+        suffix = String.fromCharCode(65 + (value % 26)) + suffix;
+        value = Math.floor(value / 26) - 1;
+    } while (value >= 0);
+    return suffix;
 }
 
 function getActiveScoreboardInstance() {
@@ -439,9 +451,29 @@ class ScoreboardInstance {
     }
 
     addTeam() {
-        const newIndex = this.config.teams.length;
+        const teamNameBase = window.i18n.t('scoreboard.teamDefault') || 'Team';
+        const knownBases = new Set(KNOWN_DEFAULT_TEAM_NAME_BASES);
+        knownBases.add(String(teamNameBase).trim());
+
+        // Collect suffixes already used by default-named teams so removing a
+        // middle team can't produce a duplicate name on the next add.
+        const usedSuffixes = new Set();
+        this.config.teams.forEach((team) => {
+            const suffix = extractDefaultTeamSuffix(team.name, knownBases);
+            if (suffix) {
+                usedSuffixes.add(suffix);
+            }
+        });
+
+        let suffixIndex = 0;
+        let suffix = scoreboardTeamSuffixFromIndex(suffixIndex);
+        while (usedSuffixes.has(suffix)) {
+            suffixIndex++;
+            suffix = scoreboardTeamSuffixFromIndex(suffixIndex);
+        }
+
         this.config.teams.push({
-            name: `${window.i18n.t('scoreboard.teamDefault')} ${String.fromCharCode(65 + newIndex)}`,
+            name: `${teamNameBase} ${suffix}`,
             score: 0
         });
         this.renderTeams();

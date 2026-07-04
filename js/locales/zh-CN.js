@@ -450,6 +450,7 @@ window.translations = {
             renameFont: '修改名称',
             expandPreview: '放大',
             confirmDeleteFont: '确定删除自定义字体“{font}”吗？',
+            resetFontManagement: '恢复默认状态',
             resetFontManagementConfirm: '恢复默认状态会删除已上传字体，并重置字体顺序、名称和预览设置。是否继续？',
             downloadedLanguagePacks: '已下载语言包',
             dismissedLanguageSuggestion: '语言提示忽略状态',
@@ -821,7 +822,9 @@ window.translations = {
         transparent: '透明',
         fullscreenDisabled: '关闭',
         fullscreenSingle: '单击',
-        fullscreenDouble: '双击'
+        fullscreenDouble: '双击',
+        widgetTab: '框体显示设置',
+        fullscreenTab: '全屏显示设置'
     },
 
     // Timer
@@ -945,7 +948,12 @@ window.translations = {
         missingAsset: '项目包缺少资源文件：{path}',
         missingPageFile: '项目包缺少页面文件：{path}',
         invalidLegacyFormat: '旧版项目文件格式无效。',
-        legacyMissingPages: '旧版项目文件缺少页面数据。'
+        legacyMissingPages: '旧版项目文件缺少页面数据。',
+        fileTooLarge: '项目文件过大，请导入 100 MB 以内的文件。',
+        unsafePath: '项目包路径不安全：{path}',
+        tooManyPages: '项目包包含的页面数量过多。',
+        assetTooLarge: '项目包包含过大的资源文件：{path}',
+        assetsTooLarge: '项目包内嵌的资源总量过大。'
     },
 
     gif: {

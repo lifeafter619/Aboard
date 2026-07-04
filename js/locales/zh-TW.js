@@ -440,6 +440,7 @@ window.translations = {
             renameFont: '修改名稱',
             expandPreview: '放大',
             confirmDeleteFont: '確定刪除自訂字體「{font}」嗎？',
+            resetFontManagement: '恢復預設狀態',
             resetFontManagementConfirm: '恢復預設狀態會刪除已上傳字體，並重設字體順序、名稱與預覽設定。是否繼續？',
             downloadedLanguagePacks: '已下載語言包',
             dismissedLanguageSuggestion: '語言提示忽略狀態',
@@ -795,7 +796,9 @@ window.translations = {
         transparent: '透明',
         fullscreenDisabled: '關閉',
         fullscreenSingle: '單擊',
-        fullscreenDouble: '雙擊'
+        fullscreenDouble: '雙擊',
+        widgetTab: '框體顯示設定',
+        fullscreenTab: '全螢幕顯示設定'
     },
 
     // Timer
@@ -956,7 +959,12 @@ window.translations = {
         missingAsset: '專案包缺少資源檔案：{path}',
         missingPageFile: '專案包缺少頁面檔案：{path}',
         invalidLegacyFormat: '舊版專案檔案格式無效。',
-        legacyMissingPages: '舊版專案檔案缺少頁面資料。'
+        legacyMissingPages: '舊版專案檔案缺少頁面資料。',
+        fileTooLarge: '專案檔案過大，請匯入 100 MB 以內的檔案。',
+        unsafePath: '專案包路徑不安全：{path}',
+        tooManyPages: '專案包包含的頁面數量過多。',
+        assetTooLarge: '專案包包含過大的資源檔案：{path}',
+        assetsTooLarge: '專案包內嵌的資源總量過大。'
     },
 
     gif: {

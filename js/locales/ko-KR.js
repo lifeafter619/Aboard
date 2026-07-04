@@ -424,6 +424,7 @@ window.translations = {
             renameFont: '이름 변경',
             expandPreview: '확대',
             confirmDeleteFont: '사용자 지정 글꼴 "{font}"을 삭제하시겠습니까?',
+            resetFontManagement: '기본 상태로 복원',
             resetFontManagementConfirm: '글꼴 관리를 초기 상태로 되돌리면 업로드한 글꼴이 삭제되고 글꼴 순서, 이름, 미리보기 설정도 재설정됩니다. 계속하시겠습니까?',
             downloadedLanguagePacks: '다운로드한 언어 팩',
             dismissedLanguageSuggestion: '언어 제안 숨김 상태',
@@ -728,7 +729,9 @@ window.translations = {
         transparent: '투명',
         fullscreenDisabled: '비활성화',
         fullscreenSingle: '한 번 클릭',
-        fullscreenDouble: '두 번 클릭'
+        fullscreenDouble: '두 번 클릭',
+        widgetTab: '위젯 표시 설정',
+        fullscreenTab: '전체 화면 표시 설정'
     },
 
     // Timer
@@ -919,7 +922,12 @@ window.translations = {
         missingAsset: '프로젝트 패키지에 리소스 파일이 없습니다: {path}',
         missingPageFile: '프로젝트 패키지에 페이지 파일이 없습니다: {path}',
         invalidLegacyFormat: '구버전 프로젝트 파일 형식이 올바르지 않습니다.',
-        legacyMissingPages: '구버전 프로젝트 파일에 페이지 데이터가 없습니다.'
+        legacyMissingPages: '구버전 프로젝트 파일에 페이지 데이터가 없습니다.',
+        fileTooLarge: '프로젝트 파일이 너무 큽니다. 100 MB 이하의 파일을 가져와 주세요.',
+        unsafePath: '안전하지 않은 프로젝트 패키지 경로입니다: {path}',
+        tooManyPages: '프로젝트 패키지에 포함된 페이지가 너무 많습니다.',
+        assetTooLarge: '프로젝트 패키지에 너무 큰 자산이 포함되어 있습니다: {path}',
+        assetsTooLarge: '프로젝트 패키지에 포함된 자산이 너무 많습니다.'
     },
 
     randomPicker: {

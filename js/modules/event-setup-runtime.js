@@ -430,6 +430,7 @@ function setupEventListeners() {
             this.isPotentialTap = false;
             this.isPotentialGesture = false;
             this.maxTouchesInGesture = 0;
+            this.multiTouchGestureStartPositions = null;
         };
 
         const endTouchPinchGesture = () => {
@@ -482,6 +483,24 @@ function setupEventListeners() {
                 this.maxTouchesInGesture = Math.max(this.maxTouchesInGesture, e.touches.length);
                 this.isPotentialGesture = true;
                 this.isPotentialTap = false; // Not a single tap if multiple fingers
+
+                // Track per-finger start positions so quick multi-finger swipes
+                // can invalidate the tap gesture even when pinch zoom is
+                // disabled (handlePinchStart returns early in that case and
+                // never flags movement).
+                if (!this.multiTouchGestureStartPositions) {
+                    this.multiTouchGestureStartPositions = new Map();
+                }
+                for (let i = 0; i < e.touches.length; i++) {
+                    const touch = e.touches[i];
+                    const touchKey = touch.identifier ?? i;
+                    if (!this.multiTouchGestureStartPositions.has(touchKey)) {
+                        this.multiTouchGestureStartPositions.set(touchKey, {
+                            x: touch.clientX,
+                            y: touch.clientY
+                        });
+                    }
+                }
             }
         }, { passive: false });
         
@@ -500,6 +519,29 @@ function setupEventListeners() {
             }
 
             if (e.touches.length >= 2) {
+                // Multi-finger move invalidation, independent of pinch being
+                // enabled: any finger moving beyond the tap threshold means
+                // this is a swipe/pinch, not a 2/3-finger undo/redo tap.
+                if (this.isPotentialGesture && this.multiTouchGestureStartPositions) {
+                    for (let i = 0; i < e.touches.length; i++) {
+                        const touch = e.touches[i];
+                        const touchKey = touch.identifier ?? i;
+                        const start = this.multiTouchGestureStartPositions.get(touchKey);
+                        if (!start) {
+                            this.multiTouchGestureStartPositions.set(touchKey, {
+                                x: touch.clientX,
+                                y: touch.clientY
+                            });
+                            continue;
+                        }
+                        const dx = touch.clientX - start.x;
+                        const dy = touch.clientY - start.y;
+                        if (dx * dx + dy * dy > 100) { // 10px threshold squared
+                            this.isPotentialGesture = false;
+                            break;
+                        }
+                    }
+                }
                 e.preventDefault();
                 this.handlePinchMove(e);
             }

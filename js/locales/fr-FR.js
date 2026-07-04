@@ -420,6 +420,7 @@ window.translations = {
             renameFont: 'Renommer',
             expandPreview: 'Agrandir',
             confirmDeleteFont: 'Voulez-vous vraiment supprimer la police personnalisée « {font} » ?',
+            resetFontManagement: 'Rétablir les valeurs par défaut',
             resetFontManagementConfirm: 'Réinitialiser la gestion des polices supprimera les polices importées et rétablira l’ordre, les noms et les paramètres d’aperçu par défaut. Continuer ?',
             downloadedLanguagePacks: 'Packs de langue téléchargés',
             dismissedLanguageSuggestion: 'État de masquage de la suggestion de langue',
@@ -736,7 +737,9 @@ window.translations = {
         transparent: 'Transparent',
         fullscreenDisabled: 'Désactivé',
         fullscreenSingle: 'Simple clic',
-        fullscreenDouble: 'Double clic'
+        fullscreenDouble: 'Double clic',
+        widgetTab: 'Paramètres d’affichage du widget',
+        fullscreenTab: 'Paramètres d’affichage plein écran'
     },
 
     // Timer
@@ -916,7 +919,12 @@ Profitez de votre travail créatif !`,
         missingAsset: 'Le paquet de projet ne contient pas le fichier de ressource : {path}',
         missingPageFile: 'Le paquet de projet ne contient pas le fichier de page : {path}',
         invalidLegacyFormat: 'Format de fichier de projet hérité invalide.',
-        legacyMissingPages: 'Le fichier de projet hérité ne contient pas de données de page.'
+        legacyMissingPages: 'Le fichier de projet hérité ne contient pas de données de page.',
+        fileTooLarge: 'Le fichier de projet est trop volumineux. Veuillez importer un fichier de moins de 100 Mo.',
+        unsafePath: 'Chemin non sûr dans le paquet de projet : {path}',
+        tooManyPages: 'Le paquet de projet contient trop de pages.',
+        assetTooLarge: 'Le paquet de projet contient une ressource trop volumineuse : {path}',
+        assetsTooLarge: 'Le paquet de projet contient trop de ressources intégrées.'
     },
 
     randomPicker: {

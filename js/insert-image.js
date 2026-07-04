@@ -278,8 +278,7 @@ class InsertImageManager {
 
         // Initial sizing and positioning
         // Image should be smaller than canvas and not exceed half the canvas size
-        const canvasLogicalWidth = this.canvas.width / (window.devicePixelRatio || 1);
-        const canvasLogicalHeight = this.canvas.height / (window.devicePixelRatio || 1);
+        const { width: canvasLogicalWidth, height: canvasLogicalHeight } = this.getLogicalCanvasSize();
 
         let width = this.currentImage.width;
         let height = this.currentImage.height;
@@ -360,8 +359,8 @@ class InsertImageManager {
 
         // Let's just place it at the center of the visible area.
         // Logical Width of canvas
-        const logicalWidth = this.canvas.width / window.devicePixelRatio; // Or just settings width
-        const logicalHeight = this.canvas.height / window.devicePixelRatio;
+        const logicalWidth = canvasLogicalWidth; // Or just settings width
+        const logicalHeight = canvasLogicalHeight;
 
         // Center of logical canvas
         const originX = logicalWidth / 2;
@@ -391,8 +390,8 @@ class InsertImageManager {
         // We can use `drawingEngine.getPointFromScreen(cx, cy)` if it existed.
 
         // Let's assume placement at logical center (width/2, height/2) - halfImageSize.
-        this.imagePosition.x = (this.canvas.width / window.devicePixelRatio / 2) - (width / 2);
-        this.imagePosition.y = (this.canvas.height / window.devicePixelRatio / 2) - (height / 2);
+        this.imagePosition.x = (logicalWidth / 2) - (width / 2);
+        this.imagePosition.y = (logicalHeight / 2) - (height / 2);
 
         // Adjust for Pan to bring it into view?
         // PanX is translation in pixels.
@@ -544,8 +543,7 @@ class InsertImageManager {
         // However, the content inside the canvas is scaled by the CSS transform.
         // So a logical unit 1 corresponds to `canvasRect.width / logicalWidth` screen pixels.
 
-        const logicalWidth = this.canvas.width / window.devicePixelRatio;
-        const logicalHeight = this.canvas.height / window.devicePixelRatio;
+        const { width: logicalWidth, height: logicalHeight } = this.getLogicalCanvasSize();
 
         const scaleX = canvasRect.width / logicalWidth;
         const scaleY = canvasRect.height / logicalHeight;
@@ -698,11 +696,23 @@ class InsertImageManager {
         return { x: e.clientX, y: e.clientY };
     }
 
+    // Logical (CSS) canvas size. canvas.width includes devicePixelRatio AND the
+    // dynamic render scale (see render-quality-runtime.js), so backing-store
+    // dimensions must never be used to derive logical coordinates.
+    getLogicalCanvasSize() {
+        const dpr = window.devicePixelRatio || 1;
+        const width = this.canvas.clientWidth ||
+            parseFloat(this.canvas.style?.width) ||
+            (this.canvas.width / dpr);
+        const height = this.canvas.clientHeight ||
+            parseFloat(this.canvas.style?.height) ||
+            (this.canvas.height / dpr);
+        return { width, height };
+    }
+
     getCanvasScales() {
         const rect = this.canvas.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        const logicalWidth = this.canvas.width / dpr;
-        const logicalHeight = this.canvas.height / dpr;
+        const { width: logicalWidth, height: logicalHeight } = this.getLogicalCanvasSize();
         return {
             scaleX: rect.width / logicalWidth,
             scaleY: rect.height / logicalHeight
@@ -820,8 +830,7 @@ class InsertImageManager {
     // bounding box and changes size/position as the element rotates
     getControlBoxCenter() {
         const canvasRect = this.canvas.getBoundingClientRect();
-        const logicalWidth = this.canvas.width / window.devicePixelRatio;
-        const logicalHeight = this.canvas.height / window.devicePixelRatio;
+        const { width: logicalWidth, height: logicalHeight } = this.getLogicalCanvasSize();
         const scaleX = canvasRect.width / logicalWidth;
         const scaleY = canvasRect.height / logicalHeight;
 

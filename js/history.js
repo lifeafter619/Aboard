@@ -12,6 +12,14 @@ class HistoryManager {
         this.onStateChanged = null;
     }
 
+    reset() {
+        this.history = [];
+        this.historyStep = -1;
+        if (typeof this.onStateChanged === 'function') {
+            this.onStateChanged();
+        }
+    }
+
     saveState() {
         // Remove any states after current step
         this.history = this.history.slice(0, this.historyStep + 1);

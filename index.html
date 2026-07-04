@@ -838,7 +838,7 @@
                             </div>
                             <p class="settings-hint" data-i18n="settings.general.fontManagementHint">字体管理：支持排序、显示开关、重命名与预览</p>
                             <div class="font-management-toolbar">
-                                <button id="font-reset-defaults-btn" type="button" class="button-secondary font-reset-defaults-btn">恢复默认状态</button>
+                                <button id="font-reset-defaults-btn" type="button" class="button-secondary font-reset-defaults-btn" data-i18n="settings.general.resetFontManagement">恢复默认状态</button>
                             </div>
                             <div id="font-management-list" class="font-management-list"></div>
                         </div>
@@ -1516,18 +1516,18 @@
             <div class="modal-body">
                 <div class="font-preview-modal-controls">
                     <label class="font-preview-field">
-                        <span>预览内容</span>
+                        <span data-i18n="settings.general.fontPreviewText">预览内容</span>
                         <input id="font-preview-modal-text-input" type="text" class="export-filename-input" value="一个白板-Aboard-123" data-i18n-title="settings.general.fontPreviewText" data-i18n-aria-label="settings.general.fontPreviewText" title="预览内容" aria-label="预览内容">
                     </label>
                     <div class="font-preview-size-editor">
                         <label class="font-preview-field">
-                            <span>预览字号</span>
+                            <span data-i18n="settings.general.fontPreviewSize">预览字号</span>
                             <input id="font-preview-modal-size-range" type="range" class="slider" min="16" max="160" step="1" value="48" data-i18n-title="settings.general.fontPreviewSize" data-i18n-aria-label="settings.general.fontPreviewSize" title="预览字号" aria-label="预览字号">
                         </label>
                         <input id="font-preview-modal-size-input" type="number" class="size-input" min="16" max="160" step="1" value="48" data-i18n-title="settings.general.fontPreviewSize" data-i18n-aria-label="settings.general.fontPreviewSize" title="预览字号" aria-label="预览字号">
-                        <button id="font-preview-modal-size-increase-btn" type="button" class="button-secondary">放大</button>
-                        <button id="font-preview-modal-size-reset-btn" type="button" class="button-secondary">恢复字号</button>
-                        <button id="font-preview-modal-text-reset-btn" type="button" class="button-secondary">恢复内容</button>
+                        <button id="font-preview-modal-size-increase-btn" type="button" class="button-secondary" data-i18n="settings.general.expandPreview">放大</button>
+                        <button id="font-preview-modal-size-reset-btn" type="button" class="button-secondary" data-i18n="common.restoreSize">恢复字号</button>
+                        <button id="font-preview-modal-text-reset-btn" type="button" class="button-secondary" data-i18n="settings.general.fontPreviewResetText">恢复内容</button>
                     </div>
                 </div>
                 <div class="font-preview-modal-stage">
@@ -1597,10 +1597,10 @@
     <div id="config-diff-modal" class="modal">
         <div class="modal-content confirm-modal-content">
             <div class="modal-header">
-                <h2 id="config-diff-title">导入配置确认</h2>
+                <h2 id="config-diff-title" data-i18n="settings.diff.title">导入配置确认</h2>
             </div>
             <div class="modal-body">
-                <p id="config-diff-description" class="confirm-message">检测到以下设置将被更改：</p>
+                <p id="config-diff-description" class="confirm-message" data-i18n="settings.diff.message">检测到以下设置将被更改：</p>
                 <div id="config-diff-list" class="diff-list">
                     <!-- Diff items will be injected here -->
                 </div>
@@ -1772,8 +1772,8 @@
             <div class="timer-modal-body">
                 <!-- Tab Navigation -->
                 <div class="timer-tab-nav">
-                    <button class="timer-tab-btn active" data-tab="widget">框体显示设置</button>
-                    <button class="timer-tab-btn" data-tab="fullscreen">全屏显示设置</button>
+                    <button class="timer-tab-btn active" data-tab="widget" data-i18n="timeDisplay.widgetTab">框体显示设置</button>
+                    <button class="timer-tab-btn" data-tab="fullscreen" data-i18n="timeDisplay.fullscreenTab">全屏显示设置</button>
                 </div>
 
                 <!-- Widget Tab Content -->
@@ -2036,7 +2036,7 @@
                 
                 <!-- Timer Title Input -->
                 <div class="timer-input-group">
-                    <label for="timer-title-input" data-i18n="timer.title">计时器标题（可选）</label>
+                    <label for="timer-title-input" data-i18n="timer.timerTitle">计时器标题（可选）</label>
                     <input type="text" id="timer-title-input" class="timer-title-input" data-i18n-placeholder="timer.titlePlaceholder" placeholder="例如：课堂演讲、考试时间等" maxlength="50">
                 </div>
                 

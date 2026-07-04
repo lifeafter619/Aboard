@@ -745,9 +745,23 @@ class ExportManager {
     }
 
     downloadCanvas(tempCanvas, filename, format, quality) {
+        let outputCanvas = tempCanvas;
+        if (format === 'jpeg') {
+            // JPEG has no alpha channel: flatten onto an opaque base color first
+            // so a translucent background (bgOpacity < 1) does not turn black.
+            const opaqueCanvas = document.createElement('canvas');
+            opaqueCanvas.width = tempCanvas.width;
+            opaqueCanvas.height = tempCanvas.height;
+            const opaqueCtx = opaqueCanvas.getContext('2d');
+            opaqueCtx.fillStyle = this.drawingBoard?.backgroundManager?.backgroundColor || '#FFFFFF';
+            opaqueCtx.fillRect(0, 0, opaqueCanvas.width, opaqueCanvas.height);
+            opaqueCtx.drawImage(tempCanvas, 0, 0);
+            outputCanvas = opaqueCanvas;
+        }
+
         const dataURL = format === 'jpeg'
-            ? tempCanvas.toDataURL('image/jpeg', quality)
-            : tempCanvas.toDataURL('image/png');
+            ? outputCanvas.toDataURL('image/jpeg', quality)
+            : outputCanvas.toDataURL('image/png');
 
         const link = document.createElement('a');
         link.download = `${filename}.${format}`;
