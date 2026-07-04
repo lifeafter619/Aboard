@@ -1,5 +1,3 @@
-const LINK_PLACEHOLDER_PATTERN = /%%ABOARD_LINK_(\d+)%%/g;
-
 function hasUnbalancedTrailingParenthesis(url) {
   const openingCount = (url.match(/\(/g) || []).length;
   const closingCount = (url.match(/\)/g) || []).length;
@@ -56,18 +54,33 @@ function linkifyEscapedText(text) {
       return candidate;
     }
 
-    const placeholder = `%%ABOARD_LINK_${links.length}%%`;
-    links.push(url);
+    let placeholder = `\u0000ABOARD_LINK_${links.length}\u0000`;
+    let placeholderSuffix = 0;
+    while (text.includes(placeholder)) {
+      placeholderSuffix += 1;
+      placeholder = `\u0000ABOARD_LINK_${links.length}_${placeholderSuffix}\u0000`;
+    }
+    links.push({ placeholder, url });
     return `${placeholder}${suffix}`;
   });
 
-  return withPlaceholders.replace(LINK_PLACEHOLDER_PATTERN, (_, indexText) => {
-    const url = links[Number(indexText)];
-    return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--theme-color, #007AFF); text-decoration: none;">${url}</a>`;
-  });
+  return links.reduce((result, { placeholder, url }) => (
+    result.split(placeholder).join(`<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--theme-color, #007AFF); text-decoration: none;">${url}</a>`)
+  ), withPlaceholders);
 }
 
 export class RichTextParser {
+  static isSafeColorValue(value) {
+    const color = String(value || '').trim();
+    return /^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?(?:[0-9a-fA-F]{2})?$/.test(color)
+      || /^[a-zA-Z]+$/.test(color);
+  }
+
+  static isSafeSizeValue(value) {
+    const size = String(value || '').trim();
+    return /^(?:0|[1-9]\d{0,2})(?:\.\d+)?(?:px|em|rem|%)$/.test(size);
+  }
+
   static parse(text) {
     if (!text) return '';
 
@@ -85,13 +98,17 @@ export class RichTextParser {
     result = linkifyEscapedText(result);
     result = result.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
     result = result.replace(/__(.*?)__/g, '<u>$1</u>');
-    result = result.replace(/\[color=([^\]]+)\](.*?)\[\/color\]/g, (_, color, text) => {
-      const sanitized = color.replace(/[^a-zA-Z0-9#(),.\s%-]/g, '');
-      return `<span style="color:${sanitized}">${text}</span>`;
+    result = result.replace(/\[color=([^\]]+)\](.*?)\[\/color\]/g, (_, color, content) => {
+      const safeColor = String(color || '').trim();
+      return RichTextParser.isSafeColorValue(safeColor)
+        ? `<span style="color:${safeColor}">${content}</span>`
+        : content;
     });
-    result = result.replace(/\[size=([^\]]+)\](.*?)\[\/size\]/g, (_, size, text) => {
-      const sanitized = size.replace(/[^a-zA-Z0-9.%-]/g, '');
-      return `<span style="font-size:${sanitized}">${text}</span>`;
+    result = result.replace(/\[size=([^\]]+)\](.*?)\[\/size\]/g, (_, size, content) => {
+      const safeSize = String(size || '').trim();
+      return RichTextParser.isSafeSizeValue(safeSize)
+        ? `<span style="font-size:${safeSize}">${content}</span>`
+        : content;
     });
 
     if (result.includes('\n')) {

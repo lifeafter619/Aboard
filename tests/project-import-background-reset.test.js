@@ -206,7 +206,8 @@ function loadProjectImportRuntime(localStorage = createLocalStorageStub()) {
   return {
     ProjectManager: context.window.ProjectManager,
     paginationRuntime: context.window.AboardPaginationRuntime,
-    localStorage
+    localStorage,
+    window
   };
 }
 
@@ -599,6 +600,38 @@ async function testOversizedLegacyProjectImportIsRejectedBeforeCompatLoads() {
   assert.equal(legacyCompatLoaded, false, 'oversized legacy imports should be rejected before loading legacy compatibility');
 }
 
+async function testAsyncZipImportErrorsAreHandledByProjectImporter() {
+  const { ProjectManager, paginationRuntime, window } = loadProjectImportRuntime();
+  const board = createBoard(paginationRuntime);
+  const manager = new ProjectManager(board);
+  const alerts = [];
+
+  window.appDialog = {
+    showAlert(message, type) {
+      alerts.push({ message, type });
+    }
+  };
+  manager.importZipProject = async () => {
+    throw new Error('bad zip payload');
+  };
+
+  const result = await manager.importProject({
+    name: 'broken.zip',
+    size: 100,
+    slice() {
+      return {
+        async arrayBuffer() {
+          return Buffer.from('PK');
+        }
+      };
+    }
+  });
+
+  assert.equal(result, false, 'async project import failures should resolve to false');
+  assert.equal(alerts[0]?.type, 'error');
+  assert.match(alerts[0]?.message || '', /bad zip payload/);
+}
+
 function testProjectPackagePathValidationRejectsUnsafePaths() {
   const { ProjectManager, paginationRuntime } = loadProjectImportRuntime();
   const board = createBoard(paginationRuntime);
@@ -757,6 +790,7 @@ async function testProjectPackageHelpersIgnoreMalformedCollections() {
   await testImportStillRestoresStateWhenLocalStorageIsBlocked();
   await testOversizedProjectImportIsRejectedBeforeZipLibraryLoads();
   await testOversizedLegacyProjectImportIsRejectedBeforeCompatLoads();
+  await testAsyncZipImportErrorsAreHandledByProjectImporter();
   testProjectPackagePathValidationRejectsUnsafePaths();
   testProjectPackagePageLimitRejectsUnboundedImports();
   await testProjectPackageRejectsOutOfRangePageIndexes();

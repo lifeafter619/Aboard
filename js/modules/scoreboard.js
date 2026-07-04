@@ -55,6 +55,10 @@ function safeScoreboardStorageSetItem(key, value) {
     }
 }
 
+function getScoreboardStorageKey(id) {
+    return `scoreboard_data_${id}`;
+}
+
 const KNOWN_DEFAULT_TEAM_NAME_BASES = new Set([
     'Team',
     'Equipe',
@@ -116,7 +120,9 @@ class ScoreboardInstance {
         this.manager = manager;
 
         // Load saved state if available
-        const savedState = safeScoreboardStorageGetItem('scoreboard_data');
+        const instanceStorageKey = getScoreboardStorageKey(id);
+        const savedState = safeScoreboardStorageGetItem(instanceStorageKey)
+            || (id === 1 ? safeScoreboardStorageGetItem('scoreboard_data') : null);
         let initialTeams = null;
         if (savedState) {
             try {
@@ -170,7 +176,11 @@ class ScoreboardInstance {
         const data = {
             teams: this.config.teams
         };
-        safeScoreboardStorageSetItem('scoreboard_data', JSON.stringify(data));
+        const serialized = JSON.stringify(data);
+        safeScoreboardStorageSetItem(getScoreboardStorageKey(this.id), serialized);
+        if (this.id === 1) {
+            safeScoreboardStorageSetItem('scoreboard_data', serialized);
+        }
     }
 
     createElement() {

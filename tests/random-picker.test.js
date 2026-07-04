@@ -94,7 +94,11 @@ function loadRandomPickerInstance(document) {
       return 1;
     },
     clearInterval() {},
-    Math,
+    Math: Object.assign(Object.create(Math), {
+      random() {
+        return 0.75;
+      }
+    }),
     JSON,
     parseInt
   };
@@ -118,8 +122,39 @@ function testInitialTitleIsInsertedAsText() {
   assert.equal(title.textContent, '<img src=x onerror=alert(1)>');
 }
 
+function testLargeNoRepeatNumberRangeStillPicksRandomResult() {
+  const document = createDocumentStub();
+  const RandomPickerInstance = loadRandomPickerInstance(document);
+  const instance = new RandomPickerInstance(1, { showSettings() {}, remove() {} }, {
+    mode: 'number',
+    min: 1,
+    max: 20000,
+    allowRepeats: false
+  });
+
+  instance.startPick();
+  instance.stopAnimation();
+  const firstResult = instance.resultElement.textContent;
+
+  assert.equal(
+    firstResult,
+    '15001',
+    'large no-repeat number ranges should fall back to random selection instead of always returning the minimum'
+  );
+
+  instance.startPick();
+  instance.stopAnimation();
+
+  assert.notEqual(
+    instance.resultElement.textContent,
+    firstResult,
+    'large no-repeat number ranges should still avoid picking the same number twice'
+  );
+}
+
 function main() {
   testInitialTitleIsInsertedAsText();
+  testLargeNoRepeatNumberRangeStillPicksRandomResult();
   console.log('random-picker.test: all assertions passed');
 }
 

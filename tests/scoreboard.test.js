@@ -71,7 +71,23 @@ function createDocumentStub() {
   return documentRef;
 }
 
-function loadScoreboardInstance(document) {
+function createLocalStorageStub() {
+  const store = new Map();
+  return {
+    getItem(key) {
+      return store.has(key) ? store.get(key) : null;
+    },
+    setItem(key, value) {
+      store.set(key, String(value));
+    },
+    removeItem(key) {
+      store.delete(key);
+    },
+    store
+  };
+}
+
+function loadScoreboardInstance(document, localStorage = createLocalStorageStub()) {
   const source = `${fs.readFileSync(path.join(__dirname, '..', 'js', 'modules', 'scoreboard.js'), 'utf8')}\nwindow.__ScoreboardInstance = ScoreboardInstance;`;
   const sandbox = {
     window: {
@@ -94,12 +110,7 @@ function loadScoreboardInstance(document) {
       }
     },
     document,
-    localStorage: {
-      getItem() {
-        return null;
-      },
-      setItem() {}
-    },
+    localStorage,
     setTimeout() {},
     Math,
     JSON,
@@ -131,8 +142,29 @@ function testInitialTitleAndTeamNameAreSafeBeforeRender() {
   assert.equal(teamName.textContent, '<svg onload=alert(1)>');
 }
 
+function testMultipleScoreboardsDoNotShareSavedTeams() {
+  const document = createDocumentStub();
+  const localStorage = createLocalStorageStub();
+  const ScoreboardInstance = loadScoreboardInstance(document, localStorage);
+
+  const first = new ScoreboardInstance(1, { remove() {} }, {
+    teams: [{ name: 'Alpha', score: 3 }]
+  });
+  first.saveState();
+
+  const second = new ScoreboardInstance(2, { remove() {} });
+
+  assert.notDeepEqual(
+    second.config.teams,
+    first.config.teams,
+    'new scoreboard instances should not inherit another widget instance saved state'
+  );
+  assert.equal(second.config.teams[0].name, 'Team A');
+}
+
 function main() {
   testInitialTitleAndTeamNameAreSafeBeforeRender();
+  testMultipleScoreboardsDoNotShareSavedTeams();
   console.log('scoreboard.test: all assertions passed');
 }
 

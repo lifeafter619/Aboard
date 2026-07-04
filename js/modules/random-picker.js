@@ -42,6 +42,32 @@ function normalizeRandomPickerConfig(config) {
     return normalizedConfig;
 }
 
+function pickRandomPickerNumber(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function pickSparseRandomPickerNumber(instance, min, max) {
+    const rangeSize = max - min + 1;
+    if (instance.remainingNumberCount <= 0 || instance.remainingNumberCount > rangeSize) {
+        instance.resetRemainingNumbers();
+    }
+
+    const selectedOffset = Math.floor(Math.random() * instance.remainingNumberCount);
+    const selectedMappedOffset = instance.remainingNumberMap.has(selectedOffset)
+        ? instance.remainingNumberMap.get(selectedOffset)
+        : selectedOffset;
+    const lastOffset = instance.remainingNumberCount - 1;
+    const lastMappedOffset = instance.remainingNumberMap.has(lastOffset)
+        ? instance.remainingNumberMap.get(lastOffset)
+        : lastOffset;
+
+    instance.remainingNumberMap.set(selectedOffset, lastMappedOffset);
+    instance.remainingNumberMap.delete(lastOffset);
+    instance.remainingNumberCount -= 1;
+
+    return min + selectedMappedOffset;
+}
+
 class RandomPickerInstance {
     constructor(id, manager, config = {}) {
         this.id = id;
@@ -60,6 +86,8 @@ class RandomPickerInstance {
         this.isAnimating = false;
         this.remainingNames = [...(this.config.names || [])];
         this.remainingNumbers = [];
+        this.remainingNumberMap = new Map();
+        this.remainingNumberCount = 0;
         this.animationInterval = null;
 
         // Initialize remaining numbers
@@ -336,19 +364,26 @@ class RandomPickerInstance {
             const { min, max } = normalizeRandomPickerNumberRange(this.config.min, this.config.max);
 
             if (!this.config.allowRepeats) {
-                if (this.remainingNumbers.length === 0) {
+                const usesSparseNumberPool = max - min + 1 > 10001;
+                if (usesSparseNumberPool) {
+                    if (this.remainingNumberCount <= 0) {
+                        this.resetRemainingNumbers();
+                    }
+                } else if (this.remainingNumbers.length === 0) {
                     this.resetRemainingNumbers();
                 }
                 // If pool is empty (e.g. range invalid), fallback
                 if (this.remainingNumbers.length === 0) {
-                    pool = [min];
+                    for (let i = 0; i < 20; i++) {
+                        pool.push(pickRandomPickerNumber(min, max));
+                    }
                 } else {
                     pool = this.remainingNumbers;
                 }
             } else {
                 // Create a small pool for animation visual
                 for (let i = 0; i < 20; i++) {
-                    pool.push(Math.floor(Math.random() * (max - min + 1)) + min);
+                    pool.push(pickRandomPickerNumber(min, max));
                 }
             }
         }
@@ -400,21 +435,22 @@ class RandomPickerInstance {
             // Number mode
             if (this.config.allowRepeats) {
                 const { min, max } = normalizeRandomPickerNumberRange(this.config.min, this.config.max);
-                result = Math.floor(Math.random() * (max - min + 1)) + min;
+                result = pickRandomPickerNumber(min, max);
             } else {
-                const { min } = normalizeRandomPickerNumberRange(this.config.min, this.config.max);
-                if (this.remainingNumbers.length === 0) {
-                    this.resetRemainingNumbers();
-                }
-
-                // Pick from remaining
-                if (this.remainingNumbers.length > 0) {
+                const { min, max } = normalizeRandomPickerNumberRange(this.config.min, this.config.max);
+                const usesSparseNumberPool = max - min + 1 > 10001;
+                if (usesSparseNumberPool) {
+                    if (this.remainingNumberCount <= 0) {
+                        this.resetRemainingNumbers();
+                    }
+                    result = pickSparseRandomPickerNumber(this, min, max);
+                } else {
+                    if (this.remainingNumbers.length === 0) {
+                        this.resetRemainingNumbers();
+                    }
                     const index = Math.floor(Math.random() * this.remainingNumbers.length);
                     result = this.remainingNumbers[index];
                     this.remainingNumbers.splice(index, 1);
-                } else {
-                    // Fallback should range cover empty?
-                    result = min;
                 }
             }
         }
@@ -517,17 +553,17 @@ class RandomPickerInstance {
 
     resetRemainingNumbers() {
         const { min, max } = normalizeRandomPickerNumberRange(this.config.min, this.config.max);
+        const rangeSize = max - min + 1;
+        this.remainingNumberMap = new Map();
+        this.remainingNumberCount = rangeSize;
 
         // Prevent massive arrays
-        if (max - min > 10000) {
-            // Too large for no-repeats array logic, fallback to random
-            // If user really wants no-repeats on large range, we'd need a Set or other logic
-            // For now, treat as allowed-repeats or just clear to force random
+        if (rangeSize > 10001) {
             this.remainingNumbers = [];
             return;
         }
 
-        this.remainingNumbers = Array.from({length: max - min + 1}, (_, i) => min + i);
+        this.remainingNumbers = Array.from({length: rangeSize}, (_, i) => min + i);
     }
 
     destroy() {

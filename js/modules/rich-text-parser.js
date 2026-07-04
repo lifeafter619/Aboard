@@ -1,5 +1,3 @@
-const LINK_PLACEHOLDER_PATTERN = /%%ABOARD_LINK_(\d+)%%/g;
-
 function hasUnbalancedTrailingParenthesis(url) {
     const openingCount = (url.match(/\(/g) || []).length;
     const closingCount = (url.match(/\)/g) || []).length;
@@ -56,15 +54,19 @@ function linkifyEscapedText(text) {
             return candidate;
         }
 
-        const placeholder = `%%ABOARD_LINK_${links.length}%%`;
-        links.push(url);
+        let placeholder = `\u0000ABOARD_LINK_${links.length}\u0000`;
+        let placeholderSuffix = 0;
+        while (text.includes(placeholder)) {
+            placeholderSuffix += 1;
+            placeholder = `\u0000ABOARD_LINK_${links.length}_${placeholderSuffix}\u0000`;
+        }
+        links.push({ placeholder, url });
         return `${placeholder}${suffix}`;
     });
 
-    return withPlaceholders.replace(LINK_PLACEHOLDER_PATTERN, (_, indexText) => {
-        const url = links[Number(indexText)];
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--theme-color, #007AFF); text-decoration: none;">${url}</a>`;
-    });
+    return links.reduce((result, { placeholder, url }) => (
+        result.split(placeholder).join(`<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--theme-color, #007AFF); text-decoration: none;">${url}</a>`)
+    ), withPlaceholders);
 }
 
 /**

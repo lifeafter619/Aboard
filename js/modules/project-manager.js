@@ -888,10 +888,10 @@ class ProjectManager {
                     ));
                 }
                 const legacyCompat = await this.ensureLegacyCompat();
-                return legacyCompat.importLegacyProject(this, file);
+                return await legacyCompat.importLegacyProject(this, file);
             }
 
-            return this.importZipProject(file);
+            return await this.importZipProject(file);
         } catch (error) {
             console.error('Import failed:', error);
             window.appDialog?.showAlert?.(
