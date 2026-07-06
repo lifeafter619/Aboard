@@ -115,8 +115,18 @@ function testBackgroundPanelFitsInsideFloatingConfigArea() {
   );
   assert.match(
     styleCss,
-    /#config-area\.background-config-mode:not\(\.vertical\)\s*{[^}]*width:\s*min\(660px,\s*calc\(100vw - 40px\)\)/s,
-    'background tool should give the floating config area enough width when it is not side-docked'
+    /#config-area\.background-config-mode:not\(\.vertical\)\s*{[^}]*width:\s*max-content/s,
+    'background tool should let the floating config area shrink to the active background content'
+  );
+  assert.match(
+    styleCss,
+    /#config-area\.background-config-mode:not\(\.vertical\)\s*{[^}]*max-width:\s*min\(660px,\s*calc\(100vw - 40px\)\)/s,
+    'background tool should keep the content-sized floating config area inside the viewport'
+  );
+  assert.doesNotMatch(
+    styleCss,
+    /#config-area\.background-config-mode:not\(\.vertical\)\s*{[^}]*[\r\n]\s*width:\s*min\(660px,\s*calc\(100vw - (?:40|32)px\)\)/s,
+    'background tool should not force a 660px outer panel that leaves blank space beside 548px content'
   );
 }
 

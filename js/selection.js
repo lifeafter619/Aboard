@@ -3586,8 +3586,11 @@ class SelectionManager {
             // pixel content (e.g. after session restore where vector data is not available)
             if (this.historyManager && this.historyManager.historyStep >= 0) {
                 const baseState = this.historyManager.history[this.historyManager.historyStep];
-                if (baseState) {
-                    this.ctx.putImageData(baseState, 0, 0);
+                const baseImageData = typeof this.historyManager.getEntryImageData === 'function'
+                    ? this.historyManager.getEntryImageData(baseState)
+                    : (baseState?.imageData || baseState);
+                if (baseImageData?.data && typeof baseImageData.width === 'number' && typeof baseImageData.height === 'number') {
+                    this.ctx.putImageData(baseImageData, 0, 0);
                 }
             }
             this.drawingEngine.updateOffCanvasImageMirrors(this.textManager?.textObjects || []);

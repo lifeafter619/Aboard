@@ -278,7 +278,8 @@ body.vector-preview-active #off-canvas-image-layer {
 }
 
 #config-area.background-config-mode:not(.vertical) {
-    width: min(660px, calc(100vw - 40px));
+    width: max-content;
+    max-width: min(660px, calc(100vw - 40px));
 }
 
 #config-area.vertical .config-panel {
@@ -2258,7 +2259,8 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     }
 
     #config-area.background-config-mode:not(.vertical) {
-        width: min(660px, calc(100vw - 32px));
+        width: max-content;
+        max-width: min(660px, calc(100vw - 32px));
     }
     
     #history-controls {
