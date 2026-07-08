@@ -67,17 +67,39 @@ function getTargetRenderScale() {
 
 function scheduleRenderQualityUpdate() {
     const targetScale = this.getTargetRenderScale();
-    if (Math.abs(targetScale - this.dynamicRenderScale) < RQ_RENDER_SCALE_SCHEDULE_THRESHOLD) return;
     if (this.qualityUpdateTimer) {
         clearTimeout(this.qualityUpdateTimer);
+        this.qualityUpdateTimer = null;
+    }
+    if (Math.abs(targetScale - this.dynamicRenderScale) < RQ_RENDER_SCALE_SCHEDULE_THRESHOLD) {
+        return;
     }
     this.qualityUpdateTimer = setTimeout(() => {
+        this.qualityUpdateTimer = null;
         this.applyRenderQualityScale(targetScale);
     }, RQ_QUALITY_UPDATE_DEBOUNCE_MS);
 }
 
 function applyRenderQualityScale(scale) {
     if (Math.abs(scale - this.dynamicRenderScale) < RQ_RENDER_SCALE_APPLY_THRESHOLD) return;
+
+    const isInteractionActive = !!(
+        this.drawingEngine?.isDrawing ||
+        this.drawingEngine?.isPanning ||
+        this.shapeDrawingManager?.isDrawing ||
+        this.isPinching ||
+        this.hasTwoFingers
+    );
+    if (isInteractionActive) {
+        if (this.qualityUpdateTimer) {
+            clearTimeout(this.qualityUpdateTimer);
+        }
+        this.qualityUpdateTimer = setTimeout(() => {
+            this.qualityUpdateTimer = null;
+            this.applyRenderQualityScale(scale);
+        }, RQ_QUALITY_UPDATE_DEBOUNCE_MS);
+        return;
+    }
 
     const width = parseFloat(this.canvas.style.width) || this.settingsManager.canvasWidth;
     const height = parseFloat(this.canvas.style.height) || this.settingsManager.canvasHeight;

@@ -492,6 +492,12 @@
     background: transparent !important;
 }
 
+.text-selection-only .selection-transform-handle,
+.text-selection-only .resize-handle.top,
+.text-selection-only .resize-handle.bottom {
+    display: none !important;
+}
+
 .selection-action-toolbar.coordinate-toolbar-side {
     min-width: auto;
     max-width: min(calc(100vw - 24px), 420px) !important;

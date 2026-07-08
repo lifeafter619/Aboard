@@ -24,6 +24,7 @@ class SelectionManager {
         
         // Dragging state
         this.isDragging = false;
+        this.hasDragMoved = false;
         this.dragStartPos = { x: 0, y: 0 };
         this.dragStartObjectPos = { x: 0, y: 0 };
         // Pointer that started the active drag/resize/rotate gesture. Moves
@@ -49,6 +50,7 @@ class SelectionManager {
         this.HANDLE_SIZE = 8;
         this.ROTATION_HANDLE_DISTANCE = 30;
         this.HANDLE_THRESHOLD = 10;
+        this.DRAG_MOVE_THRESHOLD = 3;
         this.MIN_SIZE = 10;
         this.TEXT_LINE_HEIGHT = 1.2; // Aligns with insert-text line height calculation.
         this.TEXT_BOUNDS_PADDING = 4;
@@ -74,6 +76,7 @@ class SelectionManager {
         this.coordinateDragStartPositions = [];
         this.multiBounds = null;
         this.multiRotation = 0; // Accumulated rotation for multi-select
+        this.multiRotationCenter = null;
         this.multiStrokeRotateStart = [];
         this.multiImageRotateStart = [];
         this.multiTextRotateStart = [];
@@ -1930,6 +1933,7 @@ class SelectionManager {
             this.activePointerId = e.pointerId;
         }
         this.dragStartPos = this.getClientPos(e);
+        this.hasDragMoved = false;
 
         if (this.selectionType === 'stroke') {
             const stroke = this.drawingEngine.strokes[this.selectedIndex];
@@ -2017,6 +2021,16 @@ class SelectionManager {
         const scaleY = this.canvas.offsetHeight / rect.height;
         const deltaX = (pos.x - this.dragStartPos.x) * scaleX;
         const deltaY = (pos.y - this.dragStartPos.y) * scaleY;
+
+        if (!this.hasDragMoved) {
+            const screenDeltaX = pos.x - this.dragStartPos.x;
+            const screenDeltaY = pos.y - this.dragStartPos.y;
+            const threshold = this.DRAG_MOVE_THRESHOLD || 3;
+            if (Math.hypot(screenDeltaX, screenDeltaY) < threshold) {
+                return;
+            }
+            this.hasDragMoved = true;
+        }
         
         if (this.selectionType === 'stroke') {
             const stroke = this.drawingEngine.strokes[this.selectedIndex];
@@ -2091,10 +2105,14 @@ class SelectionManager {
     
     stopDrag() {
         if (this.isDragging) {
+            const didMove = !!this.hasDragMoved;
             this.isDragging = false;
-            this.hasUnsavedChanges = true;
+            this.hasDragMoved = false;
+            if (didMove) {
+                this.hasUnsavedChanges = true;
+            }
             this.controlBox.style.cursor = 'move';
-            if (this.selectionType === 'background') {
+            if (didMove && this.selectionType === 'background') {
                 this.backgroundManager?.flushPendingPersistence?.();
             }
             
@@ -2109,7 +2127,9 @@ class SelectionManager {
                 }
             } else if (this.isCoordinateSelection()) {
                 this.coordinateDragStartPositions = [];
-                this.commitCoordinateSelectionChange(true);
+                if (didMove) {
+                    this.commitCoordinateSelectionChange(true);
+                }
             } else if (this.isCompoundSelection()) {
                 for (const idx of this.selectedStrokes) {
                     const stroke = this.drawingEngine.strokes[idx];
@@ -2221,8 +2241,14 @@ class SelectionManager {
         
         const pos = this.getClientPos(e);
         const { scaleX, scaleY } = this.getCanvasScales();
-        const deltaX = (pos.x - this.resizeStartPos.x) / scaleX;
-        const deltaY = (pos.y - this.resizeStartPos.y) / scaleY;
+        let deltaX = (pos.x - this.resizeStartPos.x) / scaleX;
+        let deltaY = (pos.y - this.resizeStartPos.y) / scaleY;
+        const rotation = this.getActiveSelectionRotation();
+        if (rotation) {
+            const localDelta = this.rotateDelta(deltaX, deltaY, -rotation);
+            deltaX = localDelta.x;
+            deltaY = localDelta.y;
+        }
         
         const startBounds = this.resizeStartBounds;
         let newBounds = { ...startBounds };
@@ -2450,6 +2476,12 @@ class SelectionManager {
             }
             this.rotateStartRotation = stroke.rotation || 0;
             stroke.originalBounds = this.getStrokeSelectionBounds(stroke);
+            if (stroke.originalBounds) {
+                stroke.rotationCenter = {
+                    x: stroke.originalBounds.x + stroke.originalBounds.width / 2,
+                    y: stroke.originalBounds.y + stroke.originalBounds.height / 2
+                };
+            }
             for (let point of stroke.points) {
                 point.originalX = point.x;
                 point.originalY = point.y;
@@ -2478,6 +2510,12 @@ class SelectionManager {
         } else if (this.isCompoundSelection()) {
             this.rotateStartRotation = this.multiRotation;
             this.multiBounds = this.getMultiSelectionBounds();
+            this.multiRotationCenter = this.multiBounds
+                ? {
+                    x: this.multiBounds.x + this.multiBounds.width / 2,
+                    y: this.multiBounds.y + this.multiBounds.height / 2
+                }
+                : null;
             this.multiStrokeRotateStart = [];
             for (const idx of this.selectedStrokes) {
                 const stroke = this.drawingEngine.strokes[idx];
@@ -3018,6 +3056,8 @@ class SelectionManager {
         const total = newStrokeIndices.length + newImageIndices.length + newTextIndices.length;
         if (total === 0) return false;
 
+        window.drawingBoard?.setTool?.('select', false);
+
         // Update clipboard positions so continuous Ctrl+V cascades
         if (this.clipboard.strokes) {
             this.clipboard.strokes = this.clipboard.strokes.map(s => ({
@@ -3438,6 +3478,7 @@ class SelectionManager {
     
     flipHorizontal() {
         if (!this.hasSelection()) return;
+        if (this.selectionType === 'text') return;
         
         if (this.selectionType === 'stroke') {
             const stroke = this.drawingEngine.strokes[this.selectedIndex];
@@ -3605,6 +3646,7 @@ class SelectionManager {
         this.selectedIndex = null;
         this.selectedGroupId = null;
         this.hasUnsavedChanges = false;
+        this.hasDragMoved = false;
         this.hideLayerMenu();
         this.drawingEngine.deselectStroke();
         this.drawingEngine.deselectImage();
@@ -3620,6 +3662,7 @@ class SelectionManager {
         this.selectedCoordinateGroupId = null;
         this.coordinateDragStartPositions = [];
         this.multiRotation = 0;
+        this.multiRotationCenter = null;
         this.multiBounds = null;
         this.multiStrokeRotateStart = [];
         this.multiImageRotateStart = [];
@@ -3943,6 +3986,35 @@ class SelectionManager {
         };
     }
 
+    rotateDelta(deltaX, deltaY, angleDeg) {
+        const angleRad = angleDeg * Math.PI / 180;
+        const cos = Math.cos(angleRad);
+        const sin = Math.sin(angleRad);
+        return {
+            x: deltaX * cos - deltaY * sin,
+            y: deltaX * sin + deltaY * cos
+        };
+    }
+
+    getActiveSelectionRotation() {
+        if (this.selectionType === 'stroke' && this.selectedIndex !== null) {
+            return this.drawingEngine.strokes[this.selectedIndex]?.rotation || 0;
+        }
+        if (this.selectionType === 'text' && this.selectedIndex !== null && this.textManager) {
+            return this.textManager.textObjects[this.selectedIndex]?.rotation || 0;
+        }
+        if (this.selectionType === 'image' && this.selectedIndex !== null) {
+            return this.drawingEngine.stampedImages[this.selectedIndex]?.rotation || 0;
+        }
+        if (this.selectionType === 'background') {
+            return this.backgroundManager?.getBackgroundImageTransform?.()?.rotation || 0;
+        }
+        if (this.isCompoundSelection()) {
+            return this.multiRotation || 0;
+        }
+        return 0;
+    }
+
     /**
      * Build a CSS font string for text measurements.
      * @param {Object} textObj - Text object containing font settings.
@@ -3976,12 +4048,24 @@ class SelectionManager {
         if (!bounds) return null;
         const rotation = stroke.rotation || 0;
         if (!rotation) return bounds;
-        const centerX = bounds.x + bounds.width / 2;
-        const centerY = bounds.y + bounds.height / 2;
+        const centerX = Number.isFinite(stroke.rotationCenter?.x)
+            ? stroke.rotationCenter.x
+            : bounds.x + bounds.width / 2;
+        const centerY = Number.isFinite(stroke.rotationCenter?.y)
+            ? stroke.rotationCenter.y
+            : bounds.y + bounds.height / 2;
         const unrotatedPoints = stroke.points.map(point =>
             this.rotatePoint(point.x, point.y, centerX, centerY, -rotation)
         );
-        return this.getBoundsFromPoints(unrotatedPoints);
+        const unrotatedBounds = this.getBoundsFromPoints(unrotatedPoints);
+        if (!unrotatedBounds) return null;
+        const padding = Number.isFinite(stroke.size) ? stroke.size * 2 : 0;
+        return {
+            x: unrotatedBounds.x - padding,
+            y: unrotatedBounds.y - padding,
+            width: unrotatedBounds.width + padding * 2,
+            height: unrotatedBounds.height + padding * 2
+        };
     }
 
     getImageCornerPoints(img) {
@@ -4039,8 +4123,12 @@ class SelectionManager {
         if (!axisBounds) return null;
         const rotation = this.multiRotation || 0;
         if (!rotation) return axisBounds;
-        const centerX = axisBounds.x + axisBounds.width / 2;
-        const centerY = axisBounds.y + axisBounds.height / 2;
+        const centerX = Number.isFinite(this.multiRotationCenter?.x)
+            ? this.multiRotationCenter.x
+            : axisBounds.x + axisBounds.width / 2;
+        const centerY = Number.isFinite(this.multiRotationCenter?.y)
+            ? this.multiRotationCenter.y
+            : axisBounds.y + axisBounds.height / 2;
         const unrotatedPoints = points.map(point =>
             this.rotatePoint(point.x, point.y, centerX, centerY, -rotation)
         );

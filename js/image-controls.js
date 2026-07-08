@@ -698,8 +698,17 @@ class ImageControls {
         const scaleY = rect.height / logicalHeight;
 
         const pos = this.getClientPos(e);
-        const deltaX = (pos.x - this.resizeStartPos.x) / scaleX;
-        const deltaY = (pos.y - this.resizeStartPos.y) / scaleY;
+        let deltaX = (pos.x - this.resizeStartPos.x) / scaleX;
+        let deltaY = (pos.y - this.resizeStartPos.y) / scaleY;
+        if (this.imageRotation) {
+            const angleRad = -this.imageRotation * Math.PI / 180;
+            const cos = Math.cos(angleRad);
+            const sin = Math.sin(angleRad);
+            const localDeltaX = deltaX * cos - deltaY * sin;
+            const localDeltaY = deltaX * sin + deltaY * cos;
+            deltaX = localDeltaX;
+            deltaY = localDeltaY;
+        }
         
         const aspectRatio = this.resizeStartSize.width / this.resizeStartSize.height;
         

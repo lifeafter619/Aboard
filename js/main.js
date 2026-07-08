@@ -349,6 +349,7 @@ class DrawingBoard {
                 } else {
                     this.clearPageSceneRuntimeState?.();
                 }
+                this.selectionManager?.redrawCanvas?.();
             }
         });
         

@@ -2,6 +2,7 @@
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
 const SESSION_PERSISTENCE_PLANNED_UPDATE_RELOAD_KEY = 'aboardPlannedUpdateReload';
+const SYNC_SNAPSHOT_INLINE_DATA_URL_LIMIT = 256 * 1024;
 
 function safeSessionPersistenceStorageGetItem(key) {
         try {
@@ -32,6 +33,36 @@ function safeSessionPersistenceStorageRemoveItem(key) {
         }
 }
 
+function isOversizeInlineDataUrl(value) {
+        return typeof value === 'string'
+            && value.startsWith('data:')
+            && value.length > SYNC_SNAPSHOT_INLINE_DATA_URL_LIMIT;
+}
+
+function cloneForSyncSnapshot(value, key = '') {
+        if (isOversizeInlineDataUrl(value)) {
+            return null;
+        }
+        if (Array.isArray(value)) {
+            return value.map((item) => cloneForSyncSnapshot(item));
+        }
+        if (value && typeof value === 'object') {
+            const cloned = {};
+            Object.entries(value).forEach(([entryKey, entryValue]) => {
+                if (entryKey === 'imageElement') {
+                    return;
+                }
+                if (entryKey === 'imageSrc' && typeof entryValue === 'string' && entryValue.startsWith('data:')) {
+                    cloned[entryKey] = null;
+                    return;
+                }
+                cloned[entryKey] = cloneForSyncSnapshot(entryValue, entryKey);
+            });
+            return cloned;
+        }
+        return value;
+}
+
 function buildSyncSnapshot() {
         try {
             if (this.currentPage > 0 && this.currentPage <= this.pages.length) {
@@ -39,14 +70,15 @@ function buildSyncSnapshot() {
             }
             this.savePageBackground(this.currentPage);
             this.saveCurrentPageScene?.(this.currentPage);
+            const currentPageScene = this.getPageScene?.(this.currentPage, { serializable: true }) || null;
+            const backgroundImageData = this.backgroundManager.backgroundImageData;
 
             return {
                 timestamp: Date.now(),
                 currentPage: this.currentPage,
                 canvasWidth: this.canvas.width,
                 canvasHeight: this.canvas.height,
-                pageDataUrl: this.canvas.toDataURL('image/png'),
-                currentPageScene: this.getPageScene?.(this.currentPage, { serializable: true }) || null,
+                currentPageScene: cloneForSyncSnapshot(currentPageScene),
                 settings: {
                     currentTool: this.drawingEngine.currentTool,
                     penSize: this.drawingEngine.penSize,
@@ -66,9 +98,8 @@ function buildSyncSnapshot() {
                     coordinateOriginY: this.backgroundManager.coordinateOriginY,
                     coordinateOverlayState: this.backgroundManager.getCoordinateOverlayState(),
                     imageSize: this.backgroundManager.imageSize,
-                    backgroundImageData: this.backgroundManager.backgroundImageData,
-                    backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder,
-                    uploadedImages: this.uploadedImages
+                    backgroundImageData: isOversizeInlineDataUrl(backgroundImageData) ? null : backgroundImageData,
+                    backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder
                 }
             };
         } catch (e) {

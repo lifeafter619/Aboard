@@ -1,6 +1,7 @@
 // Timeout for resolving manual update checks (milliseconds).
 const UPDATE_CHECK_TIMEOUT = 1200;
 const UPDATE_APPLY_TIMEOUT = 5000;
+const UPDATE_IMMEDIATE_APPLY_TIMEOUT = 90000;
 const UPDATE_IDLE_APPLY_DELAY = 15000;
 // Cap the idle-update polling loop so a stuck recovery prompt or
 // repeatedly-failing session persistence cannot keep a 1 Hz setInterval
@@ -260,6 +261,7 @@ class PWAManager {
                 'checking': '正在检查更新...',
                 'latest': '已是最新版本',
                 'manualReloadHint': '自动刷新已暂停以避免循环重载，请手动刷新页面完成更新',
+                'updateStillDownloading': '更新仍在后台下载，完成后会在白板空闲时自动应用。',
                 'versionUpdateFound': '检测到新版本：{latest}（当前：{current}）'
             },
             'zh-TW': {
@@ -279,6 +281,7 @@ class PWAManager {
                 'checking': '正在檢查更新...',
                 'latest': '已是最新版本',
                 'manualReloadHint': '自動重新整理已暫停以避免循環重載，請手動重新整理頁面完成更新',
+                'updateStillDownloading': '更新仍在背景下載，完成後會在白板閒置時自動套用。',
                 'versionUpdateFound': '檢測到新版本：{latest}（當前：{current}）'
             },
             'en-US': {
@@ -298,6 +301,7 @@ class PWAManager {
                 'checking': 'Checking for updates...',
                 'latest': 'You are on the latest version',
                 'manualReloadHint': 'Automatic refresh paused to avoid a reload loop. Please refresh the page manually to finish updating.',
+                'updateStillDownloading': 'Update is still downloading in the background. It will apply automatically when the whiteboard is idle.',
                 'versionUpdateFound': 'New version detected: {latest} (current: {current}).'
             },
             'ja-JP': {
@@ -317,6 +321,7 @@ class PWAManager {
                 'checking': 'アップデートを確認中...',
                 'latest': '最新バージョンです',
                 'manualReloadHint': 'リロードループを防ぐため自動再読み込みを一時停止しました。手動でページを再読み込みして更新を完了してください。',
+                'updateStillDownloading': '更新はバックグラウンドでまだダウンロード中です。完了後、ホワイトボードがアイドル状態のときに自動で適用されます。',
                 'versionUpdateFound': '新しいバージョンがあります：{latest}（現在：{current}）'
             },
             'ko-KR': {
@@ -336,6 +341,7 @@ class PWAManager {
                 'checking': '업데이트 확인 중...',
                 'latest': '최신 버전입니다',
                 'manualReloadHint': '새로고침 루프를 방지하기 위해 자동 새로고침을 일시 중지했습니다. 페이지를 수동으로 새로고침하여 업데이트를 완료해 주세요.',
+                'updateStillDownloading': '업데이트가 아직 백그라운드에서 다운로드 중입니다. 완료되면 화이트보드가 한가할 때 자동으로 적용됩니다.',
                 'versionUpdateFound': '새 버전 감지: {latest} (현재: {current})'
             },
             'fr-FR': {
@@ -355,6 +361,7 @@ class PWAManager {
                 'checking': 'Vérification des mises à jour...',
                 'latest': 'Vous utilisez la dernière version',
                 'manualReloadHint': 'Actualisation automatique suspendue pour éviter une boucle de rechargement. Veuillez actualiser la page manuellement pour terminer la mise à jour.',
+                'updateStillDownloading': 'La mise à jour se télécharge encore en arrière-plan. Elle sera appliquée automatiquement lorsque le tableau sera inactif.',
                 'versionUpdateFound': 'Nouvelle version détectée : {latest} (actuelle : {current}).'
             },
             'de-DE': {
@@ -374,6 +381,7 @@ class PWAManager {
                 'checking': 'Suche nach Updates...',
                 'latest': 'Sie haben die neueste Version',
                 'manualReloadHint': 'Automatisches Neuladen pausiert, um eine Neuladeschleife zu vermeiden. Bitte laden Sie die Seite manuell neu, um das Update abzuschließen.',
+                'updateStillDownloading': 'Das Update wird noch im Hintergrund heruntergeladen. Es wird automatisch angewendet, wenn das Whiteboard im Leerlauf ist.',
                 'versionUpdateFound': 'Neue Version erkannt: {latest} (aktuell: {current}).'
             },
             'es-ES': {
@@ -393,6 +401,7 @@ class PWAManager {
                 'checking': 'Buscando actualizaciones...',
                 'latest': 'Tienes la última versión',
                 'manualReloadHint': 'Recarga automática pausada para evitar un bucle de recargas. Recarga la página manualmente para completar la actualización.',
+                'updateStillDownloading': 'La actualización sigue descargándose en segundo plano. Se aplicará automáticamente cuando la pizarra esté inactiva.',
                 'versionUpdateFound': 'Nueva versión detectada: {latest} (actual: {current}).'
             }
         };
@@ -678,17 +687,26 @@ class PWAManager {
         }
     }
 
-    async applyPreparedUpdateNow(intent, { timeoutMs = UPDATE_APPLY_TIMEOUT } = {}) {
+    async applyPreparedUpdateNow(intent, { timeoutMs = null } = {}) {
         const board = this.getDrawingBoard();
         board?.setSuppressBeforeUnloadPrompt?.(true);
+        const applyTimeoutMs = Number.isFinite(timeoutMs)
+            ? timeoutMs
+            : intent?.mode === PLANNED_UPDATE_MODES.IMMEDIATE
+                ? UPDATE_IMMEDIATE_APPLY_TIMEOUT
+                : UPDATE_APPLY_TIMEOUT;
 
         const activated = await this.applyUpdateNow({
-            timeoutMs,
+            timeoutMs: applyTimeoutMs,
             reason: intent?.requestedBy || 'update'
         });
         if (!activated) {
+            this.resetAutoActivateUpdates();
             board?.setSuppressBeforeUnloadPrompt?.(false);
             this.clearPlannedUpdateIntent();
+            if (intent?.mode === PLANNED_UPDATE_MODES.IMMEDIATE) {
+                this.notifyUpdateStillDownloading();
+            }
         }
 
         return activated;
@@ -804,6 +822,14 @@ class PWAManager {
         }, timeoutMs);
     }
 
+    resetAutoActivateUpdates() {
+        this.autoActivateUpdates = false;
+        if (this.autoActivateResetTimer) {
+            window.clearTimeout(this.autoActivateResetTimer);
+            this.autoActivateResetTimer = null;
+        }
+    }
+
     async getServiceWorkerRegistration() {
         const serviceWorkerApi = getServiceWorkerApi();
         if (!serviceWorkerApi) {
@@ -905,8 +931,8 @@ class PWAManager {
         });
     }
 
-    async waitForWaitingWorker(timeoutMs = UPDATE_APPLY_TIMEOUT) {
-        const registration = await this.getServiceWorkerRegistration();
+    async waitForWaitingWorker(timeoutMs = UPDATE_APPLY_TIMEOUT, currentRegistration = null) {
+        const registration = currentRegistration || await this.getServiceWorkerRegistration();
         if (!registration) {
             return null;
         }
@@ -924,6 +950,8 @@ class PWAManager {
             let settled = false;
             let pollTimer = null;
             let timeoutTimer = null;
+            let registrationUpdateFoundListener = null;
+            const installingWorkerListeners = [];
 
             const cleanup = () => {
                 settled = true;
@@ -933,6 +961,14 @@ class PWAManager {
                 if (timeoutTimer) {
                     window.clearTimeout(timeoutTimer);
                 }
+                if (registrationUpdateFoundListener && typeof registration.removeEventListener === 'function') {
+                    registration.removeEventListener('updatefound', registrationUpdateFoundListener);
+                }
+                installingWorkerListeners.forEach(({ worker, listener }) => {
+                    if (typeof worker.removeEventListener === 'function') {
+                        worker.removeEventListener('statechange', listener);
+                    }
+                });
             };
 
             const finish = (worker) => {
@@ -941,6 +977,46 @@ class PWAManager {
                 }
                 cleanup();
                 resolve(worker || null);
+            };
+
+            const finishWithInstalledWorker = (worker) => {
+                if (!worker || worker.state !== 'installed') {
+                    return false;
+                }
+
+                const waitingWorker = registration.waiting || worker;
+                this.pendingUpdateWorker = waitingWorker;
+                finish(waitingWorker);
+                return true;
+            };
+
+            const observeInstallingWorkerForWait = (worker) => {
+                if (!worker) {
+                    return false;
+                }
+
+                this.observeInstallingWorker(worker);
+                if (finishWithInstalledWorker(worker)) {
+                    return true;
+                }
+
+                if (typeof worker.addEventListener !== 'function'
+                    || installingWorkerListeners.some((entry) => entry.worker === worker)) {
+                    return false;
+                }
+
+                const listener = () => {
+                    if (finishWithInstalledWorker(worker)) {
+                        return;
+                    }
+
+                    if (worker.state === 'redundant' && this.pendingUpdateWorker === worker) {
+                        this.pendingUpdateWorker = null;
+                    }
+                };
+                installingWorkerListeners.push({ worker, listener });
+                worker.addEventListener('statechange', listener);
+                return false;
             };
 
             const checkForWaitingWorker = () => {
@@ -955,10 +1031,23 @@ class PWAManager {
                     return true;
                 }
 
-                return false;
+                return observeInstallingWorkerForWait(registration.installing);
             };
 
             if (checkForWaitingWorker()) {
+                return;
+            }
+
+            if (typeof registration.addEventListener === 'function') {
+                registrationUpdateFoundListener = () => {
+                    if (!observeInstallingWorkerForWait(registration.installing)) {
+                        checkForWaitingWorker();
+                    }
+                };
+                registration.addEventListener('updatefound', registrationUpdateFoundListener);
+            }
+
+            if (settled) {
                 return;
             }
 
@@ -1081,6 +1170,16 @@ class PWAManager {
         }
     }
 
+    notifyUpdateStillDownloading() {
+        const message = this.getTranslation('updateStillDownloading');
+        const toastManager = window.drawingBoard?.settingsManager?.toastManager || window.toastManager || null;
+        if (toastManager) {
+            toastManager.show(message, 'warning');
+        } else {
+            console.warn(message);
+        }
+    }
+
     // Reload the page for an update, refusing repeated automatic reloads for
     // the same target version. Manual user actions are never blocked, but the
     // attempt is still recorded so a follow-up automatic retry cannot loop.
@@ -1130,7 +1229,7 @@ class PWAManager {
             return this.activateWaitingWorker(existingWaitingWorker, reason);
         }
 
-        const waitingWorkerPromise = this.waitForWaitingWorker(timeoutMs);
+        const waitingWorkerPromise = this.waitForWaitingWorker(timeoutMs, registration);
         try {
             await registration.update();
         } catch (error) {
@@ -1699,7 +1798,7 @@ class PWAManager {
             }
 
             if (!waitingWorker && registration && navigator.onLine) {
-                const waitingWorkerPromise = this.waitForWaitingWorker(UPDATE_CHECK_TIMEOUT);
+                const waitingWorkerPromise = this.waitForWaitingWorker(UPDATE_CHECK_TIMEOUT, registration);
                 try {
                     await registration.update();
                 } catch (error) {
