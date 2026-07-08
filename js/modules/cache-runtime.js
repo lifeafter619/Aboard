@@ -47,6 +47,10 @@ function getStorageKeysSafely(storage, storageLabel = 'storage') {
         }
 }
 
+function getIndexedDbApi() {
+        return window.indexedDB || (typeof indexedDB !== 'undefined' ? indexedDB : null);
+}
+
 function getCacheKeyGroups() {
         const settingsKeys = new Set([
             'toolbarSize', 'configScale', 'controlPosition', 'edgeSnapEnabled', 'touchZoomEnabled',
@@ -416,29 +420,114 @@ async function clearSelectedCache(options) {
     
 }
 
+async function waitForStorageManagerReady(storageManager) {
+        const initPromise = storageManager?.initPromise;
+        if (!initPromise || typeof initPromise.then !== 'function') {
+            return;
+        }
+
+        try {
+            await initPromise;
+        } catch (error) {
+            console.warn('StorageManager initialization failed before local data cleanup:', error);
+        }
+}
+
+function deleteIndexedDatabaseSafely(dbName, timeoutMs = 1500) {
+        const indexedDbApi = getIndexedDbApi();
+        if (!dbName || typeof indexedDbApi?.deleteDatabase !== 'function') {
+            return Promise.resolve({ ok: true, reason: 'unavailable' });
+        }
+
+        return new Promise((resolve) => {
+            let request;
+            let timeoutId = null;
+            let settled = false;
+
+            const settle = (result) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                if (timeoutId !== null && typeof window.clearTimeout === 'function') {
+                    window.clearTimeout(timeoutId);
+                }
+                resolve(result);
+            };
+
+            try {
+                request = indexedDbApi.deleteDatabase(dbName);
+            } catch (error) {
+                console.warn('Failed to start IndexedDB deletion:', error);
+                settle({ ok: false, reason: 'error', error });
+                return;
+            }
+
+            request.onsuccess = () => {
+                settle({ ok: true, reason: 'deleted' });
+            };
+
+            request.onerror = () => {
+                console.warn('Failed to delete IndexedDB:', request.error);
+                settle({ ok: false, reason: 'error', error: request.error });
+            };
+
+            request.onblocked = () => {
+                console.warn('IndexedDB deletion blocked');
+                if (typeof window.setTimeout === 'function' && timeoutMs > 0 && timeoutId === null) {
+                    timeoutId = window.setTimeout(() => {
+                        settle({ ok: false, reason: 'blocked' });
+                    }, timeoutMs);
+                    return;
+                }
+                settle({ ok: false, reason: 'blocked' });
+            };
+        });
+}
+
+function getCacheRuntimeText(key, fallback) {
+        const translated = window.i18n?.t?.(key);
+        return translated && translated !== key ? translated : fallback;
+}
+
+function showClearAllLocalDataFailure(board, deleteResult) {
+        const isBlocked = deleteResult?.reason === 'blocked';
+        const message = isBlocked
+            ? getCacheRuntimeText(
+                'errors.clearLocalDataBlocked',
+                'Local data cleanup is blocked by another open Aboard window. Close other Aboard tabs and try again.'
+            )
+            : getCacheRuntimeText(
+                'errors.clearLocalDataFailed',
+                'Local data cleanup could not finish. Please try again.'
+            );
+
+        if (board.settingsManager?.toastManager?.show) {
+            board.settingsManager.toastManager.show(message, isBlocked ? 'warning' : 'error');
+            return;
+        }
+
+        window.appDialog?.showAlert?.(message, isBlocked ? 'warning' : 'error');
+}
+
 async function clearAllLocalData() {
         this.isClearingLocalData = true;
         try {
             if (this.saveTimeout) clearTimeout(this.saveTimeout);
-            await this.clearSessionData();
-            this.storageManager?.closeDB();
-
             const dbName = this.storageManager?.dbName;
-            if ('indexedDB' in window && dbName) {
-                await new Promise((resolve) => {
-                    const request = indexedDB.deleteDatabase(dbName);
-                    request.onsuccess = () => resolve();
-                    request.onerror = () => {
-                        console.warn('Failed to delete IndexedDB:', request.error);
-                        resolve();
-                    };
-                    request.onblocked = () => {
-                        console.warn('IndexedDB deletion blocked');
-                        resolve();
-                    };
-                });
+            if (dbName && getIndexedDbApi()) {
+                await waitForStorageManagerReady(this.storageManager);
+                this.storageManager?.closeDB();
+                const deleteResult = await deleteIndexedDatabaseSafely(dbName);
+                if (!deleteResult.ok) {
+                    showClearAllLocalDataFailure(this, deleteResult);
+                    return false;
+                }
+            } else {
+                this.storageManager?.closeDB();
             }
 
+            await this.clearSessionData();
             safeCacheStorageClear(localStorage, 'localStorage');
             safeCacheStorageClear(sessionStorage, 'sessionStorage');
 
@@ -447,6 +536,7 @@ async function clearAllLocalData() {
                 await Promise.all(cacheKeys.map(key => caches.delete(key)));
             }
             this.setCacheStorageSizeSnapshot('empty', 0);
+            return true;
         } finally {
             this.isClearingLocalData = false;
         }

@@ -40,7 +40,9 @@ window.translations = {
         lazyLoadFailed: '加载{feature}失败，请刷新页面后重试。',
         fileReadFailed: '无法读取所选文件，请检查文件是否损坏后重试。',
         storageWriteFailed: '保存失败，请检查浏览器存储权限后重试。',
-        sessionSaveFailed: '板书自动保存失败，当前内容可能无法恢复。请尽快导出备份，或在设置中清理存储空间。'
+        sessionSaveFailed: '板书自动保存失败，当前内容可能无法恢复。请尽快导出备份，或在设置中清理存储空间。',
+        clearLocalDataBlocked: '本地缓存清理被另一个已打开的 Aboard 窗口阻止。请关闭其它 Aboard 标签页后重试。',
+        clearLocalDataFailed: '本地缓存清理未完成，请稍后重试。'
     },
 
     prompts: {
