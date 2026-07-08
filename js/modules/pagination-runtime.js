@@ -113,6 +113,82 @@ function normalizeBackgroundState(backgroundManager, backgroundState) {
         };
 }
 
+function clearCanvasPixels() {
+        this.ctx.save?.();
+        this.ctx.setTransform?.(1, 0, 0, 1, 0, 0);
+        clearCanvasPixels.call(this);
+        this.ctx.restore?.();
+}
+
+function isPageSnapshotCompatible(imageData) {
+        return Boolean(
+            imageData &&
+            Number.isFinite(imageData.width) &&
+            Number.isFinite(imageData.height) &&
+            imageData.width === this.canvas.width &&
+            imageData.height === this.canvas.height
+        );
+}
+
+function scalePageSnapshotToCanvas(imageData) {
+        if (!imageData || typeof document === 'undefined' || typeof document.createElement !== 'function') {
+            return null;
+        }
+
+        try {
+            const source = document.createElement('canvas');
+            source.width = imageData.width;
+            source.height = imageData.height;
+            const sourceCtx = source.getContext?.('2d');
+            if (!sourceCtx?.putImageData) {
+                return null;
+            }
+            sourceCtx.putImageData(imageData, 0, 0);
+
+            const target = document.createElement('canvas');
+            target.width = this.canvas.width;
+            target.height = this.canvas.height;
+            const targetCtx = target.getContext?.('2d');
+            if (!targetCtx?.drawImage || !targetCtx?.getImageData) {
+                return null;
+            }
+            targetCtx.drawImage(
+                source,
+                0,
+                0,
+                imageData.width,
+                imageData.height,
+                0,
+                0,
+                target.width,
+                target.height
+            );
+            return targetCtx.getImageData(0, 0, target.width, target.height);
+        } catch (error) {
+            console.warn('Failed to scale page snapshot for the current canvas size:', error);
+            return null;
+        }
+}
+
+function restorePageSnapshot(pageIndex) {
+        const imageData = this.pages[pageIndex];
+        if (!imageData) {
+            return false;
+        }
+
+        const snapshot = isPageSnapshotCompatible.call(this, imageData)
+            ? imageData
+            : scalePageSnapshotToCanvas.call(this, imageData);
+        if (!snapshot) {
+            return false;
+        }
+
+        this.pages[pageIndex] = snapshot;
+        clearCanvasPixels.call(this);
+        this.ctx.putImageData(snapshot, 0, 0);
+        return true;
+}
+
 function saveCurrentPageSnapshot() {
         // Finalize any in-progress stroke first — a second finger can tap the
         // page-switch buttons mid-stroke, and the half stroke must neither be
@@ -197,7 +273,7 @@ function nextPage() {
                 this.updatePaginationUI();
                 return;
             }
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            clearCanvasPixels.call(this);
             this.pages.push(this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height));
             snapshotInheritedBackgroundForNewPage.call(this, this.currentPage);
             this.restorePageScene?.(this.currentPage);
@@ -224,7 +300,7 @@ function nextOrAddPage() {
             // Add new page
             this.pages.push(null);
             this.currentPage = this.pages.length;
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            clearCanvasPixels.call(this);
             this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
             snapshotInheritedBackgroundForNewPage.call(this, this.currentPage);
             this.restorePageScene?.(this.currentPage);
@@ -267,13 +343,16 @@ function goToPage(pageNumber) {
 }
 
 function loadPage(pageNumber) {
-        if (pageNumber > 0 && pageNumber <= this.pages.length && this.pages[pageNumber - 1]) {
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            this.ctx.putImageData(this.pages[pageNumber - 1], 0, 0);
+        const pageIndex = pageNumber - 1;
+        if (pageNumber > 0 && pageNumber <= this.pages.length && this.pages[pageIndex]) {
+            if (!restorePageSnapshot.call(this, pageIndex)) {
+                clearCanvasPixels.call(this);
+                this.pages[pageIndex] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+            }
         } else {
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            if (!this.pages[pageNumber - 1]) {
-                this.pages[pageNumber - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+            clearCanvasPixels.call(this);
+            if (!this.pages[pageIndex]) {
+                this.pages[pageIndex] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
             }
         }
         this.restorePageScene?.(pageNumber);

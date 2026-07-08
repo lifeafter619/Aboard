@@ -130,6 +130,145 @@ function applyRenderQualityScale(scale) {
     this.drawingEngine.renderScene(this.insertTextManager || null);
 }
 
+function isFiniteNumber(value) {
+    return Number.isFinite(Number(value));
+}
+
+function scaleNumericProperty(target, property, factor) {
+    if (target && isFiniteNumber(target[property])) {
+        target[property] = Number(target[property]) * factor;
+    }
+}
+
+function scalePoint(point, scaleX, scaleY) {
+    if (!point || typeof point !== 'object') {
+        return;
+    }
+    scaleNumericProperty(point, 'x', scaleX);
+    scaleNumericProperty(point, 'y', scaleY);
+}
+
+function scaleStrokeGeometry(stroke, scaleX, scaleY, scaleSize) {
+    if (!stroke || typeof stroke !== 'object') {
+        return;
+    }
+
+    if (Array.isArray(stroke.points)) {
+        stroke.points.forEach((point) => scalePoint(point, scaleX, scaleY));
+    }
+    scalePoint(stroke.shapeStart, scaleX, scaleY);
+    scalePoint(stroke.shapeEnd, scaleX, scaleY);
+    scalePoint(stroke.rotationCenter, scaleX, scaleY);
+    scaleNumericProperty(stroke, 'size', scaleSize);
+    scaleNumericProperty(stroke, 'arrowSize', scaleSize);
+    scaleNumericProperty(stroke, 'shapeMultiLineSpacing', scaleSize);
+}
+
+function scaleTextGeometry(textObj, scaleX, scaleY, scaleSize) {
+    if (!textObj || typeof textObj !== 'object') {
+        return;
+    }
+
+    scaleNumericProperty(textObj, 'x', scaleX);
+    scaleNumericProperty(textObj, 'y', scaleY);
+    scaleNumericProperty(textObj, 'width', scaleX);
+    scaleNumericProperty(textObj, 'height', scaleY);
+    scaleNumericProperty(textObj, 'fontSize', scaleSize);
+    scaleNumericProperty(textObj, 'decorationWidth', scaleSize);
+}
+
+function scaleImageGeometry(image, scaleX, scaleY) {
+    if (!image || typeof image !== 'object') {
+        return;
+    }
+
+    scaleNumericProperty(image, 'x', scaleX);
+    scaleNumericProperty(image, 'y', scaleY);
+    scaleNumericProperty(image, 'width', scaleX);
+    scaleNumericProperty(image, 'height', scaleY);
+}
+
+function scaleSceneGeometry(scene, scaleX, scaleY, scaleSize) {
+    if (!scene || typeof scene !== 'object') {
+        return;
+    }
+
+    if (Array.isArray(scene.strokes)) {
+        scene.strokes.forEach((stroke) => scaleStrokeGeometry(stroke, scaleX, scaleY, scaleSize));
+    }
+    if (Array.isArray(scene.stampedImages)) {
+        scene.stampedImages.forEach((image) => scaleImageGeometry(image, scaleX, scaleY));
+    }
+    if (Array.isArray(scene.textObjects)) {
+        scene.textObjects.forEach((textObj) => scaleTextGeometry(textObj, scaleX, scaleY, scaleSize));
+    }
+}
+
+function scaleRuntimeScene(scaleX, scaleY, scaleSize) {
+    const drawingEngine = this.drawingEngine;
+    if (Array.isArray(drawingEngine?.strokes)) {
+        drawingEngine.strokes.forEach((stroke) => scaleStrokeGeometry(stroke, scaleX, scaleY, scaleSize));
+    }
+    if (Array.isArray(drawingEngine?.stampedImages)) {
+        drawingEngine.stampedImages.forEach((image) => scaleImageGeometry(image, scaleX, scaleY));
+    }
+    const textObjects = this.insertTextManager?.textObjects;
+    if (Array.isArray(textObjects)) {
+        textObjects.forEach((textObj) => scaleTextGeometry(textObj, scaleX, scaleY, scaleSize));
+    }
+}
+
+function scaleStoredPageScenes(scaleX, scaleY, scaleSize) {
+    if (!this.pageScenes || typeof this.pageScenes !== 'object') {
+        return;
+    }
+
+    Object.values(this.pageScenes).forEach((scene) => {
+        scaleSceneGeometry(scene, scaleX, scaleY, scaleSize);
+    });
+}
+
+function scaleBackgroundStateGeometry(backgroundState, scaleX, scaleY) {
+    if (!backgroundState || typeof backgroundState !== 'object') {
+        return;
+    }
+
+    scaleNumericProperty(backgroundState, 'coordinateOriginX', scaleX);
+    scaleNumericProperty(backgroundState, 'coordinateOriginY', scaleY);
+    scaleImageGeometry(backgroundState.imageTransform, scaleX, scaleY);
+}
+
+function scaleStoredPageBackgrounds(scaleX, scaleY) {
+    if (!this.pageBackgrounds || typeof this.pageBackgrounds !== 'object') {
+        return;
+    }
+
+    Object.values(this.pageBackgrounds).forEach((backgroundState) => {
+        scaleBackgroundStateGeometry(backgroundState, scaleX, scaleY);
+    });
+}
+
+function scaleCurrentBackground(scaleX, scaleY) {
+    const backgroundManager = this.backgroundManager;
+    if (!backgroundManager || typeof backgroundManager !== 'object') {
+        return;
+    }
+
+    scaleNumericProperty(backgroundManager, 'coordinateOriginX', scaleX);
+    scaleNumericProperty(backgroundManager, 'coordinateOriginY', scaleY);
+    if (typeof backgroundManager.queueBackgroundStorageWrite === 'function') {
+        backgroundManager.queueBackgroundStorageWrite('coordinateOriginX', backgroundManager.coordinateOriginX);
+        backgroundManager.queueBackgroundStorageWrite('coordinateOriginY', backgroundManager.coordinateOriginY);
+    }
+
+    if (backgroundManager.imageTransform && typeof backgroundManager.imageTransform === 'object') {
+        scaleImageGeometry(backgroundManager.imageTransform, scaleX, scaleY);
+        if (typeof backgroundManager.queueBackgroundStorageWrite === 'function') {
+            backgroundManager.queueBackgroundStorageWrite('imageTransform', JSON.stringify(backgroundManager.imageTransform));
+        }
+    }
+}
+
 function applyCanvasSize() {
     const width = this.settingsManager.canvasWidth;
     const height = this.settingsManager.canvasHeight;
@@ -137,9 +276,25 @@ function applyCanvasSize() {
 
     const oldWidth = this.canvas.width;
     const oldHeight = this.canvas.height;
+    const oldLogicalWidth = parseFloat(this.canvas.style.width) || (oldWidth / dpr);
+    const oldLogicalHeight = parseFloat(this.canvas.style.height) || (oldHeight / dpr);
+    const scaleX = oldLogicalWidth > 0 ? width / oldLogicalWidth : 1;
+    const scaleY = oldLogicalHeight > 0 ? height / oldLogicalHeight : 1;
+    const scaleSize = Math.sqrt(Math.max(scaleX, 0) * Math.max(scaleY, 0)) || 1;
+    const shouldScaleScene = Math.abs(scaleX - 1) > 0.0001 || Math.abs(scaleY - 1) > 0.0001;
     const imageData = this.historyManager.historyStep >= 0
         ? this.ctx.getImageData(0, 0, oldWidth, oldHeight)
         : null;
+
+    if (shouldScaleScene) {
+        this.saveCurrentPageScene?.(this.currentPage);
+        this.savePageBackground?.(this.currentPage);
+        scaleStoredPageScenes.call(this, scaleX, scaleY, scaleSize);
+        scaleRuntimeScene.call(this, scaleX, scaleY, scaleSize);
+        scaleStoredPageBackgrounds.call(this, scaleX, scaleY);
+        scaleCurrentBackground.call(this, scaleX, scaleY);
+        this.selectionManager?.clearSelection?.({ skipRedraw: true });
+    }
 
     this.canvas.width = width * dpr;
     this.canvas.height = height * dpr;
@@ -185,6 +340,17 @@ function applyCanvasSize() {
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.drawImage(tmp, 0, 0, oldWidth, oldHeight, 0, 0, this.canvas.width, this.canvas.height);
         this.ctx.restore();
+    }
+
+    if (this.currentPage > 0 && this.currentPage <= this.pages.length) {
+        this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    }
+    if (shouldScaleScene) {
+        this.saveCurrentPageScene?.(this.currentPage);
+        this.savePageBackground?.(this.currentPage);
+        this.historyManager?.reset?.();
+        this.historyManager?.saveState?.();
+        this.saveSessionDebounced?.();
     }
 
     this.backgroundManager.drawBackground();
