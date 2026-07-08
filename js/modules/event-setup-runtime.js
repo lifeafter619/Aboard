@@ -582,12 +582,14 @@ function setupEventListeners() {
                         if (this.maxTouchesInGesture === 2) {
                             // 2-finger tap: Undo
                             if (this.historyManager.undo()) {
-                                this.drawingEngine.clearStrokes();
-                                this.drawingEngine.stampedImages = [];
-                                this.drawingEngine.objectGroups = [];
-                                this.insertTextManager?.clearTextObjects?.();
-                                this.drawingEngine.clearVectorScene();
-                                this.drawingEngine.setVectorPreviewVisible(false);
+                                if (!this.historyManager.lastRestoreHadSceneState) {
+                                    this.drawingEngine.clearStrokes();
+                                    this.drawingEngine.stampedImages = [];
+                                    this.drawingEngine.objectGroups = [];
+                                    this.insertTextManager?.clearTextObjects?.();
+                                    this.drawingEngine.clearVectorScene();
+                                    this.drawingEngine.setVectorPreviewVisible(false);
+                                }
                                 this.updateUI();
                                 this.saveSessionDebounced();
                             }
@@ -595,12 +597,14 @@ function setupEventListeners() {
                         } else if (this.maxTouchesInGesture === 3) {
                             // 3-finger tap: Redo
                             if (this.historyManager.redo()) {
-                                this.drawingEngine.clearStrokes();
-                                this.drawingEngine.stampedImages = [];
-                                this.drawingEngine.objectGroups = [];
-                                this.insertTextManager?.clearTextObjects?.();
-                                this.drawingEngine.clearVectorScene();
-                                this.drawingEngine.setVectorPreviewVisible(false);
+                                if (!this.historyManager.lastRestoreHadSceneState) {
+                                    this.drawingEngine.clearStrokes();
+                                    this.drawingEngine.stampedImages = [];
+                                    this.drawingEngine.objectGroups = [];
+                                    this.insertTextManager?.clearTextObjects?.();
+                                    this.drawingEngine.clearVectorScene();
+                                    this.drawingEngine.setVectorPreviewVisible(false);
+                                }
                                 this.updateUI();
                                 this.saveSessionDebounced();
                             }
@@ -656,13 +660,15 @@ function setupEventListeners() {
         // History buttons
         bindIfPresent(document.getElementById('undo-btn'), 'click', () => {
             if (this.historyManager.undo()) {
-                // Clear stroke selection as strokes are no longer valid
-                this.drawingEngine.clearStrokes();
-                this.drawingEngine.stampedImages = [];
-                this.drawingEngine.objectGroups = [];
-                this.insertTextManager?.clearTextObjects?.();
-                this.drawingEngine.clearVectorScene();
-                this.drawingEngine.setVectorPreviewVisible(false);
+                if (!this.historyManager.lastRestoreHadSceneState) {
+                    // Clear stroke selection as strokes are no longer valid
+                    this.drawingEngine.clearStrokes();
+                    this.drawingEngine.stampedImages = [];
+                    this.drawingEngine.objectGroups = [];
+                    this.insertTextManager?.clearTextObjects?.();
+                    this.drawingEngine.clearVectorScene();
+                    this.drawingEngine.setVectorPreviewVisible(false);
+                }
                 this.updateUI();
                 this.saveSessionDebounced();
             }
@@ -670,13 +676,15 @@ function setupEventListeners() {
         
         bindIfPresent(document.getElementById('redo-btn'), 'click', () => {
             if (this.historyManager.redo()) {
-                // Clear stroke selection as strokes are no longer valid
-                this.drawingEngine.clearStrokes();
-                this.drawingEngine.stampedImages = [];
-                this.drawingEngine.objectGroups = [];
-                this.insertTextManager?.clearTextObjects?.();
-                this.drawingEngine.clearVectorScene();
-                this.drawingEngine.setVectorPreviewVisible(false);
+                if (!this.historyManager.lastRestoreHadSceneState) {
+                    // Clear stroke selection as strokes are no longer valid
+                    this.drawingEngine.clearStrokes();
+                    this.drawingEngine.stampedImages = [];
+                    this.drawingEngine.objectGroups = [];
+                    this.insertTextManager?.clearTextObjects?.();
+                    this.drawingEngine.clearVectorScene();
+                    this.drawingEngine.setVectorPreviewVisible(false);
+                }
                 this.updateUI();
                 this.saveSessionDebounced();
             }

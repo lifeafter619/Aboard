@@ -14,6 +14,17 @@ function showCoordinateToast(i18nKey, fallback, type = 'info') {
     this.settingsManager?.toastManager?.show(getCoordinateText(i18nKey, fallback), type);
 }
 
+// Plot ids can come from imported project files, so they must be escaped
+// before being interpolated into an attribute selector — characters like
+// `"` or `]` would otherwise make querySelector throw.
+function escapeCoordinatePlotIdForSelector(plotId) {
+    const value = String(plotId ?? '');
+    if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+        return CSS.escape(value);
+    }
+    return value.replace(/["\\\]]/g, '\\$&');
+}
+
 function getLogicalCanvasPointFromEvent(e) {
     if (this.drawingEngine?.getPosition) {
         return this.drawingEngine.getPosition(e);
@@ -163,7 +174,7 @@ function handleCoordinatePlotListClick(e) {
 }
 
 function addCoordinatePlotRangeRow(plotId) {
-    const plotItem = document.querySelector(`.coordinate-plot-item[data-plot-id="${plotId}"]`);
+    const plotItem = document.querySelector(`.coordinate-plot-item[data-plot-id="${escapeCoordinatePlotIdForSelector(plotId)}"]`);
     const rangeList = plotItem?.querySelector('.coordinate-plot-range-list');
     if (!rangeList) return;
 
@@ -176,7 +187,7 @@ function addCoordinatePlotRangeRow(plotId) {
 }
 
 function collectCoordinatePlotEditorSegments(plotId) {
-    const plotItem = document.querySelector(`.coordinate-plot-item[data-plot-id="${plotId}"]`);
+    const plotItem = document.querySelector(`.coordinate-plot-item[data-plot-id="${escapeCoordinatePlotIdForSelector(plotId)}"]`);
     if (!plotItem) return [];
 
     return Array.from(plotItem.querySelectorAll('[data-range-row]')).map(row => ({
@@ -188,7 +199,7 @@ function collectCoordinatePlotEditorSegments(plotId) {
 }
 
 function saveCoordinatePlotEditor(plotId) {
-    const plotItem = document.querySelector(`.coordinate-plot-item[data-plot-id="${plotId}"]`);
+    const plotItem = document.querySelector(`.coordinate-plot-item[data-plot-id="${escapeCoordinatePlotIdForSelector(plotId)}"]`);
     if (!plotItem) return;
 
     const expression = plotItem.querySelector('[data-plot-field="expression"]')?.value?.trim() || '';

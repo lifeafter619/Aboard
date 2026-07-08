@@ -470,6 +470,38 @@ function testRemoveCustomSoundKeepsExistingEntryWhenStorageWriteFails() {
   );
 }
 
+function testLoadCustomSoundsIgnoresMalformedStoredPayload() {
+  const document = createDocumentStub();
+  const loadFromStoredPayload = (payload) => {
+    const proto = loadTimerManagerPrototype(document, {
+      localStorage: {
+        getItem() {
+          return payload;
+        },
+        setItem() {},
+        removeItem() {}
+      }
+    });
+    return JSON.parse(JSON.stringify(proto.loadCustomSounds.call({})));
+  };
+
+  assert.deepEqual(
+    loadFromStoredPayload('{"id":"custom-1","name":"alarm.mp3","url":"data:audio/mp3;base64,AAA"}'),
+    [],
+    'stored custom sounds should fall back to an empty list when the payload is not an array'
+  );
+  assert.deepEqual(
+    loadFromStoredPayload(JSON.stringify([
+      { id: 'custom-1', name: 'alarm.mp3', url: 'data:audio/mp3;base64,AAA' },
+      { id: 'missing-url', name: 'broken.mp3' },
+      null,
+      'broken'
+    ])),
+    [{ id: 'custom-1', name: 'alarm.mp3', url: 'data:audio/mp3;base64,AAA' }],
+    'stored custom sounds should keep only complete sound entries'
+  );
+}
+
 function testOversizedCustomSoundIsRejectedBeforeFileReaderRuns() {
   const document = createDocumentStub();
   const toasts = [];
@@ -521,6 +553,7 @@ function main() {
   testCustomSoundRowsUseSeparateActionButtons();
   testAddCustomSoundDoesNotMutateUiWhenStorageWriteFails();
   testRemoveCustomSoundKeepsExistingEntryWhenStorageWriteFails();
+  testLoadCustomSoundsIgnoresMalformedStoredPayload();
   testOversizedCustomSoundIsRejectedBeforeFileReaderRuns();
   console.log('timer-custom-sound-list-ux.test: all assertions passed');
 }

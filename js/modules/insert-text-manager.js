@@ -613,15 +613,16 @@ class InsertTextManager {
         // Font Upload
         const fontUpload = document.getElementById('insert-text-font-upload');
         if (fontUpload) {
-            fontUpload.addEventListener('change', (e) => {
+            fontUpload.addEventListener('change', async (e) => {
                 if (e.target.files && e.target.files[0]) {
                     if (window.drawingBoard?.settingsManager) {
-                        window.drawingBoard.settingsManager.handleFontUpload(e.target.files[0]);
+                        // handleFontUpload reads the file asynchronously — the
+                        // dropdown must only be repopulated after it finishes.
+                        const uploadedName = await window.drawingBoard.settingsManager.handleFontUpload(e.target.files[0]);
                         this.customFonts = window.drawingBoard.settingsManager.customFonts;
                         this.populateFonts();
                         const select = document.getElementById('insert-text-font-select');
-                        const uploadedName = e.target.files[0].name.replace(/\.[^/.]+$/, '');
-                        if (select && [...select.options].some(opt => opt.value === uploadedName)) {
+                        if (uploadedName && select && [...select.options].some(opt => opt.value === uploadedName)) {
                             select.value = uploadedName;
                             this.textConfig.fontFamily = uploadedName;
                         }

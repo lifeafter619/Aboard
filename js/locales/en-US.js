@@ -39,7 +39,8 @@ window.translations = {
     errors: {
         lazyLoadFailed: 'Failed to load {feature}. Please refresh and try again.',
         fileReadFailed: 'Failed to read the selected file. Please verify the file is not corrupted.',
-        storageWriteFailed: 'Failed to save your changes. Please check browser storage permissions and try again.'
+        storageWriteFailed: 'Failed to save your changes. Please check browser storage permissions and try again.',
+        sessionSaveFailed: 'Autosave failed — your board may not be recoverable. Export a backup soon, or free up storage in Settings.'
     },
 
     prompts: {
@@ -742,6 +743,8 @@ window.translations = {
         defaultNames: 'Student A\nStudent B\nStudent C\nStudent D\nStudent E',
         allowRepeats: 'Allow Repeats',
         rangeLabel: 'Number Range',
+        rangeMin: 'Minimum',
+        rangeMax: 'Maximum',
         importLabel: 'Import Names (Excel/CSV)',
         defaultColumnName: 'Name',
         importColumnPlaceholder: 'Column',

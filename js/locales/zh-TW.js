@@ -718,6 +718,8 @@ window.translations = {
         defaultNames: '張三\n李四\n王五\n趙六\n孫七',
         allowRepeats: '允許重複抽取',
         rangeLabel: '數字範圍',
+        rangeMin: '最小值',
+        rangeMax: '最大值',
         importLabel: '匯入名單 (Excel/CSV)',
         defaultColumnName: '姓名',
         importColumnPlaceholder: '欄名',

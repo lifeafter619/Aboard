@@ -303,10 +303,12 @@ class SettingsManager {
         });
     }
     
-    // Handle font file upload
+    // Handle font file upload. Returns a Promise resolving with the font
+    // name once the (async) FileReader work is done, or null on failure —
+    // callers that refresh font dropdowns must await it.
     handleFontUpload(file) {
-        if (!file) return;
-        
+        if (!file) return Promise.resolve(null);
+
         // Check file size (limit to 2MB)
         const maxSize = 2 * 1024 * 1024;
         if (file.size > maxSize) {
@@ -314,26 +316,27 @@ class SettingsManager {
             if (this.toastManager) {
                 this.toastManager.show(msg, 'error');
             }
-            return;
+            return Promise.resolve(null);
         }
-        
+
         const extension = file.name.split('.').pop().toLowerCase();
         const validExtensions = ['ttf', 'otf', 'woff', 'woff2'];
-        
+
         if (!validExtensions.includes(extension)) {
             const msg = window.i18n ? window.i18n.t('tools.text.invalidFontFormat') : 'Invalid font format. Please use TTF, OTF, WOFF, or WOFF2 files.';
             if (this.toastManager) {
                 this.toastManager.show(msg, 'error');
             }
-            return;
+            return Promise.resolve(null);
         }
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
             const fontData = e.target.result;
             const lastDotIndex = file.name.lastIndexOf('.');
             const fontName = lastDotIndex > 0 ? file.name.substring(0, lastDotIndex) : file.name;
-            
+
             const exists = this.customFonts.find(f => f.name === fontName);
             if (!exists) {
                 this.customFonts.push({ name: fontName, data: fontData });
@@ -346,14 +349,14 @@ class SettingsManager {
                 }
                 this.saveFontPreferences();
                 this.populateGlobalFontSelect();
-                
+
                 // Select the newly uploaded font
                 const select = document.getElementById('global-font-select');
                 if (select) {
                     select.value = fontName;
                     this.setGlobalFont(fontName);
                 }
-                
+
                 const msg = window.i18n ? window.i18n.t('tools.text.fontUploadSuccess') : 'Font uploaded successfully!';
                 if (this.toastManager) {
                     this.toastManager.show(msg, 'success');
@@ -364,15 +367,18 @@ class SettingsManager {
                     this.toastManager.show(msg, 'warning');
                 }
             }
-        };
-        reader.onerror = () => {
-            console.warn('Failed to read font file:', reader.error);
-            const msg = window.i18n?.t?.('errors.fileReadFailed') || 'Failed to read the selected file.';
-            if (this.toastManager) {
-                this.toastManager.show(msg, 'error');
-            }
-        };
-        reader.readAsDataURL(file);
+            resolve(fontName);
+            };
+            reader.onerror = () => {
+                console.warn('Failed to read font file:', reader.error);
+                const msg = window.i18n?.t?.('errors.fileReadFailed') || 'Failed to read the selected file.';
+                if (this.toastManager) {
+                    this.toastManager.show(msg, 'error');
+                }
+                resolve(null);
+            };
+            reader.readAsDataURL(file);
+        });
     }
     
     // Populate global font select with custom fonts
@@ -989,6 +995,9 @@ class SettingsManager {
         });
         updateElementById('show-import-export-btn-checkbox', element => {
             element.checked = this.showImportExportBtn;
+        });
+        updateElementById('show-fullscreen-btn-checkbox', element => {
+            element.checked = this.showFullscreenBtn;
         });
         
         // Load toolbar text visibility setting

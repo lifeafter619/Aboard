@@ -343,6 +343,7 @@ class DrawingEngine {
         const firstPoint = this.points[0];
 
         if (this.penLineStyle === 'dotted' || this.penLineStyle === 'dashed') {
+            this.ctx.fillStyle = this.currentColor;
             this.ctx.beginPath();
             this.ctx.arc(firstPoint.x, firstPoint.y, this.penSize / 2, 0, Math.PI * 2);
             this.ctx.fill();
@@ -1453,13 +1454,15 @@ class DrawingEngine {
             const dashLen = spacing;
             const gapLen = spacing * 0.6;
             this.ctx.setLineDash([dashLen, gapLen]);
-            this.ctx.lineDashOffset = -this.accumulatedDistance;
+            // Positive offset continues the pattern from the distance already
+            // drawn; a negative value breaks the pattern at segment seams.
+            this.ctx.lineDashOffset = this.accumulatedDistance;
         } else if (this.penLineStyle === 'dotted') {
             const spacing = Math.max(2, 400 / Math.max(1, this.penDashDensity));
             const dotLen = this.penSize * 0.1; // Almost circular dots (with round caps)
             const gapLen = spacing * 0.6 + this.penSize; // Gap needs to account for cap width
             this.ctx.setLineDash([dotLen, gapLen]);
-            this.ctx.lineDashOffset = -this.accumulatedDistance;
+            this.ctx.lineDashOffset = this.accumulatedDistance;
         } else {
             this.ctx.setLineDash([]);
         }

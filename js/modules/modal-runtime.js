@@ -524,6 +524,11 @@ function finishModalResize(board) {
     }
 
     document.removeEventListener('pointermove', state.moveHandler);
+    // The two end listeners are registered with {once:true}, but only the one
+    // that fired auto-removes itself — drop the other one too, or a later
+    // unrelated pointercancel would terminate the next resize mid-gesture.
+    document.removeEventListener('pointerup', state.endHandler);
+    document.removeEventListener('pointercancel', state.endHandler);
     state.content.classList.remove('modal-resizing');
 
     const rect = state.content.getBoundingClientRect();

@@ -364,12 +364,16 @@ function reorderControlButtonList(order) {
 function reorderControlButtons(order) {
         const controlArea = document.getElementById('history-controls');
         if (!controlArea || !order) return;
-        
-        // Map control names to their element IDs
+
+        // Map control names to their element IDs.
+        // NOTE: #pagination-controls and #time-display-area are independent
+        // position:fixed panels living outside #history-controls. Reparenting
+        // them in here would make #history-controls (which has will-change:
+        // transform) their containing block and break their fixed positioning
+        // and drag coordinates — so they are never moved, only shown/hidden
+        // by applyControlButtonVisibility.
         const controlElements = {
             zoom: ['zoom-out-btn', 'zoom-input', 'zoom-in-btn'],
-            pagination: ['pagination-controls'],
-            time: ['time-display-area'],
             fullscreen: ['fullscreen-btn'],
             import: ['import-project-btn'],
             export: ['export-btn-top']

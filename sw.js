@@ -332,7 +332,13 @@ async function precacheOptionalAssets(cache, optionalAssets) {
 
 async function precacheCoreAssets(cache) {
   // Atomic: essentials must all succeed or the install fails cleanly.
-  await cache.addAll(ESSENTIAL_CORE_ASSETS);
+  // cache: 'reload' bypasses the HTTP cache — with max-age still fresh, the
+  // default mode would seed the new version's cache with stale files and the
+  // app would then run mixed old/new code until the next version bump.
+  const essentialRequests = typeof Request === 'function'
+    ? ESSENTIAL_CORE_ASSETS.map((asset) => new Request(asset, { cache: 'reload' }))
+    : ESSENTIAL_CORE_ASSETS;
+  await cache.addAll(essentialRequests);
 
   // Best-effort: individual failures (renamed file, temporary 404) warn and move
   // on instead of poisoning the whole install. First-use traffic will still
@@ -358,7 +364,11 @@ self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => Promise.all(
       cacheNames.map(cacheName => {
-        if (!cacheWhitelist.includes(cacheName)) {
+        // Only clean up our own versioned caches. caches.keys() is
+        // origin-wide, so deleting every unknown name would wipe the caches
+        // of other apps deployed on the same origin (e.g. GitHub Pages
+        // project sites).
+        if (cacheName.startsWith('aboard-') && !cacheWhitelist.includes(cacheName)) {
           return caches.delete(cacheName);
         }
         return Promise.resolve();

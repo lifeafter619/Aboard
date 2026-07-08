@@ -52,63 +52,84 @@ function showLazyLoadError(board, featureName, error) {
     window.appDialog?.showAlert(message, 'error');
 }
 
+// Concurrent calls (e.g. a double-tap on a feature button while its script is
+// still downloading, or session restore racing a user click) must share one
+// in-flight creation — a second `new Ctor()` would double-register the
+// constructor's document/window listeners.
+function getOrCreateManager(board, cacheKey, create) {
+    if (board[cacheKey]) {
+        return Promise.resolve(board[cacheKey]);
+    }
+    const pendingKey = `${cacheKey}Pending`;
+    if (!board[pendingKey]) {
+        board[pendingKey] = (async () => {
+            try {
+                return await create();
+            } finally {
+                board[pendingKey] = null;
+            }
+        })();
+    }
+    return board[pendingKey];
+}
+
 async function getExportManager(board) {
-    if (!board.exportManager) {
+    return getOrCreateManager(board, 'exportManager', async () => {
         const ExportManagerCtor = await loadManagerConstructor(board, 'ExportManager');
         board.exportManager = new ExportManagerCtor(board.canvas, board.bgCanvas, board);
-    }
-    return board.exportManager;
+        return board.exportManager;
+    });
 }
 
 async function getProjectManager(board) {
-    if (!board.projectManager) {
+    return getOrCreateManager(board, 'projectManager', async () => {
         const ProjectManagerCtor = await loadManagerConstructor(board, 'ProjectManager');
         board.projectManager = new ProjectManagerCtor(board);
-    }
-    return board.projectManager;
+        return board.projectManager;
+    });
 }
 
 async function getTimerManager(board) {
-    if (!board.timerManager) {
+    return getOrCreateManager(board, 'timerManager', async () => {
         const TimerManagerCtor = await loadManagerConstructor(board, 'TimerManager');
         board.timerManager = new TimerManagerCtor();
         board.initResizableModals();
-    }
-    return board.timerManager;
+        return board.timerManager;
+    });
 }
 
 async function getInsertTextManager(board) {
-    if (!board.insertTextManager) {
+    return getOrCreateManager(board, 'insertTextManager', async () => {
         const InsertTextManagerCtor = await loadManagerConstructor(board, 'InsertTextManager');
         board.insertTextManager = new InsertTextManagerCtor(board.canvas, board.ctx, board.historyManager, board.drawingEngine);
         board.selectionManager?.setTextManager?.(board.insertTextManager);
-    }
-    return board.insertTextManager;
+        return board.insertTextManager;
+    });
 }
 
 async function getInsertImageManager(board) {
-    if (!board.insertImageManager) {
+    return getOrCreateManager(board, 'insertImageManager', async () => {
         const InsertImageManagerCtor = await loadManagerConstructor(board, 'InsertImageManager');
         board.insertImageManager = new InsertImageManagerCtor(board.canvas, board.ctx, board.historyManager, board.drawingEngine);
-    }
-    return board.insertImageManager;
+        return board.insertImageManager;
+    });
 }
 
 async function getRandomPickerManager(board) {
-    if (!board.randomPickerManager) {
+    return getOrCreateManager(board, 'randomPickerManager', async () => {
         const RandomPickerManagerCtor = await loadManagerConstructor(board, 'RandomPickerManager');
         board.randomPickerManager = new RandomPickerManagerCtor();
         board.initResizableModals();
-    }
-    return board.randomPickerManager;
+        return board.randomPickerManager;
+    });
 }
 
 async function getScoreboardManager(board) {
-    if (!board.scoreboardManager) {
+    return getOrCreateManager(board, 'scoreboardManager', async () => {
         const ScoreboardManagerCtor = await loadManagerConstructor(board, 'ScoreboardManager');
         board.scoreboardManager = new ScoreboardManagerCtor();
-    }
-    return board.scoreboardManager;
+        return board.scoreboardManager;
+    });
 }
 
 function scheduleMoreFeaturePreload(board) {

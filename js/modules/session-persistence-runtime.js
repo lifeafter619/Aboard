@@ -77,7 +77,17 @@ function buildSyncSnapshot() {
         }
 }
 
+// While startup recovery is unresolved (check still running, prompt open, or
+// restore in progress) any save would overwrite the very data the recovery
+// flow is about to offer/restore — so saves must be skipped in that window.
+function isRecoveryFlowBlockingSaves(board) {
+        return Boolean(board.recoveryCheckPromise || board.recoveryPromptOpen || board.isRestoringSession);
+}
+
 function saveSessionSnapshotSync() {
+        if (isRecoveryFlowBlockingSaves(this)) {
+            return null;
+        }
         const snapshot = buildSyncSnapshot.call(this);
         if (!snapshot) {
             return null;
@@ -107,6 +117,8 @@ function saveSessionSnapshotSync() {
 
 async function saveSession() {
         if (this.isClearingLocalData) return;
+        // Skipped (not failed): the recovery flow owns the stores right now.
+        if (isRecoveryFlowBlockingSaves(this)) return;
         try {
             saveSessionSnapshotSync.call(this);
             this.saveCurrentPageScene?.(this.currentPage);
@@ -149,7 +161,11 @@ async function saveSession() {
                 canvasHeight: this.canvas.height
             };
 
-            await this.storageManager.saveSession(data);
+            const savedToIndexedDb = await this.storageManager.saveSession(data);
+            if (!savedToIndexedDb) {
+                console.warn('Session was not saved to IndexedDB.');
+                return false;
+            }
             console.log('Session saved to IndexedDB');
             return true;
         } catch (e) {

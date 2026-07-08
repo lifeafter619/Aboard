@@ -209,7 +209,10 @@ function capturePageScene(pageNumber = this.currentPage, options = {}) {
             : [],
         textObjects: insertTextManager
             ? cloneSerializable(Array.isArray(textObjects) ? textObjects : [])
-            : [],
+            // Text module not loaded (e.g. lazy-load failed offline): keep the
+            // page's previously stored text instead of capturing "no text",
+            // which would erase it from storage on the next save.
+            : cloneSerializable(ensurePageScenesStore.call(this)[String(normalizedPage)]?.textObjects || []),
         strokes: Array.isArray(drawingEngine?.strokes)
             ? drawingEngine.strokes
                 .map((stroke) => serializeStroke(stroke, drawingEngine))
@@ -319,7 +322,10 @@ function getSerializedPageScenes(pageNumbers = null, options = {}) {
 }
 
 function clearPageSceneRuntimeState() {
-    this.selectionManager?.clearSelection?.();
+    // skipRedraw: at this point drawingEngine still holds the outgoing
+    // scene — clearSelection's default redraw would paint that old scene
+    // over the bitmap the caller just restored (undo/redo, page switch).
+    this.selectionManager?.clearSelection?.({ skipRedraw: true });
 
     if (this.insertTextManager?.clearTextObjects) {
         this.insertTextManager.clearTextObjects();

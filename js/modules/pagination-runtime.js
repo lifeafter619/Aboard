@@ -114,6 +114,13 @@ function normalizeBackgroundState(backgroundManager, backgroundState) {
 }
 
 function saveCurrentPageSnapshot() {
+        // Finalize any in-progress stroke first — a second finger can tap the
+        // page-switch buttons mid-stroke, and the half stroke must neither be
+        // carried into the next page's stroke list nor left on this page as
+        // orphan pixels missing from its vector scene.
+        if (this.drawingEngine?.isDrawing) {
+            this.drawingEngine.stopDrawing?.();
+        }
         if (this.currentPage > 0 && this.currentPage <= this.pages.length) {
             this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         }
@@ -253,8 +260,9 @@ function goToPage(pageNumber) {
         }
         
         this.currentPage = normalizedPage;
-        this.loadPage(this.currentPage);
+        const pendingBackgroundPromise = this.loadPage(this.currentPage);
         this.updatePaginationUI();
+        return pendingBackgroundPromise;
     
 }
 
@@ -274,18 +282,20 @@ function loadPage(pageNumber) {
         this.historyManager.saveState();
         
         // Restore page-specific background if exists; async callers can await it.
-        this._pendingBackgroundPromise = Promise.resolve(this.restorePageBackground(pageNumber));
+        const pendingBackgroundPromise = Promise.resolve(this.restorePageBackground(pageNumber));
+        this._pendingBackgroundPromise = pendingBackgroundPromise;
         this.drawingEngine.updateOffCanvasImageMirrors(this.insertTextManager?.textObjects || []);
 
         // Save session state (current page change)
         this.saveSessionDebounced();
+        return pendingBackgroundPromise;
     
 }
 
 async function goToPageAsync(pageNumber) {
-        goToPage.call(this, pageNumber);
-        if (this._pendingBackgroundPromise) {
-            await this._pendingBackgroundPromise;
+        const pendingBackgroundPromise = goToPage.call(this, pageNumber) || this._pendingBackgroundPromise;
+        if (pendingBackgroundPromise) {
+            await pendingBackgroundPromise;
         }
 }
 

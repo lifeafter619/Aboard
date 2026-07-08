@@ -25,30 +25,34 @@ function refreshAdaptiveEraserSize() {
 function setupKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
         const isEditableTarget = e.target &&
-            (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable);
+            (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable);
         if (e.ctrlKey || e.metaKey) {
             const key = e.key.toLowerCase();
             if (!isEditableTarget && key === 'z' && !e.shiftKey) {
                 e.preventDefault();
                 if (this.historyManager.undo()) {
-                    this.drawingEngine.clearStrokes();
-                    this.drawingEngine.stampedImages = [];
-                    this.drawingEngine.objectGroups = [];
-                    this.insertTextManager?.clearTextObjects?.();
-                    this.drawingEngine.clearVectorScene();
-                    this.drawingEngine.setVectorPreviewVisible(false);
+                    if (!this.historyManager.lastRestoreHadSceneState) {
+                        this.drawingEngine.clearStrokes();
+                        this.drawingEngine.stampedImages = [];
+                        this.drawingEngine.objectGroups = [];
+                        this.insertTextManager?.clearTextObjects?.();
+                        this.drawingEngine.clearVectorScene();
+                        this.drawingEngine.setVectorPreviewVisible(false);
+                    }
                     this.updateUI();
                     this.saveSessionDebounced();
                 }
             } else if (!isEditableTarget && (key === 'y' || (key === 'z' && e.shiftKey))) {
                 e.preventDefault();
                 if (this.historyManager.redo()) {
-                    this.drawingEngine.clearStrokes();
-                    this.drawingEngine.stampedImages = [];
-                    this.drawingEngine.objectGroups = [];
-                    this.insertTextManager?.clearTextObjects?.();
-                    this.drawingEngine.clearVectorScene();
-                    this.drawingEngine.setVectorPreviewVisible(false);
+                    if (!this.historyManager.lastRestoreHadSceneState) {
+                        this.drawingEngine.clearStrokes();
+                        this.drawingEngine.stampedImages = [];
+                        this.drawingEngine.objectGroups = [];
+                        this.insertTextManager?.clearTextObjects?.();
+                        this.drawingEngine.clearVectorScene();
+                        this.drawingEngine.setVectorPreviewVisible(false);
+                    }
                     this.updateUI();
                     this.saveSessionDebounced();
                 }
@@ -73,15 +77,30 @@ function setupKeyboardShortcuts() {
             }
         }
 
-        if (!isEditableTarget && (e.key === '+' || e.key === '=')) {
-            e.preventDefault();
-            this.zoomIn();
-        } else if (!isEditableTarget && (e.key === '-' || e.key === '_')) {
-            e.preventDefault();
-            this.zoomOut();
+        if (!isEditableTarget && !e.ctrlKey && !e.metaKey &&
+            (e.key === '+' || e.key === '=' || e.key === '-' || e.key === '_')) {
+            // Ctrl/Cmd plus/minus stays reserved for browser page zoom, and
+            // canvas zoom must not silently change behind an open modal.
+            if (!document.querySelector('.modal.show, #timer-settings-modal.show')) {
+                e.preventDefault();
+                if (e.key === '+' || e.key === '=') {
+                    this.zoomIn();
+                } else {
+                    this.zoomOut();
+                }
+            }
         }
 
         if (e.key === 'Escape') {
+            const openModal = document.querySelector('.modal.show, #timer-settings-modal.show');
+            if (openModal) {
+                // A visible modal owns this Escape press; closing the config
+                // panel too would also kick the user out of the shape tool.
+                if (openModal === document.getElementById('settings-modal')) {
+                    this.closeSettings();
+                }
+                return;
+            }
             this.closeSettings();
             this.closeConfigPanel();
         }

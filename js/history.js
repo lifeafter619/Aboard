@@ -10,6 +10,45 @@ class HistoryManager {
         this.maxHistory = 50;
         this.memoryLimitBytes = 128 * 1024 * 1024; // 128 MB cap for history
         this.onStateChanged = null;
+        this.captureSceneState = null;
+        this.restoreSceneState = null;
+        this.lastRestoreHadSceneState = false;
+    }
+
+    setSceneStateHandlers({ capture, restore } = {}) {
+        this.captureSceneState = typeof capture === 'function' ? capture : null;
+        this.restoreSceneState = typeof restore === 'function' ? restore : null;
+    }
+
+    getEntryImageData(entry) {
+        if (entry?.imageData) {
+            return entry.imageData;
+        }
+        return entry;
+    }
+
+    getEntryByteLength(entry) {
+        return this.getEntryImageData(entry)?.data?.byteLength || 0;
+    }
+
+    createHistoryEntry(imageData) {
+        let sceneState = null;
+        let hasSceneState = false;
+
+        if (typeof this.captureSceneState === 'function') {
+            try {
+                sceneState = this.captureSceneState();
+                hasSceneState = true;
+            } catch (error) {
+                console.warn('Failed to capture scene history state:', error);
+            }
+        }
+
+        return {
+            imageData,
+            sceneState,
+            hasSceneState
+        };
     }
 
     reset() {
@@ -26,7 +65,7 @@ class HistoryManager {
 
         // Save current canvas state
         const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        this.history.push(imageData);
+        this.history.push(this.createHistoryEntry(imageData));
         this.historyStep++;
 
         // Limit history by count
@@ -46,10 +85,10 @@ class HistoryManager {
     trimToMemoryLimit() {
         let totalBytes = 0;
         for (let i = 0; i < this.history.length; i++) {
-            totalBytes += this.history[i].data.byteLength;
+            totalBytes += this.getEntryByteLength(this.history[i]);
         }
         while (totalBytes > this.memoryLimitBytes && this.history.length > 1) {
-            totalBytes -= this.history[0].data.byteLength;
+            totalBytes -= this.getEntryByteLength(this.history[0]);
             this.history.shift();
             this.historyStep--;
         }
@@ -80,9 +119,15 @@ class HistoryManager {
     }
     
     restoreState() {
+        this.lastRestoreHadSceneState = false;
         if (this.historyStep >= 0 && this.historyStep < this.history.length) {
-            const imageData = this.history[this.historyStep];
+            const entry = this.history[this.historyStep];
+            const imageData = this.getEntryImageData(entry);
             this.ctx.putImageData(imageData, 0, 0);
+            if (entry?.hasSceneState && typeof this.restoreSceneState === 'function') {
+                this.restoreSceneState(entry.sceneState);
+                this.lastRestoreHadSceneState = true;
+            }
         }
     }
     

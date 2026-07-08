@@ -485,7 +485,16 @@ class I18n {
                     }
                 });
                 this._localeLoadChain = next.catch(() => null);
-                const cached = next.then((data) => data);
+                const cached = next.then((data) => {
+                    if (data === null) {
+                        // A failed load (offline blip, missing file) must not
+                        // stay cached, or the language can never be switched
+                        // to for the rest of the session — evict so the next
+                        // attempt retries the download.
+                        localeDataCache.delete(url);
+                    }
+                    return data;
+                });
                 localeDataCache.set(url, cached);
                 return cached;
             };

@@ -39,7 +39,8 @@ window.translations = {
     errors: {
         lazyLoadFailed: '加载{feature}失败，请刷新页面后重试。',
         fileReadFailed: '无法读取所选文件，请检查文件是否损坏后重试。',
-        storageWriteFailed: '保存失败，请检查浏览器存储权限后重试。'
+        storageWriteFailed: '保存失败，请检查浏览器存储权限后重试。',
+        sessionSaveFailed: '板书自动保存失败，当前内容可能无法恢复。请尽快导出备份，或在设置中清理存储空间。'
     },
 
     prompts: {
@@ -740,6 +741,8 @@ window.translations = {
         defaultNames: '张三\n李四\n王五\n赵六\n孙七',
         allowRepeats: '允许重复抽取',
         rangeLabel: '数字范围',
+        rangeMin: '最小值',
+        rangeMax: '最大值',
         importLabel: '导入名单 (Excel/CSV)',
         defaultColumnName: '姓名',
         importColumnPlaceholder: '列名',

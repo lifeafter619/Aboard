@@ -217,7 +217,10 @@ function showConfigDiffModal(diff, newSettings) {
                 await this.settingsManager.applySettings(pendingSettings);
                 // Also update UI that depends on settings immediately
                 this.recalculateAndRecenterCanvas();
-                this.applyZoom(true);
+                // false: the config-area scale was just applied from the
+                // imported configScale by loadSettings — passing true would
+                // overwrite it with the canvas zoom factor.
+                this.applyZoom(false);
                 this.updateZoomControlsVisibility();
                 this.updateImportExportBtnVisibility();
                 this.updateFullscreenBtnVisibility();

@@ -914,12 +914,12 @@ class RandomPickerManager {
 
         const minInput = modal.querySelector('#rp-min-input');
         if (minInput) {
-            minInput.setAttribute('aria-label', `${getRandomPickerText('randomPicker.rangeLabel', 'Number Range')} Min`);
+            minInput.setAttribute('aria-label', `${getRandomPickerText('randomPicker.rangeLabel', 'Number Range')} ${getRandomPickerText('randomPicker.rangeMin', 'Minimum')}`);
         }
 
         const maxInput = modal.querySelector('#rp-max-input');
         if (maxInput) {
-            maxInput.setAttribute('aria-label', `${getRandomPickerText('randomPicker.rangeLabel', 'Number Range')} Max`);
+            maxInput.setAttribute('aria-label', `${getRandomPickerText('randomPicker.rangeLabel', 'Number Range')} ${getRandomPickerText('randomPicker.rangeMax', 'Maximum')}`);
         }
 
         const allowRepeatsLabel = modal.querySelector('.rp-allow-repeats-label');
@@ -1017,11 +1017,45 @@ class RandomPickerManager {
         const instance = new RandomPickerInstance(id, this);
         this.instances.set(id, instance);
 
+        const savedConfig = this.loadSavedConfig();
+        if (savedConfig) {
+            if (savedConfig.mode !== 'number' && !(Array.isArray(savedConfig.names) && savedConfig.names.length > 0)) {
+                savedConfig.names = window.i18n.t('randomPicker.defaultNames').split('\n');
+            }
+            instance.updateConfig(savedConfig);
+            return;
+        }
+
         // Populate with example names if empty
         const defaultNames = window.i18n.t('randomPicker.defaultNames').split('\n');
         instance.updateConfig({
             names: defaultNames
         });
+    }
+
+    loadSavedConfig() {
+        try {
+            const raw = localStorage.getItem('randomPickerConfig');
+            if (!raw) {
+                return null;
+            }
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                return null;
+            }
+            return parsed;
+        } catch (e) {
+            console.warn('Failed to load saved random picker config:', e);
+            return null;
+        }
+    }
+
+    persistConfig(config) {
+        try {
+            localStorage.setItem('randomPickerConfig', JSON.stringify(config));
+        } catch (e) {
+            console.warn('Failed to save random picker config:', e);
+        }
     }
 
     remove(id) {
@@ -1138,6 +1172,7 @@ class RandomPickerManager {
         }
 
         this.currentInstance.updateConfig(config);
+        this.persistConfig(this.currentInstance.config);
         this.closeSettingsModal();
         return true;
     }

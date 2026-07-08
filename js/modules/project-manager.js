@@ -1093,7 +1093,7 @@ class ProjectManager {
 
         // 5. Reset UI to the imported target page
         this.drawingBoard.currentPage = importedCurrentPage;
-        this.drawingBoard.loadPage(importedCurrentPage);
+        await this.drawingBoard.loadPage(importedCurrentPage);
         this.drawingBoard.updatePaginationUI();
         this.drawingBoard.updateBackgroundUI();
         this.drawingBoard.updateUI?.();

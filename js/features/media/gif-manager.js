@@ -433,6 +433,14 @@ export class GifManager {
     const data = this.gifs.get(id);
     if (!data) return;
 
+    // Stop libgif's self-rescheduling playback loop before dropping the
+    // instance, otherwise it keeps running against the detached canvas.
+    try {
+      data.instance?.pause?.();
+    } catch (e) {
+      console.warn('Failed to stop GIF instance:', e);
+    }
+
     data.container.remove();
     this.gifs.delete(id);
     this.saveState();

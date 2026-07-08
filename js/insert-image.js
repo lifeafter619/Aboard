@@ -148,7 +148,6 @@ class InsertImageManager {
         const handleDragStart = (e) => {
             // Stop propagation to prevent drawing on canvas
             e.stopPropagation();
-            e.preventDefault?.();
 
             const target = e.target;
             const closest = typeof target?.closest === 'function'
@@ -156,14 +155,20 @@ class InsertImageManager {
                 : () => null;
             const hasClass = (className) => Boolean(target?.classList?.contains?.(className));
 
+            // Toolbar buttons and flip handles rely on synthesized click
+            // events; calling preventDefault() on their touchstart would
+            // suppress that click and leave them dead on touch screens.
+            if (hasClass('flip-handle') || closest('.flip-handle') || closest('.image-controls-toolbar')) {
+                return;
+            }
+
+            e.preventDefault?.();
+
             if (target === this.controlBox || closest('.image-controls-box') === this.controlBox) {
                 if (!hasClass('resize-handle') &&
                     !hasClass('rotate-handle') &&
-                    !hasClass('flip-handle') &&
                     !closest('.resize-handle') &&
-                    !closest('.rotate-handle') &&
-                    !closest('.flip-handle') &&
-                    !closest('.image-controls-toolbar')) {
+                    !closest('.rotate-handle')) {
                     this.startDrag(e);
                 }
             }
@@ -300,104 +305,16 @@ class InsertImageManager {
 
         this.imageSize = { width, height };
 
-        // Center on screen (screen coordinates)
-        // We track position in *Screen Coordinates* for the overlay,
-        // but when stamping we must convert to *Canvas Coordinates*.
-        // Actually, to make it stick to the canvas during zoom/pan while editing (if we supported that),
-        // we should track in Canvas Coordinates.
-        // But `ImageControls` uses Canvas Coordinates and transforms them.
-        // Let's use Canvas Coordinates logic to be consistent with how `applyZoom` updates overlays.
-
-        // Get center of canvas in canvas coordinates
-        // Canvas center is always (width/2, height/2) in logical units?
-        // No, infinite canvas.
-        // Let's place it at the center of the current *View*.
-
-        // Viewport center in screen pixels
+        // Convert the viewport center to logical canvas coordinates.
         const cx = window.innerWidth / 2;
         const cy = window.innerHeight / 2;
-
-        // Convert to canvas coordinates
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.offsetWidth / rect.width; // Should be 1 if handled by transform?
-        // Wait, `this.drawingEngine.canvasScale` handles zoom.
-        // `this.drawingEngine.panOffset` handles pan.
-
-        // Inverse transform from Screen to Canvas:
-        // ScreenX = (CanvasX * Scale + PanX) + RectLeft + (Width/2 - Width/2)?
-        // Simplified: The canvas is centered.
-        // Let's rely on `transformMouseCoords` logic if we had it.
-
-        // To place at center of viewport:
-        // We need to find the canvas point that corresponds to (cx, cy).
-
-        // Let's maintain `imagePosition` as *Logical Canvas Coordinates*.
-        // Then `updateControlBox` converts to screen/DOM coordinates.
-
-        const canvasScale = this.drawingEngine.canvasScale * (this.drawingEngine.canvasFitScale || 1);
-        const panX = this.drawingEngine.panOffset.x;
-        const panY = this.drawingEngine.panOffset.y;
-
-        // Center of canvas element (which is centered in screen)
         const canvasRect = this.canvas.getBoundingClientRect();
-        const canvasCenterX = canvasRect.left + canvasRect.width / 2;
-        const canvasCenterY = canvasRect.top + canvasRect.height / 2;
-
-        // The difference between Viewport Center and Canvas Center (in screen pixels)
-        const diffX = cx - canvasCenterX;
-        const diffY = cy - canvasCenterY;
-
-        // Convert difference to logical units
-        const logicalDiffX = diffX / canvasScale;
-        const logicalDiffY = diffY / canvasScale;
-
-        // We want the image center to be at the viewport center.
-        // Image logic position (top-left) relative to canvas center (0,0)?
-        // DrawingEngine assumes 0,0 is top-left of the canvas *bitmap*.
-        // If we are in Pagination mode, 0,0 is top-left.
-        // If we are in Infinite mode, it's arbitrary but 0,0 is origin.
-
-        // Let's just place it at the center of the visible area.
-        // Logical Width of canvas
-        const logicalWidth = canvasLogicalWidth; // Or just settings width
-        const logicalHeight = canvasLogicalHeight;
-
-        // Center of logical canvas
-        const originX = logicalWidth / 2;
-        const originY = logicalHeight / 2;
-
-        // Apply offset based on pan (pan moves the canvas, so we need to counter it to stay in view?)
-        // If I pan right, canvas moves right. To stay in center of screen, object must be "left" relative to canvas.
-        // Actually, let's keep it simple: Place at center of logical canvas initially.
-        // User can drag it.
-
-        // Wait, if user is zoomed in on a corner, placing at center might be off-screen.
-        // Let's use the inverse transform of the viewport center.
-
-        // Inverse Transform:
-        // Screen Point (Px, Py)
-        // Canvas Point (Cx, Cy) = (Px - Rect.left, Py - Rect.top) / Scale ... roughly.
-        // But we have CSS transform `translate(-50%, -50%) translate(PanX, PanY) scale(Scale)`.
-        // This is complex to reverse perfectly without matrix math.
-
-        // Strategy:
-        // 1. Set logical position to center of canvas bitmap (width/2, height/2).
-        // 2. Update box.
-        // If it's off screen, user will zoom out.
-        // But usually "Insert" puts it in view.
-
-        // Let's try to calculate the logical point under the screen center.
-        // We can use `drawingEngine.getPointFromScreen(cx, cy)` if it existed.
-
-        // Let's assume placement at logical center (width/2, height/2) - halfImageSize.
-        this.imagePosition.x = (logicalWidth / 2) - (width / 2);
-        this.imagePosition.y = (logicalHeight / 2) - (height / 2);
-
-        // Adjust for Pan to bring it into view?
-        // PanX is translation in pixels.
-        // If we subtract PanX from position?
-        this.imagePosition.x -= panX;
-        this.imagePosition.y -= panY;
+        const scaleX = canvasRect.width / canvasLogicalWidth || 1;
+        const scaleY = canvasRect.height / canvasLogicalHeight || 1;
+        const logicalCenterX = (cx - canvasRect.left) / scaleX;
+        const logicalCenterY = (cy - canvasRect.top) / scaleY;
+        this.imagePosition.x = logicalCenterX - (width / 2);
+        this.imagePosition.y = logicalCenterY - (height / 2);
 
         this.imageRotation = 0;
 

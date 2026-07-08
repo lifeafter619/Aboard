@@ -228,7 +228,13 @@ async function testOptionalPrecacheLimitsConcurrentFetches() {
     Promise,
     Set,
     URL,
-    setTimeout
+    setTimeout,
+    Request: class RequestStub {
+      constructor(url, init = {}) {
+        this.url = url;
+        this.cache = init.cache;
+      }
+    }
   };
   sandbox.globalThis = sandbox;
 
@@ -237,7 +243,17 @@ async function testOptionalPrecacheLimitsConcurrentFetches() {
 
   const cache = {
     async addAll(assets) {
-      assert.deepEqual(assets, sandbox.__swTestExports.ESSENTIAL_CORE_ASSETS);
+      assert.deepEqual(
+        assets.map((entry) => (typeof entry === 'string' ? entry : entry.url)),
+        sandbox.__swTestExports.ESSENTIAL_CORE_ASSETS
+      );
+      for (const entry of assets) {
+        assert.equal(
+          entry.cache,
+          'reload',
+          'essential precache requests must bypass the HTTP cache so a new SW version never installs stale files'
+        );
+      }
     },
     async put() {}
   };

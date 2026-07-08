@@ -786,7 +786,7 @@ class BackgroundManager {
                         this.setStyleIfChanged(gifSettingsBtn, 'display', 'none', 'gifSettingsDisplay');
                     }
                     if (this.gifInstance) {
-                        this.gifInstance = null;
+                        this.stopGifInstance();
                         this.restoreBackgroundGifImage(imgElement);
                     }
                 }
@@ -901,6 +901,18 @@ class BackgroundManager {
         return Boolean(existingJsgif);
     }
 
+    stopGifInstance() {
+        // libgif keeps playing through a self-rescheduling timer chain that
+        // only pause() stops; dropping the reference alone leaks the loop and
+        // every decoded frame.
+        try {
+            this.gifInstance?.pause?.();
+        } catch (e) {
+            console.warn('Failed to stop background GIF instance:', e);
+        }
+        this.gifInstance = null;
+    }
+
     async initGif(imgElement) {
         // Ensure SuperGif is loaded
         if (!window.SuperGif) {
@@ -920,7 +932,7 @@ class BackgroundManager {
         // Clear previous instance if exists (remove jsgif wrapper if any)
         const container = document.getElementById('background-image-container');
         if (!container) {
-            this.gifInstance = null;
+            this.stopGifInstance();
             if (imgElement) {
                 imgElement.style.display = 'block';
             }
@@ -930,7 +942,7 @@ class BackgroundManager {
         // If there is already a jsgif div, remove it and restore img
         this.restoreBackgroundGifImage(imgElement);
 
-        this.gifInstance = null;
+        this.stopGifInstance();
 
         try {
             this.gifInstance = new SuperGif({
@@ -3143,7 +3155,7 @@ class BackgroundManager {
         this.isImagePaused = false;
         this.imageStaticData = null;
         this.currentGifLoop = 0;
-        this.gifInstance = null;
+        this.stopGifInstance();
         this.imageTransform = {
             x: 0,
             y: 0,

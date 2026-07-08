@@ -323,8 +323,16 @@ function syncInteractiveOverlays() {
         if (this.imageControls?.isActive) {
             this.imageControls.updateControlBox();
         }
+        // Pending insert overlays must track zoom/pan too, or the stamped
+        // result lands somewhere different from where the preview showed.
+        if (this.insertImageManager?.isActive) {
+            this.insertImageManager.updateControlBox?.();
+        }
+        if (this.insertTextManager?.isActive) {
+            this.insertTextManager.updateOverlay?.();
+        }
         this.syncVectorPreviewState();
-    
+
 }
 
 function shouldShowLiveStrokePreview() {

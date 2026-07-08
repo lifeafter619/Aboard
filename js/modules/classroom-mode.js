@@ -55,12 +55,14 @@ class ClassroomModeManager {
                 event.preventDefault();
                 this.exit();
             }
-        });
+        }, true); // capture: overlays close themselves on Escape before this
+                  // check runs in bubble phase, which made the same key press
+                  // also exit classroom mode.
     }
 
     hasBlockingOverlay() {
         return Boolean(document.querySelector?.(
-            '.timer-fullscreen-modal.show, .time-fullscreen-modal.show, .modal.show'
+            '.timer-fullscreen-modal.show, .time-fullscreen-modal.show, .modal.show, #timer-settings-modal.show'
         ));
     }
 

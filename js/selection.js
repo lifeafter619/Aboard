@@ -26,6 +26,10 @@ class SelectionManager {
         this.isDragging = false;
         this.dragStartPos = { x: 0, y: 0 };
         this.dragStartObjectPos = { x: 0, y: 0 };
+        // Pointer that started the active drag/resize/rotate gesture. Moves
+        // and lift-offs from any other pointer (palm, second finger) must not
+        // drive or end the gesture.
+        this.activePointerId = null;
         
         // Rotating state
         this.isRotating = false;
@@ -616,6 +620,12 @@ class SelectionManager {
         
         // Global mouse/touch events
         const handleMove = (e) => {
+            // Only the pointer that started the gesture may drive it; a palm
+            // or second finger elsewhere on the screen must be ignored.
+            if (e.type === 'pointermove' && this.activePointerId !== null &&
+                typeof e.pointerId === 'number' && e.pointerId !== this.activePointerId) {
+                return;
+            }
             if (this.isDragging) {
                 this.drag(e);
             } else if (this.isResizing) {
@@ -624,13 +634,19 @@ class SelectionManager {
                 this.rotate(e);
             }
         };
-        
+
         document.addEventListener('mousemove', handleMove);
         document.addEventListener('pointermove', handleMove);
-        
+
         document.addEventListener('touchmove', (e) => {
             if (this.isDragging || this.isResizing || this.isRotating) {
                 e.preventDefault();
+                // When pointer events started this gesture the pointermove
+                // handler above already drives it with per-pointer filtering;
+                // running the touch path too would bypass that filter.
+                if (this.activePointerId !== null) {
+                    return;
+                }
                 if (this.isDragging) {
                     this.drag(e);
                 } else if (this.isResizing) {
@@ -640,38 +656,49 @@ class SelectionManager {
                 }
             }
         }, { passive: false });
-        
+
+        const endGesture = () => {
+            this.stopDrag();
+            this.stopResize();
+            this.stopRotate();
+            this.activePointerId = null;
+        };
+
+        const isForeignPointer = (e) => (
+            this.activePointerId !== null &&
+            typeof e.pointerId === 'number' &&
+            e.pointerId !== this.activePointerId
+        );
+
         document.addEventListener('mouseup', () => {
-            this.stopDrag();
-            this.stopResize();
-            this.stopRotate();
+            endGesture();
         });
-        
-        document.addEventListener('pointerup', () => {
-            this.stopDrag();
-            this.stopResize();
-            this.stopRotate();
+
+        document.addEventListener('pointerup', (e) => {
+            // A palm or second finger lifting must not end the gesture.
+            if (isForeignPointer(e)) return;
+            endGesture();
         });
-        
-        document.addEventListener('touchend', () => {
-            this.stopDrag();
-            this.stopResize();
-            this.stopRotate();
+
+        document.addEventListener('touchend', (e) => {
+            // While the gesture is pointer-driven, let pointerup own the
+            // lifecycle as long as any touch remains on screen.
+            if (this.activePointerId !== null && e.touches && e.touches.length > 0) {
+                return;
+            }
+            endGesture();
         });
-        
+
         // Also handle pointer cancel (e.g., when touch is interrupted)
-        document.addEventListener('pointercancel', () => {
-            this.stopDrag();
-            this.stopResize();
-            this.stopRotate();
+        document.addEventListener('pointercancel', (e) => {
+            if (isForeignPointer(e)) return;
+            endGesture();
         });
-        
+
         document.addEventListener('touchcancel', () => {
-            this.stopDrag();
-            this.stopResize();
-            this.stopRotate();
+            endGesture();
         });
-        
+
         // Action buttons - need to handle both mousedown and click to prevent event propagation
         const copyBtn = document.getElementById('selection-copy-btn');
         const colorBtn = document.getElementById('selection-color-btn');
@@ -1893,12 +1920,24 @@ class SelectionManager {
         }
         
         e.preventDefault();
+        if (this.isDragging || this.isResizing || this.isRotating) {
+            // A gesture is already in progress — a second pointer landing on
+            // the box (palm) must not restart the drag and steal ownership.
+            return;
+        }
         this.isDragging = true;
+        if (typeof e.pointerId === 'number') {
+            this.activePointerId = e.pointerId;
+        }
         this.dragStartPos = this.getClientPos(e);
-        
+
         if (this.selectionType === 'stroke') {
             const stroke = this.drawingEngine.strokes[this.selectedIndex];
-            const bounds = this.drawingEngine.getStrokeBounds(stroke);
+            const bounds = stroke ? this.drawingEngine.getStrokeBounds(stroke) : null;
+            if (!bounds) {
+                this.isDragging = false;
+                return;
+            }
             this.dragStartObjectPos = { x: bounds.x, y: bounds.y };
             // Store original positions
             for (let point of stroke.points) {
@@ -1907,9 +1946,17 @@ class SelectionManager {
             }
         } else if (this.selectionType === 'text' && this.textManager) {
             const textObj = this.textManager.textObjects[this.selectedIndex];
+            if (!textObj) {
+                this.isDragging = false;
+                return;
+            }
             this.dragStartObjectPos = { x: textObj.x, y: textObj.y };
         } else if (this.selectionType === 'image') {
             const img = this.drawingEngine.stampedImages[this.selectedIndex];
+            if (!img) {
+                this.isDragging = false;
+                return;
+            }
             this.dragStartObjectPos = { x: img.x, y: img.y };
         } else if (this.selectionType === 'background') {
             const transform = this.backgroundManager?.getBackgroundImageTransform?.();
@@ -1973,6 +2020,7 @@ class SelectionManager {
         
         if (this.selectionType === 'stroke') {
             const stroke = this.drawingEngine.strokes[this.selectedIndex];
+            if (!stroke) return;
             for (let point of stroke.points) {
                 if (point.originalX !== undefined) {
                     point.x = point.originalX + deltaX;
@@ -1981,10 +2029,12 @@ class SelectionManager {
             }
         } else if (this.selectionType === 'text' && this.textManager) {
             const textObj = this.textManager.textObjects[this.selectedIndex];
+            if (!textObj) return;
             textObj.x = this.dragStartObjectPos.x + deltaX;
             textObj.y = this.dragStartObjectPos.y + deltaY;
         } else if (this.selectionType === 'image') {
             const img = this.drawingEngine.stampedImages[this.selectedIndex];
+            if (!img) return;
             img.x = this.dragStartObjectPos.x + deltaX;
             img.y = this.dragStartObjectPos.y + deltaY;
         } else if (this.selectionType === 'background') {
@@ -2076,6 +2126,7 @@ class SelectionManager {
         }
     }
     startResize(e, handle) {
+        if (this.isDragging || this.isResizing || this.isRotating) return;
         if (this.isCoordinateSelection()) return;
         if (!this.isCompoundSelection() && this.selectionType !== 'background' && this.selectedIndex === null) return;
 
@@ -2084,6 +2135,7 @@ class SelectionManager {
 
         if (this.selectionType === 'stroke') {
             const stroke = this.drawingEngine.strokes[this.selectedIndex];
+            if (!stroke) return;
             resizeStartBounds = this.drawingEngine.getStrokeBounds(stroke);
             for (let point of stroke.points) {
                 point.originalX = point.x;
@@ -2091,6 +2143,7 @@ class SelectionManager {
             }
         } else if (this.selectionType === 'text' && this.textManager) {
             const textObj = this.textManager.textObjects[this.selectedIndex];
+            if (!textObj) return;
             if (typeof this.textManager.normalizeTextObjectScale === 'function') {
                 this.textManager.normalizeTextObjectScale(textObj);
             }
@@ -2105,6 +2158,7 @@ class SelectionManager {
             };
         } else if (this.selectionType === 'image') {
             const img = this.drawingEngine.stampedImages[this.selectedIndex];
+            if (!img) return;
             resizeStartBounds = { x: img.x, y: img.y, width: img.width, height: img.height };
         } else if (this.selectionType === 'background') {
             const transform = this.backgroundManager?.getBackgroundImageTransform?.();
@@ -2150,7 +2204,12 @@ class SelectionManager {
             }
         }
 
+        if (!resizeStartBounds) return;
+
         this.isResizing = true;
+        if (typeof e.pointerId === 'number') {
+            this.activePointerId = e.pointerId;
+        }
         this.resizeHandle = handle;
         this.resizeStartPos = resizeStartPos;
         this.resizeStartBounds = resizeStartBounds;
@@ -2371,6 +2430,7 @@ class SelectionManager {
     }
     
     startRotate(e) {
+        if (this.isDragging || this.isResizing || this.isRotating) return;
         if (this.isCoordinateSelection()) return;
         if (!this.isCompoundSelection() && this.selectionType !== 'background' && this.selectedIndex === null) return;
 
@@ -2378,9 +2438,16 @@ class SelectionManager {
         if (!center) return;
 
         this.isRotating = true;
+        if (typeof e.pointerId === 'number') {
+            this.activePointerId = e.pointerId;
+        }
 
         if (this.selectionType === 'stroke') {
             const stroke = this.drawingEngine.strokes[this.selectedIndex];
+            if (!stroke) {
+                this.isRotating = false;
+                return;
+            }
             this.rotateStartRotation = stroke.rotation || 0;
             stroke.originalBounds = this.getStrokeSelectionBounds(stroke);
             for (let point of stroke.points) {
@@ -2389,9 +2456,17 @@ class SelectionManager {
             }
         } else if (this.selectionType === 'text' && this.textManager) {
             const textObj = this.textManager.textObjects[this.selectedIndex];
+            if (!textObj) {
+                this.isRotating = false;
+                return;
+            }
             this.rotateStartRotation = textObj.rotation || 0;
         } else if (this.selectionType === 'image') {
             const img = this.drawingEngine.stampedImages[this.selectedIndex];
+            if (!img) {
+                this.isRotating = false;
+                return;
+            }
             this.rotateStartRotation = img.rotation || 0;
         } else if (this.selectionType === 'background') {
             const transform = this.backgroundManager?.getBackgroundImageTransform?.();
@@ -3173,16 +3248,18 @@ class SelectionManager {
     editSelectedText() {
         if (this.selectionType !== 'text' || this.selectedIndex === null) return;
         if (!this.textManager) return;
-        
+
         const textObj = this.textManager.textObjects[this.selectedIndex];
         if (!textObj) return;
-        
+
         // Store the index for after editing
         const editIndex = this.selectedIndex;
-        
-        // Clear the selection overlay first
-        this.hideControls();
-        
+
+        // Fully clear the selection, not just the overlay: an invisible
+        // selection left behind would let a stray Delete/Backspace (or
+        // Ctrl+C) act on the text with no visual cue.
+        this.clearSelection({ skipRedraw: true });
+
         // Use the text manager's edit method if available
         if (typeof this.textManager.editExistingText === 'function') {
             this.textManager.editExistingText(editIndex);
@@ -3523,7 +3600,7 @@ class SelectionManager {
             (this.isCompoundSelection() && (this.selectedStrokes.length > 0 || this.selectedImages.length > 0 || this.selectedTexts.length > 0));
     }
     
-    clearSelection() {
+    clearSelection(options = {}) {
         this.selectionType = null;
         this.selectedIndex = null;
         this.selectedGroupId = null;
@@ -3558,7 +3635,13 @@ class SelectionManager {
         if (this.lassoSvg) {
             this.lassoSvg.style.display = 'none';
         }
-        this.redrawCanvas();
+        // Scene-restore flows clear the selection while drawingEngine still
+        // holds the OUTGOING scene arrays; redrawing here would paint the old
+        // scene over the freshly restored bitmap. Those callers pass
+        // skipRedraw and repaint (or keep the restored bitmap) themselves.
+        if (!options.skipRedraw) {
+            this.redrawCanvas();
+        }
     }
     
     redrawWithSelection() {

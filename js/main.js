@@ -305,6 +305,7 @@ class DrawingBoard {
         this.suppressBeforeUnloadPrompt = false;
         this.hasUnresolvedRecoveryData = false;
         this.recoveryPromptOpen = false;
+        this.isRestoringSession = false;
         this.recoveryCheckPromise = null;
         
         // Coordinate origin dragging state
@@ -330,6 +331,26 @@ class DrawingBoard {
         
         // Uploaded images storage
         this.uploadedImages = this.loadUploadedImages() || [];
+
+        this.historyManager?.setSceneStateHandlers?.({
+            capture: () => this.capturePageScene?.(this.currentPage, {
+                includeEmpty: true,
+                includeImageElements: true
+            }) || {
+                pageNumber: this.currentPage,
+                objectGroups: [],
+                textObjects: [],
+                strokes: [],
+                stampedImages: []
+            },
+            restore: (sceneState) => {
+                if (sceneState) {
+                    this.restorePageScene?.(sceneState.pageNumber || this.currentPage, { scene: sceneState });
+                } else {
+                    this.clearPageSceneRuntimeState?.();
+                }
+            }
+        });
         
         // Connect edge drawing manager to drawing engine
         this.drawingEngine.setEdgeDrawingManager(this.edgeDrawingManager);
@@ -340,10 +361,25 @@ class DrawingBoard {
 
         // Debounced save function
         this.saveTimeout = null;
+        this.consecutiveSessionSaveFailures = 0;
         this.saveSessionDebounced = () => {
             if (this.saveTimeout) clearTimeout(this.saveTimeout);
             this.saveTimeout = setTimeout(() => {
-                this.saveSession();
+                Promise.resolve(this.saveSession()).then((saved) => {
+                    // false = a real write failure (quota, broken IndexedDB);
+                    // undefined = intentionally skipped. Surface persistent
+                    // failures once instead of failing silently all lesson.
+                    if (saved === false) {
+                        this.consecutiveSessionSaveFailures += 1;
+                        if (this.consecutiveSessionSaveFailures === 3) {
+                            const message = window.i18n?.t?.('errors.sessionSaveFailed')
+                                || 'Autosave failed — your board may not be recoverable.';
+                            this.settingsManager?.toastManager?.show?.(message, 'error');
+                        }
+                    } else if (saved === true) {
+                        this.consecutiveSessionSaveFailures = 0;
+                    }
+                }).catch(() => {});
             }, 1000); // 1 second delay
         };
         // Persist a fresh recovery snapshot whenever history commits change
@@ -762,7 +798,7 @@ class DrawingBoard {
         return overlayUiRuntime.openSettings?.(this);
     }
     closeSettings() {
-        return overlayUiRuntime.closeSettings?.();
+        return overlayUiRuntime.closeSettings?.(this);
     }
     showConfigDiffModal(diff, newSettings) {
         return configImportRuntime.showConfigDiffModal?.(this, diff, newSettings);

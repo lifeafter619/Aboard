@@ -205,6 +205,13 @@ function resetRuntimeCanvasState() {
         this.updateUploadedImagesButtons?.();
         this.updateBackgroundUI?.();
         this.updatePaginationUI?.();
+
+        // Drop undo history so cleared content cannot be brought back with
+        // undo (and then re-persisted by the debounced session save).
+        if (this.historyManager) {
+            this.historyManager.reset();
+            this.historyManager.saveState();
+        }
 }
 
 function getRecoveryFailureMessage() {
@@ -254,6 +261,13 @@ function showRecoveryModal() {
         };
         
         this.recoveryPromptOpen = true;
+        // A debounced save scheduled before the prompt appeared must not fire
+        // while the user decides — it would overwrite the recoverable session
+        // with the still-blank board.
+        if (this.saveTimeout) {
+            clearTimeout(this.saveTimeout);
+            this.saveTimeout = null;
+        }
         modal.classList.add('show');
         scheduleFrame(() => {
             (restoreBtn || discardBtn || modal)?.focus?.();
@@ -291,6 +305,7 @@ function showRecoveryModal() {
 }
 
 async function restoreSession() {
+        this.isRestoringSession = true;
         try {
             let sessionData = await this.storageManager.loadSession();
             let syncSnapshot = null;
@@ -468,7 +483,7 @@ async function restoreSession() {
             }
 
             // Apply restored state
-            this.loadPage(this.currentPage);
+            await this.loadPage(this.currentPage);
             this.updateUI();
             this.updateZoomUI();
             this.applyZoom(false);
@@ -483,8 +498,10 @@ async function restoreSession() {
         } catch (e) {
             console.warn('Failed to restore session:', e);
             return false;
+        } finally {
+            this.isRestoringSession = false;
         }
-    
+
 }
 
 function syncSettingsUI(settings) {
@@ -520,6 +537,13 @@ function syncSettingsUI(settings) {
 }
 
 async function clearSessionData() {
+        // Cancel any pending debounced save so it cannot re-persist the
+        // content that is being cleared right now.
+        if (this.saveTimeout) {
+            clearTimeout(this.saveTimeout);
+            this.saveTimeout = null;
+        }
+
         try {
             await this.storageManager.clearSession();
         } catch (e) {

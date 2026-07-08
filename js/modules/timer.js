@@ -454,9 +454,28 @@ class TimerInstance {
         });
         
         // Double-click on time display to restore from minimal mode
-        timeDisplay.addEventListener('dblclick', () => {
+        const restoreFromMinimal = () => {
             if (this.isMinimal) {
+                this.lastMinimalRestoreTime = Date.now();
                 this.toggleMinimal();
+            }
+        };
+        timeDisplay.addEventListener('dblclick', () => {
+            if (Date.now() - (this.lastMinimalRestoreTime || 0) < 500) return;
+            restoreFromMinimal();
+        });
+        // The widget's touchstart handler calls preventDefault() (see
+        // setupDragging), which suppresses the synthesized dblclick on touch
+        // screens — detect a double-tap from pointerup timing so minimal mode
+        // can still be exited by touch.
+        timeDisplay.addEventListener('pointerup', (e) => {
+            if (!this.isMinimal || e.pointerType === 'mouse') return;
+            const now = Date.now();
+            const previousTap = this.lastMinimalTapTime || 0;
+            this.lastMinimalTapTime = now;
+            if (now - previousTap < 400) {
+                this.lastMinimalTapTime = 0;
+                restoreFromMinimal();
             }
         });
     }
@@ -1402,7 +1421,21 @@ class TimerManager {
         try {
             const saved = localStorage.getItem('timerCustomSounds');
             if (saved) {
-                return JSON.parse(saved);
+                const parsed = JSON.parse(saved);
+                if (!Array.isArray(parsed)) {
+                    console.warn('Ignoring malformed custom sounds payload: expected an array.');
+                    return [];
+                }
+                return parsed.filter(sound => (
+                    sound
+                    && typeof sound === 'object'
+                    && typeof sound.id === 'string'
+                    && typeof sound.name === 'string'
+                    && typeof sound.url === 'string'
+                    && sound.id
+                    && sound.name
+                    && sound.url
+                ));
             }
         } catch (e) {
             console.warn('Failed to load custom sounds:', e);
@@ -2242,6 +2275,7 @@ class TimerManager {
     }
     
     hideSettingsModal() {
+        this.stopPreviewAudio();
         const modal = document.getElementById('timer-settings-modal');
         const restoreFocusTarget = this.timerSettingsPreviouslyFocusedElement;
         this.timerSettingsPreviouslyFocusedElement = null;

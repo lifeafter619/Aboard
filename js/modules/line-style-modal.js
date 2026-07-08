@@ -245,6 +245,14 @@ class LineStyleModal {
             this.hide();
         }, 'lineStyleBindingsInitialized');
 
+        // ensureModalReady() runs on every show(); guard on the modal element
+        // (like bindDialogDismissal) so buttons and sliders don't accumulate
+        // one extra copy of each listener per open.
+        if (this.modal.dataset.lineStyleListenersInitialized === 'true') {
+            return;
+        }
+        this.modal.dataset.lineStyleListenersInitialized = 'true';
+
         // Close button
         document.getElementById('line-style-modal-close')?.addEventListener('click', () => {
             this.hide();
