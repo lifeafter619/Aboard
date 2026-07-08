@@ -795,13 +795,21 @@ class ScoreboardInstance {
 class ScoreboardManager {
     constructor() {
         this.instances = new Map();
-        this.nextId = 1;
+    }
+
+    getNextAvailableId() {
+        let id = 1;
+        while (this.instances.has(id)) {
+            id += 1;
+        }
+        return id;
     }
 
     create() {
-        const id = this.nextId++;
+        const id = this.getNextAvailableId();
         const instance = new ScoreboardInstance(id, this);
         this.instances.set(id, instance);
+        return instance;
     }
 
     remove(id) {

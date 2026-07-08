@@ -42,6 +42,20 @@ function resetSharedFontPreviewSettings(options = {}) {
         this.syncFontPreviewDisplays();
 }
 
+function findFontManagementItem(list, fontValue) {
+        if (!list?.querySelectorAll || fontValue === null || typeof fontValue === 'undefined') {
+                return null;
+        }
+
+        const targetValue = String(fontValue);
+        return Array.from(list.querySelectorAll('.font-management-item[data-font]'))
+                .find(item => item?.dataset?.font === targetValue) || null;
+}
+
+function findFontAliasInput(list, fontValue) {
+        return findFontManagementItem(list, fontValue)?.querySelector?.('.font-alias-input') || null;
+}
+
 function getDialogConfirm(board, config) {
         if (window.appDialog?.showConfirm) {
             return window.appDialog.showConfirm(config);
@@ -421,7 +435,7 @@ function renderFontManagementList() {
                 this.editingFontAliasFont = font.value;
                 this.renderFontManagementList();
                 requestAnimationFrame(() => {
-                    const nextInput = list.querySelector(`.font-management-item[data-font="${CSS.escape(font.value)}"] .font-alias-input`);
+                    const nextInput = findFontAliasInput(list, font.value);
                     nextInput?.focus();
                     nextInput?.select();
                 });
@@ -556,6 +570,7 @@ function saveFontOrderFromList() {
 
 window.AboardFontManagementRuntime = {
     normalizeFontPreviewSizeInput,
+    findFontAliasInput,
     getTextWithFallback(board, key, fallback) {
         return getTextWithFallback.call(board, key, fallback);
     },

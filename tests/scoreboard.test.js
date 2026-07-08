@@ -24,6 +24,7 @@ function createElement(tagName, documentRef) {
     addEventListener(type, handler) {
       element.listeners[type] = handler;
     },
+    remove() {},
     setAttribute(name, value) {
       element[name] = String(value);
     },
@@ -57,6 +58,7 @@ function createDocumentStub() {
       return createElement(tagName, this);
     },
     addEventListener() {},
+    removeEventListener() {},
     getElementById() {
       return null;
     },
@@ -87,8 +89,8 @@ function createLocalStorageStub() {
   };
 }
 
-function loadScoreboardInstance(document, localStorage = createLocalStorageStub()) {
-  const source = `${fs.readFileSync(path.join(__dirname, '..', 'js', 'modules', 'scoreboard.js'), 'utf8')}\nwindow.__ScoreboardInstance = ScoreboardInstance;`;
+function loadScoreboardHarness(document, localStorage = createLocalStorageStub()) {
+  const source = `${fs.readFileSync(path.join(__dirname, '..', 'js', 'modules', 'scoreboard.js'), 'utf8')}\nwindow.__ScoreboardInstance = ScoreboardInstance;\nwindow.__ScoreboardManager = ScoreboardManager;`;
   const sandbox = {
     window: {
       innerWidth: 1024,
@@ -120,7 +122,14 @@ function loadScoreboardInstance(document, localStorage = createLocalStorageStub(
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox, { filename: 'scoreboard.js' });
-  return sandbox.window.__ScoreboardInstance;
+  return {
+    ScoreboardInstance: sandbox.window.__ScoreboardInstance,
+    ScoreboardManager: sandbox.window.__ScoreboardManager
+  };
+}
+
+function loadScoreboardInstance(document, localStorage = createLocalStorageStub()) {
+  return loadScoreboardHarness(document, localStorage).ScoreboardInstance;
 }
 
 function testInitialTitleAndTeamNameAreSafeBeforeRender() {
@@ -162,9 +171,27 @@ function testMultipleScoreboardsDoNotShareSavedTeams() {
   assert.equal(second.config.teams[0].name, 'Team A');
 }
 
+function testClosedPrimaryScoreboardReopensSavedPrimarySlot() {
+  const document = createDocumentStub();
+  const localStorage = createLocalStorageStub();
+  const { ScoreboardManager } = loadScoreboardHarness(document, localStorage);
+  const manager = new ScoreboardManager();
+
+  const first = manager.create();
+  first.config.teams[0].score = 7;
+  first.saveState();
+  manager.remove(first.id);
+
+  const reopened = manager.create();
+
+  assert.equal(reopened.id, 1, 'reopening the primary scoreboard should reuse the primary storage slot');
+  assert.equal(reopened.config.teams[0].score, 7, 'reopened primary scoreboard should restore its saved score');
+}
+
 function main() {
   testInitialTitleAndTeamNameAreSafeBeforeRender();
   testMultipleScoreboardsDoNotShareSavedTeams();
+  testClosedPrimaryScoreboardReopensSavedPrimarySlot();
   console.log('scoreboard.test: all assertions passed');
 }
 

@@ -20,6 +20,16 @@ function safeCustomizationStorageSetItem(key, value, label = 'customization') {
         }
 }
 
+function findCustomizationDataItem(container, selector, datasetKey, value) {
+        if (!container?.querySelectorAll || value === null || typeof value === 'undefined') {
+                return null;
+        }
+
+        const targetValue = String(value);
+        return Array.from(container.querySelectorAll(selector))
+                .find(item => item?.dataset?.[datasetKey] === targetValue) || null;
+}
+
 function initToolbarCustomization() {
         const toolbarList = document.getElementById('toolbar-customization-list');
         if (!toolbarList) return;
@@ -93,8 +103,10 @@ function initToolbarCustomization() {
 }
 
 function reorderToolbarItems(container, order) {
+        if (!Array.isArray(order)) return;
+
         order.forEach(tool => {
-            const item = container.querySelector(`[data-tool="${tool}"]`);
+            const item = findCustomizationDataItem(container, '[data-tool]', 'tool', tool);
             if (item) {
                 container.appendChild(item);
             }
@@ -350,10 +362,10 @@ function saveControlButtonOrder() {
 
 function reorderControlButtonList(order) {
         const list = document.getElementById('control-button-list');
-        if (!list || !order) return;
+        if (!list || !Array.isArray(order)) return;
         
         order.forEach(controlName => {
-            const item = list.querySelector(`[data-control="${controlName}"]`);
+            const item = findCustomizationDataItem(list, '[data-control]', 'control', controlName);
             if (item) {
                 list.appendChild(item);
             }

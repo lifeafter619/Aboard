@@ -249,10 +249,32 @@ function testFullscreenDisplayEscapesTranslatedMode() {
   );
 }
 
+function testSoundPresetLookupHandlesSelectorSpecialChars() {
+  const { sandbox } = loadTimerRuntime();
+  const soundButton = {
+    dataset: {
+      sound: 'custom"]#bad'
+    }
+  };
+  let selectorUsed = null;
+  const root = {
+    querySelectorAll(selector) {
+      selectorUsed = selector;
+      return [soundButton];
+    }
+  };
+
+  const found = sandbox.window.AboardTimerRuntime.findTimerSoundPresetButton('custom"]#bad', root);
+
+  assert.equal(found, soundButton, 'timer sound preset lookup should match special-character ids without dynamic selectors');
+  assert.equal(selectorUsed, '.sound-preset-btn[data-sound]', 'timer sound preset lookup should use a static selector');
+}
+
 (function main() {
   testCreateDisplayElementEscapesTitle();
   testCreateDisplayElementEscapesTranslatedLabels();
   testFullscreenDisplayEscapesTitle();
   testFullscreenDisplayEscapesTranslatedMode();
+  testSoundPresetLookupHandlesSelectorSpecialChars();
   console.log('timer-title-escaping.test: all assertions passed');
 })();

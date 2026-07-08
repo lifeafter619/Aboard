@@ -123,6 +123,16 @@ function setTimerPreviewButtonState(previewButton, isPlaying) {
     previewButton.innerHTML = isPlaying ? timerPreviewPauseIconSvg : timerPreviewPlayIconSvg;
 }
 
+function findTimerSoundPresetButton(soundId, root = document) {
+    if (!root?.querySelectorAll || soundId === null || typeof soundId === 'undefined') {
+        return null;
+    }
+
+    const targetSoundId = String(soundId);
+    return Array.from(root.querySelectorAll('.sound-preset-btn[data-sound]'))
+        .find(button => button?.dataset?.sound === targetSoundId) || null;
+}
+
 // Single Timer Instance Class
 class TimerInstance {
     constructor(options) {
@@ -2254,7 +2264,7 @@ class TimerManager {
 
             if (timer.selectedSound) {
                 document.querySelectorAll('.sound-preset-btn').forEach(b => b.classList.remove('active'));
-                const soundBtn = document.querySelector(`.sound-preset-btn[data-sound="${timer.selectedSound}"]`);
+                const soundBtn = findTimerSoundPresetButton(timer.selectedSound);
                 if (soundBtn) {
                     soundBtn.classList.add('active');
                 }
@@ -2551,7 +2561,8 @@ class TimerManager {
 
 if (typeof window !== 'undefined') {
     window.AboardTimerRuntime = {
-        normalizeTimerNumberInputValue
+        normalizeTimerNumberInputValue,
+        findTimerSoundPresetButton
     };
     window.TimerManager = TimerManager;
 }

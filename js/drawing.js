@@ -852,6 +852,16 @@ class DrawingEngine {
         return layer;
     }
 
+    findOffCanvasImageMirror(layer, objectId) {
+        if (!layer?.querySelectorAll || objectId === null || typeof objectId === 'undefined') {
+            return null;
+        }
+
+        const targetId = String(objectId);
+        return Array.from(layer.querySelectorAll('[data-object-id]'))
+            .find(node => node?.dataset?.objectId === targetId) || null;
+    }
+
     updateOffCanvasImageMirrors(textObjects = []) {
         const layer = this.ensureOffCanvasImageLayer();
         if (!layer) return;
@@ -876,11 +886,12 @@ class DrawingEngine {
             }
             img.wasOutsideCanvas = true;
 
-            usedIds.add(img.objectId);
-            let mirror = layer.querySelector(`[data-object-id="${img.objectId}"]`);
+            const mirrorObjectId = String(img.objectId);
+            usedIds.add(mirrorObjectId);
+            let mirror = this.findOffCanvasImageMirror(layer, mirrorObjectId);
             if (!mirror) {
                 mirror = document.createElement('img');
-                mirror.dataset.objectId = img.objectId;
+                mirror.dataset.objectId = mirrorObjectId;
                 mirror.style.position = 'absolute';
                 mirror.style.transformOrigin = 'center center';
                 mirror.style.pointerEvents = 'auto';

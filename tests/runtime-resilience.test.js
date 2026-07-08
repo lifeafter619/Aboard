@@ -268,6 +268,93 @@ function loadHistoryManager() {
   return sandbox.__runtimeResilienceExports.HistoryManager;
 }
 
+function loadDrawingEngine() {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'js', 'drawing.js'),
+    'utf8'
+  ) + '\n;globalThis.__runtimeResilienceExports = { DrawingEngine: window.AboardDrawingEngine || window.DrawingEngine };';
+
+  const sandbox = {
+    window: {},
+    localStorage: {
+      getItem() {
+        return null;
+      },
+      setItem() {},
+      removeItem() {}
+    },
+    document: {},
+    console,
+    Object,
+    String,
+    Number,
+    Boolean,
+    Array,
+    Set,
+    Map,
+    Math
+  };
+
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox, { filename: 'drawing.js' });
+  return sandbox.__runtimeResilienceExports.DrawingEngine;
+}
+
+function loadCustomizationRuntime(document = {}) {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'js', 'modules', 'customization-runtime.js'),
+    'utf8'
+  );
+
+  const sandbox = {
+    window: {},
+    document,
+    localStorage: {
+      getItem() {
+        return null;
+      },
+      setItem() {}
+    },
+    console,
+    JSON,
+    Object,
+    String,
+    Array
+  };
+
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox, { filename: 'customization-runtime.js' });
+  return sandbox.window.AboardCustomizationRuntime;
+}
+
+function loadFontManagementRuntime() {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'js', 'modules', 'font-management-runtime.js'),
+    'utf8'
+  );
+
+  const sandbox = {
+    window: {},
+    document: {},
+    console,
+    Object,
+    String,
+    Number,
+    Boolean,
+    Array,
+    Set,
+    Map,
+    parseInt
+  };
+
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox, { filename: 'font-management-runtime.js' });
+  return sandbox.window.AboardFontManagementRuntime;
+}
+
 function loadStorageManager({
   indexedDB,
   warnings = [],
@@ -941,6 +1028,87 @@ function testVectorPreviewStaysOffForMarkerStrokes() {
   );
 }
 
+function testOffCanvasImageMirrorLookupHandlesSelectorSpecialChars() {
+  const DrawingEngine = loadDrawingEngine();
+  const mirror = {
+    dataset: {
+      objectId: 'imported"]#bad'
+    }
+  };
+  let selectorUsed = null;
+  const layer = {
+    querySelectorAll(selector) {
+      selectorUsed = selector;
+      return [mirror];
+    }
+  };
+  const engine = Object.create(DrawingEngine.prototype);
+
+  const found = engine.findOffCanvasImageMirror(layer, 'imported"]#bad');
+
+  assert.equal(found, mirror, 'off-canvas image mirrors should be found without interpolating object ids into selectors');
+  assert.equal(selectorUsed, '[data-object-id]', 'mirror lookup should use a static selector only');
+}
+
+function testCustomizationReorderingHandlesSelectorSpecialChars() {
+  const suspiciousName = 'imported"]#bad';
+  const toolItem = { dataset: { tool: suspiciousName } };
+  const controlItem = { dataset: { control: suspiciousName } };
+  const appended = [];
+
+  const makeList = (expectedSelector, item) => ({
+    querySelector(selector) {
+      throw new Error(`dynamic selector should not be used: ${selector}`);
+    },
+    querySelectorAll(selector) {
+      assert.equal(selector, expectedSelector, 'reordering should use a static data selector');
+      return [item];
+    },
+    appendChild(itemToAppend) {
+      appended.push(itemToAppend);
+    }
+  });
+  const controlList = makeList('[data-control]', controlItem);
+  const runtime = loadCustomizationRuntime({
+    getElementById(id) {
+      return id === 'control-button-list' ? controlList : null;
+    }
+  });
+
+  runtime.reorderToolbarItems({}, makeList('[data-tool]', toolItem), [suspiciousName]);
+  runtime.reorderControlButtonList({}, [suspiciousName]);
+
+  assert.deepEqual(appended, [toolItem, controlItem], 'customization reordering should match data attributes by value without selector interpolation');
+}
+
+function testFontAliasLookupHandlesSelectorSpecialCharsWithoutCssEscape() {
+  const runtime = loadFontManagementRuntime();
+  const suspiciousFont = 'Font"]#bad';
+  const aliasInput = {};
+  const fontItem = {
+    dataset: {
+      font: suspiciousFont
+    },
+    querySelector(selector) {
+      assert.equal(selector, '.font-alias-input', 'font alias lookup should query inside the matched item only');
+      return aliasInput;
+    }
+  };
+  const list = {
+    querySelector(selector) {
+      throw new Error(`dynamic selector should not be used: ${selector}`);
+    },
+    querySelectorAll(selector) {
+      assert.equal(selector, '.font-management-item[data-font]', 'font alias lookup should use a static data selector');
+      return [fontItem];
+    }
+  };
+
+  const found = runtime.findFontAliasInput(list, suspiciousFont);
+
+  assert.equal(found, aliasInput, 'font alias input lookup should not depend on CSS.escape or selector interpolation');
+}
+
 async function testStorageManagerGracefullyHandlesMissingIndexedDb() {
   const warnings = [];
   const StorageManager = loadStorageManager({ indexedDB: undefined, warnings });
@@ -1277,6 +1445,9 @@ function testHistoryManagerUsesSmallerDefaultMemoryCap() {
   testToolSelectionSurvivesMissingSelectionManager();
   testSelectToolUsesDefaultCanvasCursor();
   testVectorPreviewStaysOffForMarkerStrokes();
+  testOffCanvasImageMirrorLookupHandlesSelectorSpecialChars();
+  testCustomizationReorderingHandlesSelectorSpecialChars();
+  testFontAliasLookupHandlesSelectorSpecialCharsWithoutCssEscape();
   await testStorageManagerGracefullyHandlesMissingIndexedDb();
   await testStorageManagerFallsBackWhenCanvasToBlobIsUnavailable();
   await testStorageManagerFallsBackWhenCreateImageBitmapIsUnavailable();
