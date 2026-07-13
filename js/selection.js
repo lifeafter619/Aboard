@@ -3699,6 +3699,12 @@ class SelectionManager {
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.restore();
+
+        const board = window.drawingBoard;
+        const rasterFallbackBase = board?.getPageRasterFallbackBase?.(board.currentPage) || null;
+        if (rasterFallbackBase) {
+            this.ctx.putImageData(rasterFallbackBase, 0, 0);
+        }
         
         // Check if there is vector content to redraw
         const hasVectorContent = this.drawingEngine.strokes.length > 0 ||
@@ -3707,7 +3713,7 @@ class SelectionManager {
         
         if (hasVectorContent) {
             this.drawingEngine.renderScene(this.textManager);
-        } else {
+        } else if (!rasterFallbackBase) {
             // No vector content: restore base canvas from history to preserve
             // pixel content (e.g. after session restore where vector data is not available)
             if (this.historyManager && this.historyManager.historyStep >= 0) {

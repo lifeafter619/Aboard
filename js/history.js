@@ -84,7 +84,8 @@ class HistoryManager {
         }
 
         const byteLength = imageData?.data?.byteLength || 0;
-        if (hasSceneState && byteLength > this.singleBitmapMemoryLimitBytes) {
+        const requiresHistoryBitmap = sceneState?.requiresHistoryBitmap === true;
+        if (hasSceneState && !requiresHistoryBitmap && byteLength > this.singleBitmapMemoryLimitBytes) {
             imageData = null;
         }
 

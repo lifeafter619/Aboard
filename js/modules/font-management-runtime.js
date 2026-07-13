@@ -546,7 +546,9 @@ function initFontManagement() {
                 cancelText: this.getTextWithFallback('common.cancel', 'Cancel')
             });
             if (!confirmed) return;
-            this.settingsManager.resetFontManagementToDefaults();
+            if (!this.settingsManager.resetFontManagementToDefaults()) {
+                return;
+            }
             this.openFontPreviewPanels.clear();
             this.editingFontAliasFont = null;
             this.activeFontPreviewFont = null;

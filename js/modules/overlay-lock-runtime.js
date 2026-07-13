@@ -3,7 +3,12 @@
 
 function setupModalInteractionLock() {
         const updateModalState = () => {
-            const hasBlockingModal = !!document.querySelector('.modal.show:not(.non-blocking-modal), .time-fullscreen-modal.show, .timer-fullscreen-modal.show');
+            const hasBlockingModal = !!document.querySelector(
+                '.modal.show:not(.non-blocking-modal), '
+                + '[role="dialog"][aria-modal="true"].show:not(.non-blocking-modal), '
+                + '.time-fullscreen-modal.show, .timer-fullscreen-modal.show, '
+                + '#timer-settings-modal.show, #time-display-settings-modal.show'
+            );
             document.body.classList.toggle('overlay-modal-open', hasBlockingModal);
         };
         const observer = new MutationObserver(updateModalState);

@@ -1,6 +1,8 @@
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+const VECTOR_PREVIEW_UNSUPPORTED_SHAPE_STYLES = new Set(['wavy', 'double', 'triple', 'multi']);
+
 function persistBoardViewState(board, options = {}) {
         if (typeof board?.drawingEngine?.persistViewState === 'function') {
                 board.drawingEngine.persistViewState(options);
@@ -370,6 +372,18 @@ function shouldUseVectorPreview() {
             this.drawingEngine?.shouldUseLiveStrokePreview?.() ||
             this.drawingEngine?.shouldUseLiveEraserPreview?.()
         );
+        const hasUnsupportedVectorShape = this.drawingEngine?.strokes?.some?.((stroke) => {
+            if (stroke?.renderMode !== 'shape' && !stroke?.shapeType) {
+                return false;
+            }
+            const lineStyle = stroke.shapeLineStyle || stroke.lineStyle || 'solid';
+            if (VECTOR_PREVIEW_UNSUPPORTED_SHAPE_STYLES.has(lineStyle)) {
+                return true;
+            }
+            return (lineStyle === 'arrow' || lineStyle === 'doubleArrow')
+                && stroke.shapeType !== 'arrow'
+                && stroke.shapeType !== 'doubleArrow';
+        }) || false;
         const hasBlockingTransientOverlay = !!(
             this.insertImageManager?.isActive ||
             this.insertTextManager?.isActive ||
@@ -382,6 +396,7 @@ function shouldUseVectorPreview() {
         return finalScale > 1.05 &&
             this.hasVectorPreviewContent() &&
             !hasStoredMarkerStroke &&
+            !hasUnsupportedVectorShape &&
             !hasBlockingTransientOverlay;
     
 }

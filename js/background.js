@@ -50,6 +50,10 @@ class BackgroundManager {
         this.patternDensity = Number.isNaN(savedPatternDensity) ? 1.0 : savedPatternDensity;
         this.backgroundImage = null;
         this.backgroundImageData = safeBackgroundStorageGetItem('backgroundImageData') || null;
+        this.backgroundImageLoadToken = 0;
+        this.gifInitToken = 0;
+        this.pendingGifSource = null;
+        this.gifInstance = null;
         this.imageSize = Number.isNaN(savedImageSize) ? 1.0 : savedImageSize;
         this.isImagePaused = false; // State for GIF playback control
         this.imageStaticData = null; // Store static frame for paused GIF
@@ -100,14 +104,22 @@ class BackgroundManager {
             // (e.g. ImageControls.copyImageToCanvas) expect an HTMLImageElement,
             // never a raw data-URL string.
             if (typeof Image === 'function') {
+                const restoredSource = this.backgroundImageData;
+                const loadToken = ++this.backgroundImageLoadToken;
                 const restoredImage = new Image();
                 restoredImage.onload = () => {
-                    this.backgroundImage = restoredImage;
+                    if (loadToken === this.backgroundImageLoadToken
+                        && restoredSource === this.backgroundImageData) {
+                        this.backgroundImage = restoredImage;
+                    }
                 };
                 restoredImage.onerror = () => {
-                    console.warn('Failed to restore saved background image');
+                    if (loadToken === this.backgroundImageLoadToken
+                        && restoredSource === this.backgroundImageData) {
+                        console.warn('Failed to restore saved background image');
+                    }
                 };
-                restoredImage.src = this.backgroundImageData;
+                restoredImage.src = restoredSource;
             }
             // Also need to initialize the DOM element if it doesn't exist?
             // The DOM element logic is handled in drawBackgroundPattern/updateBackgroundImageElement
@@ -117,7 +129,6 @@ class BackgroundManager {
             }
         }
 
-        this.gifInstance = null; // Store SuperGif instance
         this.gifLoopCount = 0; // Default infinite
         this.currentGifLoop = 0;
 
@@ -767,28 +778,32 @@ class BackgroundManager {
 
             this.setStyleIfChanged(containerElement, 'display', 'block');
 
-            // Check if source changed
-            if (imgElement.src !== this.backgroundImageData && !this.isImagePaused) {
+            const sourceChanged = imgElement.getAttribute('src') !== this.backgroundImageData;
+            if (sourceChanged) {
+                this.stopGifInstance();
+                this.restoreBackgroundGifImage(imgElement);
                 imgElement.src = this.backgroundImageData;
+            }
 
-                // Check if it's a GIF and initialize SuperGif if needed
-                if (this.isGif(this.backgroundImageData)) {
+            // Check if it's a GIF and initialize SuperGif if needed. A source
+            // can remain unchanged after its wrapper was removed, so instance
+            // state—not only img.src—must participate in this decision.
+            if (this.isGif(this.backgroundImageData)) {
+                if (!this.gifInstance && this.pendingGifSource !== this.backgroundImageData) {
                     this.initGif(imgElement);
-                    // Show GIF settings button
-                    const gifSettingsBtn = document.getElementById('bg-gif-settings-btn');
-                    if (gifSettingsBtn) {
-                        this.setStyleIfChanged(gifSettingsBtn, 'display', 'block', 'gifSettingsDisplay');
-                    }
-                } else {
-                    // Hide GIF settings button
-                    const gifSettingsBtn = document.getElementById('bg-gif-settings-btn');
-                    if (gifSettingsBtn) {
-                        this.setStyleIfChanged(gifSettingsBtn, 'display', 'none', 'gifSettingsDisplay');
-                    }
-                    if (this.gifInstance) {
-                        this.stopGifInstance();
-                        this.restoreBackgroundGifImage(imgElement);
-                    }
+                }
+                const gifSettingsBtn = document.getElementById('bg-gif-settings-btn');
+                if (gifSettingsBtn) {
+                    this.setStyleIfChanged(gifSettingsBtn, 'display', 'block', 'gifSettingsDisplay');
+                }
+            } else {
+                const gifSettingsBtn = document.getElementById('bg-gif-settings-btn');
+                if (gifSettingsBtn) {
+                    this.setStyleIfChanged(gifSettingsBtn, 'display', 'none', 'gifSettingsDisplay');
+                }
+                if (this.gifInstance || this.pendingGifSource) {
+                    this.stopGifInstance();
+                    this.restoreBackgroundGifImage(imgElement);
                 }
             }
 
@@ -860,6 +875,10 @@ class BackgroundManager {
             );
 
         } else {
+            if (this.gifInstance || this.pendingGifSource) {
+                this.stopGifInstance();
+                this.restoreBackgroundGifImage(imgElement);
+            }
             if (containerElement) {
                 this.setStyleIfChanged(containerElement, 'display', 'none');
             }
@@ -891,7 +910,9 @@ class BackgroundManager {
             : null;
         if (existingJsgif) {
              existingJsgif.remove();
-             container.appendChild(imgElement);
+             if (imgElement) {
+                 container.appendChild(imgElement);
+             }
         }
 
         if (imgElement) {
@@ -901,7 +922,11 @@ class BackgroundManager {
         return Boolean(existingJsgif);
     }
 
-    stopGifInstance() {
+    stopGifInstance({ invalidatePending = true } = {}) {
+        if (invalidatePending) {
+            this.gifInitToken = (this.gifInitToken || 0) + 1;
+            this.pendingGifSource = null;
+        }
         // libgif keeps playing through a self-rescheduling timer chain that
         // only pause() stops; dropping the reference alone leaks the loop and
         // every decoded frame.
@@ -911,9 +936,47 @@ class BackgroundManager {
             console.warn('Failed to stop background GIF instance:', e);
         }
         this.gifInstance = null;
+        if (typeof document !== 'undefined') {
+            try {
+                const imgElement = document.getElementById('background-image-element');
+                this.restoreBackgroundGifImage(imgElement);
+            } catch (e) {
+                console.warn('Failed to restore the background GIF image element:', e);
+            }
+        }
     }
 
     async initGif(imgElement) {
+        const expectedSource = this.backgroundImageData;
+        if (!imgElement) {
+            return;
+        }
+        if (!this.isGif(expectedSource)) {
+            imgElement.style.display = 'block';
+            return;
+        }
+
+        // Do this before the DOM-identity guard below. When the wrapper is
+        // unavailable, the image cannot be discoverable through that guard,
+        // but it still needs to remain visible as a static fallback.
+        if (!document.getElementById('background-image-container')) {
+            this.stopGifInstance();
+            imgElement.style.display = 'block';
+            return;
+        }
+        if (this.pendingGifSource === expectedSource) {
+            return;
+        }
+
+        const initToken = (this.gifInitToken || 0) + 1;
+        this.gifInitToken = initToken;
+        this.pendingGifSource = expectedSource;
+        const isCurrentInitialization = () => initToken === this.gifInitToken
+            && expectedSource === this.backgroundImageData
+            && this.backgroundPattern === 'image'
+            && imgElement.getAttribute('src') === expectedSource
+            && document.getElementById('background-image-element') === imgElement;
+
         // Ensure SuperGif is loaded
         if (!window.SuperGif) {
             try {
@@ -921,12 +984,18 @@ class BackgroundManager {
                     await ScriptLoader.load('js/modules/libgif.js');
                 } else {
                     console.error('ScriptLoader not found');
+                    if (isCurrentInitialization()) this.pendingGifSource = null;
                     return;
                 }
             } catch (e) {
                 console.error('Failed to load libgif.js', e);
+                if (isCurrentInitialization()) this.pendingGifSource = null;
                 return;
             }
+        }
+
+        if (!isCurrentInitialization()) {
+            return;
         }
 
         // Clear previous instance if exists (remove jsgif wrapper if any)
@@ -936,29 +1005,41 @@ class BackgroundManager {
             if (imgElement) {
                 imgElement.style.display = 'block';
             }
+            if (isCurrentInitialization()) this.pendingGifSource = null;
             return;
         }
 
         // If there is already a jsgif div, remove it and restore img
         this.restoreBackgroundGifImage(imgElement);
 
-        this.stopGifInstance();
+        this.stopGifInstance({ invalidatePending: false });
 
+        let gifInstance = null;
         try {
-            this.gifInstance = new SuperGif({
+            gifInstance = new SuperGif({
                 gif: imgElement,
                 auto_play: !this.isImagePaused,
                 loop_mode: this.gifLoopCount === 0 ? true : false,
                 vp_t: 0, vp_l: 0,
                 on_end: () => {
-                   this.handleGifLoop();
+                   this.handleGifLoop(gifInstance, initToken, expectedSource);
                 }
             });
+            if (!isCurrentInitialization()) {
+                gifInstance.pause?.();
+                return;
+            }
+            this.gifInstance = gifInstance;
+            this.pendingGifSource = null;
 
             this.currentGifLoop = 0;
 
-            this.gifInstance.load(() => {
-                const canvas = this.gifInstance.get_canvas();
+            gifInstance.load(() => {
+                if (!isCurrentInitialization() || this.gifInstance !== gifInstance) {
+                    gifInstance.pause?.();
+                    return;
+                }
+                const canvas = gifInstance.get_canvas();
                 if (canvas) {
                     canvas.style.width = '100%';
                     canvas.style.height = '100%';
@@ -966,15 +1047,26 @@ class BackgroundManager {
                 this.emitBackgroundUiState();
             });
         } catch(e) {
+            if (isCurrentInitialization()) {
+                this.pendingGifSource = null;
+                if (this.gifInstance === gifInstance) {
+                    this.gifInstance = null;
+                }
+            }
             console.error("Failed to init SuperGif", e);
         }
     }
 
-    handleGifLoop() {
+    handleGifLoop(instance = this.gifInstance, initToken = this.gifInitToken, source = this.backgroundImageData) {
+        if (instance !== this.gifInstance
+            || initToken !== this.gifInitToken
+            || source !== this.backgroundImageData) {
+            return;
+        }
         if (this.gifLoopCount > 0) {
             this.currentGifLoop++;
             if (this.currentGifLoop >= this.gifLoopCount) {
-                this.gifInstance.pause();
+                instance.pause();
                 this.isImagePaused = true;
                 // Dispatch event for UI update
                 window.dispatchEvent(new CustomEvent('backgroundGifPaused'));
@@ -3010,6 +3102,11 @@ class BackgroundManager {
     }
     
     setBackgroundPattern(pattern) {
+        if (pattern !== 'image') {
+            // A file picker or saved-image decode may still be in flight. A
+            // newer explicit pattern choice must win over that stale result.
+            this.backgroundImageLoadToken = (this.backgroundImageLoadToken || 0) + 1;
+        }
         this.backgroundPattern = pattern;
         safeBackgroundStorageSetItem('backgroundPattern', this.backgroundPattern);
         this.drawBackground();
@@ -3035,11 +3132,8 @@ class BackgroundManager {
     }
     
     setBackgroundImage(imageData) {
-        this.backgroundImageData = imageData;
-        this.isImagePaused = false;
-        this.imageStaticData = null;
-        this.currentGifLoop = 0;
-        safeBackgroundStorageSetItem('backgroundImageData', imageData);
+        const loadToken = (this.backgroundImageLoadToken || 0) + 1;
+        this.backgroundImageLoadToken = loadToken;
         const preserveTransform = this.imageTransform.width > 0 && this.imageTransform.height > 0;
         const existingTransform = preserveTransform ? { ...this.imageTransform } : null;
         
@@ -3047,7 +3141,18 @@ class BackgroundManager {
             // Create an Image object to get dimensions for ImageControls
             const img = new Image();
             img.onload = () => {
+                if (loadToken !== this.backgroundImageLoadToken) {
+                    resolve(false);
+                    return;
+                }
+                this.stopGifInstance();
+                this.restoreBackgroundGifImage(document.getElementById('background-image-element'));
+                this.backgroundImageData = imageData;
                 this.backgroundImage = img;
+                this.isImagePaused = false;
+                this.imageStaticData = null;
+                this.currentGifLoop = 0;
+                safeBackgroundStorageSetItem('backgroundImageData', imageData);
 
                 if (existingTransform) {
                     this.imageTransform = {
@@ -3073,13 +3178,16 @@ class BackgroundManager {
                 this.backgroundPattern = 'image';
                 this.drawBackground();
                 this.emitBackgroundUiState();
-                resolve();
+                resolve(true);
             };
             img.onerror = () => {
+                if (loadToken !== this.backgroundImageLoadToken) {
+                    resolve(false);
+                    return;
+                }
                 console.warn('Failed to load background image');
-                this.drawBackground();
                 this.emitBackgroundUiState();
-                resolve();
+                resolve(false);
             };
             img.src = imageData;
         });
@@ -3150,6 +3258,7 @@ class BackgroundManager {
     }
 
     clearBackgroundImage() {
+        this.backgroundImageLoadToken = (this.backgroundImageLoadToken || 0) + 1;
         this.backgroundImage = null;
         this.backgroundImageData = null;
         this.isImagePaused = false;

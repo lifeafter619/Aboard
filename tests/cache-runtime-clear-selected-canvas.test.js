@@ -172,6 +172,7 @@ async function testCanvasClearRemovesExtendedBoardStateKeys() {
     },
     async clearSessionData() {
       clearSessionDataCalls += 1;
+      return true;
     },
     storageManager: {
       getSessionSizeEstimate() {
@@ -234,6 +235,7 @@ async function testCanvasClearSurvivesBlockedLocalStorageRemoval() {
     },
     async clearSessionData() {
       clearSessionDataCalls += 1;
+      return true;
     },
     storageManager: {
       getSessionSizeEstimate() {
@@ -283,6 +285,7 @@ async function testClearAllLocalDataSurvivesBlockedLocalStorageClear() {
     },
     async clearSessionData() {
       clearSessionDataCalls += 1;
+      return true;
     },
     setCacheStorageSizeSnapshot() {}
   };
@@ -294,9 +297,66 @@ async function testClearAllLocalDataSurvivesBlockedLocalStorageClear() {
   });
 
   assert.equal(clearSessionDataCalls, 1);
-  assert.equal(closeDbCalls, 1);
+  assert.equal(closeDbCalls, 0, 'clearing the session record should keep the reusable database connection open');
   assert.equal(sessionStorage.getItem('backgroundImageData'), null);
   assert.equal(board.isClearingLocalData, false);
+}
+
+async function testClearAllLocalDataRestoresSessionWriteEpoch() {
+  const localStorage = createStorageStub({
+    themeColor: '#336699',
+    aboardSessionWriteEpoch: '42'
+  });
+  const sessionStorage = createStorageStub({
+    backgroundImageData: 'data:image/png;base64,abc'
+  });
+  const runtime = loadCacheRuntime(localStorage, sessionStorage);
+  let persistEpochCalls = 0;
+  const board = {
+    isClearingLocalData: false,
+    saveTimeout: null,
+    sessionWriteEpoch: '43',
+    async clearSessionData() {
+      return true;
+    },
+    persistSessionWriteEpoch() {
+      persistEpochCalls += 1;
+      localStorage.setItem('aboardSessionWriteEpoch', this.sessionWriteEpoch);
+      return true;
+    },
+    setCacheStorageSizeSnapshot() {}
+  };
+
+  const cleared = await runtime.clearAllLocalData(board);
+
+  assert.equal(cleared, true);
+  assert.equal(persistEpochCalls, 1, 'full cleanup should restore the cross-tab invalidation marker');
+  assert.equal(localStorage.getItem('aboardSessionWriteEpoch'), '43');
+}
+
+async function testOtherCacheCleanupPreservesSessionWriteEpoch() {
+  const localStorage = createStorageStub({
+    aboardSessionWriteEpoch: '43',
+    temporaryOtherKey: 'remove-me'
+  });
+  const sessionStorage = createStorageStub();
+  const runtime = loadCacheRuntime(localStorage, sessionStorage);
+  const board = {
+    getCacheKeyGroups() {
+      return runtime.getCacheKeyGroups(this);
+    },
+    setCacheStorageSizeSnapshot() {}
+  };
+
+  const cleared = await runtime.clearSelectedCache(board, {
+    canvas: false,
+    settings: false,
+    other: true
+  });
+
+  assert.equal(cleared, true);
+  assert.equal(localStorage.getItem('aboardSessionWriteEpoch'), '43');
+  assert.equal(localStorage.getItem('temporaryOtherKey'), null);
 }
 
 async function testCacheSizeSummarySurvivesBlockedStorageEnumeration() {
@@ -363,6 +423,8 @@ async function testCacheSizeSummarySurvivesBlockedStorageEnumeration() {
   await testCanvasClearRemovesExtendedBoardStateKeys();
   await testCanvasClearSurvivesBlockedLocalStorageRemoval();
   await testClearAllLocalDataSurvivesBlockedLocalStorageClear();
+  await testClearAllLocalDataRestoresSessionWriteEpoch();
+  await testOtherCacheCleanupPreservesSessionWriteEpoch();
   await testCacheSizeSummarySurvivesBlockedStorageEnumeration();
   console.log('cache-runtime-clear-selected-canvas.test: all assertions passed');
 })().catch((error) => {

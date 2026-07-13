@@ -63,7 +63,7 @@ function loadSessionPersistenceRuntime(localStorage) {
 
 async function testFailedPlannedUpdateRestoreClearsOneShotMarker() {
   const localStorage = createLocalStorageStub({
-    [SYNC_SNAPSHOT_KEY]: JSON.stringify({ timestamp: Date.now() }),
+    [SYNC_SNAPSHOT_KEY]: JSON.stringify({ timestamp: Date.now(), settings: {} }),
     [PLANNED_UPDATE_RELOAD_KEY]: JSON.stringify({
       reason: 'update',
       mode: 'immediate',

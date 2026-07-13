@@ -62,7 +62,9 @@ class ClassroomModeManager {
 
     hasBlockingOverlay() {
         return Boolean(document.querySelector?.(
-            '.timer-fullscreen-modal.show, .time-fullscreen-modal.show, .modal.show, #timer-settings-modal.show'
+            '.timer-fullscreen-modal.show, .time-fullscreen-modal.show, .modal.show, '
+            + '[role="dialog"][aria-modal="true"].show, '
+            + '#timer-settings-modal.show, #time-display-settings-modal.show'
         ));
     }
 

@@ -6,6 +6,85 @@ const defaultCanvasWidth = 1920;
 const defaultCanvasHeight = 1080;
 const minCanvasDimension = 300;
 const maxCanvasDimension = 4000;
+const defaultThemeColor = '#007AFF';
+const minimumThemeContrastRatio = 4.5;
+
+function parseThemeHexColor(value) {
+    const match = String(value || '').trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (!match) return null;
+    const hex = match[1].length === 3
+        ? match[1].split('').map((character) => character + character).join('')
+        : match[1];
+    return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16)
+    };
+}
+
+function formatThemeHexColor({ r, g, b }) {
+    return `#${[r, g, b]
+        .map((component) => Math.max(0, Math.min(255, Math.round(component))).toString(16).padStart(2, '0'))
+        .join('')}`.toUpperCase();
+}
+
+function normalizeThemeColorInput(value) {
+    const parsed = parseThemeHexColor(value) || parseThemeHexColor(defaultThemeColor);
+    return formatThemeHexColor(parsed);
+}
+
+function getRelativeLuminance({ r, g, b }) {
+    const toLinear = (component) => {
+        const channel = component / 255;
+        return channel <= 0.04045
+            ? channel / 12.92
+            : ((channel + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+function getContrastAgainstWhite(rgb) {
+    return 1.05 / (getRelativeLuminance(rgb) + 0.05);
+}
+
+function getAccessibleThemeColor(value) {
+    const parsed = parseThemeHexColor(value) || parseThemeHexColor(defaultThemeColor);
+    if (getContrastAgainstWhite(parsed) >= minimumThemeContrastRatio) {
+        return formatThemeHexColor(parsed);
+    }
+
+    // Preserve hue while finding the lightest RGB scale that still gives
+    // white labels and theme-colored text at least 4.5:1 contrast.
+    let accessibleScale = 0;
+    let inaccessibleScale = 1;
+    for (let iteration = 0; iteration < 18; iteration++) {
+        const candidateScale = (accessibleScale + inaccessibleScale) / 2;
+        const candidate = {
+            r: parsed.r * candidateScale,
+            g: parsed.g * candidateScale,
+            b: parsed.b * candidateScale
+        };
+        if (getContrastAgainstWhite(candidate) >= minimumThemeContrastRatio) {
+            accessibleScale = candidateScale;
+        } else {
+            inaccessibleScale = candidateScale;
+        }
+    }
+
+    let accessibleColor = {
+        r: Math.round(parsed.r * accessibleScale),
+        g: Math.round(parsed.g * accessibleScale),
+        b: Math.round(parsed.b * accessibleScale)
+    };
+    while (getContrastAgainstWhite(accessibleColor) < minimumThemeContrastRatio) {
+        accessibleColor = {
+            r: Math.max(0, accessibleColor.r - 1),
+            g: Math.max(0, accessibleColor.g - 1),
+            b: Math.max(0, accessibleColor.b - 1)
+        };
+    }
+    return formatThemeHexColor(accessibleColor);
+}
 
 function normalizeCanvasDimension(value, fallbackValue) {
     const parsedValue = typeof value === 'number' ? value : parseInt(value, 10);
@@ -80,7 +159,7 @@ class SettingsManager {
         this.canvasWidth = normalizeCanvasDimension(safeLocalStorageGetItem('canvasWidth'), defaultCanvasWidth);
         this.canvasHeight = normalizeCanvasDimension(safeLocalStorageGetItem('canvasHeight'), defaultCanvasHeight);
         this.canvasPreset = safeLocalStorageGetItem('canvasPreset') || 'custom';
-        this.themeColor = safeLocalStorageGetItem('themeColor') || '#007AFF';
+        this.themeColor = normalizeThemeColorInput(safeLocalStorageGetItem('themeColor') || defaultThemeColor);
         this.globalFont = safeLocalStorageGetItem('globalFont') || 'system';
         this.customFonts = this.loadCustomFonts();
         this.fontPreferences = this.loadFontPreferences();
@@ -268,13 +347,18 @@ class SettingsManager {
     // Save custom fonts to localStorage
     saveCustomFonts() {
         try {
-            safeLocalStorageSetItem('customFonts', JSON.stringify(this.customFonts));
+            const persisted = safeLocalStorageSetItem('customFonts', JSON.stringify(this.customFonts));
+            if (!persisted) {
+                throw new Error('custom-font-storage-write-failed');
+            }
+            return true;
         } catch (e) {
             const msg = window.i18n ? window.i18n.t('tools.text.storageQuotaExceeded') : 'Storage quota exceeded. Please delete some custom fonts.';
             if (this.toastManager) {
                 this.toastManager.show(msg, 'error');
             }
             console.warn('Failed to save custom fonts:', e);
+            return false;
         }
     }
     
@@ -339,8 +423,16 @@ class SettingsManager {
 
             const exists = this.customFonts.find(f => f.name === fontName);
             if (!exists) {
-                this.customFonts.push({ name: fontName, data: fontData });
-                this.saveCustomFonts();
+                const newFont = { name: fontName, data: fontData };
+                this.customFonts.push(newFont);
+                if (!this.saveCustomFonts()) {
+                    const fontIndex = this.customFonts.indexOf(newFont);
+                    if (fontIndex >= 0) {
+                        this.customFonts.splice(fontIndex, 1);
+                    }
+                    resolve(null);
+                    return;
+                }
                 this.addFontToDocument(fontName, fontData);
                 this.ensureFontPreferencesIntegrity();
                 this.fontPreferences.visibility[fontName] = true;
@@ -513,8 +605,11 @@ class SettingsManager {
         const fontIndex = this.customFonts.findIndex(font => font.name === fontValue);
         if (fontIndex < 0) return false;
 
-        this.customFonts.splice(fontIndex, 1);
-        this.saveCustomFonts();
+        const [removedFont] = this.customFonts.splice(fontIndex, 1);
+        if (!this.saveCustomFonts()) {
+            this.customFonts.splice(fontIndex, 0, removedFont);
+            return false;
+        }
 
         this.ensureFontPreferencesIntegrity();
         this.fontPreferences.order = this.fontPreferences.order.filter(value => value !== fontValue);
@@ -533,8 +628,12 @@ class SettingsManager {
     }
 
     resetFontManagementToDefaults() {
+        const previousCustomFonts = this.customFonts;
         this.customFonts = [];
-        this.saveCustomFonts();
+        if (!this.saveCustomFonts()) {
+            this.customFonts = previousCustomFonts;
+            return false;
+        }
         this.fontPreferences = { order: [], visibility: {}, aliases: {} };
         this.ensureFontPreferencesIntegrity();
         this.resetFontPreviewSettings({ text: true, size: true });
@@ -542,6 +641,7 @@ class SettingsManager {
         safeLocalStorageSetItem('globalFont', this.globalFont);
         this.applyGlobalFont();
         this.populateGlobalFontSelect();
+        return true;
     }
 
     getModalSizePreference(modalKey) {
@@ -1093,14 +1193,19 @@ class SettingsManager {
     }
     
     setThemeColor(color) {
-        this.themeColor = color;
-        safeLocalStorageSetItem('themeColor', color);
-        document.documentElement.style.setProperty('--theme-color', color);
+        this.themeColor = normalizeThemeColorInput(color);
+        safeLocalStorageSetItem('themeColor', this.themeColor);
+        document.documentElement.style.setProperty('--theme-color', getAccessibleThemeColor(this.themeColor));
         window.i18n?.syncGenericColorControls?.();
     }
     
     applyThemeColor() {
-        document.documentElement.style.setProperty('--theme-color', this.themeColor);
+        const normalizedThemeColor = normalizeThemeColorInput(this.themeColor);
+        if (normalizedThemeColor !== this.themeColor) {
+            this.themeColor = normalizedThemeColor;
+            safeLocalStorageSetItem('themeColor', this.themeColor);
+        }
+        document.documentElement.style.setProperty('--theme-color', getAccessibleThemeColor(this.themeColor));
     }
     
     setGlobalFont(font) {
@@ -1566,9 +1671,13 @@ class SettingsManager {
         if (newSettings.toolbarVisibility) safeLocalStorageSetItem('toolbarVisibility', newSettings.toolbarVisibility);
         if (newSettings.controlButtonOrder) safeLocalStorageSetItem('controlButtonOrder', newSettings.controlButtonOrder);
         if (Array.isArray(newSettings.customFonts)) {
-            this.customFonts = newSettings.customFonts;
-            this.saveCustomFonts();
-            this.loadCustomFontsToDocument();
+            const previousCustomFonts = this.customFonts;
+            this.customFonts = (window.safeDeepClone || ((value) => JSON.parse(JSON.stringify(value))))(newSettings.customFonts);
+            if (this.saveCustomFonts()) {
+                this.loadCustomFontsToDocument();
+            } else {
+                this.customFonts = previousCustomFonts;
+            }
         }
         if (newSettings.fontPreferences && typeof newSettings.fontPreferences === 'object') {
             this.fontPreferences = newSettings.fontPreferences;

@@ -1476,8 +1476,18 @@ class InsertTextManager {
     
     // Trigger a canvas redraw 
     redrawCanvas() {
-        // Clear and redraw canvas contents
+        // Clear and redraw the complete scene. Text edits can occur on top of
+        // imported raster-only content, which must be restored first.
+        this.ctx.save();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.restore();
+
+        const board = window.drawingBoard;
+        const rasterFallbackBase = board?.getPageRasterFallbackBase?.(board.currentPage) || null;
+        if (rasterFallbackBase) {
+            this.ctx.putImageData(rasterFallbackBase, 0, 0);
+        }
         
         if (this.drawingEngine?.renderScene) {
             this.drawingEngine.renderScene(this);

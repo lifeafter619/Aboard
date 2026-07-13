@@ -41,6 +41,8 @@ window.translations = {
         fileReadFailed: 'Failed to read the selected file. Please verify the file is not corrupted.',
         storageWriteFailed: 'Failed to save your changes. Please check browser storage permissions and try again.',
         sessionSaveFailed: 'Autosave failed — your board may not be recoverable. Export a backup soon, or free up storage in Settings.',
+        sessionWriteConflict: 'Another Aboard tab owns autosave. Changes in this tab will not be autosaved until you close the other tab.',
+        sessionDataClearedElsewhere: 'Saved board data was cleared in another tab. Export anything you need, then reload this tab.',
         clearLocalDataBlocked: 'Local data cleanup is blocked by another open Aboard window. Close other Aboard tabs and try again.',
         clearLocalDataFailed: 'Local data cleanup could not finish. Please try again.'
     },
@@ -960,7 +962,8 @@ window.translations = {
         unsafePath: 'Unsafe project package path: {path}',
         tooManyPages: 'The project package contains too many pages.',
         assetTooLarge: 'The project package contains an asset that is too large: {path}',
-        assetsTooLarge: 'The project package contains too many embedded assets.'
+        assetsTooLarge: 'The project package contains too many embedded assets.',
+        rasterFallbackUnavailable: 'Raster page data required to preserve the project is unavailable.'
     },
 
     gif: {

@@ -342,6 +342,32 @@ function testRestorePageBackgroundClearsPausedGifRuntimeState() {
   );
 }
 
+function testBitmapBudgetCanEvictBlankPages() {
+  const localStorage = createStorageStub();
+  const runtime = loadPaginationRuntime(localStorage);
+  const bytesPerPage = 16 * 1024 * 1024;
+  const board = {
+    currentPage: 1,
+    pages: Array.from({ length: 20 }, () => ({
+      data: { byteLength: bytesPerPage },
+      width: 2048,
+      height: 2048
+    })),
+    pageScenes: {},
+    pageRasterFallbackPages: new Set(),
+    pageRasterFallbackBases: new Map(),
+    drawingEngine: {
+      renderScene() {}
+    }
+  };
+
+  const remainingBytes = runtime.enforcePageBitmapMemoryBudget(board);
+
+  assert.ok(remainingBytes <= 256 * 1024 * 1024, 'blank-page snapshots should respect the bitmap budget');
+  assert.ok(board.pages.slice(1).some((page) => page === null), 'at least one non-current blank page should be evicted');
+  assert.notEqual(board.pages[0], null, 'the visible page snapshot should not be evicted');
+}
+
 async function testGoToPageAsyncWaitsForBackgroundImageLoad() {
   const localStorage = createStorageStub();
   const runtime = loadPaginationRuntime(localStorage);
@@ -380,6 +406,7 @@ async function main() {
   testAddPageSnapshotsInheritedBackground();
   testGoToPageSnapshotsInheritedBackgroundForIntermediatePages();
   testRestorePageBackgroundClearsPausedGifRuntimeState();
+  testBitmapBudgetCanEvictBlankPages();
   await testGoToPageAsyncWaitsForBackgroundImageLoad();
   console.log('pagination-background-state.test: all assertions passed');
 }

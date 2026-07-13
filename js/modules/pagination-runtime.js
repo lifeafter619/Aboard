@@ -3,6 +3,7 @@
 
 // Maximum number of pages; keep in sync with PROJECT_IMPORT_MAX_PAGES in project-manager.js.
 const MAX_PAGES = 300;
+const PAGE_BITMAP_MEMORY_BUDGET_BYTES = 256 * 1024 * 1024;
 
 function normalizePageNumber(pageNumber, fallback = 1) {
         const normalizedPage = parseInt(pageNumber, 10);
@@ -113,11 +114,170 @@ function normalizeBackgroundState(backgroundManager, backgroundState) {
         };
 }
 
+function getPageSnapshotByteLength(snapshot) {
+        if (!snapshot) return 0;
+        if (Number.isFinite(snapshot.data?.byteLength)) {
+            return snapshot.data.byteLength;
+        }
+        if (Number.isFinite(snapshot.width) && Number.isFinite(snapshot.height)) {
+            return Math.max(0, snapshot.width * snapshot.height * 4);
+        }
+        return 0;
+}
+
+function touchPageSnapshot(pageNumber) {
+        if (!(this.pageSnapshotAccessOrder instanceof Map)) {
+            this.pageSnapshotAccessOrder = new Map();
+        }
+        this.pageSnapshotAccessCounter = (this.pageSnapshotAccessCounter || 0) + 1;
+        this.pageSnapshotAccessOrder.set(pageNumber, this.pageSnapshotAccessCounter);
+}
+
+function isPageSceneRasterRegenerable(pageNumber) {
+        const scene = this.pageScenes?.[String(pageNumber)];
+        const hasRasterFallbackTracking = this.pageRasterFallbackPages instanceof Set;
+        const requiresRasterBase = hasRasterFallbackTracking
+            && this.pageRasterFallbackPages.has(pageNumber);
+        const hasRasterBase = requiresRasterBase
+            && this.pageRasterFallbackBases instanceof Map
+            && Boolean(this.pageRasterFallbackBases.get(pageNumber));
+        if (requiresRasterBase && !hasRasterBase) {
+            return false;
+        }
+        if (requiresRasterBase && !scene) {
+            return true;
+        }
+        if (!scene) {
+            // With explicit fallback tracking, no scene and no raster base
+            // means a genuinely blank page. Clearing the canvas regenerates it.
+            // Stay conservative if an older/incomplete board lacks tracking.
+            return hasRasterFallbackTracking;
+        }
+        if (typeof scene !== 'object' || typeof this.drawingEngine?.renderScene !== 'function') {
+            return false;
+        }
+
+        const hasRenderableContent = Boolean(
+            scene.textObjects?.length
+            || scene.strokes?.length
+            || scene.stampedImages?.length
+        );
+        if (!hasRenderableContent) {
+            return hasRasterFallbackTracking;
+        }
+
+        if (Array.isArray(scene.textObjects) && scene.textObjects.length > 0
+            && typeof this.insertTextManager?.setTextObjects !== 'function') {
+            return false;
+        }
+
+        if (Array.isArray(scene.strokes)) {
+            const hasUnrenderableShape = scene.strokes.some((stroke) =>
+                (stroke?.shapeType && stroke.renderMode !== 'shape')
+                || (stroke?.renderMode === 'shape'
+                    && typeof this.shapeDrawingManager?.drawStoredShapeOnContext !== 'function')
+            );
+            if (hasUnrenderableShape) {
+                return false;
+            }
+        }
+
+        if (Array.isArray(scene.stampedImages) && scene.stampedImages.some((image) =>
+            !image?.imageElement || image.imageElement.complete === false
+        )) {
+            return false;
+        }
+
+        return true;
+}
+
+function getPageRasterFallbackBase(pageNumber) {
+        const normalizedPage = normalizePageNumber(pageNumber, this.currentPage || 1);
+        if (!(this.pageRasterFallbackPages instanceof Set)
+            || !this.pageRasterFallbackPages.has(normalizedPage)
+            || !(this.pageRasterFallbackBases instanceof Map)) {
+            return null;
+        }
+        const base = this.pageRasterFallbackBases.get(normalizedPage);
+        if (!base) {
+            this.pageRasterFallbackScaledBases?.delete?.(normalizedPage);
+            return null;
+        }
+        if (isPageSnapshotCompatible.call(this, base)) {
+            this.pageRasterFallbackScaledBases?.delete?.(normalizedPage);
+            return base;
+        }
+        const shouldCacheScaledBase = normalizedPage === this.currentPage;
+        if (shouldCacheScaledBase) {
+            if (!(this.pageRasterFallbackScaledBases instanceof Map)) {
+                this.pageRasterFallbackScaledBases = new Map();
+            }
+            Array.from(this.pageRasterFallbackScaledBases.keys()).forEach((cachedPageNumber) => {
+                if (cachedPageNumber !== normalizedPage) {
+                    this.pageRasterFallbackScaledBases.delete(cachedPageNumber);
+                }
+            });
+            const cachedBase = this.pageRasterFallbackScaledBases.get(normalizedPage);
+            if (isPageSnapshotCompatible.call(this, cachedBase)) {
+                return cachedBase;
+            }
+        }
+        const scaledBase = scalePageSnapshotToCanvas.call(this, base);
+        if (scaledBase && shouldCacheScaledBase) {
+            // Preserve the original pixels. Dynamic render scaling can change
+            // the backing size repeatedly; resampling an already-resampled
+            // base would progressively degrade it. Cache only the visible page
+            // so background session encoding cannot double memory for all pages.
+            this.pageRasterFallbackScaledBases.set(normalizedPage, scaledBase);
+        }
+        return scaledBase;
+}
+
+function enforcePageBitmapMemoryBudget() {
+        if (!Array.isArray(this.pages) || this.pages.length === 0) {
+            return 0;
+        }
+
+        let totalBytes = this.pages.reduce(
+            (total, snapshot) => total + getPageSnapshotByteLength(snapshot),
+            0
+        );
+        if (totalBytes <= PAGE_BITMAP_MEMORY_BUDGET_BYTES) {
+            return totalBytes;
+        }
+
+        const accessOrder = this.pageSnapshotAccessOrder instanceof Map
+            ? this.pageSnapshotAccessOrder
+            : new Map();
+        const candidates = this.pages
+            .map((snapshot, index) => ({
+                snapshot,
+                index,
+                pageNumber: index + 1,
+                lastAccess: accessOrder.get(index + 1) || 0
+            }))
+            .filter((entry) => entry.snapshot
+                && entry.pageNumber !== this.currentPage
+                && isPageSceneRasterRegenerable.call(this, entry.pageNumber))
+            .sort((left, right) => left.lastAccess - right.lastAccess);
+
+        for (const candidate of candidates) {
+            if (totalBytes <= PAGE_BITMAP_MEMORY_BUDGET_BYTES) break;
+            totalBytes -= getPageSnapshotByteLength(candidate.snapshot);
+            this.pages[candidate.index] = null;
+        }
+
+        return totalBytes;
+}
+
 function clearCanvasPixels() {
         this.ctx.save?.();
-        this.ctx.setTransform?.(1, 0, 0, 1, 0, 0);
-        clearCanvasPixels.call(this);
-        this.ctx.restore?.();
+        try {
+            this.ctx.setTransform?.(1, 0, 0, 1, 0, 0);
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        } finally {
+            this.ctx.restore?.();
+        }
 }
 
 function isPageSnapshotCompatible(imageData) {
@@ -202,6 +362,8 @@ function saveCurrentPageSnapshot() {
         }
         this.savePageBackground?.(this.currentPage);
         this.saveCurrentPageScene?.(this.currentPage);
+        touchPageSnapshot.call(this, this.currentPage);
+        enforcePageBitmapMemoryBudget.call(this);
 }
 
 function snapshotInheritedBackgroundForNewPage(pageNumber) {
@@ -215,6 +377,8 @@ function resetTransientBackgroundMediaState(backgroundManager) {
             return;
         }
 
+        backgroundManager.backgroundImageLoadToken = (backgroundManager.backgroundImageLoadToken || 0) + 1;
+        backgroundManager.stopGifInstance?.();
         backgroundManager.currentGifLoop = 0;
         backgroundManager.isImagePaused = false;
         backgroundManager.imageStaticData = null;
@@ -237,12 +401,13 @@ function addPage() {
         this.currentPage = this.pages.length;
 
         // Clear canvas for new page
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        clearCanvasPixels.call(this);
         snapshotInheritedBackgroundForNewPage.call(this, this.currentPage);
         this.restorePageScene?.(this.currentPage);
         this.historyManager.reset?.();
         this.historyManager.saveState();
+        touchPageSnapshot.call(this, this.currentPage);
+        enforcePageBitmapMemoryBudget.call(this);
         this.updatePaginationUI();
 
 }
@@ -274,11 +439,13 @@ function nextPage() {
                 return;
             }
             clearCanvasPixels.call(this);
-            this.pages.push(this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height));
+            this.pages.push(null);
             snapshotInheritedBackgroundForNewPage.call(this, this.currentPage);
             this.restorePageScene?.(this.currentPage);
             this.historyManager.reset?.();
             this.historyManager.saveState();
+            touchPageSnapshot.call(this, this.currentPage);
+            enforcePageBitmapMemoryBudget.call(this);
         } else {
             this.loadPage(this.currentPage);
         }
@@ -301,11 +468,12 @@ function nextOrAddPage() {
             this.pages.push(null);
             this.currentPage = this.pages.length;
             clearCanvasPixels.call(this);
-            this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
             snapshotInheritedBackgroundForNewPage.call(this, this.currentPage);
             this.restorePageScene?.(this.currentPage);
             this.historyManager.reset?.();
             this.historyManager.saveState();
+            touchPageSnapshot.call(this, this.currentPage);
+            enforcePageBitmapMemoryBudget.call(this);
         } else {
             // Go to next page
             this.currentPage++;
@@ -344,18 +512,26 @@ function goToPage(pageNumber) {
 
 function loadPage(pageNumber) {
         const pageIndex = pageNumber - 1;
+        let restoredSnapshot = false;
         if (pageNumber > 0 && pageNumber <= this.pages.length && this.pages[pageIndex]) {
-            if (!restorePageSnapshot.call(this, pageIndex)) {
+            restoredSnapshot = restorePageSnapshot.call(this, pageIndex);
+            if (!restoredSnapshot) {
                 clearCanvasPixels.call(this);
-                this.pages[pageIndex] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
             }
         } else {
             clearCanvasPixels.call(this);
-            if (!this.pages[pageIndex]) {
-                this.pages[pageIndex] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-            }
         }
-        this.restorePageScene?.(pageNumber);
+        const restoredScene = this.restorePageScene?.(pageNumber);
+        const rasterFallbackBase = getPageRasterFallbackBase.call(this, pageNumber);
+        if (rasterFallbackBase) {
+            clearCanvasPixels.call(this);
+            this.ctx.putImageData(rasterFallbackBase, 0, 0);
+            if (restoredScene) {
+                this.drawingEngine.renderScene?.(this.insertTextManager || null);
+            }
+        } else if (!restoredSnapshot && restoredScene) {
+            this.selectionManager?.redrawCanvas?.();
+        }
         // Reset undo history when switching pages so undo cannot leak pixels across pages.
         this.historyManager.reset?.();
         this.historyManager.saveState();
@@ -364,6 +540,8 @@ function loadPage(pageNumber) {
         const pendingBackgroundPromise = Promise.resolve(this.restorePageBackground(pageNumber));
         this._pendingBackgroundPromise = pendingBackgroundPromise;
         this.drawingEngine.updateOffCanvasImageMirrors(this.insertTextManager?.textObjects || []);
+        touchPageSnapshot.call(this, pageNumber);
+        enforcePageBitmapMemoryBudget.call(this);
 
         // Save session state (current page change)
         this.saveSessionDebounced();
@@ -419,6 +597,8 @@ function restorePageBackground(pageNumber) {
         if (this.pageBackgrounds[pageNumber]) {
             const bg = normalizeBackgroundState(this.backgroundManager, this.pageBackgrounds[pageNumber]);
             resetTransientBackgroundMediaState(this.backgroundManager);
+            const mediaLoadToken = this.backgroundManager.backgroundImageLoadToken;
+            this.backgroundManager.backgroundImage = null;
             this.backgroundManager.backgroundColor = bg.backgroundColor;
             this.backgroundManager.backgroundPattern = bg.backgroundPattern;
             this.backgroundManager.bgOpacity = bg.bgOpacity;
@@ -444,8 +624,12 @@ function restorePageBackground(pageNumber) {
                 return new Promise((resolve) => {
                     const img = new Image();
                     img.onload = () => {
-                        if (loadToken !== this._backgroundLoadToken) {
-                            // A newer page restore started; drop this stale image.
+                        if (loadToken !== this._backgroundLoadToken
+                            || mediaLoadToken !== this.backgroundManager.backgroundImageLoadToken
+                            || bg.backgroundImageData !== this.backgroundManager.backgroundImageData
+                            || this.backgroundManager.backgroundPattern !== 'image') {
+                            // A newer page restore or background selection won;
+                            // drop this stale decode result.
                             resolve();
                             return;
                         }
@@ -456,7 +640,10 @@ function restorePageBackground(pageNumber) {
                     };
                     img.onerror = () => {
                         console.warn('Failed to load page background image');
-                        if (loadToken === this._backgroundLoadToken) {
+                        if (loadToken === this._backgroundLoadToken
+                            && mediaLoadToken === this.backgroundManager.backgroundImageLoadToken
+                            && bg.backgroundImageData === this.backgroundManager.backgroundImageData
+                            && this.backgroundManager.backgroundPattern === 'image') {
                             this.backgroundManager.drawBackground();
                             this.updateBackgroundUI();
                         }
@@ -556,5 +743,14 @@ window.AboardPaginationRuntime = {
     },
     updatePaginationUI(board) {
         return updatePaginationUI.call(board);
+    },
+    enforcePageBitmapMemoryBudget(board) {
+        return enforcePageBitmapMemoryBudget.call(board);
+    },
+    canRegeneratePageBitmap(board, pageNumber) {
+        return isPageSceneRasterRegenerable.call(board, pageNumber);
+    },
+    getPageRasterFallbackBase(board, pageNumber) {
+        return getPageRasterFallbackBase.call(board, pageNumber);
     }
 };

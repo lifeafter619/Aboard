@@ -101,8 +101,18 @@ function updateUploadedImagesButtons() {
             btn.dataset.imageId = image.id;
             btn.textContent = image.name;
             btn.addEventListener('click', async () => {
+                const applyPromise = this.backgroundManager.setBackgroundImage(image.data);
+                const applyToken = this.backgroundManager.backgroundImageLoadToken;
+                const applied = await applyPromise;
+                if (!applied) {
+                    if (applyToken !== this.backgroundManager.backgroundImageLoadToken) {
+                        return;
+                    }
+                    const message = window.i18n?.t?.('errors.fileReadFailed') || 'Failed to decode the saved image.';
+                    this.settingsManager?.toastManager?.show?.(message, 'error');
+                    return;
+                }
                 this.imageControls.resetConfirmation();
-                await this.backgroundManager.setBackgroundImage(image.data);
                 this.updateBackgroundUI();
                 const imgData = this.backgroundManager.getImageData();
                 if (imgData) {

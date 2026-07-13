@@ -173,12 +173,21 @@ class StorageManager {
 
                 request.onerror = () => {
                     console.warn('Failed to clear session:', request.error);
+                };
+
+                transaction.oncomplete = () => {
+                    this.clearSessionSizeEstimate();
+                    resolve(true);
+                };
+
+                transaction.onabort = () => {
+                    console.warn('Session clear transaction aborted:', transaction.error);
                     resolve(false);
                 };
 
-                request.onsuccess = () => {
-                    this.clearSessionSizeEstimate();
-                    resolve(true);
+                transaction.onerror = () => {
+                    console.warn('Session clear transaction failed:', transaction.error);
+                    resolve(false);
                 };
             });
         } catch (error) {
@@ -233,6 +242,14 @@ class StorageManager {
         let total = 0;
         if (Array.isArray(sessionData.pages)) {
             total += sessionData.pages.reduce((sum, page) => {
+                if (page instanceof Blob) {
+                    return sum + page.size;
+                }
+                return sum;
+            }, 0);
+        }
+        if (Array.isArray(sessionData.rasterFallbackBases)) {
+            total += sessionData.rasterFallbackBases.reduce((sum, page) => {
                 if (page instanceof Blob) {
                     return sum + page.size;
                 }

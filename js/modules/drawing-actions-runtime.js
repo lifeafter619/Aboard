@@ -74,6 +74,7 @@ function clearCanvas(saveToHistory = true) {
     // is a dead ghost overlay.
     this.selectionManager?.clearSelection?.({ skipRedraw: true });
     this.drawingEngine.clearCanvas();
+    this.pageRasterFallbackPages?.delete?.(this.currentPage);
     if (saveToHistory) {
         this.historyManager.saveState();
     }

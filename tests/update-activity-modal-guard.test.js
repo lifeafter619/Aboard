@@ -57,7 +57,7 @@ function createDocumentStub({ blockingModalOpen = false, activeElement = null } 
     activeElement,
     addEventListener() {},
     querySelector(selector) {
-      if (selector === '.modal.show:not(.non-blocking-modal), .time-fullscreen-modal.show, .timer-fullscreen-modal.show') {
+      if (selector.includes('.modal.show:not(.non-blocking-modal)')) {
         return blockingModalOpen ? { id: 'blocking-modal' } : null;
       }
       return null;

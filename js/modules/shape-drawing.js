@@ -603,18 +603,36 @@ class ShapeDrawingManager {
             // plain outline. Geometry is derived from the current points so
             // moved/resized shapes stay in place.
             const geometry = this.getStoredShapeGeometry(stroke, fallbackStart, fallbackEnd);
-            switch (stroke.shapeType) {
-                case 'rectangle':
-                    this.drawRectangleWithStyle(ctx, geometry.start, geometry.end, false);
-                    break;
-                case 'circle':
-                case 'ellipse':
-                    // drawEllipseWithStyle renders a circle when both radii match.
-                    this.drawEllipseWithStyle(ctx, geometry.start, geometry.end, false);
-                    break;
-                default:
-                    this.drawLineWithStyle(ctx, geometry.start, geometry.end, false);
-                    break;
+            const drawWithGeometry = () => {
+                switch (stroke.shapeType) {
+                    case 'rectangle':
+                        this.drawRectangleWithStyle(ctx, geometry.start, geometry.end, false);
+                        break;
+                    case 'circle':
+                    case 'ellipse':
+                        // drawEllipseWithStyle renders a circle when both radii match.
+                        this.drawEllipseWithStyle(ctx, geometry.start, geometry.end, false);
+                        break;
+                    default:
+                        this.drawLineWithStyle(ctx, geometry.start, geometry.end, false);
+                        break;
+                }
+            };
+
+            if (geometry.transform && typeof ctx.transform === 'function') {
+                ctx.save();
+                ctx.transform(
+                    geometry.transform.a,
+                    geometry.transform.b,
+                    geometry.transform.c,
+                    geometry.transform.d,
+                    geometry.transform.e,
+                    geometry.transform.f
+                );
+                drawWithGeometry();
+                ctx.restore();
+            } else {
+                drawWithGeometry();
             }
         } else if (Array.isArray(stroke.points) && stroke.points.length > 1) {
             ctx.beginPath();
@@ -650,6 +668,80 @@ class ShapeDrawingManager {
      */
     getStoredShapeGeometry(stroke, fallbackStart, fallbackEnd) {
         const points = Array.isArray(stroke.points) ? stroke.points : [];
+
+        if (stroke.shapeType === 'rectangle' && points.length >= 4) {
+            const origin = points[0];
+            const widthVector = {
+                x: points[1].x - origin.x,
+                y: points[1].y - origin.y
+            };
+            const heightVector = {
+                x: points[3].x - origin.x,
+                y: points[3].y - origin.y
+            };
+            const width = Math.hypot(widthVector.x, widthVector.y);
+            const height = Math.hypot(heightVector.x, heightVector.y);
+
+            if (width > 0.001 && height > 0.001) {
+                return {
+                    start: { x: 0, y: 0 },
+                    end: { x: width, y: height },
+                    transform: {
+                        a: widthVector.x / width,
+                        b: widthVector.y / width,
+                        c: heightVector.x / height,
+                        d: heightVector.y / height,
+                        e: origin.x,
+                        f: origin.y
+                    }
+                };
+            }
+        }
+
+        if ((stroke.shapeType === 'circle' || stroke.shapeType === 'ellipse') && points.length >= 8) {
+            const isClosed = Math.hypot(
+                points[0].x - points[points.length - 1].x,
+                points[0].y - points[points.length - 1].y
+            ) < 0.001;
+            const perimeter = isClosed ? points.slice(0, -1) : points;
+            const segmentCount = perimeter.length;
+
+            if (segmentCount >= 8) {
+                const right = perimeter[0];
+                const bottom = perimeter[Math.round(segmentCount / 4) % segmentCount];
+                const left = perimeter[Math.round(segmentCount / 2) % segmentCount];
+                const top = perimeter[Math.round(segmentCount * 3 / 4) % segmentCount];
+                const center = {
+                    x: (right.x + bottom.x + left.x + top.x) / 4,
+                    y: (right.y + bottom.y + left.y + top.y) / 4
+                };
+                const radiusXVector = {
+                    x: (right.x - left.x) / 2,
+                    y: (right.y - left.y) / 2
+                };
+                const radiusYVector = {
+                    x: (bottom.x - top.x) / 2,
+                    y: (bottom.y - top.y) / 2
+                };
+                const radiusX = Math.hypot(radiusXVector.x, radiusXVector.y);
+                const radiusY = Math.hypot(radiusYVector.x, radiusYVector.y);
+
+                if (radiusX > 0.001 && radiusY > 0.001) {
+                    return {
+                        start: { x: 0, y: 0 },
+                        end: { x: radiusX, y: radiusY },
+                        transform: {
+                            a: radiusXVector.x / radiusX,
+                            b: radiusXVector.y / radiusX,
+                            c: radiusYVector.x / radiusY,
+                            d: radiusYVector.y / radiusY,
+                            e: center.x,
+                            f: center.y
+                        }
+                    };
+                }
+            }
+        }
 
         if ((stroke.shapeType === 'rectangle' || stroke.shapeType === 'circle' || stroke.shapeType === 'ellipse') && points.length > 1) {
             let minX = points[0].x;

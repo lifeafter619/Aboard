@@ -26,6 +26,20 @@ function setupKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
         const isEditableTarget = e.target &&
             (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable);
+        const openBlockingModal = document.querySelector(
+            '.modal.show:not(.non-blocking-modal), '
+            + '[role="dialog"][aria-modal="true"].show:not(.non-blocking-modal), '
+            + '.time-fullscreen-modal.show, .timer-fullscreen-modal.show, '
+            + '#timer-settings-modal.show, #time-display-settings-modal.show'
+        );
+
+        // Modal-specific handlers and native form controls still receive the
+        // event; only the board-wide shortcuts must stop here so they cannot
+        // mutate or zoom content hidden behind the dialog.
+        if (openBlockingModal && e.key !== 'Escape') {
+            return;
+        }
+
         if (e.ctrlKey || e.metaKey) {
             const key = e.key.toLowerCase();
             if (!isEditableTarget && key === 'z' && !e.shiftKey) {
@@ -79,24 +93,20 @@ function setupKeyboardShortcuts() {
 
         if (!isEditableTarget && !e.ctrlKey && !e.metaKey &&
             (e.key === '+' || e.key === '=' || e.key === '-' || e.key === '_')) {
-            // Ctrl/Cmd plus/minus stays reserved for browser page zoom, and
-            // canvas zoom must not silently change behind an open modal.
-            if (!document.querySelector('.modal.show, #timer-settings-modal.show')) {
-                e.preventDefault();
-                if (e.key === '+' || e.key === '=') {
-                    this.zoomIn();
-                } else {
-                    this.zoomOut();
-                }
+            // Ctrl/Cmd plus/minus stays reserved for browser page zoom.
+            e.preventDefault();
+            if (e.key === '+' || e.key === '=') {
+                this.zoomIn();
+            } else {
+                this.zoomOut();
             }
         }
 
         if (e.key === 'Escape') {
-            const openModal = document.querySelector('.modal.show, #timer-settings-modal.show');
-            if (openModal) {
+            if (openBlockingModal) {
                 // A visible modal owns this Escape press; closing the config
                 // panel too would also kick the user out of the shape tool.
-                if (openModal === document.getElementById('settings-modal')) {
+                if (openBlockingModal === document.getElementById('settings-modal')) {
                     this.closeSettings();
                 }
                 return;

@@ -1,6 +1,8 @@
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+const CACHE_SESSION_WRITE_EPOCH_KEY = 'aboardSessionWriteEpoch';
+
 function safeCacheStorageRemoveItem(storage, key, storageLabel = 'storage') {
         try {
             storage?.removeItem?.(key);
@@ -43,12 +45,8 @@ function getStorageKeysSafely(storage, storageLabel = 'storage') {
             return keys;
         } catch (error) {
             console.warn(`Failed to enumerate ${storageLabel} keys:`, error);
-            return [];
+            return null;
         }
-}
-
-function getIndexedDbApi() {
-        return window.indexedDB || (typeof indexedDB !== 'undefined' ? indexedDB : null);
 }
 
 function getCacheKeyGroups() {
@@ -73,9 +71,12 @@ function getCacheKeyGroups() {
             'backgroundOutsideLayerOrder',
             'uploadedImages',
             'canvasScale', 'panOffsetX', 'panOffsetY', 'canvasViewStateVersion',
-            'aboardSessionSizeEstimate'
+            'aboardSessionSizeEstimate',
+            this?.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot',
+            'aboardPlannedUpdateReload'
         ]);
-        return { settingsKeys, canvasKeys };
+        const internalKeys = new Set([CACHE_SESSION_WRITE_EPOCH_KEY]);
+        return { settingsKeys, canvasKeys, internalKeys };
     
 }
 
@@ -303,11 +304,15 @@ function formatBytes(bytes) {
 }
 
 async function getCacheSizeSummary() {
-        const { settingsKeys, canvasKeys } = this.getCacheKeyGroups();
+        const { settingsKeys, canvasKeys, internalKeys: groupedInternalKeys = new Set() } = this.getCacheKeyGroups();
         const summary = { settings: 0, canvas: 0, other: 0 };
-        const internalKeys = new Set([this.cacheStorageSizeSnapshotKey]);
+        const internalKeys = new Set([this.cacheStorageSizeSnapshotKey, ...groupedInternalKeys]);
         const addStorageUsage = (storage, storageLabel) => {
-            getStorageKeysSafely(storage, storageLabel).forEach((key) => {
+            const storageKeys = getStorageKeysSafely(storage, storageLabel);
+            if (storageKeys === null) {
+                return;
+            }
+            storageKeys.forEach((key) => {
                 if (!key || internalKeys.has(key)) return;
                 const val = safeCacheStorageGetItem(storage, key, storageLabel);
                 const size = this.getStorageEntrySize(key, val);
@@ -380,109 +385,76 @@ async function updateCacheSizeDisplay() {
 }
 
 async function clearSelectedCache(options) {
-        const { settingsKeys, canvasKeys } = this.getCacheKeyGroups();
+        const { settingsKeys, canvasKeys, internalKeys = new Set() } = this.getCacheKeyGroups();
+        let cleanupSucceeded = true;
+
+        if (typeof this.isSessionWriteAllowed === 'function' && !this.isSessionWriteAllowed()) {
+            showClearAllLocalDataFailure(this, { reason: 'blocked' });
+            return false;
+        }
 
         if (options.canvas) {
-            await this.clearSessionData();
+            const cleared = await this.clearSessionData();
+            if (!cleared) {
+                return false;
+            }
             canvasKeys.forEach(key => {
-                safeCacheStorageRemoveItem(localStorage, key, 'localStorage');
-                safeCacheStorageRemoveItem(sessionStorage, key, 'sessionStorage');
+                cleanupSucceeded = safeCacheStorageRemoveItem(localStorage, key, 'localStorage') && cleanupSucceeded;
+                cleanupSucceeded = safeCacheStorageRemoveItem(sessionStorage, key, 'sessionStorage') && cleanupSucceeded;
             });
         }
 
         if (options.settings) {
             settingsKeys.forEach(key => {
-                safeCacheStorageRemoveItem(localStorage, key, 'localStorage');
-                safeCacheStorageRemoveItem(sessionStorage, key, 'sessionStorage');
+                cleanupSucceeded = safeCacheStorageRemoveItem(localStorage, key, 'localStorage') && cleanupSucceeded;
+                cleanupSucceeded = safeCacheStorageRemoveItem(sessionStorage, key, 'sessionStorage') && cleanupSucceeded;
             });
         }
 
         if (options.other) {
-            const preserved = new Set();
+            const preserved = new Set(internalKeys);
             if (!options.settings) settingsKeys.forEach(k => preserved.add(k));
             if (!options.canvas) canvasKeys.forEach(k => preserved.add(k));
 
             const localKeys = getStorageKeysSafely(localStorage, 'localStorage');
-            localKeys.forEach(key => {
-                if (!preserved.has(key)) safeCacheStorageRemoveItem(localStorage, key, 'localStorage');
-            });
+            if (localKeys === null) {
+                cleanupSucceeded = false;
+            } else {
+                localKeys.forEach(key => {
+                    if (!preserved.has(key)) {
+                        cleanupSucceeded = safeCacheStorageRemoveItem(localStorage, key, 'localStorage') && cleanupSucceeded;
+                    }
+                });
+            }
             const sessionKeys = getStorageKeysSafely(sessionStorage, 'sessionStorage');
-            sessionKeys.forEach(key => {
-                if (!preserved.has(key)) safeCacheStorageRemoveItem(sessionStorage, key, 'sessionStorage');
-            });
+            if (sessionKeys === null) {
+                cleanupSucceeded = false;
+            } else {
+                sessionKeys.forEach(key => {
+                    if (!preserved.has(key)) {
+                        cleanupSucceeded = safeCacheStorageRemoveItem(sessionStorage, key, 'sessionStorage') && cleanupSucceeded;
+                    }
+                });
+            }
 
             if ('caches' in window) {
-                const cacheKeys = await caches.keys();
-                await Promise.all(cacheKeys.map(key => caches.delete(key)));
+                try {
+                    const cacheKeys = await caches.keys();
+                    const cacheResults = await Promise.all(cacheKeys.map(key => caches.delete(key)));
+                    cleanupSucceeded = cacheResults.every(Boolean) && cleanupSucceeded;
+                } catch (error) {
+                    console.warn('Failed to clear Cache Storage:', error);
+                    cleanupSucceeded = false;
+                }
             }
             this.setCacheStorageSizeSnapshot('empty', 0);
         }
-    
-}
 
-async function waitForStorageManagerReady(storageManager) {
-        const initPromise = storageManager?.initPromise;
-        if (!initPromise || typeof initPromise.then !== 'function') {
-            return;
+        if (!cleanupSucceeded) {
+            showClearAllLocalDataFailure(this, { reason: 'error' });
         }
+        return cleanupSucceeded;
 
-        try {
-            await initPromise;
-        } catch (error) {
-            console.warn('StorageManager initialization failed before local data cleanup:', error);
-        }
-}
-
-function deleteIndexedDatabaseSafely(dbName, timeoutMs = 1500) {
-        const indexedDbApi = getIndexedDbApi();
-        if (!dbName || typeof indexedDbApi?.deleteDatabase !== 'function') {
-            return Promise.resolve({ ok: true, reason: 'unavailable' });
-        }
-
-        return new Promise((resolve) => {
-            let request;
-            let timeoutId = null;
-            let settled = false;
-
-            const settle = (result) => {
-                if (settled) {
-                    return;
-                }
-                settled = true;
-                if (timeoutId !== null && typeof window.clearTimeout === 'function') {
-                    window.clearTimeout(timeoutId);
-                }
-                resolve(result);
-            };
-
-            try {
-                request = indexedDbApi.deleteDatabase(dbName);
-            } catch (error) {
-                console.warn('Failed to start IndexedDB deletion:', error);
-                settle({ ok: false, reason: 'error', error });
-                return;
-            }
-
-            request.onsuccess = () => {
-                settle({ ok: true, reason: 'deleted' });
-            };
-
-            request.onerror = () => {
-                console.warn('Failed to delete IndexedDB:', request.error);
-                settle({ ok: false, reason: 'error', error: request.error });
-            };
-
-            request.onblocked = () => {
-                console.warn('IndexedDB deletion blocked');
-                if (typeof window.setTimeout === 'function' && timeoutMs > 0 && timeoutId === null) {
-                    timeoutId = window.setTimeout(() => {
-                        settle({ ok: false, reason: 'blocked' });
-                    }, timeoutMs);
-                    return;
-                }
-                settle({ ok: false, reason: 'blocked' });
-            };
-        });
 }
 
 function getCacheRuntimeText(key, fallback) {
@@ -492,7 +464,13 @@ function getCacheRuntimeText(key, fallback) {
 
 function showClearAllLocalDataFailure(board, deleteResult) {
         const isBlocked = deleteResult?.reason === 'blocked';
-        const message = isBlocked
+        const isInvalidated = board.sessionWriteLockState === 'invalidated';
+        const message = isInvalidated
+            ? getCacheRuntimeText(
+                'errors.sessionDataClearedElsewhere',
+                'Saved board data was cleared in another tab. Reload before clearing again.'
+            )
+            : isBlocked
             ? getCacheRuntimeText(
                 'errors.clearLocalDataBlocked',
                 'Local data cleanup is blocked by another open Aboard window. Close other Aboard tabs and try again.'
@@ -503,37 +481,49 @@ function showClearAllLocalDataFailure(board, deleteResult) {
             );
 
         if (board.settingsManager?.toastManager?.show) {
-            board.settingsManager.toastManager.show(message, isBlocked ? 'warning' : 'error');
+            board.settingsManager.toastManager.show(message, isBlocked || isInvalidated ? 'warning' : 'error');
             return;
         }
 
-        window.appDialog?.showAlert?.(message, isBlocked ? 'warning' : 'error');
+        window.appDialog?.showAlert?.(message, isBlocked || isInvalidated ? 'warning' : 'error');
 }
 
 async function clearAllLocalData() {
+        if (typeof this.isSessionWriteAllowed === 'function' && !this.isSessionWriteAllowed()) {
+            showClearAllLocalDataFailure(this, { reason: 'blocked' });
+            return false;
+        }
+
         this.isClearingLocalData = true;
         try {
             if (this.saveTimeout) clearTimeout(this.saveTimeout);
-            const dbName = this.storageManager?.dbName;
-            if (dbName && getIndexedDbApi()) {
-                await waitForStorageManagerReady(this.storageManager);
-                this.storageManager?.closeDB();
-                const deleteResult = await deleteIndexedDatabaseSafely(dbName);
-                if (!deleteResult.ok) {
-                    showClearAllLocalDataFailure(this, deleteResult);
-                    return false;
-                }
-            } else {
-                this.storageManager?.closeDB();
+            const sessionCleared = await this.clearSessionData();
+            if (!sessionCleared) {
+                return false;
             }
+            const localStorageCleared = safeCacheStorageClear(localStorage, 'localStorage');
+            const sessionStorageCleared = safeCacheStorageClear(sessionStorage, 'sessionStorage');
+            const sessionWriteEpochPersisted = !localStorageCleared
+                || typeof this.persistSessionWriteEpoch !== 'function'
+                || this.persistSessionWriteEpoch() !== false;
 
-            await this.clearSessionData();
-            safeCacheStorageClear(localStorage, 'localStorage');
-            safeCacheStorageClear(sessionStorage, 'sessionStorage');
-
+            let cacheStorageCleared = true;
             if ('caches' in window) {
-                const cacheKeys = await caches.keys();
-                await Promise.all(cacheKeys.map(key => caches.delete(key)));
+                try {
+                    const cacheKeys = await caches.keys();
+                    const cacheResults = await Promise.all(cacheKeys.map(key => caches.delete(key)));
+                    cacheStorageCleared = cacheResults.every(Boolean);
+                } catch (error) {
+                    console.warn('Failed to clear Cache Storage:', error);
+                    cacheStorageCleared = false;
+                }
+            }
+            if (!localStorageCleared
+                || !sessionStorageCleared
+                || !sessionWriteEpochPersisted
+                || !cacheStorageCleared) {
+                showClearAllLocalDataFailure(this, { reason: 'error' });
+                return false;
             }
             this.setCacheStorageSizeSnapshot('empty', 0);
             return true;

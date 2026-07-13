@@ -331,12 +331,72 @@ async function testBackgroundGifInitSurvivesMissingContainer() {
   const bgCtx = { clearRect() {}, fillRect() {}, save() {}, restore() {} };
   const manager = new BackgroundManager(bgCanvas, bgCtx);
   const imgElement = createElementStub({ style: {} });
+  manager.backgroundImageData = 'data:image/gif;base64,test';
 
   await assert.doesNotReject(async () => {
     await manager.initGif(imgElement);
   }, 'GIF initialization should not reject when the background image container is unavailable');
   assert.equal(manager.gifInstance, null, 'missing GIF container should leave GIF playback disabled');
   assert.equal(imgElement.style.display, 'block', 'missing GIF container should keep the static image visible');
+}
+
+function testStoppingGifRestoresWrappedImage() {
+  let wrapperPresent = true;
+  let wrapperRemoveCalls = 0;
+  let imageAppendCalls = 0;
+  let pauseCalls = 0;
+  const imgElement = createElementStub({
+    id: 'background-image-element',
+    style: { display: 'none' }
+  });
+  const wrapper = {
+    remove() {
+      wrapperPresent = false;
+      wrapperRemoveCalls += 1;
+    }
+  };
+  const container = {
+    querySelector(selector) {
+      return selector === '.jsgif' && wrapperPresent ? wrapper : null;
+    },
+    appendChild(child) {
+      assert.equal(child, imgElement);
+      imageAppendCalls += 1;
+      return child;
+    }
+  };
+  const BackgroundManager = loadBackgroundManager({
+    localStorage: {
+      getItem() { return null; },
+      setItem() {},
+      removeItem() {}
+    },
+    documentOverrides: {
+      getElementById(id) {
+        if (id === 'background-image-container') return container;
+        if (id === 'background-image-element') return imgElement;
+        return null;
+      }
+    }
+  });
+  const bgCanvas = { width: 1280, height: 720, clientWidth: 1280, clientHeight: 720, style: {} };
+  const bgCtx = { clearRect() {}, fillRect() {}, save() {}, restore() {} };
+  const manager = new BackgroundManager(bgCanvas, bgCtx);
+  manager.gifInstance = {
+    pause() {
+      pauseCalls += 1;
+    }
+  };
+  manager.pendingGifSource = 'data:image/gif;base64,test';
+
+  manager.stopGifInstance();
+
+  assert.equal(pauseCalls, 1, 'stopping a GIF should stop its playback timer');
+  assert.equal(wrapperRemoveCalls, 1, 'stopping a GIF should remove the generated wrapper');
+  assert.equal(imageAppendCalls, 1, 'stopping a GIF should restore the original image element');
+  assert.equal(imgElement.style.display, 'block');
+  assert.equal(manager.gifInstance, null);
+  assert.equal(manager.pendingGifSource, null);
 }
 
 function testCollapsibleManagerSurvivesBlockedLocalStorage() {
@@ -460,6 +520,7 @@ function testCustomizationRuntimeSurvivesBlockedLocalStorage() {
 (async function main() {
   testBackgroundManagerSurvivesBlockedLocalStorage();
   await testBackgroundGifInitSurvivesMissingContainer();
+  testStoppingGifRestoresWrappedImage();
   testCollapsibleManagerSurvivesBlockedLocalStorage();
   testCustomizationRuntimeSurvivesBlockedLocalStorage();
   console.log('background-customization-resilience.test: all assertions passed');

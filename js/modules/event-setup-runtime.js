@@ -94,6 +94,12 @@ function setupEventListeners() {
         // Canvas drawing events - use Pointer Events for unified Mouse/Touch/Pen support
         // Track all pointers for multi-touch gesture detection (pinch zoom)
         document.addEventListener('pointerdown', (e) => {
+            // Left/touch/pen contact draws; the middle button pans. Context-menu
+            // and auxiliary buttons must never fall through into a drawing tool.
+            if (e.button !== 0 && e.button !== 1) {
+                return;
+            }
+
             // Track all touch and pen pointers for multi-touch gesture detection
             if (e.pointerType === 'touch' || e.pointerType === 'pen') {
                 this.activePointers.set(e.pointerId, {
@@ -166,10 +172,19 @@ function setupEventListeners() {
                 
                 // Check if clicking inside the stroke controls overlay
                 if (!closest('#stroke-controls-overlay')) {
-                    // Clicking outside the stroke controls, save and switch to pen
+                    // Clicking outside the stroke controls commits the edit.
+                    // Middle-button/Shift-drag still belongs to panning and
+                    // must not start an accidental pen stroke here.
                     this.strokeControls.hideControls();
                     if (this.historyManager) {
                         this.historyManager.saveState();
+                    }
+                    if (e.button === 1
+                        || (e.button === 0 && e.shiftKey)
+                        || this.drawingEngine.currentTool === 'pan') {
+                        this.drawingEngine.startPanning(e);
+                        this.scheduleRenderQualityUpdate();
+                        return;
                     }
                     this.setTool('pen', false);
                     captureCanvasPointer(this, e);
@@ -178,7 +193,16 @@ function setupEventListeners() {
                     return;
                 }
             }
-            
+
+            const isPanGesture = e.button === 1
+                || (e.button === 0 && e.shiftKey)
+                || this.drawingEngine.currentTool === 'pan';
+            if (isPanGesture) {
+                this.drawingEngine.startPanning(e);
+                this.scheduleRenderQualityUpdate();
+                return;
+            }
+
             if (this.isCoordinatePointMode && this.backgroundManager.supportsMovableOrigin()) {
                 const point = this.getLogicalCanvasPointFromEvent(e);
                 const pointMode = this.getCoordinatePointLineMode();
@@ -238,10 +262,7 @@ function setupEventListeners() {
                 }
             }
             
-            if (e.button === 1 || (e.button === 0 && e.shiftKey) || this.drawingEngine.currentTool === 'pan') {
-                this.drawingEngine.startPanning(e);
-                this.scheduleRenderQualityUpdate();
-            } else if (this.drawingEngine.currentTool === 'select') {
+            if (this.drawingEngine.currentTool === 'select') {
                 // Handle selection tool
                 this.selectionManager.startSelection(e);
             } else if (this.drawingEngine.currentTool === 'shape') {
@@ -348,7 +369,14 @@ function setupEventListeners() {
                     this.isPointerPinching = false;
                 }
             }
-            
+
+            // Match the pointerdown admission rule. Releasing a right/side
+            // mouse button while the primary button is still drawing must not
+            // prematurely commit that stroke.
+            if (e.button !== 0 && e.button !== 1) {
+                return;
+            }
+
             if (!e.isPrimary) return;
             this.stopDraggingCoordinateOrigin();
             if (this.drawingEngine.currentTool === 'select' && this.selectionManager.isBoxSelecting) {

@@ -532,10 +532,10 @@ async function testRestoreSessionKeepsRecoveringWhenOnePageBlobFails() {
 
   assert.equal(restored, true, 'restore should still succeed when one blob page cannot be decoded');
   assert.deepEqual(toPlainObject(board.pages[0]), { restored: 'good-page' });
-  assert.deepEqual(
-    toPlainObject(board.pages[1]),
-    { blank: true, width: 1280, height: 720 },
-    'failed blob pages should fall back to a blank page instead of aborting the entire restore'
+  assert.equal(
+    board.pages[1],
+    null,
+    'failed blob pages should use the lazy blank-page sentinel instead of aborting the entire restore'
   );
   assert.equal(loadPageCalls, 1, 'restore should still finish applying the recovered session');
   assert.equal(board.currentPage, 2, 'restore should preserve the requested current page');
@@ -648,12 +648,17 @@ async function testClearSessionDataDropsPersistedCanvasStateAndResetsRuntimeStat
   let updateUploadedImageButtonsCalls = 0;
   let updateBackgroundUiCalls = 0;
   let updatePaginationUiCalls = 0;
+  let rotateSessionWriteEpochCalls = 0;
 
   const board = {
     syncSessionSnapshotKey: syncKey,
     storageManager: {
       async clearSession() {
         clearSessionCalls += 1;
+        return true;
+      },
+      async hasSession() {
+        return false;
       },
       clearSessionSizeEstimate() {
         clearEstimateCalls += 1;
@@ -670,6 +675,10 @@ async function testClearSessionDataDropsPersistedCanvasStateAndResetsRuntimeStat
           'pageScenes'
         ])
       };
+    },
+    rotateSessionWriteEpoch() {
+      rotateSessionWriteEpochCalls += 1;
+      return true;
     },
     pageBackgrounds: {
       1: { backgroundPattern: 'image' }
@@ -750,8 +759,9 @@ async function testClearSessionDataDropsPersistedCanvasStateAndResetsRuntimeStat
     hasUnresolvedRecoveryData: true
   };
 
-  await runtime.clearSessionData(board);
+  const cleared = await runtime.clearSessionData(board);
 
+  assert.equal(cleared, true);
   assert.equal(clearSessionCalls, 1);
   assert.equal(clearEstimateCalls, 1);
   assert.equal(clearAllPageScenesCalls, 1, 'discarding recovery data should clear page scene runtime state');
@@ -759,12 +769,13 @@ async function testClearSessionDataDropsPersistedCanvasStateAndResetsRuntimeStat
   assert.equal(updateUploadedImageButtonsCalls, 1, 'discarding recovery data should refresh uploaded image UI');
   assert.equal(updateBackgroundUiCalls, 1, 'discarding recovery data should refresh background UI');
   assert.equal(updatePaginationUiCalls, 1, 'discarding recovery data should refresh pagination UI');
+  assert.equal(rotateSessionWriteEpochCalls, 1, 'successful cleanup should invalidate stale writers in other tabs');
 
   assert.deepEqual(toPlainObject(board.pageBackgrounds), {});
   assert.deepEqual(toPlainObject(board.pageScenes), {});
   assert.deepEqual(toPlainObject(board.uploadedImages), []);
   assert.equal(board.currentPage, 1);
-  assert.deepEqual(toPlainObject(board.pages), [{ blank: true }]);
+  assert.deepEqual(toPlainObject(board.pages), [null]);
   assert.equal(board.hasUnresolvedRecoveryData, false);
 
   assert.equal(board.backgroundManager.backgroundPattern, 'blank');
@@ -808,7 +819,12 @@ async function testClearSessionDataStillClearsSessionStorageWhenLocalStorageRemo
   const board = {
     syncSessionSnapshotKey: syncKey,
     storageManager: {
-      async clearSession() {},
+      async clearSession() {
+        return true;
+      },
+      async hasSession() {
+        return false;
+      },
       clearSessionSizeEstimate() {}
     },
     getCacheKeyGroups() {
@@ -882,8 +898,9 @@ async function testClearSessionDataStillClearsSessionStorageWhenLocalStorageRemo
     hasUnresolvedRecoveryData: true
   };
 
-  await runtime.clearSessionData(board);
+  const cleared = await runtime.clearSessionData(board);
 
+  assert.equal(cleared, false, 'cleanup should report failure while the synchronous recovery snapshot remains');
   assert.equal(
     sessionStorage.getItem('backgroundImageData'),
     null,
@@ -892,8 +909,9 @@ async function testClearSessionDataStillClearsSessionStorageWhenLocalStorageRemo
   assert.equal(sessionStorage.getItem('imageTransform'), null);
   assert.equal(sessionStorage.getItem(syncKey), null);
   assert.equal(sessionStorage.getItem('aboardPlannedUpdateReload'), null);
-  assert.equal(board.hasUnresolvedRecoveryData, false);
-  assert.equal(board.currentPage, 1);
+  assert.notEqual(localStorage.getItem('backgroundImageData'), null);
+  assert.equal(board.hasUnresolvedRecoveryData, true, 'failed cleanup should keep recovery state unresolved');
+  assert.equal(board.currentPage, 2, 'failed cleanup should not discard the in-memory board');
 }
 
 (async function main() {

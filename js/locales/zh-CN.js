@@ -41,6 +41,8 @@ window.translations = {
         fileReadFailed: '无法读取所选文件，请检查文件是否损坏后重试。',
         storageWriteFailed: '保存失败，请检查浏览器存储权限后重试。',
         sessionSaveFailed: '板书自动保存失败，当前内容可能无法恢复。请尽快导出备份，或在设置中清理存储空间。',
+        sessionWriteConflict: '另一个 Aboard 标签页正在使用自动保存；当前标签页的更改暂不会自动保存。请关闭另一个标签页后继续。',
+        sessionDataClearedElsewhere: '另一个标签页已清除保存的白板数据。请先导出仍需保留的内容，再重新加载当前标签页。',
         clearLocalDataBlocked: '本地缓存清理被另一个已打开的 Aboard 窗口阻止。请关闭其它 Aboard 标签页后重试。',
         clearLocalDataFailed: '本地缓存清理未完成，请稍后重试。'
     },
@@ -958,7 +960,8 @@ window.translations = {
         unsafePath: '项目包路径不安全：{path}',
         tooManyPages: '项目包包含的页面数量过多。',
         assetTooLarge: '项目包包含过大的资源文件：{path}',
-        assetsTooLarge: '项目包内嵌的资源总量过大。'
+        assetsTooLarge: '项目包内嵌的资源总量过大。',
+        rasterFallbackUnavailable: '用于完整保留项目内容的栅格页面数据不可用。'
     },
 
     gif: {

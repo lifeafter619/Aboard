@@ -5,7 +5,7 @@
 }
 
 :root {
-    --theme-color: #007AFF;
+    --theme-color: #006FE6;
     --touch-target-size: 44px;
     --background-color-column-width: 168px;
 }
@@ -91,6 +91,30 @@ body.vector-preview-active #vector-scene-svg {
 
 body.vector-preview-active #off-canvas-image-layer {
     display: none !important;
+}
+
+.session-write-conflict-banner {
+    position: fixed;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: 50%;
+    z-index: 10400;
+    width: min(calc(100vw - 24px), 720px);
+    padding: 10px 14px;
+    border: 1px solid #b45309;
+    border-radius: 10px;
+    background: #fffbeb;
+    color: #78350f;
+    box-shadow: 0 8px 24px rgba(120, 53, 15, 0.2);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.45;
+    text-align: center;
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+.session-write-conflict-banner[hidden] {
+    display: none;
 }
 
 /* Eraser cursor */
@@ -1953,6 +1977,33 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
         min-width: 280px;
     }
 
+}
+
+/* Keyboard focus remains visible even where component styles remove the
+   default focus outline for pointer interaction. */
+:where(
+    button,
+    a[href],
+    input,
+    select,
+    textarea,
+    [contenteditable="true"],
+    [role="button"],
+    [tabindex]:not([tabindex="-1"])
+):focus-visible {
+    outline: 3px solid #0b57d0 !important;
+    outline-offset: 2px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 
 @media (max-height: 720px), (max-width: 480px) {

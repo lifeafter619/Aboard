@@ -18,7 +18,12 @@ function setupCanvasZoom() {
                 // Ctrl+wheel in places where the browser/app needs it (e.g.
                 // adjusting font size in a text box, scrolling a long modal).
                 const blockingTarget = typeof e.target?.closest === 'function'
-                    ? e.target.closest('.modal.show, input, textarea, select, [contenteditable="true"]')
+                    ? e.target.closest(
+                        '.modal.show, [role="dialog"][aria-modal="true"].show, '
+                        + '.time-fullscreen-modal.show, .timer-fullscreen-modal.show, '
+                        + '#timer-settings-modal.show, #time-display-settings-modal.show, '
+                        + 'input, textarea, select, [contenteditable="true"]'
+                    )
                     : null;
                 if (blockingTarget) {
                     return;

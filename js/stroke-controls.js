@@ -552,12 +552,25 @@ class StrokeControls {
     }
     
     redrawCanvas() {
-        // Clear canvas
+        // Clear and redraw the complete scene so legacy stroke manipulation
+        // cannot erase stamped images, text, or an imported raster base.
+        this.ctx.save();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Redraw all strokes
-        for (const stroke of this.drawingEngine.strokes) {
-            this.drawingEngine.redrawStroke(stroke);
+        this.ctx.restore();
+
+        const board = window.drawingBoard;
+        const rasterFallbackBase = board?.getPageRasterFallbackBase?.(board.currentPage) || null;
+        if (rasterFallbackBase) {
+            this.ctx.putImageData(rasterFallbackBase, 0, 0);
+        }
+
+        if (typeof this.drawingEngine.renderScene === 'function') {
+            this.drawingEngine.renderScene(board?.insertTextManager || null);
+        } else {
+            for (const stroke of this.drawingEngine.strokes) {
+                this.drawingEngine.redrawStroke(stroke);
+            }
         }
         
         // Draw selection border if a stroke is selected

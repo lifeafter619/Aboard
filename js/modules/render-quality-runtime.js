@@ -107,6 +107,10 @@ function applyRenderQualityScale(scale) {
     this.dynamicRenderScale = scale;
     const dpr = this.getRenderPixelRatio();
 
+    // Every cached fallback base targets the previous backing dimensions.
+    // Keep the immutable source bases and discard only their scaled caches.
+    this.pageRasterFallbackScaledBases?.clear?.();
+
     this.canvas.width = width * dpr;
     this.canvas.height = height * dpr;
     this.canvas.style.width = `${width}px`;
@@ -127,6 +131,12 @@ function applyRenderQualityScale(scale) {
     this.ctx.clearRect(0, 0, width, height);
     this.bgCtx.clearRect(0, 0, width, height);
     this.backgroundManager.drawBackground();
+    const rasterFallbackBase = this.getPageRasterFallbackBase?.(this.currentPage) || null;
+    if (rasterFallbackBase) {
+        // Canvas resizing clears every pixel. Restore any non-vector base at
+        // the new backing resolution before rendering the editable scene.
+        this.ctx.putImageData(rasterFallbackBase, 0, 0);
+    }
     this.drawingEngine.renderScene(this.insertTextManager || null);
 }
 
@@ -286,6 +296,8 @@ function applyCanvasSize() {
         ? this.ctx.getImageData(0, 0, oldWidth, oldHeight)
         : null;
 
+    this.pageRasterFallbackScaledBases?.clear?.();
+
     if (shouldScaleScene) {
         this.saveCurrentPageScene?.(this.currentPage);
         this.savePageBackground?.(this.currentPage);
@@ -352,6 +364,7 @@ function applyCanvasSize() {
         this.historyManager?.saveState?.();
         this.saveSessionDebounced?.();
     }
+    this.enforcePageBitmapMemoryBudget?.();
 
     this.backgroundManager.drawBackground();
 }

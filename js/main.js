@@ -249,6 +249,9 @@ class DrawingBoard {
         this.currentPage = 1;
         this.pages = [];
         this.pageScenes = {};
+        this.pageRasterFallbackPages = new Set();
+        this.pageRasterFallbackBases = new Map();
+        this.pageRasterFallbackScaledBases = new Map();
         this.pageBackgrounds = {}; // Store background settings per page
         
         // Load saved page backgrounds
@@ -333,23 +336,56 @@ class DrawingBoard {
         this.uploadedImages = this.loadUploadedImages() || [];
 
         this.historyManager?.setSceneStateHandlers?.({
-            capture: () => this.capturePageScene?.(this.currentPage, {
-                includeEmpty: true,
-                includeImageElements: true
-            }) || {
-                pageNumber: this.currentPage,
-                objectGroups: [],
-                textObjects: [],
-                strokes: [],
-                stampedImages: []
+            capture: () => {
+                const rasterFallbackActive = this.pageRasterFallbackPages instanceof Set
+                    && this.pageRasterFallbackPages.has(this.currentPage);
+                const rasterFallbackBaseAvailable = this.pageRasterFallbackBases instanceof Map
+                    && this.pageRasterFallbackBases.has(this.currentPage);
+                return {
+                    ...(this.capturePageScene?.(this.currentPage, {
+                        includeEmpty: true,
+                        includeImageElements: true
+                    }) || {
+                        pageNumber: this.currentPage,
+                        objectGroups: [],
+                        textObjects: [],
+                        strokes: [],
+                        stampedImages: []
+                    }),
+                    rasterFallbackActive,
+                    // If base decoding failed, the composite bitmap is the only
+                    // representation that still contains all raster pixels.
+                    requiresHistoryBitmap: rasterFallbackActive && !rasterFallbackBaseAvailable
+                };
             },
             restore: (sceneState) => {
+                let preserveHistoryBitmap = false;
                 if (sceneState) {
-                    this.restorePageScene?.(sceneState.pageNumber || this.currentPage, { scene: sceneState });
+                    const pageNumber = sceneState.pageNumber || this.currentPage;
+                    if (sceneState.rasterFallbackActive) {
+                        // Keep the page non-regenerable even if a corrupted
+                        // session base failed to decode. Its complete history
+                        // bitmap is still the only recoverable representation.
+                        this.pageRasterFallbackPages?.add?.(pageNumber);
+                        preserveHistoryBitmap = !(this.pageRasterFallbackBases instanceof Map)
+                            || !this.pageRasterFallbackBases.has(pageNumber);
+                    } else {
+                        this.pageRasterFallbackPages?.delete?.(pageNumber);
+                    }
+                    this.restorePageScene?.(pageNumber, { scene: sceneState });
                 } else {
                     this.clearPageSceneRuntimeState?.();
                 }
-                this.selectionManager?.redrawCanvas?.();
+                if (!preserveHistoryBitmap) {
+                    this.selectionManager?.redrawCanvas?.();
+                } else {
+                    // HistoryManager already restored the exact composite. A
+                    // scene redraw without its missing base would erase data.
+                    this.drawingEngine.updateOffCanvasImageMirrors?.(
+                        this.insertTextManager?.textObjects || []
+                    );
+                    this.syncVectorPreviewState?.();
+                }
             }
         });
         
@@ -363,7 +399,22 @@ class DrawingBoard {
         // Debounced save function
         this.saveTimeout = null;
         this.consecutiveSessionSaveFailures = 0;
+        this.sessionSaveRequestId = 0;
+        this.sessionWriteLockState = 'pending';
+        this.sessionWriteDirtyWhileBlocked = false;
+        this.sessionSaveDirtyWhileRecoveryBlocked = false;
+        this.sessionWriteTrackingReady = false;
         this.saveSessionDebounced = () => {
+            if (this.isClearingLocalData) {
+                return;
+            }
+            if (!this.isSessionWriteAllowed()) {
+                if (this.sessionWriteTrackingReady
+                    && this.sessionWriteLockState !== 'invalidated') {
+                    this.sessionWriteDirtyWhileBlocked = true;
+                }
+                return;
+            }
             if (this.saveTimeout) clearTimeout(this.saveTimeout);
             this.saveTimeout = setTimeout(() => {
                 Promise.resolve(this.saveSession()).then((saved) => {
@@ -383,6 +434,7 @@ class DrawingBoard {
                 }).catch(() => {});
             }, 1000); // 1 second delay
         };
+        void this.initializeSessionWriteLock();
         // Persist a fresh recovery snapshot whenever history commits change
         // so refresh-restore covers all tools that write through HistoryManager.
         this.historyManager.onStateChanged = () => {
@@ -405,10 +457,11 @@ class DrawingBoard {
         this.updateUI();
         this.revealToolbar();
         this.historyManager.saveState();
+        this.sessionWriteTrackingReady = true;
         
         // Initialize pages array for pagination mode (always on)
         if (this.pages.length === 0) {
-            this.pages.push(this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height));
+            this.pages.push(null);
             this.currentPage = 1;
             this.updatePaginationUI();
         }
@@ -432,14 +485,28 @@ class DrawingBoard {
         
         // Save canvas data before page unload (Attempt synchronous save, though IndexedDB is async)
         window.addEventListener('beforeunload', (e) => {
-            this.saveSessionSnapshotSync();
-            void this.saveSession();
+            const canPersistSession = this.isSessionWriteAllowed();
+            if (canPersistSession) {
+                this.saveSessionSnapshotSync();
+                void this.saveSession();
+            }
             if (this.suppressBeforeUnloadPrompt) {
                 return undefined;
             }
             // Show warning message when user tries to refresh or close the page
-            const message = window.i18n
-                ? window.i18n.t('tools.refresh.warning')
+            const blockedMessageKey = this.sessionWriteLockState === 'invalidated'
+                ? 'errors.sessionDataClearedElsewhere'
+                : 'errors.sessionWriteConflict';
+            const blockedMessageFallback = this.sessionWriteLockState === 'invalidated'
+                ? 'Saved board data was cleared in another tab. Export anything you need before leaving.'
+                : 'This tab cannot autosave while another Aboard tab is open.';
+            const translatedBlockedMessage = window.i18n?.t?.(blockedMessageKey);
+            const message = !canPersistSession
+                ? (translatedBlockedMessage && translatedBlockedMessage !== blockedMessageKey
+                    ? translatedBlockedMessage
+                    : blockedMessageFallback)
+                : window.i18n
+                    ? window.i18n.t('tools.refresh.warning')
                 : 'Your board will be saved automatically before leaving. You can restore it the next time you open Aboard.';
             e.preventDefault();
             e.returnValue = message;
@@ -455,6 +522,14 @@ class DrawingBoard {
             });
         this.recoveryCheckPromise = recoveryCheck.then((result) => {
             this.recoveryCheckPromise = null;
+            const shouldFlushSkippedSave = result === false
+                && this.sessionSaveDirtyWhileRecoveryBlocked
+                && !this.hasUnresolvedRecoveryData
+                && !this.recoveryPromptOpen;
+            this.sessionSaveDirtyWhileRecoveryBlocked = false;
+            if (shouldFlushSkippedSave) {
+                this.saveSessionDebounced();
+            }
             return result;
         }, (error) => {
             this.recoveryCheckPromise = null;
@@ -1124,6 +1199,15 @@ class DrawingBoard {
     updatePaginationUI() {
         return paginationRuntime.updatePaginationUI?.(this);
     }
+    enforcePageBitmapMemoryBudget() {
+        return paginationRuntime.enforcePageBitmapMemoryBudget?.(this) || 0;
+    }
+    canRegeneratePageBitmap(pageNumber) {
+        return paginationRuntime.canRegeneratePageBitmap?.(this, pageNumber) === true;
+    }
+    getPageRasterFallbackBase(pageNumber = this.currentPage) {
+        return paginationRuntime.getPageRasterFallbackBase?.(this, pageNumber) || null;
+    }
     updateEraserCursor(e) {
         return interactionRuntime.updateEraserCursor?.(this, e);
     }
@@ -1224,7 +1308,12 @@ class DrawingBoard {
             || ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeElement.tagName)
         );
         const hasBlockingModal = Boolean(
-            document.querySelector('.modal.show:not(.non-blocking-modal), .time-fullscreen-modal.show, .timer-fullscreen-modal.show')
+            document.querySelector(
+                '.modal.show:not(.non-blocking-modal), '
+                + '[role="dialog"][aria-modal="true"].show:not(.non-blocking-modal), '
+                + '.time-fullscreen-modal.show, .timer-fullscreen-modal.show, '
+                + '#timer-settings-modal.show, #time-display-settings-modal.show'
+            )
         );
 
         return {
@@ -1268,6 +1357,22 @@ class DrawingBoard {
 
     saveSessionSnapshotSync() {
         return sessionPersistenceRuntime.saveSessionSnapshotSync?.(this);
+    }
+
+    initializeSessionWriteLock() {
+        return sessionPersistenceRuntime.initializeSessionWriteLock?.(this) || Promise.resolve(true);
+    }
+
+    isSessionWriteAllowed() {
+        return sessionPersistenceRuntime.isSessionWriteAllowed?.(this) !== false;
+    }
+
+    persistSessionWriteEpoch() {
+        return sessionPersistenceRuntime.persistSessionWriteEpoch?.(this) !== false;
+    }
+
+    rotateSessionWriteEpoch() {
+        return sessionPersistenceRuntime.rotateSessionWriteEpoch?.(this) !== false;
     }
     
     async saveSession() {

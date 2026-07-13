@@ -580,6 +580,8 @@ function setupBackgroundToolConfigListeners() {
         bindIfPresent(document.getElementById('bg-image-upload'), 'change', (e) => {
             const file = e.target.files[0];
             if (file) {
+                const backgroundReadToken = (this.backgroundManager.backgroundImageLoadToken || 0) + 1;
+                this.backgroundManager.backgroundImageLoadToken = backgroundReadToken;
                 const validation = window.AboardFileValidation;
                 const toast = this.settingsManager?.toastManager || window.toastManager;
                 try {
@@ -591,12 +593,26 @@ function setupBackgroundToolConfigListeners() {
                 }
                 const reader = new FileReader();
                 reader.onload = async (event) => {
+                    if (backgroundReadToken !== this.backgroundManager.backgroundImageLoadToken) {
+                        return;
+                    }
                     const imageData = event.target.result;
 
-                    // Reset confirmation state for new image
+                    const applyPromise = this.backgroundManager.setBackgroundImage(imageData);
+                    const applyToken = this.backgroundManager.backgroundImageLoadToken;
+                    const applied = await applyPromise;
+                    if (!applied) {
+                        // A newer background choice intentionally cancelled
+                        // this decode; only surface genuine failures for the
+                        // operation that still owns the current token.
+                        if (applyToken !== this.backgroundManager.backgroundImageLoadToken) {
+                            return;
+                        }
+                        const msg = window.i18n?.t?.('errors.fileReadFailed') || 'Failed to decode the selected image.';
+                        toast?.show?.(msg, 'error');
+                        return;
+                    }
                     this.imageControls.resetConfirmation();
-
-                    await this.backgroundManager.setBackgroundImage(imageData);
                     this.updateBackgroundUI();
                     this.setCoordinatePointMode(false);
 
@@ -610,11 +626,16 @@ function setupBackgroundToolConfigListeners() {
                     }
                 };
                 reader.onerror = () => {
+                    if (backgroundReadToken !== this.backgroundManager.backgroundImageLoadToken) {
+                        return;
+                    }
                     console.warn('Failed to read background image file:', reader.error);
                     const msg = window.i18n?.t?.('errors.fileReadFailed') || 'Failed to read the selected file.';
                     toast?.show?.(msg, 'error');
                 };
                 reader.readAsDataURL(file);
+                // Allow selecting the same file again after a decode/storage failure.
+                e.target.value = '';
             }
         });
 

@@ -119,6 +119,8 @@ function resetTransientBackgroundMediaState(backgroundManager) {
         return;
     }
 
+    backgroundManager.backgroundImageLoadToken = (backgroundManager.backgroundImageLoadToken || 0) + 1;
+    backgroundManager.stopGifInstance?.();
     backgroundManager.currentGifLoop = 0;
     backgroundManager.isImagePaused = false;
     backgroundManager.imageStaticData = null;
@@ -373,6 +375,9 @@ class ProjectManager {
         const normalizedBackground = normalizeImportedBackgroundState(bm, backgroundData);
 
         resetTransientBackgroundMediaState(bm);
+        const backgroundLoadToken = bm.backgroundImageLoadToken;
+        bm.backgroundImageData = normalizedBackground.backgroundImageData;
+        bm.backgroundImage = null;
         bm.backgroundColor = normalizedBackground.backgroundColor;
         bm.backgroundPattern = normalizedBackground.backgroundPattern;
         bm.bgOpacity = normalizedBackground.bgOpacity;
@@ -402,10 +407,12 @@ class ProjectManager {
         bm.backgroundOutsideLayerOrder = normalizedBackground.backgroundOutsideLayerOrder;
 
         if (normalizedBackground.backgroundImageData) {
-            bm.backgroundImageData = normalizedBackground.backgroundImageData;
-            bm.backgroundImage = await this.loadImageElement(normalizedBackground.backgroundImageData);
+            const loadedImage = await this.loadImageElement(normalizedBackground.backgroundImageData);
+            if (backgroundLoadToken === bm.backgroundImageLoadToken
+                && normalizedBackground.backgroundImageData === bm.backgroundImageData) {
+                bm.backgroundImage = loadedImage;
+            }
         } else {
-            bm.backgroundImageData = null;
             bm.backgroundImage = null;
         }
     }
@@ -670,6 +677,7 @@ class ProjectManager {
             },
             capabilities: [
                 'page-scenes-v1',
+                'page-raster-fallback-v1',
                 'asset-pool-v1',
                 'page-backgrounds-v1',
                 'uploaded-image-library-v1'
@@ -692,13 +700,42 @@ class ProjectManager {
             const pagePath = `pages/${pageId}.json`;
             const serializedScene = await this.serializeSceneForPackage(serializedScenes[String(originalPageNumber)] || null, assetStore);
             const serializedBackground = await this.serializeBackgroundForPackage(this.getPageBackgroundSnapshot(originalPageNumber), assetStore);
+            let rasterAsset = null;
+            if (this.drawingBoard.pageRasterFallbackPages instanceof Set
+                && this.drawingBoard.pageRasterFallbackPages.has(originalPageNumber)) {
+                const rasterBase = this.drawingBoard.getPageRasterFallbackBase?.(originalPageNumber)
+                    // A legacy raster-only page has no scene, so its complete
+                    // page bitmap is also a safe base. Never use a composite
+                    // bitmap when a scene exists or it would be drawn twice.
+                    || (!serializedScene
+                        ? this.drawingBoard.pages?.[originalPageNumber - 1] || null
+                        : null);
+                const rasterDataUrl = await this.imageDataToBase64(rasterBase);
+                const registeredRaster = await this.registerDataUrlAsset(
+                    assetStore,
+                    rasterDataUrl,
+                    `page-raster-${pageNumber}`
+                );
+                if (!registeredRaster) {
+                    throw new Error(this.t(
+                        'projectPackage.rasterFallbackUnavailable',
+                        'Raster page data required to preserve the project is unavailable.'
+                    ));
+                }
+                rasterAsset = {
+                    id: registeredRaster.id,
+                    path: registeredRaster.path,
+                    mime: registeredRaster.mime
+                };
+            }
             const pagePayload = {
                 schemaVersion: PROJECT_PACKAGE_SCHEMA_VERSION,
                 id: pageId,
                 index: pageNumber,
                 sourcePageIndex: originalPageNumber,
                 background: serializedBackground,
-                scene: serializedScene
+                scene: serializedScene,
+                raster: rasterAsset
             };
 
             pages.push({
@@ -957,6 +994,8 @@ class ProjectManager {
 
         const pageScenes = {};
         const pageBackgrounds = {};
+        const pagesImageData = [];
+        const rasterFallbackPages = new Set();
         let pageCount = 0;
 
         for (const pageEntry of documentPayload.pages) {
@@ -980,6 +1019,18 @@ class ProjectManager {
             if (pagePayload.scene) {
                 pageScenes[String(pageIndex)] = this.inflateSceneFromPackage(pagePayload.scene, resolveAssetDataUrl);
             }
+            if (pagePayload.raster) {
+                const rasterDataUrl = resolveAssetDataUrl(pagePayload.raster);
+                const rasterImageData = await this.base64ToImageData(rasterDataUrl);
+                if (!rasterImageData) {
+                    throw new Error(this.t(
+                        'projectPackage.rasterFallbackUnavailable',
+                        'Raster page data required to preserve the project is unavailable.'
+                    ));
+                }
+                pagesImageData[pageIndex - 1] = rasterImageData;
+                rasterFallbackPages.add(pageIndex);
+            }
         }
 
         await this.applyImportedProjectState({
@@ -988,6 +1039,8 @@ class ProjectManager {
             globalBackground: this.inflateBackgroundFromPackage(documentPayload.globalBackground || null, resolveAssetDataUrl),
             pageBackgrounds,
             pageScenes,
+            pagesImageData: pagesImageData.some(Boolean) ? pagesImageData : null,
+            rasterFallbackPages,
             currentPage: this.normalizeImportedPageNumber(documentPayload.currentPage, 1),
             pageCount
         });
@@ -1017,6 +1070,7 @@ class ProjectManager {
         pageBackgrounds = {},
         pageScenes = {},
         pagesImageData = null,
+        rasterFallbackPages = null,
         currentPage = 1,
         pageCount = 1
     } = {}) {
@@ -1068,22 +1122,64 @@ class ProjectManager {
 
         // 3. Restore backgrounds and scenes
         this.drawingBoard.pageBackgrounds = this.cloneSerializable(pageBackgrounds || {});
+        const hasExplicitRasterFallbackPages = rasterFallbackPages !== null
+            && typeof rasterFallbackPages !== 'undefined';
+        const importedRasterFallbackPages = new Set();
+        if (hasExplicitRasterFallbackPages) {
+            const explicitPages = rasterFallbackPages instanceof Set
+                ? Array.from(rasterFallbackPages)
+                : (Array.isArray(rasterFallbackPages) ? rasterFallbackPages : []);
+            explicitPages.forEach((pageNumber) => {
+                const normalizedPage = Number(pageNumber);
+                if (Number.isInteger(normalizedPage)
+                    && normalizedPage >= 1
+                    && normalizedPage <= normalizedPageCount
+                    && pagesImageData?.[normalizedPage - 1]) {
+                    importedRasterFallbackPages.add(normalizedPage);
+                }
+            });
+        } else if (Array.isArray(pagesImageData)) {
+            // Legacy projects do not identify raster bases separately. Their
+            // complete bitmap is safe as a base only when no editable scene is
+            // present for that page.
+            pagesImageData.forEach((pageBitmap, index) => {
+                const pageNumber = index + 1;
+                if (pageBitmap && !pageScenes?.[String(pageNumber)]) {
+                    importedRasterFallbackPages.add(pageNumber);
+                }
+            });
+        }
+        this.drawingBoard.pageRasterFallbackPages = importedRasterFallbackPages;
+        this.drawingBoard.pageRasterFallbackBases = new Map();
+        this.drawingBoard.pageRasterFallbackScaledBases = new Map();
+        importedRasterFallbackPages.forEach((pageNumber) => {
+            const rasterBase = pagesImageData?.[pageNumber - 1] || null;
+            if (rasterBase) {
+                this.drawingBoard.pageRasterFallbackBases.set(pageNumber, rasterBase);
+            }
+        });
         safeProjectStorageSetItem('pageBackgrounds', JSON.stringify(this.drawingBoard.pageBackgrounds));
         await this.applyGlobalBackground(globalBackground || null);
         await this.drawingBoard.applySerializedPageScenes(pageScenes || {});
 
         // 4. Restore page raster cache
         if (Array.isArray(pagesImageData) && pagesImageData.length > 0) {
-            this.drawingBoard.pages = [...pagesImageData];
+            this.drawingBoard.pages = Array.from(
+                { length: pagesImageData.length },
+                (_, index) => pagesImageData[index] || null
+            );
             while (this.drawingBoard.pages.length < normalizedPageCount) {
-                this.drawingBoard.pages.push(this.createBlankPageImageData());
+                this.drawingBoard.pages.push(null);
             }
         } else {
-            this.drawingBoard.pages = await this.renderPagesFromCurrentScenes(normalizedPageCount);
+            // Editable package pages are fully represented by their scenes;
+            // keep their raster cache lazy instead of allocating every full
+            // canvas during import.
+            this.drawingBoard.pages = Array.from({ length: normalizedPageCount }, () => null);
         }
 
         if (!Array.isArray(this.drawingBoard.pages) || this.drawingBoard.pages.length === 0) {
-            this.drawingBoard.pages = [this.createBlankPageImageData()];
+            this.drawingBoard.pages = [null];
         }
 
         const importedCurrentPage = Math.min(
@@ -1094,6 +1190,7 @@ class ProjectManager {
         // 5. Reset UI to the imported target page
         this.drawingBoard.currentPage = importedCurrentPage;
         await this.drawingBoard.loadPage(importedCurrentPage);
+        this.drawingBoard.enforcePageBitmapMemoryBudget?.();
         this.drawingBoard.updatePaginationUI();
         this.drawingBoard.updateBackgroundUI();
         this.drawingBoard.updateUI?.();

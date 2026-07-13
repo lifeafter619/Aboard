@@ -33,7 +33,9 @@ window.translations = {
     },
 
     errors: {
-        lazyLoadFailed: '載入{feature}失敗，請重新整理頁面後再試。'
+        lazyLoadFailed: '載入{feature}失敗，請重新整理頁面後再試。',
+        sessionWriteConflict: '另一個 Aboard 分頁正在使用自動儲存；目前分頁的變更暫時不會自動儲存。請關閉另一個分頁後繼續。',
+        sessionDataClearedElsewhere: '另一個分頁已清除儲存的白板資料。請先匯出仍需保留的內容，再重新載入目前分頁。'
     },
 
     prompts: {
@@ -966,7 +968,8 @@ window.translations = {
         unsafePath: '專案包路徑不安全：{path}',
         tooManyPages: '專案包包含的頁面數量過多。',
         assetTooLarge: '專案包包含過大的資源檔案：{path}',
-        assetsTooLarge: '專案包內嵌的資源總量過大。'
+        assetsTooLarge: '專案包內嵌的資源總量過大。',
+        rasterFallbackUnavailable: '用於完整保留專案內容的點陣頁面資料無法使用。'
     },
 
     gif: {
