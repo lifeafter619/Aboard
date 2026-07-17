@@ -13,6 +13,8 @@ function createElementStub(id) {
     textContent: '',
     title: '',
     disabled: false,
+    hidden: false,
+    value: '',
     dataset: {},
     classList: {
       add(className) {
@@ -67,6 +69,20 @@ function createContext() {
   const ids = [
     'classroom-mode-bar',
     'classroom-mode-status',
+    'classroom-pen-btn',
+    'classroom-eraser-btn',
+    'classroom-select-btn',
+    'classroom-pan-btn',
+    'classroom-pen-settings-btn',
+    'classroom-pen-settings',
+    'classroom-pen-size-slider',
+    'classroom-pen-size-value',
+    'classroom-color-black',
+    'classroom-color-red',
+    'classroom-color-blue',
+    'classroom-color-green',
+    'classroom-undo-btn',
+    'classroom-redo-btn',
     'classroom-prev-page-btn',
     'classroom-page-status',
     'classroom-next-page-btn',
@@ -77,9 +93,19 @@ function createContext() {
     'config-area',
     'feature-area',
     'time-display-area',
-    'timer-settings-modal'
+    'timer-settings-modal',
+    'undo-btn',
+    'redo-btn'
   ];
   const elements = Object.fromEntries(ids.map((id) => [id, createElementStub(id)]));
+  elements['classroom-pen-btn'].dataset.classroomTool = 'pen';
+  elements['classroom-eraser-btn'].dataset.classroomTool = 'eraser';
+  elements['classroom-select-btn'].dataset.classroomTool = 'select';
+  elements['classroom-pan-btn'].dataset.classroomTool = 'pan';
+  elements['classroom-color-black'].dataset.classroomColor = '#000000';
+  elements['classroom-color-red'].dataset.classroomColor = '#FF3B30';
+  elements['classroom-color-blue'].dataset.classroomColor = '#0A63C9';
+  elements['classroom-color-green'].dataset.classroomColor = '#16815A';
   const bodyClasses = new Set();
 
   const document = {
@@ -98,6 +124,18 @@ function createContext() {
     },
     getElementById(id) {
       return elements[id] || null;
+    },
+    querySelectorAll(selector) {
+      if (selector === '[data-classroom-tool]') {
+        return ['pen', 'eraser', 'select', 'pan'].map((tool) => elements[`classroom-${tool}-btn`]);
+      }
+      if (selector === '[data-classroom-color]') {
+        return ['black', 'red', 'blue', 'green'].map((color) => elements[`classroom-color-${color}`]);
+      }
+      return [];
+    },
+    querySelector() {
+      return null;
     },
     addEventListener() {}
   };
@@ -182,10 +220,28 @@ function testEnterExitAndPaginationBehavior() {
   const board = {
     currentPage: 1,
     pages: [{}, {}, {}],
+    drawingEngine: {
+      currentTool: 'select',
+      currentColor: '#000000',
+      penSize: 5,
+      setColor(color) {
+        this.currentColor = color;
+        calls.push(['setColor', color]);
+      },
+      setPenSize(size) {
+        this.penSize = size;
+        calls.push(['setPenSize', size]);
+      }
+    },
+    historyManager: {
+      canUndo() { return true; },
+      canRedo() { return false; }
+    },
     exitShapeMode() {
       calls.push('exitShapeMode');
     },
     setTool(tool, showConfig) {
+      this.drawingEngine.currentTool = tool;
       calls.push(['setTool', tool, showConfig]);
     },
     prevPage() {
@@ -207,7 +263,10 @@ function testEnterExitAndPaginationBehavior() {
   manager.enter();
 
   assert.equal(bodyClasses.has('classroom-mode-active'), true, 'enter should add body active class');
-  assert.deepEqual(calls[1], ['setTool', 'pen', false], 'enter should return to pen without opening config');
+  assert.equal(board.drawingEngine.currentTool, 'select', 'enter should preserve an already useful classroom tool');
+  assert.equal(elements['classroom-select-btn'].getAttribute('aria-pressed'), 'true');
+  assert.equal(elements['classroom-undo-btn'].disabled, false);
+  assert.equal(elements['classroom-redo-btn'].disabled, true);
   assert.equal(elements['classroom-page-status'].textContent, '1 / 3');
   assert.equal(elements['classroom-mode-status'].textContent, 'Classroom mode');
   assert.equal(elements['classroom-prev-page-btn'].disabled, true);
@@ -223,6 +282,24 @@ function testEnterExitAndPaginationBehavior() {
   ], 'next page should stop at existing last page');
   assert.equal(board.pages.length, 3, 'next page should not add a blank page');
   assert.equal(elements['classroom-next-page-btn'].disabled, true);
+
+  elements['classroom-eraser-btn'].click();
+  assert.equal(board.drawingEngine.currentTool, 'eraser');
+  assert.deepEqual(calls.find((call) => Array.isArray(call) && call[0] === 'setTool' && call[1] === 'eraser'), ['setTool', 'eraser', false]);
+
+  elements['classroom-color-red'].click();
+  assert.equal(board.drawingEngine.currentColor, '#FF3B30');
+  assert.equal(board.drawingEngine.currentTool, 'pen', 'choosing a pen color should return to the pen tool');
+
+  elements['classroom-pen-size-slider'].value = '12';
+  manager.setPenSize({ currentTarget: elements['classroom-pen-size-slider'] });
+  assert.equal(board.drawingEngine.penSize, 12);
+  assert.equal(elements['classroom-pen-size-value'].textContent, '12');
+
+  let undoClicks = 0;
+  elements['undo-btn'].addEventListener('click', () => { undoClicks += 1; });
+  elements['classroom-undo-btn'].click();
+  assert.equal(undoClicks, 1, 'classroom undo should reuse the board history action');
 
   manager.goToPreviousPage();
   assert.equal(calls.includes('prevPage'), true, 'previous page should call board.prevPage');
@@ -247,6 +324,17 @@ function testTimerTracksWallClockNotTicks() {
   const board = {
     currentPage: 1,
     pages: [{}],
+    drawingEngine: {
+      currentTool: 'pen',
+      currentColor: '#000000',
+      penSize: 5,
+      setColor() {},
+      setPenSize() {}
+    },
+    historyManager: {
+      canUndo() { return false; },
+      canRedo() { return false; }
+    },
     exitShapeMode() {},
     setTool() {},
     updatePaginationUI() {},

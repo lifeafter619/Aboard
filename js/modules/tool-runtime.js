@@ -181,6 +181,7 @@ function updateUI() {
     
     const paginationControls = getElement('pagination-controls');
     addClassIfPresent(paginationControls, 'show');
+    this.classroomModeManager?.syncBoardState?.();
 }
 
 window.AboardToolRuntime = {

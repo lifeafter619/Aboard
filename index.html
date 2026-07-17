@@ -679,45 +679,107 @@
     </div>
 
     <!-- Classroom mode controls -->
-    <div id="classroom-mode-bar" aria-live="polite">
-        <span id="classroom-mode-status" class="classroom-mode-status" data-i18n="classroom.modeActive">课堂模式</span>
-        <span class="classroom-divider" aria-hidden="true"></span>
-        <button id="classroom-prev-page-btn" class="classroom-control-btn" data-i18n-title="classroom.prevPage" title="上一页" aria-label="上一页">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
-        </button>
-        <span id="classroom-page-status">1 / 1</span>
-        <button id="classroom-next-page-btn" class="classroom-control-btn" data-i18n-title="classroom.nextPage" title="下一页" aria-label="下一页">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-        </button>
-        <span class="classroom-divider" aria-hidden="true"></span>
-        <span id="classroom-timer-display">00:00</span>
-        <button id="classroom-timer-toggle-btn" class="classroom-control-btn" data-i18n-title="classroom.startTimer" title="开始计时" aria-label="开始计时">
-            <svg class="classroom-play-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                <path d="M8 5v14l11-7z"></path>
-            </svg>
-            <svg class="classroom-pause-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                <path d="M7 5h4v14H7z"></path>
-                <path d="M13 5h4v14h-4z"></path>
-            </svg>
-        </button>
-        <button id="classroom-timer-reset-btn" class="classroom-control-btn" data-i18n-title="classroom.resetTimer" title="重置计时" aria-label="重置计时">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 12a9 9 0 1 0 3-6.7"></path>
-                <path d="M3 4v6h6"></path>
-            </svg>
-        </button>
-        <span class="classroom-divider" aria-hidden="true"></span>
-        <button id="classroom-exit-btn" class="classroom-control-btn" data-i18n-title="classroom.exit" title="退出课堂模式" aria-label="退出课堂模式">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-        </button>
+    <div id="classroom-mode-bar" role="toolbar" aria-label="课堂模式" tabindex="-1" hidden>
+        <div class="classroom-tool-dock">
+            <button id="classroom-pen-btn" type="button" class="classroom-tool-btn" data-classroom-tool="pen" title="笔" aria-label="笔" aria-pressed="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                    <path d="M2 2l7.6 7.6"></path>
+                    <circle cx="11" cy="11" r="2"></circle>
+                </svg>
+            </button>
+            <button id="classroom-eraser-btn" type="button" class="classroom-tool-btn" data-classroom-tool="eraser" title="橡皮" aria-label="橡皮" aria-pressed="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M20 20H7l-4-4 9-9 5 5"></path>
+                    <path d="M7 20l5-5"></path>
+                </svg>
+            </button>
+            <button id="classroom-select-btn" type="button" class="classroom-tool-btn" data-classroom-tool="select" title="选择" aria-label="选择" aria-pressed="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M3 3l7.1 17 2.5-7.4 7.4-2.5L3 3z"></path>
+                    <path d="M13 13l6 6"></path>
+                </svg>
+            </button>
+            <button id="classroom-pan-btn" type="button" class="classroom-tool-btn" data-classroom-tool="pan" title="移动" aria-label="移动" aria-pressed="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M18 11V6a2 2 0 0 0-4 0v4"></path>
+                    <path d="M14 10V4a2 2 0 0 0-4 0v6"></path>
+                    <path d="M10 10.5V6a2 2 0 0 0-4 0v8"></path>
+                    <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"></path>
+                </svg>
+            </button>
+            <span class="classroom-dock-divider" aria-hidden="true"></span>
+            <button id="classroom-pen-settings-btn" type="button" class="classroom-tool-btn classroom-pen-settings-trigger" title="颜色与粗细" aria-label="颜色与粗细" aria-expanded="false" aria-controls="classroom-pen-settings">
+                <span class="classroom-current-color" aria-hidden="true"></span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M12 3v18"></path>
+                    <path d="M8 7h8"></path>
+                    <path d="M9 17h6"></path>
+                </svg>
+            </button>
+            <div id="classroom-pen-settings" class="classroom-pen-settings" hidden>
+                <div class="classroom-quick-colors">
+                    <button id="classroom-color-black" type="button" class="classroom-color-btn" data-classroom-color="#000000" data-color-name="black" title="黑色" aria-label="黑色" aria-pressed="false"></button>
+                    <button id="classroom-color-red" type="button" class="classroom-color-btn" data-classroom-color="#FF3B30" data-color-name="red" title="红色" aria-label="红色" aria-pressed="false"></button>
+                    <button id="classroom-color-blue" type="button" class="classroom-color-btn" data-classroom-color="#0A63C9" data-color-name="blue" title="蓝色" aria-label="蓝色" aria-pressed="false"></button>
+                    <button id="classroom-color-green" type="button" class="classroom-color-btn" data-classroom-color="#16815A" data-color-name="green" title="绿色" aria-label="绿色" aria-pressed="false"></button>
+                </div>
+                <label class="classroom-pen-size-control" for="classroom-pen-size-slider">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M4 16h5"></path>
+                        <path d="M4 8h16"></path>
+                    </svg>
+                    <input id="classroom-pen-size-slider" type="range" min="1" max="50" value="5" title="笔粗细" aria-label="笔粗细">
+                    <span id="classroom-pen-size-value">5</span><span aria-hidden="true">px</span>
+                </label>
+            </div>
+            <span class="classroom-dock-divider" aria-hidden="true"></span>
+            <button id="classroom-undo-btn" type="button" class="classroom-tool-btn" title="撤销" aria-label="撤销">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M3 7v6h6"></path>
+                    <path d="M21 17a9 9 0 0 0-15-6.7L3 13"></path>
+                </svg>
+            </button>
+            <button id="classroom-redo-btn" type="button" class="classroom-tool-btn" title="重做" aria-label="重做">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M21 7v6h-6"></path>
+                    <path d="M3 17a9 9 0 0 1 15-6.7l3 2.7"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div class="classroom-session-dock">
+            <span id="classroom-mode-status" class="classroom-mode-status" data-i18n="classroom.modeActive" role="status" aria-live="polite">
+                <span class="classroom-status-dot" aria-hidden="true"></span>
+                <span>课堂模式</span>
+            </span>
+            <span class="classroom-dock-divider classroom-session-divider" aria-hidden="true"></span>
+            <div class="classroom-page-group">
+                <button id="classroom-prev-page-btn" type="button" class="classroom-control-btn" title="上一页" aria-label="上一页">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <span id="classroom-page-status">1 / 1</span>
+                <button id="classroom-next-page-btn" type="button" class="classroom-control-btn" title="下一页" aria-label="下一页">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </div>
+            <span class="classroom-dock-divider classroom-session-divider" aria-hidden="true"></span>
+            <div class="classroom-timer-group">
+                <span id="classroom-timer-display">00:00</span>
+                <button id="classroom-timer-toggle-btn" type="button" class="classroom-control-btn classroom-timer-toggle" title="开始计时" aria-label="开始计时">
+                    <svg class="classroom-play-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+                    <svg class="classroom-pause-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><path d="M7 5h4v14H7z"></path><path d="M13 5h4v14h-4z"></path></svg>
+                </button>
+                <button id="classroom-timer-reset-btn" type="button" class="classroom-control-btn" title="重置计时" aria-label="重置计时">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 4v6h6"></path></svg>
+                </button>
+            </div>
+            <span class="classroom-dock-divider classroom-session-divider" aria-hidden="true"></span>
+            <button id="classroom-exit-btn" type="button" class="classroom-control-btn classroom-exit-btn" title="退出课堂模式" aria-label="退出课堂模式">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            </button>
+        </div>
     </div>
 
     <!-- Settings modal -->

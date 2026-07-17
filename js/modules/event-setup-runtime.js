@@ -137,6 +137,7 @@ function setupEventListeners() {
                     closest('#config-area') || 
                     closest('#history-controls') || 
                     closest('#pagination-controls') ||
+                    closest('#classroom-mode-bar') ||
                     closest('#time-display-area') ||
                     closest('#time-display') ||
                     closest('#feature-area') ||

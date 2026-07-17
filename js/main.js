@@ -439,6 +439,7 @@ class DrawingBoard {
         // so refresh-restore covers all tools that write through HistoryManager.
         this.historyManager.onStateChanged = () => {
             this.saveSessionDebounced();
+            this.classroomModeManager?.syncBoardState?.();
         };
 
         // Initialize

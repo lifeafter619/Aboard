@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { access, mkdir, readdir, rm } from 'node:fs/promises';
+import { access, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
 const PORT = process.env.PORT || '18084';
@@ -110,7 +110,45 @@ const STATES = [
       }
       board?.classroomModeManager?.enter?.();
     }`,
-    selectors: ['#classroom-mode-bar']
+    selectors: [
+      '#classroom-mode-bar',
+      '.classroom-tool-dock',
+      '.classroom-session-dock',
+      '#classroom-pen-btn',
+      '#classroom-eraser-btn',
+      '#classroom-select-btn',
+      '#classroom-pan-btn',
+      '#classroom-pen-settings-btn',
+      '#classroom-undo-btn',
+      '#classroom-redo-btn',
+      '#classroom-prev-page-btn',
+      '#classroom-next-page-btn',
+      '#classroom-timer-toggle-btn',
+      '#classroom-timer-reset-btn',
+      '#classroom-exit-btn'
+    ],
+    nonOverlap: [['.classroom-tool-dock', '.classroom-session-dock']]
+  },
+  {
+    name: 'classroom-pen-settings',
+    setup: `async () => {
+      const board = window.drawingBoard;
+      if (!board?.classroomModeManager && typeof window.AboardClassroomModeManager === 'function') {
+        board.classroomModeManager = new window.AboardClassroomModeManager(board);
+      }
+      board?.classroomModeManager?.enter?.();
+      board?.classroomModeManager?.setPenSettingsOpen?.(true);
+    }`,
+    selectors: [
+      '.classroom-tool-dock',
+      '.classroom-session-dock',
+      '#classroom-pen-settings',
+      '#classroom-pen-size-slider'
+    ],
+    nonOverlap: [
+      ['.classroom-tool-dock', '.classroom-session-dock'],
+      ['#classroom-pen-settings', '.classroom-session-dock']
+    ]
   },
   {
     name: 'time-panel',
@@ -530,16 +568,18 @@ async function runState(cdp, viewport, state) {
       }
     }
 
-    if (state.name === 'classroom-mode') {
-      const classroomBar = document.querySelector('#classroom-mode-bar');
-      if (isVisible(classroomBar) && hasHorizontalOverflow(classroomBar)) {
-        issues.push({
-          type: 'horizontal-overflow',
-          selector: '#classroom-mode-bar',
-          clientWidth: classroomBar.clientWidth,
-          scrollWidth: classroomBar.scrollWidth
-        });
-      }
+    if (state.name.startsWith('classroom-')) {
+      ['.classroom-tool-dock', '.classroom-session-dock'].forEach((selector) => {
+        const dock = document.querySelector(selector);
+        if (isVisible(dock) && hasHorizontalOverflow(dock)) {
+          issues.push({
+            type: 'horizontal-overflow',
+            selector,
+            clientWidth: dock.clientWidth,
+            scrollWidth: dock.scrollWidth
+          });
+        }
+      });
 
       ['#toolbar', '#history-controls', '#pagination-controls', '#feature-area', '#config-area'].forEach((selector) => {
         const element = document.querySelector(selector);
@@ -560,9 +600,9 @@ async function runState(cdp, viewport, state) {
   })()`);
 }
 
-async function runResponsiveChecks(cdp) {
+async function runResponsiveChecks(cdp, screenshotDir = '', viewports = VIEWPORTS, states = STATES) {
   const failures = [];
-  for (const viewport of VIEWPORTS) {
+  for (const viewport of viewports) {
     await cdp.send('Emulation.setDeviceMetricsOverride', {
       width: viewport.width,
       height: viewport.height,
@@ -575,9 +615,17 @@ async function runResponsiveChecks(cdp) {
     await wait(500);
     await dismissPortraitOverlay(cdp);
 
-    for (const state of STATES) {
+    for (const state of states) {
       const result = await runState(cdp, viewport, state);
       if (result.issues.length > 0) failures.push(result);
+      if (screenshotDir && state.name.startsWith('classroom-')) {
+        console.log(`classroom measurement: ${JSON.stringify(result)}`);
+        const screenshot = await cdp.send('Page.captureScreenshot', {
+          format: 'png',
+          captureBeyondViewport: false
+        });
+        await writeFile(join(screenshotDir, `${viewport.name}-${state.name}.png`), Buffer.from(screenshot.data, 'base64'));
+      }
       await evaluate(cdp, `(() => {
         document.querySelectorAll('.modal.show, .timer-modal.show, #timer-settings-modal.show').forEach(element => element.classList.remove('show'));
         document.getElementById('config-area')?.classList.remove('show');
@@ -596,7 +644,22 @@ async function runResponsiveChecks(cdp) {
 async function main() {
   const repoRoot = resolve(join(import.meta.dirname, '..'));
   const profileDir = join(repoRoot, '.tmp', `responsive-smoke-profile-${Date.now()}`);
+  const screenshotDir = process.argv.includes('--capture-classroom')
+    ? join(repoRoot, '.tmp', 'classroom-mode-screenshots')
+    : '';
+  const viewportArg = process.argv.find((argument) => argument.startsWith('--viewport='));
+  const requestedViewport = viewportArg?.slice('--viewport='.length);
+  const activeViewports = requestedViewport
+    ? VIEWPORTS.filter((viewport) => viewport.name === requestedViewport)
+    : VIEWPORTS;
+  const activeStates = process.argv.includes('--classroom-only')
+    ? STATES.filter((state) => state.name.startsWith('classroom-'))
+    : STATES;
+  if (requestedViewport && activeViewports.length === 0) {
+    throw new Error(`Unknown viewport: ${requestedViewport}`);
+  }
   await mkdir(profileDir, { recursive: true });
+  if (screenshotDir) await mkdir(screenshotDir, { recursive: true });
   const browserPath = await resolveBrowserPath();
 
   const server = spawn(process.execPath, ['server.js'], {
@@ -634,11 +697,12 @@ async function main() {
     cdp = createCdpClient(await connectWebSocket(target.webSocketDebuggerUrl));
     await cdp.send('Runtime.enable');
     await cdp.send('Page.enable');
-    const failures = await runResponsiveChecks(cdp);
+    const failures = await runResponsiveChecks(cdp, screenshotDir, activeViewports, activeStates);
     if (failures.length > 0) {
       throw new Error(`Responsive layout failures:\\n${JSON.stringify(failures, null, 2)}`);
     }
-    console.log(`responsive-layout-smoke: ${VIEWPORTS.length} viewports x ${STATES.length} states passed`);
+    console.log(`responsive-layout-smoke: ${activeViewports.length} viewports x ${activeStates.length} states passed`);
+    if (screenshotDir) console.log(`classroom screenshots: ${screenshotDir}`);
   } finally {
     cdp?.close();
     await Promise.all([

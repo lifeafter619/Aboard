@@ -789,9 +789,92 @@ async function main() {
       throw new Error(`Classroom mode click did not expose clear active feedback: ${JSON.stringify(classroomState)}`);
     }
 
-    await evaluate(cdp, `window.drawingBoard?.classroomModeManager?.exit?.()`);
+    const classroomBaseline = await evaluate(cdp, `(() => ({
+      strokes: window.drawingBoard?.drawingEngine?.strokes?.length ?? -1,
+      tool: window.drawingBoard?.drawingEngine?.currentTool || ''
+    }))()`);
+    const classroomEraserRect = await evaluate(cdp, `(() => {
+      const rect = document.getElementById('classroom-eraser-btn').getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    })()`);
+    await click(cdp, classroomEraserRect.x, classroomEraserRect.y);
+    const classroomEraserState = await evaluate(cdp, `(() => ({
+      tool: window.drawingBoard?.drawingEngine?.currentTool || '',
+      strokes: window.drawingBoard?.drawingEngine?.strokes?.length ?? -1,
+      isDrawing: !!window.drawingBoard?.drawingEngine?.isDrawing,
+      pressed: document.getElementById('classroom-eraser-btn')?.getAttribute('aria-pressed')
+    }))()`);
+    if (classroomEraserState.tool !== 'eraser'
+      || classroomEraserState.pressed !== 'true'
+      || classroomEraserState.isDrawing
+      || classroomEraserState.strokes !== classroomBaseline.strokes) {
+      throw new Error(`Classroom tool click leaked into the canvas or failed to switch tools: ${JSON.stringify(classroomEraserState)}`);
+    }
 
-    console.log('drawing-smoke-cdp: pen, shape, zoomed pen, marker zoom, select cursor, and classroom entry checks passed');
+    const penSettingsRect = await evaluate(cdp, `(() => {
+      const rect = document.getElementById('classroom-pen-settings-btn').getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    })()`);
+    await click(cdp, penSettingsRect.x, penSettingsRect.y);
+    await waitUntil(() => evaluate(cdp, `!document.getElementById('classroom-pen-settings')?.hidden`), { timeoutMs: 3000 });
+
+    const redRect = await evaluate(cdp, `(() => {
+      const rect = document.getElementById('classroom-color-red').getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    })()`);
+    await click(cdp, redRect.x, redRect.y);
+    await evaluate(cdp, `(() => {
+      const slider = document.getElementById('classroom-pen-size-slider');
+      slider.value = '12';
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
+    })()`);
+    const classroomPenState = await evaluate(cdp, `(() => ({
+      tool: window.drawingBoard?.drawingEngine?.currentTool || '',
+      color: window.drawingBoard?.drawingEngine?.currentColor || '',
+      penSize: window.drawingBoard?.drawingEngine?.penSize,
+      sizeLabel: document.getElementById('classroom-pen-size-value')?.textContent,
+      baseColor: document.getElementById('custom-color-picker')?.value || '',
+      basePenSize: document.getElementById('pen-size-slider')?.value || ''
+    }))()`);
+    if (classroomPenState.tool !== 'pen'
+      || classroomPenState.color.toUpperCase() !== '#FF3B30'
+      || classroomPenState.penSize !== 12
+      || classroomPenState.sizeLabel !== '12'
+      || classroomPenState.baseColor.toUpperCase() !== '#FF3B30'
+      || classroomPenState.basePenSize !== '12') {
+      throw new Error(`Classroom pen controls did not update the drawing engine: ${JSON.stringify(classroomPenState)}`);
+    }
+
+    const timerToggleRect = await evaluate(cdp, `(() => {
+      const rect = document.getElementById('classroom-timer-toggle-btn').getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    })()`);
+    await click(cdp, timerToggleRect.x, timerToggleRect.y);
+    await wait(1100);
+    const classroomTimerState = await evaluate(cdp, `(() => ({
+      running: !!window.drawingBoard?.classroomModeManager?.isTimerRunning,
+      display: document.getElementById('classroom-timer-display')?.textContent || ''
+    }))()`);
+    if (!classroomTimerState.running || classroomTimerState.display === '00:00') {
+      throw new Error(`Classroom timer did not start from the session dock: ${JSON.stringify(classroomTimerState)}`);
+    }
+
+    const classroomExitRect = await evaluate(cdp, `(() => {
+      const rect = document.getElementById('classroom-exit-btn').getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    })()`);
+    await click(cdp, classroomExitRect.x, classroomExitRect.y);
+    const classroomExitState = await evaluate(cdp, `(() => ({
+      active: document.body.classList.contains('classroom-mode-active'),
+      timerRunning: !!window.drawingBoard?.classroomModeManager?.isTimerRunning,
+      hidden: !!document.getElementById('classroom-mode-bar')?.hidden
+    }))()`);
+    if (classroomExitState.active || classroomExitState.timerRunning || !classroomExitState.hidden) {
+      throw new Error(`Classroom exit did not restore the board UI cleanly: ${JSON.stringify(classroomExitState)}`);
+    }
+
+    console.log('drawing-smoke-cdp: pen, shape, zoomed pen, marker zoom, select cursor, and classroom workflow checks passed');
   } finally {
     cdp?.close();
     browser.kill();

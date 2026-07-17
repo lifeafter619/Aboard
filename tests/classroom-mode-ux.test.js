@@ -6,6 +6,7 @@ const rootDir = path.join(__dirname, '..');
 const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
 const manifest = fs.readFileSync(path.join(rootDir, 'js', 'app', 'legacy-manifest.js'), 'utf8');
 const uiListenersRuntime = fs.readFileSync(path.join(rootDir, 'js', 'modules', 'ui-listeners-runtime.js'), 'utf8');
+const eventSetupRuntime = fs.readFileSync(path.join(rootDir, 'js', 'modules', 'event-setup-runtime.js'), 'utf8');
 const classroomModePath = path.join(rootDir, 'js', 'modules', 'classroom-mode.js');
 const classroomModeCssPath = path.join(rootDir, 'css', 'modules', 'classroom-mode.css');
 
@@ -49,6 +50,15 @@ function testClassroomControlBarExistsOutsideFeaturePanel() {
 
   [
     'classroom-mode-status',
+    'classroom-pen-btn',
+    'classroom-eraser-btn',
+    'classroom-select-btn',
+    'classroom-pan-btn',
+    'classroom-pen-settings-btn',
+    'classroom-pen-settings',
+    'classroom-pen-size-slider',
+    'classroom-undo-btn',
+    'classroom-redo-btn',
     'classroom-prev-page-btn',
     'classroom-page-status',
     'classroom-next-page-btn',
@@ -62,6 +72,15 @@ function testClassroomControlBarExistsOutsideFeaturePanel() {
 
   const statusMarkup = getElementMarkup(indexHtml, 'classroom-mode-status');
   assert.match(statusMarkup, /data-i18n="classroom\.modeActive"/, 'classroom bar should label the active teaching state');
+
+  ['pen', 'eraser', 'select', 'pan'].forEach((tool) => {
+    const toolMarkup = getElementMarkup(indexHtml, `classroom-${tool}-btn`);
+    assert.match(toolMarkup, new RegExp(`data-classroom-tool="${tool}"`), `classroom dock should expose the ${tool} tool`);
+  });
+
+  ['#000000', '#FF3B30', '#0A63C9', '#16815A'].forEach((color) => {
+    assert.match(indexHtml, new RegExp(`data-classroom-color="${color}"`, 'i'), `classroom pen settings should expose ${color}`);
+  });
 }
 
 function testClassroomModeScriptsAndStylesAreLoaded() {
@@ -90,18 +109,31 @@ function testClassroomRuntimeOwnsModeStatePaginationAndTimer() {
   assert.match(classroomMode, /prevPage\?\.\(\)/, 'previous page should reuse board pagination');
   assert.match(classroomMode, /setInterval/, 'timer should tick without depending on the existing timer modal');
   assert.match(classroomMode, /localeChanged/, 'labels should refresh when locale changes');
+  assert.match(classroomMode, /data-classroom-tool/, 'runtime should bind the dedicated classroom drawing tools');
+  assert.match(classroomMode, /drawingEngine\?\.setColor/, 'runtime should update the existing drawing engine color');
+  assert.match(classroomMode, /drawingEngine\?\.setPenSize/, 'runtime should update the existing drawing engine pen size');
+  assert.match(classroomMode, /undo-btn/, 'classroom undo should reuse the existing history action');
+  assert.match(classroomMode, /redo-btn/, 'classroom redo should reuse the existing history action');
 }
 
-function testClassroomModeLayoutDoesNotOverflowHorizontally() {
+function testClassroomModeUsesStableResponsiveDocks() {
   const css = readRequiredFile(classroomModeCssPath, 'classroom mode stylesheet');
 
-  assert.match(css, /#classroom-mode-bar\s*{[^}]*max-width:\s*calc\(100vw - 24px\)/s, 'control bar should fit inside narrow viewports');
-  assert.match(css, /#classroom-mode-bar\s*{[^}]*overflow-x:\s*hidden/s, 'control bar should never expose a horizontal scrollbar');
-  assert.match(css, /#classroom-mode-bar\s*{[^}]*flex-wrap:\s*wrap/s, 'control bar controls should wrap instead of overflowing');
+  assert.match(css, /\.classroom-tool-dock\s*{[^}]*position:\s*absolute/s, 'drawing tools should live in a stable dock');
+  assert.match(css, /\.classroom-session-dock\s*{[^}]*position:\s*absolute/s, 'page and timer controls should live in a separate stable dock');
+  assert.doesNotMatch(css, /#classroom-mode-bar\s*{[^}]*flex-wrap:\s*wrap/s, 'the classroom shell should not unpredictably wrap one long toolbar');
   assert.match(css, /\.classroom-mode-status\s*{[^}]*font-weight:\s*600/s, 'active classroom label should be readable on a projector');
   assert.match(css, /body\.classroom-mode-active\s+#toolbar/s, 'classroom mode should hide the normal toolbar');
   assert.match(css, /body\.classroom-mode-active\s+#pagination-controls/s, 'classroom mode should hide normal pagination controls');
   assert.match(css, /@media \(max-width:\s*520px\)[\s\S]*#classroom-mode-bar/s, 'small screens should have a dedicated classroom bar layout');
+}
+
+function testClassroomControlsDoNotLeakPointerInputToCanvas() {
+  assert.match(
+    eventSetupRuntime,
+    /closest\('#classroom-mode-bar'\)/,
+    'canvas pointer handling should ignore the dedicated classroom controls'
+  );
 }
 
 function testClassroomModeLocaleKeysExist() {
@@ -125,7 +157,8 @@ function testClassroomModeLocaleKeysExist() {
   testClassroomModeScriptsAndStylesAreLoaded();
   testMorePanelButtonEntersClassroomMode();
   testClassroomRuntimeOwnsModeStatePaginationAndTimer();
-  testClassroomModeLayoutDoesNotOverflowHorizontally();
+  testClassroomModeUsesStableResponsiveDocks();
+  testClassroomControlsDoNotLeakPointerInputToCanvas();
   testClassroomModeLocaleKeysExist();
   console.log('classroom-mode-ux.test: all assertions passed');
 })();

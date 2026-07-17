@@ -4,19 +4,21 @@ class ClassroomModeManager {
         this.isActive = false;
         this.isTimerRunning = false;
         this.elapsedSeconds = 0;
-        // Time is tracked from real timestamps rather than counting interval
-        // ticks: backgrounded tabs throttle (or freeze) setInterval, so a
-        // tick-counting timer drifts behind wall-clock whenever the teacher
-        // switches windows or the panel sleeps. accumulatedMs holds completed
-        // run time; runStartTimestamp marks the start of the current run.
         this.accumulatedMs = 0;
         this.runStartTimestamp = 0;
         this.timerInterval = null;
         this.bound = false;
+        this.supportedTools = new Set(['pen', 'eraser', 'select', 'pan']);
 
         this.elements = {
             bar: document.getElementById('classroom-mode-bar'),
             modeStatus: document.getElementById('classroom-mode-status'),
+            penSettingsBtn: document.getElementById('classroom-pen-settings-btn'),
+            penSettings: document.getElementById('classroom-pen-settings'),
+            penSizeSlider: document.getElementById('classroom-pen-size-slider'),
+            penSizeValue: document.getElementById('classroom-pen-size-value'),
+            undoBtn: document.getElementById('classroom-undo-btn'),
+            redoBtn: document.getElementById('classroom-redo-btn'),
             prevPageBtn: document.getElementById('classroom-prev-page-btn'),
             pageStatus: document.getElementById('classroom-page-status'),
             nextPageBtn: document.getElementById('classroom-next-page-btn'),
@@ -25,10 +27,11 @@ class ClassroomModeManager {
             timerResetBtn: document.getElementById('classroom-timer-reset-btn'),
             exitBtn: document.getElementById('classroom-exit-btn')
         };
+        this.toolButtons = Array.from(document.querySelectorAll?.('[data-classroom-tool]') || []);
+        this.colorButtons = Array.from(document.querySelectorAll?.('[data-classroom-color]') || []);
 
         this.bindEvents();
-        this.updatePageStatus();
-        this.updateTimerDisplay();
+        this.syncBoardState();
         this.updateLocalizedLabels();
     }
 
@@ -38,26 +41,61 @@ class ClassroomModeManager {
         }
         this.bound = true;
 
+        this.toolButtons.forEach((button) => {
+            button.addEventListener('click', () => this.selectTool(button.dataset.classroomTool));
+        });
+        this.colorButtons.forEach((button) => {
+            button.addEventListener('click', () => this.setColor(button.dataset.classroomColor));
+        });
+        this.elements.penSettingsBtn?.addEventListener('click', () => this.togglePenSettings());
+        this.elements.penSizeSlider?.addEventListener('input', (event) => this.setPenSize(event));
+        this.elements.undoBtn?.addEventListener('click', () => this.runHistoryAction('undo'));
+        this.elements.redoBtn?.addEventListener('click', () => this.runHistoryAction('redo'));
         this.elements.prevPageBtn?.addEventListener('click', () => this.goToPreviousPage());
         this.elements.nextPageBtn?.addEventListener('click', () => this.goToNextPage());
         this.elements.timerToggleBtn?.addEventListener('click', () => this.toggleTimer());
         this.elements.timerResetBtn?.addEventListener('click', () => this.resetTimer());
         this.elements.exitBtn?.addEventListener('click', () => this.exit());
+
         window.addEventListener('localeChanged', () => this.updateLocalizedLabels());
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && this.isActive) {
-                if (this.hasBlockingOverlay()) {
-                    // A visible overlay above the classroom bar (fullscreen
-                    // timer/clock, any modal) owns this Escape press; let its
-                    // own handler close it instead of exiting classroom mode.
-                    return;
-                }
-                event.preventDefault();
-                this.exit();
+        document.addEventListener('pointerup', () => {
+            if (this.isActive) {
+                this.syncBoardState();
             }
-        }, true); // capture: overlays close themselves on Escape before this
-                  // check runs in bubble phase, which made the same key press
-                  // also exit classroom mode.
+        });
+        document.addEventListener('keyup', () => {
+            if (this.isActive) {
+                this.syncBoardState();
+            }
+        });
+        document.addEventListener('pointerdown', (event) => {
+            if (!this.isPenSettingsOpen()) {
+                return;
+            }
+            const target = event.target;
+            if (!target?.closest?.('#classroom-pen-settings, #classroom-pen-settings-btn')) {
+                this.setPenSettingsOpen(false);
+            }
+        }, true);
+        document.addEventListener('keydown', (event) => this.handleKeydown(event), true);
+    }
+
+    handleKeydown(event) {
+        if (event.key !== 'Escape' || !this.isActive) {
+            return;
+        }
+        if (this.isPenSettingsOpen()) {
+            event.preventDefault();
+            event.stopPropagation?.();
+            this.setPenSettingsOpen(false);
+            this.elements.penSettingsBtn?.focus?.({ preventScroll: true });
+            return;
+        }
+        if (this.hasBlockingOverlay()) {
+            return;
+        }
+        event.preventDefault();
+        this.exit();
     }
 
     hasBlockingOverlay() {
@@ -70,22 +108,27 @@ class ClassroomModeManager {
 
     enter() {
         if (this.isActive) {
-            this.updatePageStatus();
-            this.updateTimerDisplay();
+            this.syncBoardState();
             return;
         }
 
         this.isActive = true;
-        this.board.exitShapeMode?.();
-        this.board.setTool?.('pen', false);
+        const currentTool = this.board.drawingEngine?.currentTool;
+        if (!this.supportedTools.has(currentTool)) {
+            this.board.exitShapeMode?.();
+            this.board.setTool?.('pen', false);
+        }
         this.closeTransientSurfaces();
         document.body?.classList.add('classroom-mode-active');
         this.elements.bar?.removeAttribute('hidden');
-        this.updatePageStatus();
-        this.updateTimerDisplay();
+        if (this.elements.bar) {
+            this.elements.bar.hidden = false;
+        }
+        this.syncBoardState();
         this.updateLocalizedLabels();
         this.emitModeChange(true);
-        this.elements.timerToggleBtn?.focus?.({ preventScroll: true });
+
+        this.elements.bar?.focus?.({ preventScroll: true });
     }
 
     exit() {
@@ -94,7 +137,12 @@ class ClassroomModeManager {
         }
 
         this.isActive = false;
+        this.setPenSettingsOpen(false);
         document.body?.classList.remove('classroom-mode-active');
+        if (this.elements.bar) {
+            this.elements.bar.hidden = true;
+            this.elements.bar.setAttribute('hidden', '');
+        }
         this.pauseTimer();
         this.updateTimerDisplay();
         this.board.updatePaginationUI?.();
@@ -110,21 +158,137 @@ class ClassroomModeManager {
     }
 
     closeTransientSurfaces() {
-        [
-            'config-area',
-            'feature-area',
-            'time-display-area',
-            'timer-settings-modal'
-        ].forEach((id) => {
+        ['config-area', 'feature-area', 'time-display-area', 'timer-settings-modal'].forEach((id) => {
             document.getElementById(id)?.classList.remove('show');
         });
         this.board.toggleCoordinateSettingsPanel?.(false);
         this.board.toggleCoordinatePointPanel?.(false);
     }
 
+    selectTool(tool) {
+        if (!this.supportedTools.has(tool)) {
+            return;
+        }
+        this.board.setTool?.(tool, false);
+        this.closeTransientSurfaces();
+        this.updateToolState();
+    }
+
+    togglePenSettings() {
+        const shouldOpen = !this.isPenSettingsOpen();
+        if (shouldOpen && this.board.drawingEngine?.currentTool !== 'pen') {
+            this.board.setTool?.('pen', false);
+        }
+        this.setPenSettingsOpen(shouldOpen);
+        this.syncPenSettings();
+        this.updateToolState();
+    }
+
+    isPenSettingsOpen() {
+        return Boolean(this.elements.penSettings && !this.elements.penSettings.hidden);
+    }
+
+    setPenSettingsOpen(open) {
+        if (this.elements.penSettings) {
+            this.elements.penSettings.hidden = !open;
+            this.elements.penSettings.classList.toggle('show', open);
+            if (open) {
+                this.elements.penSettings.removeAttribute('hidden');
+            } else {
+                this.elements.penSettings.setAttribute('hidden', '');
+            }
+        }
+        this.elements.penSettingsBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    setColor(color) {
+        if (!/^#[0-9a-f]{6}$/i.test(String(color || ''))) {
+            return;
+        }
+        this.board.drawingEngine?.setColor?.(color);
+        this.syncBasePenColorControls(color);
+        this.board.setTool?.('pen', false);
+        this.syncPenSettings();
+        this.updateToolState();
+    }
+
+    syncBasePenColorControls(color) {
+        const normalizedColor = String(color).toUpperCase();
+        let matchedPreset = false;
+        document.querySelectorAll?.('.color-btn[data-color]')?.forEach((button) => {
+            const active = String(button.dataset.color || '').toUpperCase() === normalizedColor;
+            button.classList.toggle('active', active);
+            matchedPreset ||= active;
+        });
+        ['custom-color-picker', 'shape-custom-color-picker'].forEach((id) => {
+            const picker = document.getElementById(id);
+            if (picker) {
+                picker.value = color;
+            }
+        });
+        [
+            'label[for="custom-color-picker"]',
+            'label[for="shape-custom-color-picker"]'
+        ].forEach((selector) => {
+            document.querySelector?.(selector)?.classList.toggle('active', !matchedPreset);
+        });
+        window.i18n?.syncGenericColorControls?.();
+    }
+
+    setPenSize(event) {
+        const rawValue = Number.parseInt(event?.currentTarget?.value, 10);
+        if (!Number.isFinite(rawValue)) {
+            return;
+        }
+        const size = Math.min(50, Math.max(1, rawValue));
+        this.board.drawingEngine?.setPenSize?.(size);
+        this.syncBasePenSizeControls(size);
+        if (this.elements.penSizeSlider) {
+            this.elements.penSizeSlider.value = String(size);
+        }
+        if (this.elements.penSizeValue) {
+            this.elements.penSizeValue.textContent = String(size);
+        }
+    }
+
+    syncBasePenSizeControls(size) {
+        ['pen-size-slider', 'shape-size-slider'].forEach((id) => {
+            const slider = document.getElementById(id);
+            if (slider) {
+                slider.value = String(size);
+            }
+        });
+        ['pen-size-value', 'shape-size-value'].forEach((id) => {
+            const value = document.getElementById(id);
+            if (value) {
+                value.textContent = String(size);
+            }
+        });
+        const arrowSizeSlider = document.getElementById('arrow-size-slider');
+        const arrowSizeValue = document.getElementById('arrow-size-value');
+        if (arrowSizeSlider && Number.parseInt(arrowSizeSlider.value, 10) < size) {
+            arrowSizeSlider.value = String(size);
+            if (arrowSizeValue) {
+                arrowSizeValue.textContent = String(size);
+            }
+            this.board.shapeDrawingManager?.setArrowSize?.(size);
+        }
+    }
+
+    runHistoryAction(action) {
+        if (action !== 'undo' && action !== 'redo') {
+            return;
+        }
+        const sourceButton = document.getElementById(`${action}-btn`);
+        if (!sourceButton?.disabled) {
+            sourceButton?.click?.();
+        }
+        this.updateHistoryState();
+    }
+
     goToPreviousPage() {
         this.board.prevPage?.();
-        this.updatePageStatus();
+        this.syncBoardState();
     }
 
     goToNextPage() {
@@ -134,11 +298,57 @@ class ClassroomModeManager {
             return;
         }
         this.board.goToPage?.(this.board.currentPage + 1);
-        this.updatePageStatus();
+        this.syncBoardState();
     }
 
     getTotalPages() {
         return Math.max(1, this.board.pages?.length || 1);
+    }
+
+    syncBoardState() {
+        this.updateToolState();
+        this.syncPenSettings();
+        this.updateHistoryState();
+        this.updatePageStatus();
+        this.updateTimerDisplay();
+    }
+
+    updateToolState() {
+        const currentTool = this.board.drawingEngine?.currentTool || 'pen';
+        this.toolButtons.forEach((button) => {
+            const active = button.dataset.classroomTool === currentTool;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+    }
+
+    syncPenSettings() {
+        const drawingEngine = this.board.drawingEngine;
+        const currentColor = String(drawingEngine?.currentColor || '#000000').toUpperCase();
+        const penSize = Math.min(50, Math.max(1, Number.parseInt(drawingEngine?.penSize, 10) || 5));
+
+        this.colorButtons.forEach((button) => {
+            const active = String(button.dataset.classroomColor || '').toUpperCase() === currentColor;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        this.elements.penSettingsBtn?.style?.setProperty('--classroom-current-color', currentColor);
+        if (this.elements.penSizeSlider) {
+            this.elements.penSizeSlider.value = String(penSize);
+        }
+        if (this.elements.penSizeValue) {
+            this.elements.penSizeValue.textContent = String(penSize);
+        }
+    }
+
+    updateHistoryState() {
+        const history = this.board.historyManager;
+        if (this.elements.undoBtn) {
+            this.elements.undoBtn.disabled = history?.canUndo?.() === false;
+        }
+        if (this.elements.redoBtn) {
+            this.elements.redoBtn.disabled = history?.canRedo?.() === false;
+        }
     }
 
     updatePageStatus() {
@@ -171,9 +381,6 @@ class ClassroomModeManager {
 
         this.isTimerRunning = true;
         this.runStartTimestamp = Date.now();
-        // Tick frequently so the visible display stays smooth, but derive the
-        // shown value from elapsed wall-clock time inside syncElapsedFromClock
-        // so throttled/missed ticks never lose time.
         this.timerInterval = setInterval(() => {
             this.syncElapsedFromClock();
             this.updateTimerDisplay();
@@ -187,8 +394,6 @@ class ClassroomModeManager {
             return;
         }
 
-        // Fold the current run into the accumulated total before stopping so
-        // resuming continues from the correct elapsed time.
         this.accumulatedMs += Math.max(0, Date.now() - this.runStartTimestamp);
         this.runStartTimestamp = 0;
         this.isTimerRunning = false;
@@ -205,8 +410,6 @@ class ClassroomModeManager {
         this.updateTimerDisplay();
     }
 
-    // Recompute elapsedSeconds from real timestamps. Robust to setInterval
-    // throttling in backgrounded tabs and to the device sleeping mid-run.
     syncElapsedFromClock() {
         let totalMs = this.accumulatedMs;
         if (this.isTimerRunning && this.runStartTimestamp) {
@@ -226,7 +429,7 @@ class ClassroomModeManager {
             this.elements.timerDisplay.textContent = this.formatElapsedTime();
         }
         this.elements.timerToggleBtn?.classList.toggle('timer-running', this.isTimerRunning);
-        this.updateLocalizedLabels();
+        this.updateTimerButtonLabel();
     }
 
     getText(key, fallback) {
@@ -247,6 +450,11 @@ class ClassroomModeManager {
         if (!element) {
             return;
         }
+        const textTarget = element.querySelector?.('span:last-child');
+        if (textTarget) {
+            textTarget.textContent = this.getText(key, fallback);
+            return;
+        }
         element.textContent = this.getText(key, fallback);
     }
 
@@ -259,17 +467,41 @@ class ClassroomModeManager {
         }));
     }
 
-    updateLocalizedLabels() {
-        this.setTextContent(this.elements.modeStatus, 'classroom.modeActive', 'Classroom mode');
-        this.setButtonLabel(this.elements.prevPageBtn, 'classroom.prevPage', 'Previous page');
-        this.setButtonLabel(this.elements.nextPageBtn, 'classroom.nextPage', 'Next page');
+    updateTimerButtonLabel() {
         this.setButtonLabel(
             this.elements.timerToggleBtn,
             this.isTimerRunning ? 'classroom.pauseTimer' : 'classroom.startTimer',
             this.isTimerRunning ? 'Pause timer' : 'Start timer'
         );
+    }
+
+    updateLocalizedLabels() {
+        this.setTextContent(this.elements.modeStatus, 'classroom.modeActive', 'Classroom mode');
+        const toolLabels = {
+            pen: ['toolbar.pen', 'Pen'],
+            eraser: ['toolbar.eraser', 'Eraser'],
+            select: ['toolbar.select', 'Select'],
+            pan: ['toolbar.move', 'Move']
+        };
+        this.toolButtons.forEach((button) => {
+            const [key, fallback] = toolLabels[button.dataset.classroomTool] || ['', 'Tool'];
+            this.setButtonLabel(button, key, fallback);
+        });
+        this.setButtonLabel(this.elements.penSettingsBtn, 'tools.pen.colorAndSize', 'Color and size');
+        this.colorButtons.forEach((button) => {
+            const colorName = button.dataset.colorName || 'black';
+            this.setButtonLabel(button, `colors.${colorName}`, colorName);
+        });
+        this.setButtonLabel(this.elements.penSizeSlider, 'tools.pen.thickness', 'Pen thickness');
+        this.setButtonLabel(this.elements.undoBtn, 'toolbar.undo', 'Undo');
+        this.setButtonLabel(this.elements.redoBtn, 'toolbar.redo', 'Redo');
+        this.setButtonLabel(this.elements.prevPageBtn, 'classroom.prevPage', 'Previous page');
+        this.setButtonLabel(this.elements.nextPageBtn, 'classroom.nextPage', 'Next page');
+        this.updateTimerButtonLabel();
         this.setButtonLabel(this.elements.timerResetBtn, 'classroom.resetTimer', 'Reset timer');
         this.setButtonLabel(this.elements.exitBtn, 'classroom.exit', 'Exit classroom mode');
+        const modeLabel = this.getText('classroom.modeActive', 'Classroom mode');
+        this.elements.bar?.setAttribute('aria-label', modeLabel);
     }
 }
 
