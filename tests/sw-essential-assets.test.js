@@ -72,6 +72,20 @@ function readCoreAssets() {
   );
 }
 
+function readPngDimensions(relPath) {
+  const png = fs.readFileSync(path.join(REPO_ROOT, relPath));
+  assert.equal(
+    png.subarray(0, 8).toString('hex'),
+    '89504e470d0a1a0a',
+    `${relPath} should be a valid PNG file`
+  );
+
+  return {
+    width: png.readUInt32BE(16),
+    height: png.readUInt32BE(20)
+  };
+}
+
 function readLegacyManifestArray(arrayName) {
   const source = readText('js/app/legacy-manifest.js');
   const match = source.match(new RegExp(`export const ${arrayName} = \\[(.*?)\\];`, 's'));
@@ -198,6 +212,34 @@ function testCorePrecacheCoversIndexStylesheets() {
   );
 }
 
+function testInstallablePwaIconsExistAndArePrecached() {
+  const manifest = JSON.parse(readText('manifest.json'));
+  const coreAssets = readCoreAssets();
+  const requiredIcons = [
+    { src: 'img/icon-192.png', size: 192 },
+    { src: 'img/icon-512.png', size: 512 }
+  ];
+
+  for (const { src, size } of requiredIcons) {
+    const icon = manifest.icons?.find((entry) => entry.src === src);
+    assert.ok(icon, `manifest.json should include ${src}`);
+    assert.equal(icon.type, 'image/png', `${src} should declare image/png`);
+    assert.equal(icon.sizes, `${size}x${size}`, `${src} should declare its exact dimensions`);
+    assert.deepEqual(
+      readPngDimensions(src),
+      { width: size, height: size },
+      `${src} should contain a ${size}x${size} PNG`
+    );
+    assert.ok(coreAssets.has(src), `${src} should be available in the offline core cache`);
+  }
+
+  const maskableIcon = manifest.icons?.find((entry) => (
+    String(entry.purpose || '').split(/\s+/).includes('maskable')
+  ));
+  assert.equal(maskableIcon?.src, 'img/icon-512.png',
+    'manifest.json should expose the 512px PNG as a maskable icon');
+}
+
 async function testOptionalPrecacheLimitsConcurrentFetches() {
   const source = `${readText('sw.js')}\n;globalThis.__swTestExports = { precacheCoreAssets, CORE_ASSETS, ESSENTIAL_CORE_ASSETS };`;
   let activeFetches = 0;
@@ -274,6 +316,7 @@ async function run() {
   testRuntimeCacheCoversLazyTimerAudioAssets();
   testCorePrecacheCoversIndexClassicScripts();
   testCorePrecacheCoversIndexStylesheets();
+  testInstallablePwaIconsExistAndArePrecached();
   await testOptionalPrecacheLimitsConcurrentFetches();
   console.log('sw-essential-assets.test: all assertions passed');
 }

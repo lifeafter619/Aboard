@@ -25,7 +25,8 @@ class ClassroomModeManager {
             timerDisplay: document.getElementById('classroom-timer-display'),
             timerToggleBtn: document.getElementById('classroom-timer-toggle-btn'),
             timerResetBtn: document.getElementById('classroom-timer-reset-btn'),
-            exitBtn: document.getElementById('classroom-exit-btn')
+            exitBtn: document.getElementById('classroom-exit-btn'),
+            returnFocusBtn: document.getElementById('more-btn')
         };
         this.toolButtons = Array.from(document.querySelectorAll?.('[data-classroom-tool]') || []);
         this.colorButtons = Array.from(document.querySelectorAll?.('[data-classroom-color]') || []);
@@ -147,6 +148,7 @@ class ClassroomModeManager {
         this.updateTimerDisplay();
         this.board.updatePaginationUI?.();
         this.emitModeChange(false);
+        this.elements.returnFocusBtn?.focus?.({ preventScroll: true });
     }
 
     toggle() {

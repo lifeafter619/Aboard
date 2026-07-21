@@ -34,11 +34,14 @@ class SelectionManager {
         
         // Rotating state
         this.isRotating = false;
+        this.hasRotateChanged = false;
         this.rotateStartAngle = 0;
         this.rotateStartRotation = 0;
+        this.rotateStartPos = null;
         
         // Resizing state
         this.isResizing = false;
+        this.hasResizeChanged = false;
         this.resizeHandle = null;
         this.resizeStartBounds = null;
         
@@ -2227,6 +2230,7 @@ class SelectionManager {
         if (!resizeStartBounds) return;
 
         this.isResizing = true;
+        this.hasResizeChanged = false;
         if (typeof e.pointerId === 'number') {
             this.activePointerId = e.pointerId;
         }
@@ -2240,6 +2244,15 @@ class SelectionManager {
         if (!this.isCompoundSelection() && this.selectionType !== 'background' && this.selectedIndex === null) return;
         
         const pos = this.getClientPos(e);
+        if (!this.hasResizeChanged) {
+            const screenDeltaX = pos.x - this.resizeStartPos.x;
+            const screenDeltaY = pos.y - this.resizeStartPos.y;
+            const threshold = this.DRAG_MOVE_THRESHOLD || 3;
+            if (Math.hypot(screenDeltaX, screenDeltaY) < threshold) {
+                return;
+            }
+            this.hasResizeChanged = true;
+        }
         const { scaleX, scaleY } = this.getCanvasScales();
         let deltaX = (pos.x - this.resizeStartPos.x) / scaleX;
         let deltaY = (pos.y - this.resizeStartPos.y) / scaleY;
@@ -2380,11 +2393,15 @@ class SelectionManager {
     
     stopResize() {
         if (this.isResizing) {
+            const didResize = !!this.hasResizeChanged;
             this.isResizing = false;
-            this.hasUnsavedChanges = true;
+            this.hasResizeChanged = false;
+            if (didResize) {
+                this.hasUnsavedChanges = true;
+            }
             this.resizeHandle = null;
             this.resizeStartBounds = null;
-            if (this.selectionType === 'background') {
+            if (didResize && this.selectionType === 'background') {
                 this.backgroundManager?.flushPendingPersistence?.();
             }
             
@@ -2464,6 +2481,8 @@ class SelectionManager {
         if (!center) return;
 
         this.isRotating = true;
+        this.hasRotateChanged = false;
+        this.rotateStartPos = null;
         if (typeof e.pointerId === 'number') {
             this.activePointerId = e.pointerId;
         }
@@ -2544,6 +2563,7 @@ class SelectionManager {
         }
 
         const pos = this.getClientPos(e);
+        this.rotateStartPos = { x: pos.x, y: pos.y };
         this.rotateStartAngle = Math.atan2(pos.y - center.y, pos.x - center.x) * 180 / Math.PI;
     }
     
@@ -2555,6 +2575,14 @@ class SelectionManager {
         if (!center) return;
         
         const pos = this.getClientPos(e);
+        if (!this.hasRotateChanged) {
+            const startPos = this.rotateStartPos || pos;
+            const threshold = this.DRAG_MOVE_THRESHOLD || 3;
+            if (Math.hypot(pos.x - startPos.x, pos.y - startPos.y) < threshold) {
+                return;
+            }
+            this.hasRotateChanged = true;
+        }
         const currentAngle = Math.atan2(pos.y - center.y, pos.x - center.x) * 180 / Math.PI;
         const angleDelta = currentAngle - this.rotateStartAngle;
         
@@ -2657,9 +2685,14 @@ class SelectionManager {
     
     stopRotate() {
         if (this.isRotating) {
+            const didRotate = !!this.hasRotateChanged;
             this.isRotating = false;
-            this.hasUnsavedChanges = true;
-            if (this.selectionType === 'background') {
+            this.hasRotateChanged = false;
+            this.rotateStartPos = null;
+            if (didRotate) {
+                this.hasUnsavedChanges = true;
+            }
+            if (didRotate && this.selectionType === 'background') {
                 this.backgroundManager?.flushPendingPersistence?.();
             }
             

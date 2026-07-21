@@ -15,6 +15,7 @@ function createElementStub(id) {
     disabled: false,
     hidden: false,
     value: '',
+    focusCount: 0,
     dataset: {},
     classList: {
       add(className) {
@@ -61,7 +62,9 @@ function createElementStub(id) {
     removeAttribute(name) {
       attributes.delete(name);
     },
-    focus() {}
+    focus() {
+      this.focusCount += 1;
+    }
   };
 }
 
@@ -94,6 +97,7 @@ function createContext() {
     'feature-area',
     'time-display-area',
     'timer-settings-modal',
+    'more-btn',
     'undo-btn',
     'redo-btn'
   ];
@@ -314,6 +318,7 @@ function testEnterExitAndPaginationBehavior() {
   assert.equal(bodyClasses.has('classroom-mode-active'), false, 'exit should remove body active class');
   assert.equal(manager.isTimerRunning, false, 'exit should pause timer');
   assert.equal(calls.includes('updatePaginationUI'), true, 'exit should refresh regular pagination UI');
+  assert.equal(elements['more-btn'].focusCount, 1, 'exit should restore keyboard focus to a visible main control');
 }
 
 function testTimerTracksWallClockNotTicks() {

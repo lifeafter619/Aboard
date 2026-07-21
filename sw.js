@@ -35,6 +35,8 @@ const CORE_ASSETS = [
   './index.html',
   './manifest.json',
   './img/icon.svg',
+  './img/icon-192.png',
+  './img/icon-512.png',
   './css/style.css',
   './css/modules/time-display.css',
   './css/modules/feature-area.css',

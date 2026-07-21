@@ -642,6 +642,105 @@ function testDraggingPastThresholdStillMovesSelection() {
   assert.equal(selection.hasUnsavedChanges, true, 'real drags should still mark selection changes dirty');
 }
 
+function testTappingResizeAndRotateHandlesDoesNotDirtyHistory() {
+  const SelectionManager = loadSelectionManagerClass();
+  const resizeSelection = {
+    isResizing: true,
+    hasResizeChanged: false,
+    hasUnsavedChanges: false,
+    selectionType: 'text',
+    selectedIndex: 0,
+    resizeHandle: 'bottom-right',
+    resizeStartBounds: { x: 10, y: 20, width: 100, height: 40 },
+    isCompoundSelection() { return false; }
+  };
+
+  SelectionManager.prototype.stopResize.call(resizeSelection);
+  assert.equal(resizeSelection.hasUnsavedChanges, false,
+    'tapping a resize handle without movement should not create a dirty selection');
+
+  const rotateSelection = {
+    isRotating: true,
+    hasRotateChanged: false,
+    hasUnsavedChanges: false,
+    selectionType: 'text',
+    selectedIndex: 0,
+    isCompoundSelection() { return false; }
+  };
+
+  SelectionManager.prototype.stopRotate.call(rotateSelection);
+  assert.equal(rotateSelection.hasUnsavedChanges, false,
+    'tapping a rotate handle without movement should not create a dirty selection');
+}
+
+function testResizeAndRotateThresholdsPreserveRealGestures() {
+  const SelectionManager = loadSelectionManagerClass();
+  const image = { x: 0, y: 0, width: 100, height: 100, rotation: 0 };
+  const resizeSelection = Object.assign(Object.create(SelectionManager.prototype), {
+    isResizing: true,
+    hasResizeChanged: false,
+    hasUnsavedChanges: false,
+    selectionType: 'image',
+    selectedIndex: 0,
+    resizeHandle: 'bottom-right',
+    resizeStartPos: { x: 0, y: 0 },
+    resizeStartBounds: { x: 0, y: 0, width: 100, height: 100 },
+    DRAG_MOVE_THRESHOLD: 3,
+    MIN_SIZE: 10,
+    drawingEngine: { stampedImages: [image] },
+    isCompoundSelection() { return false; },
+    getClientPos(event) { return { x: event.clientX, y: event.clientY }; },
+    getCanvasScales() { return { scaleX: 1, scaleY: 1 }; },
+    updateControlBox() {},
+    redrawCanvas() {}
+  });
+
+  resizeSelection.resize({ clientX: 1, clientY: 1 });
+  assert.deepEqual(
+    { width: image.width, height: image.height },
+    { width: 100, height: 100 },
+    'resize movement below the gesture threshold should not mutate the selection'
+  );
+  resizeSelection.resize({ clientX: 10, clientY: 10 });
+  resizeSelection.stopResize();
+  assert.deepEqual(
+    { width: image.width, height: image.height },
+    { width: 110, height: 110 },
+    'resize movement past the gesture threshold should still resize the selection'
+  );
+  assert.equal(resizeSelection.hasUnsavedChanges, true,
+    'a real resize gesture should mark the selection dirty');
+
+  const textObject = { rotation: 0 };
+  const rotateSelection = Object.assign(Object.create(SelectionManager.prototype), {
+    isRotating: true,
+    hasRotateChanged: false,
+    hasUnsavedChanges: false,
+    selectionType: 'text',
+    selectedIndex: 0,
+    rotateStartPos: { x: 100, y: 0 },
+    rotateStartAngle: 0,
+    rotateStartRotation: 0,
+    DRAG_MOVE_THRESHOLD: 3,
+    textManager: { textObjects: [textObject] },
+    isCompoundSelection() { return false; },
+    getControlBoxScreenCenter() { return { x: 0, y: 0 }; },
+    getClientPos(event) { return { x: event.clientX, y: event.clientY }; },
+    updateControlBox() {},
+    redrawCanvas() {}
+  });
+
+  rotateSelection.rotate({ clientX: 101, clientY: 0 });
+  assert.equal(textObject.rotation, 0,
+    'rotate movement below the gesture threshold should not mutate the selection');
+  rotateSelection.rotate({ clientX: 0, clientY: 100 });
+  rotateSelection.stopRotate();
+  assert.equal(textObject.rotation, 90,
+    'rotate movement past the gesture threshold should still rotate the selection');
+  assert.equal(rotateSelection.hasUnsavedChanges, true,
+    'a real rotate gesture should mark the selection dirty');
+}
+
 function rotatePoint(point, center, angleDeg) {
   const angleRad = angleDeg * Math.PI / 180;
   const cos = Math.cos(angleRad);
@@ -854,6 +953,8 @@ async function main() {
   testSceneOnlyHistoryRestoreRedrawsCanvas();
   testTapSelectionBoxDoesNotDirtyHistory();
   testDraggingPastThresholdStillMovesSelection();
+  testTappingResizeAndRotateHandlesDoesNotDirtyHistory();
+  testResizeAndRotateThresholdsPreserveRealGestures();
   testRotatedStrokeBoundsUseOriginalRotationCenterAndPadding();
   testRotatedSelectionResizeUsesLocalPointerDelta();
   testRotatedBackgroundImageResizeUsesLocalPointerDelta();

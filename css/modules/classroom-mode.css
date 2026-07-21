@@ -27,7 +27,9 @@ body.classroom-mode-active #classroom-mode-bar {
     bottom: max(14px, env(safe-area-inset-bottom));
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
+    width: min(432px, calc(100vw - 24px));
     max-width: calc(100vw - 24px);
     padding: 6px;
     border: 1px solid #d7dcde;
@@ -262,7 +264,7 @@ body.classroom-mode-active #time-display {
     grid-template-columns: auto minmax(190px, 1fr);
     align-items: center;
     gap: 14px;
-    width: min(370px, calc(100vw - 24px));
+    width: min(430px, calc(100vw - 24px));
     padding: 10px 12px;
     border: 1px solid #d7dcde;
     border-radius: 8px;
@@ -283,8 +285,8 @@ body.classroom-mode-active #time-display {
 }
 
 .classroom-color-btn {
-    width: 30px;
-    height: 30px;
+    width: 44px;
+    height: 44px;
     padding: 0;
     border: 3px solid #fdfefe;
     border-radius: 50%;

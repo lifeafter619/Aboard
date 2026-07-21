@@ -126,6 +126,8 @@ function testClassroomModeUsesStableResponsiveDocks() {
   assert.match(css, /body\.classroom-mode-active\s+#toolbar/s, 'classroom mode should hide the normal toolbar');
   assert.match(css, /body\.classroom-mode-active\s+#pagination-controls/s, 'classroom mode should hide normal pagination controls');
   assert.match(css, /@media \(max-width:\s*520px\)[\s\S]*#classroom-mode-bar/s, 'small screens should have a dedicated classroom bar layout');
+  assert.match(css, /\.classroom-color-btn\s*{[^}]*width:\s*44px[^}]*height:\s*44px/s,
+    'quick color controls should preserve a 44px touch target');
 }
 
 function testClassroomControlsDoNotLeakPointerInputToCanvas() {
