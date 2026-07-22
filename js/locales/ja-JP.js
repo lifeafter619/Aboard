@@ -656,17 +656,24 @@ window.translations = {
         scoreboard: 'スコアボード',
         insertImage: '画像を挿入',
         insertText: 'テキスト挿入',
-        classroomMode: '授業'
+        classroomMode: '授業集中'
     },
 
     classroom: {
-        modeActive: '授業モード',
+        modeActive: '授業中',
         prevPage: '前のページ',
         nextPage: '次のページ',
-        startTimer: 'タイマー開始',
-        pauseTimer: 'タイマー一時停止',
-        resetTimer: 'タイマーリセット',
-        exit: '授業モードを終了'
+        startTimer: 'ストップウォッチ開始',
+        pauseTimer: 'ストップウォッチ一時停止',
+        resetTimer: 'ストップウォッチリセット',
+        stopwatch: 'ストップウォッチ',
+        actions: '授業ツール',
+        addPage: '新しいページ',
+        countdown: 'カウントダウン',
+        randomPicker: 'ランダム指名',
+        scoreboard: 'スコアボード',
+        teachingTools: '教具',
+        exit: '授業集中を終了'
     },
 
     // Teaching Tools

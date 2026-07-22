@@ -1995,6 +1995,33 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     outline-offset: 2px !important;
 }
 
+/* Text-like controls use one reinforced boundary instead of stacking the
+   global outer outline on top of each component's focused border. */
+:where(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+    select,
+    textarea,
+    [contenteditable="true"]
+):focus-visible {
+    outline: none !important;
+    border-color: #0b57d0 !important;
+    box-shadow: inset 0 0 0 1px #0b57d0 !important;
+}
+
+@media (forced-colors: active) {
+    :where(
+        input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+        select,
+        textarea,
+        [contenteditable="true"]
+    ):focus-visible {
+        outline: 2px solid CanvasText !important;
+        outline-offset: 2px !important;
+        border-color: CanvasText !important;
+        box-shadow: none !important;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

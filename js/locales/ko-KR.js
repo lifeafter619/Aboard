@@ -656,17 +656,24 @@ window.translations = {
         scoreboard: '점수판',
         insertImage: '이미지 삽입',
         insertText: '텍스트 삽입',
-        classroomMode: '수업'
+        classroomMode: '수업 집중'
     },
 
     classroom: {
-        modeActive: '수업 모드',
+        modeActive: '수업 중',
         prevPage: '이전 페이지',
         nextPage: '다음 페이지',
-        startTimer: '타이머 시작',
-        pauseTimer: '타이머 일시정지',
-        resetTimer: '타이머 재설정',
-        exit: '수업 모드 종료'
+        startTimer: '스톱워치 시작',
+        pauseTimer: '스톱워치 일시정지',
+        resetTimer: '스톱워치 재설정',
+        stopwatch: '스톱워치',
+        actions: '수업 도구',
+        addPage: '새 페이지',
+        countdown: '카운트다운',
+        randomPicker: '무작위 지명',
+        scoreboard: '점수판',
+        teachingTools: '교구',
+        exit: '수업 집중 종료'
     },
 
     // Teaching Tools

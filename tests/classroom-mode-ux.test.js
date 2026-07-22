@@ -65,6 +65,14 @@ function testClassroomControlBarExistsOutsideFeaturePanel() {
     'classroom-timer-display',
     'classroom-timer-toggle-btn',
     'classroom-timer-reset-btn',
+    'classroom-actions-btn',
+    'classroom-actions-panel',
+    'classroom-add-page-action',
+    'classroom-timer-action',
+    'classroom-random-picker-action',
+    'classroom-scoreboard-action',
+    'classroom-teaching-tools-action',
+    'classroom-fullscreen-btn',
     'classroom-exit-btn'
   ].forEach((id) => {
     assert.match(indexHtml, new RegExp(`id="${id}"`), `missing #${id}`);
@@ -80,6 +88,10 @@ function testClassroomControlBarExistsOutsideFeaturePanel() {
 
   ['#000000', '#FF3B30', '#0A63C9', '#16815A'].forEach((color) => {
     assert.match(indexHtml, new RegExp(`data-classroom-color="${color}"`, 'i'), `classroom pen settings should expose ${color}`);
+  });
+
+  ['addPage', 'timer', 'randomPicker', 'scoreboard', 'teachingTools'].forEach((action) => {
+    assert.match(indexHtml, new RegExp(`data-classroom-action="${action}"`), `classroom tools should expose ${action}`);
   });
 }
 
@@ -114,6 +126,12 @@ function testClassroomRuntimeOwnsModeStatePaginationAndTimer() {
   assert.match(classroomMode, /drawingEngine\?\.setPenSize/, 'runtime should update the existing drawing engine pen size');
   assert.match(classroomMode, /undo-btn/, 'classroom undo should reuse the existing history action');
   assert.match(classroomMode, /redo-btn/, 'classroom redo should reuse the existing history action');
+  assert.match(classroomMode, /this\.board\.addPage\?\.\(\)/, 'classroom tools should expose intentional page creation');
+  assert.match(classroomMode, /timer-feature-btn/, 'classroom tools should reuse the full countdown feature');
+  assert.match(classroomMode, /random-picker-feature-btn/, 'classroom tools should reuse the random picker');
+  assert.match(classroomMode, /scoreboard-feature-btn/, 'classroom tools should reuse the scoreboard');
+  assert.match(classroomMode, /more-teaching-tools-btn/, 'classroom tools should reuse teaching tools');
+  assert.match(classroomMode, /this\.board\.toggleFullscreen\?\.\(\)/, 'classroom mode should expose fullscreen without exiting');
 }
 
 function testClassroomModeUsesStableResponsiveDocks() {
@@ -125,9 +143,14 @@ function testClassroomModeUsesStableResponsiveDocks() {
   assert.match(css, /\.classroom-mode-status\s*{[^}]*font-weight:\s*600/s, 'active classroom label should be readable on a projector');
   assert.match(css, /body\.classroom-mode-active\s+#toolbar/s, 'classroom mode should hide the normal toolbar');
   assert.match(css, /body\.classroom-mode-active\s+#pagination-controls/s, 'classroom mode should hide normal pagination controls');
-  assert.match(css, /@media \(max-width:\s*520px\)[\s\S]*#classroom-mode-bar/s, 'small screens should have a dedicated classroom bar layout');
+  assert.match(css, /@media \(max-width:\s*720px\)[\s\S]*#classroom-mode-bar/s, 'compact screens should use a stacked classroom layout');
+  assert.match(css, /@media \(max-width:\s*520px\)[\s\S]*\.classroom-session-dock/s, 'phones should keep both classroom docks within the viewport');
+  assert.match(css, /@media \(min-width:\s*2200px\)[\s\S]*--classroom-control-size:\s*60px/s,
+    'large classroom displays should receive larger controls');
   assert.match(css, /\.classroom-color-btn\s*{[^}]*width:\s*44px[^}]*height:\s*44px/s,
     'quick color controls should preserve a 44px touch target');
+  assert.match(css, /\.classroom-actions-panel\.show:not\(\[hidden\]\)\s*{[^}]*display:\s*grid/s,
+    'classroom tools should use progressive disclosure');
 }
 
 function testClassroomControlsDoNotLeakPointerInputToCanvas() {
@@ -147,7 +170,11 @@ function testClassroomModeLocaleKeysExist() {
     const source = fs.readFileSync(path.join(rootDir, 'js', 'locales', fileName), 'utf8');
     assert.match(source, /classroomMode:/, `${fileName} should translate features.classroomMode`);
     assert.match(source, /classroom:\s*{/, `${fileName} should define classroom labels`);
-    ['modeActive', 'prevPage', 'nextPage', 'startTimer', 'pauseTimer', 'resetTimer', 'exit'].forEach((key) => {
+    [
+      'modeActive', 'prevPage', 'nextPage', 'startTimer', 'pauseTimer', 'resetTimer',
+      'stopwatch', 'actions', 'addPage', 'countdown', 'randomPicker', 'scoreboard',
+      'teachingTools', 'exit'
+    ].forEach((key) => {
       assert.match(source, new RegExp(`${key}:`), `${fileName} should translate classroom.${key}`);
     });
   }

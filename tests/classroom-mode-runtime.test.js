@@ -92,6 +92,14 @@ function createContext() {
     'classroom-timer-display',
     'classroom-timer-toggle-btn',
     'classroom-timer-reset-btn',
+    'classroom-actions-btn',
+    'classroom-actions-panel',
+    'classroom-add-page-action',
+    'classroom-timer-action',
+    'classroom-random-picker-action',
+    'classroom-scoreboard-action',
+    'classroom-teaching-tools-action',
+    'classroom-fullscreen-btn',
     'classroom-exit-btn',
     'config-area',
     'feature-area',
@@ -99,7 +107,11 @@ function createContext() {
     'timer-settings-modal',
     'more-btn',
     'undo-btn',
-    'redo-btn'
+    'redo-btn',
+    'timer-feature-btn',
+    'random-picker-feature-btn',
+    'scoreboard-feature-btn',
+    'more-teaching-tools-btn'
   ];
   const elements = Object.fromEntries(ids.map((id) => [id, createElementStub(id)]));
   elements['classroom-pen-btn'].dataset.classroomTool = 'pen';
@@ -110,6 +122,13 @@ function createContext() {
   elements['classroom-color-red'].dataset.classroomColor = '#FF3B30';
   elements['classroom-color-blue'].dataset.classroomColor = '#0A63C9';
   elements['classroom-color-green'].dataset.classroomColor = '#16815A';
+  elements['classroom-add-page-action'].dataset.classroomAction = 'addPage';
+  elements['classroom-timer-action'].dataset.classroomAction = 'timer';
+  elements['classroom-random-picker-action'].dataset.classroomAction = 'randomPicker';
+  elements['classroom-scoreboard-action'].dataset.classroomAction = 'scoreboard';
+  elements['classroom-teaching-tools-action'].dataset.classroomAction = 'teachingTools';
+  elements['classroom-pen-settings'].hidden = true;
+  elements['classroom-actions-panel'].hidden = true;
   const bodyClasses = new Set();
 
   const document = {
@@ -136,12 +155,17 @@ function createContext() {
       if (selector === '[data-classroom-color]') {
         return ['black', 'red', 'blue', 'green'].map((color) => elements[`classroom-color-${color}`]);
       }
+      if (selector === '[data-classroom-action]') {
+        return ['add-page', 'timer', 'random-picker', 'scoreboard', 'teaching-tools']
+          .map((action) => elements[`classroom-${action}-action`]);
+      }
       return [];
     },
     querySelector() {
       return null;
     },
-    addEventListener() {}
+    addEventListener() {},
+    fullscreenElement: null
   };
 
   const window = {
@@ -151,12 +175,21 @@ function createContext() {
       t(key) {
         return {
           'classroom.prevPage': 'Previous page',
-          'classroom.modeActive': 'Classroom mode',
+          'classroom.modeActive': 'Teaching focus',
           'classroom.nextPage': 'Next page',
-          'classroom.startTimer': 'Start timer',
-          'classroom.pauseTimer': 'Pause timer',
-          'classroom.resetTimer': 'Reset timer',
-          'classroom.exit': 'Exit classroom mode'
+          'classroom.startTimer': 'Start stopwatch',
+          'classroom.pauseTimer': 'Pause stopwatch',
+          'classroom.resetTimer': 'Reset stopwatch',
+          'classroom.stopwatch': 'Stopwatch',
+          'classroom.actions': 'Class tools',
+          'classroom.addPage': 'New page',
+          'classroom.countdown': 'Countdown',
+          'classroom.randomPicker': 'Random picker',
+          'classroom.scoreboard': 'Scoreboard',
+          'classroom.teachingTools': 'Teaching tools',
+          'classroom.exit': 'Exit teaching focus',
+          'toolbar.fullscreen': 'Fullscreen',
+          'toolbar.exitFullscreen': 'Exit fullscreen'
         }[key] || key;
       }
     }
@@ -272,7 +305,7 @@ function testEnterExitAndPaginationBehavior() {
   assert.equal(elements['classroom-undo-btn'].disabled, false);
   assert.equal(elements['classroom-redo-btn'].disabled, true);
   assert.equal(elements['classroom-page-status'].textContent, '1 / 3');
-  assert.equal(elements['classroom-mode-status'].textContent, 'Classroom mode');
+  assert.equal(elements['classroom-mode-status'].textContent, 'Teaching focus');
   assert.equal(elements['classroom-prev-page-btn'].disabled, true);
   assert.equal(elements['classroom-next-page-btn'].disabled, false);
 
@@ -286,6 +319,47 @@ function testEnterExitAndPaginationBehavior() {
   ], 'next page should stop at existing last page');
   assert.equal(board.pages.length, 3, 'next page should not add a blank page');
   assert.equal(elements['classroom-next-page-btn'].disabled, true);
+
+  elements['classroom-actions-btn'].click();
+  assert.equal(elements['classroom-actions-panel'].hidden, false, 'classroom tools should open without leaving focus mode');
+  assert.equal(elements['classroom-add-page-action'].focusCount, 1, 'opening classroom tools should focus the first action');
+
+  board.addPage = function addPage() {
+    this.pages.push({});
+    this.currentPage = this.pages.length;
+    calls.push('addPage');
+  };
+  elements['classroom-add-page-action'].click();
+  assert.equal(calls.includes('addPage'), true, 'new page should reuse board pagination');
+  assert.equal(elements['classroom-page-status'].textContent, '4 / 4');
+  assert.equal(elements['classroom-actions-panel'].hidden, true, 'new page should close classroom tools');
+  assert.equal(elements['classroom-actions-btn'].focusCount, 1,
+    'closing classroom tools should restore focus to the trigger');
+
+  const featureClicks = [];
+  ['timer-feature-btn', 'random-picker-feature-btn', 'scoreboard-feature-btn', 'more-teaching-tools-btn']
+    .forEach((id) => elements[id].addEventListener('click', () => featureClicks.push(id)));
+  elements['classroom-timer-action'].click();
+  elements['classroom-random-picker-action'].click();
+  elements['classroom-scoreboard-action'].click();
+  elements['classroom-teaching-tools-action'].click();
+  assert.deepEqual(featureClicks, [
+    'timer-feature-btn',
+    'random-picker-feature-btn',
+    'scoreboard-feature-btn',
+    'more-teaching-tools-btn'
+  ], 'classroom tools should reuse the existing feature entry points');
+  assert.equal(elements['classroom-actions-btn'].focusCount, 5,
+    'every classroom action should move focus out of the hidden panel');
+
+  board.toggleFullscreen = function toggleFullscreen() {
+    context.document.fullscreenElement = context.document.fullscreenElement ? null : {};
+    calls.push('toggleFullscreen');
+  };
+  elements['classroom-fullscreen-btn'].click();
+  assert.equal(calls.includes('toggleFullscreen'), true, 'fullscreen should reuse the board display action');
+  assert.equal(elements['classroom-fullscreen-btn'].classList.contains('is-fullscreen'), true);
+  assert.equal(elements['classroom-fullscreen-btn'].ariaLabel, 'Exit fullscreen');
 
   elements['classroom-eraser-btn'].click();
   assert.equal(board.drawingEngine.currentTool, 'eraser');
@@ -307,12 +381,12 @@ function testEnterExitAndPaginationBehavior() {
 
   manager.goToPreviousPage();
   assert.equal(calls.includes('prevPage'), true, 'previous page should call board.prevPage');
-  assert.equal(elements['classroom-page-status'].textContent, '2 / 3');
+  assert.equal(elements['classroom-page-status'].textContent, '3 / 4');
 
   manager.startTimer();
   assert.equal(manager.isTimerRunning, true);
   assert.equal(elements['classroom-timer-toggle-btn'].classList.contains('timer-running'), true);
-  assert.equal(elements['classroom-timer-toggle-btn'].ariaLabel, 'Pause timer');
+  assert.equal(elements['classroom-timer-toggle-btn'].ariaLabel, 'Pause stopwatch');
 
   manager.exit();
   assert.equal(bodyClasses.has('classroom-mode-active'), false, 'exit should remove body active class');

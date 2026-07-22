@@ -429,7 +429,7 @@ function setupMoreFeatureToolConfigListeners() {
                     this.handleMoreFeaturePanelAfterAction();
                 } catch (error) {
                     setClassroomModeButtonState(classroomModeBtn, false);
-                    this.showLazyLoadError(getLazyFeatureLabel('features.classroomMode', 'Classroom'), error);
+                    this.showLazyLoadError(getLazyFeatureLabel('features.classroomMode', 'Teaching Focus'), error);
                 }
             });
         }

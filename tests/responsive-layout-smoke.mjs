@@ -125,6 +125,8 @@ const STATES = [
       '#classroom-next-page-btn',
       '#classroom-timer-toggle-btn',
       '#classroom-timer-reset-btn',
+      '#classroom-actions-btn',
+      '#classroom-fullscreen-btn',
       '#classroom-exit-btn'
     ],
     nonOverlap: [['.classroom-tool-dock', '.classroom-session-dock']]
@@ -148,6 +150,32 @@ const STATES = [
     nonOverlap: [
       ['.classroom-tool-dock', '.classroom-session-dock'],
       ['#classroom-pen-settings', '.classroom-session-dock']
+    ]
+  },
+  {
+    name: 'classroom-actions',
+    setup: `async () => {
+      const board = window.drawingBoard;
+      if (!board?.classroomModeManager && typeof window.AboardClassroomModeManager === 'function') {
+        board.classroomModeManager = new window.AboardClassroomModeManager(board);
+      }
+      board?.classroomModeManager?.enter?.();
+      board?.classroomModeManager?.setActionsOpen?.(true);
+    }`,
+    selectors: [
+      '.classroom-tool-dock',
+      '.classroom-session-dock',
+      '#classroom-actions-panel',
+      '#classroom-add-page-action',
+      '#classroom-timer-action',
+      '#classroom-random-picker-action',
+      '#classroom-scoreboard-action',
+      '#classroom-teaching-tools-action'
+    ],
+    nonOverlap: [
+      ['.classroom-tool-dock', '.classroom-session-dock'],
+      ['#classroom-actions-panel', '.classroom-session-dock'],
+      ['#classroom-actions-panel', '.classroom-tool-dock']
     ]
   },
   {

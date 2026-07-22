@@ -717,17 +717,24 @@ window.translations = {
         scoreboard: '计分板',
         insertImage: '插入图片',
         insertText: '插入文字',
-        classroomMode: '课堂'
+        classroomMode: '专注授课'
     },
 
     classroom: {
-        modeActive: '课堂模式',
+        modeActive: '授课中',
         prevPage: '上一页',
         nextPage: '下一页',
-        startTimer: '开始计时',
-        pauseTimer: '暂停计时',
-        resetTimer: '重置计时',
-        exit: '退出课堂模式'
+        startTimer: '开始正计时',
+        pauseTimer: '暂停正计时',
+        resetTimer: '重置正计时',
+        stopwatch: '正计时',
+        actions: '课堂工具',
+        addPage: '新建页',
+        countdown: '倒计时',
+        randomPicker: '随机点名',
+        scoreboard: '计分板',
+        teachingTools: '教具',
+        exit: '退出专注授课'
     },
 
     // Random Picker

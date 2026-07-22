@@ -678,17 +678,24 @@ window.translations = {
         scoreboard: 'Punktetafel',
         insertImage: 'Bild einfügen',
         insertText: 'Text einfügen',
-        classroomMode: 'Unterricht'
+        classroomMode: 'Unterrichtsfokus'
     },
 
     classroom: {
-        modeActive: 'Unterrichtsmodus',
+        modeActive: 'Unterrichtsfokus',
         prevPage: 'Vorherige Seite',
         nextPage: 'Nächste Seite',
-        startTimer: 'Timer starten',
-        pauseTimer: 'Timer pausieren',
-        resetTimer: 'Timer zurücksetzen',
-        exit: 'Unterrichtsmodus verlassen'
+        startTimer: 'Stoppuhr starten',
+        pauseTimer: 'Stoppuhr pausieren',
+        resetTimer: 'Stoppuhr zurücksetzen',
+        stopwatch: 'Stoppuhr',
+        actions: 'Unterrichtswerkzeuge',
+        addPage: 'Neue Seite',
+        countdown: 'Countdown',
+        randomPicker: 'Zufallsauswahl',
+        scoreboard: 'Punktestand',
+        teachingTools: 'Lehrmittel',
+        exit: 'Unterrichtsfokus verlassen'
     },
 
     // Teaching Tools

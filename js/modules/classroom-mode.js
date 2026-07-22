@@ -25,11 +25,15 @@ class ClassroomModeManager {
             timerDisplay: document.getElementById('classroom-timer-display'),
             timerToggleBtn: document.getElementById('classroom-timer-toggle-btn'),
             timerResetBtn: document.getElementById('classroom-timer-reset-btn'),
+            actionsBtn: document.getElementById('classroom-actions-btn'),
+            actionsPanel: document.getElementById('classroom-actions-panel'),
+            fullscreenBtn: document.getElementById('classroom-fullscreen-btn'),
             exitBtn: document.getElementById('classroom-exit-btn'),
             returnFocusBtn: document.getElementById('more-btn')
         };
         this.toolButtons = Array.from(document.querySelectorAll?.('[data-classroom-tool]') || []);
         this.colorButtons = Array.from(document.querySelectorAll?.('[data-classroom-color]') || []);
+        this.actionButtons = Array.from(document.querySelectorAll?.('[data-classroom-action]') || []);
 
         this.bindEvents();
         this.syncBoardState();
@@ -56,6 +60,11 @@ class ClassroomModeManager {
         this.elements.nextPageBtn?.addEventListener('click', () => this.goToNextPage());
         this.elements.timerToggleBtn?.addEventListener('click', () => this.toggleTimer());
         this.elements.timerResetBtn?.addEventListener('click', () => this.resetTimer());
+        this.elements.actionsBtn?.addEventListener('click', () => this.toggleActions());
+        this.actionButtons.forEach((button) => {
+            button.addEventListener('click', () => this.runClassroomAction(button.dataset.classroomAction));
+        });
+        this.elements.fullscreenBtn?.addEventListener('click', () => this.toggleFullscreen());
         this.elements.exitBtn?.addEventListener('click', () => this.exit());
 
         window.addEventListener('localeChanged', () => this.updateLocalizedLabels());
@@ -70,19 +79,29 @@ class ClassroomModeManager {
             }
         });
         document.addEventListener('pointerdown', (event) => {
-            if (!this.isPenSettingsOpen()) {
-                return;
-            }
             const target = event.target;
-            if (!target?.closest?.('#classroom-pen-settings, #classroom-pen-settings-btn')) {
+            if (this.isPenSettingsOpen()
+                && !target?.closest?.('#classroom-pen-settings, #classroom-pen-settings-btn')) {
                 this.setPenSettingsOpen(false);
+            }
+            if (this.isActionsOpen()
+                && !target?.closest?.('#classroom-actions-panel, #classroom-actions-btn')) {
+                this.setActionsOpen(false);
             }
         }, true);
         document.addEventListener('keydown', (event) => this.handleKeydown(event), true);
+        document.addEventListener('fullscreenchange', () => this.updateFullscreenState());
     }
 
     handleKeydown(event) {
         if (event.key !== 'Escape' || !this.isActive) {
+            return;
+        }
+        if (this.isActionsOpen()) {
+            event.preventDefault();
+            event.stopPropagation?.();
+            this.setActionsOpen(false);
+            this.elements.actionsBtn?.focus?.({ preventScroll: true });
             return;
         }
         if (this.isPenSettingsOpen()) {
@@ -139,6 +158,7 @@ class ClassroomModeManager {
 
         this.isActive = false;
         this.setPenSettingsOpen(false);
+        this.setActionsOpen(false);
         document.body?.classList.remove('classroom-mode-active');
         if (this.elements.bar) {
             this.elements.bar.hidden = true;
@@ -160,6 +180,8 @@ class ClassroomModeManager {
     }
 
     closeTransientSurfaces() {
+        this.setPenSettingsOpen(false);
+        this.setActionsOpen(false);
         ['config-area', 'feature-area', 'time-display-area', 'timer-settings-modal'].forEach((id) => {
             document.getElementById(id)?.classList.remove('show');
         });
@@ -181,6 +203,9 @@ class ClassroomModeManager {
         if (shouldOpen && this.board.drawingEngine?.currentTool !== 'pen') {
             this.board.setTool?.('pen', false);
         }
+        if (shouldOpen) {
+            this.setActionsOpen(false);
+        }
         this.setPenSettingsOpen(shouldOpen);
         this.syncPenSettings();
         this.updateToolState();
@@ -201,6 +226,59 @@ class ClassroomModeManager {
             }
         }
         this.elements.penSettingsBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    toggleActions() {
+        const shouldOpen = !this.isActionsOpen();
+        if (shouldOpen) {
+            this.setPenSettingsOpen(false);
+        }
+        this.setActionsOpen(shouldOpen);
+        if (shouldOpen) {
+            this.actionButtons[0]?.focus?.({ preventScroll: true });
+        }
+    }
+
+    isActionsOpen() {
+        return Boolean(this.elements.actionsPanel && !this.elements.actionsPanel.hidden);
+    }
+
+    setActionsOpen(open) {
+        if (this.elements.actionsPanel) {
+            this.elements.actionsPanel.hidden = !open;
+            this.elements.actionsPanel.classList.toggle('show', open);
+            if (open) {
+                this.elements.actionsPanel.removeAttribute('hidden');
+            } else {
+                this.elements.actionsPanel.setAttribute('hidden', '');
+            }
+        }
+        this.elements.actionsBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    runClassroomAction(action) {
+        this.setActionsOpen(false);
+        this.elements.actionsBtn?.focus?.({ preventScroll: true });
+        if (action === 'addPage') {
+            this.board.addPage?.();
+            this.syncBoardState();
+            return;
+        }
+
+        const sourceButtons = {
+            timer: 'timer-feature-btn',
+            randomPicker: 'random-picker-feature-btn',
+            scoreboard: 'scoreboard-feature-btn',
+            teachingTools: 'more-teaching-tools-btn'
+        };
+        const sourceButton = document.getElementById(sourceButtons[action]);
+        sourceButton?.click?.();
+    }
+
+    toggleFullscreen() {
+        this.setActionsOpen(false);
+        this.board.toggleFullscreen?.();
+        this.updateFullscreenState();
     }
 
     setColor(color) {
@@ -313,6 +391,7 @@ class ClassroomModeManager {
         this.updateHistoryState();
         this.updatePageStatus();
         this.updateTimerDisplay();
+        this.updateFullscreenState();
     }
 
     updateToolState() {
@@ -434,6 +513,17 @@ class ClassroomModeManager {
         this.updateTimerButtonLabel();
     }
 
+    updateFullscreenState() {
+        const isFullscreen = Boolean(document.fullscreenElement);
+        this.elements.fullscreenBtn?.classList.toggle('is-fullscreen', isFullscreen);
+        this.elements.fullscreenBtn?.setAttribute('aria-pressed', isFullscreen ? 'true' : 'false');
+        this.setButtonLabel(
+            this.elements.fullscreenBtn,
+            isFullscreen ? 'toolbar.exitFullscreen' : 'toolbar.fullscreen',
+            isFullscreen ? 'Exit fullscreen' : 'Fullscreen'
+        );
+    }
+
     getText(key, fallback) {
         const translated = window.i18n?.t?.(key);
         return translated && translated !== key ? translated : fallback;
@@ -473,12 +563,12 @@ class ClassroomModeManager {
         this.setButtonLabel(
             this.elements.timerToggleBtn,
             this.isTimerRunning ? 'classroom.pauseTimer' : 'classroom.startTimer',
-            this.isTimerRunning ? 'Pause timer' : 'Start timer'
+            this.isTimerRunning ? 'Pause stopwatch' : 'Start stopwatch'
         );
     }
 
     updateLocalizedLabels() {
-        this.setTextContent(this.elements.modeStatus, 'classroom.modeActive', 'Classroom mode');
+        this.setTextContent(this.elements.modeStatus, 'classroom.modeActive', 'Teaching focus');
         const toolLabels = {
             pen: ['toolbar.pen', 'Pen'],
             eraser: ['toolbar.eraser', 'Eraser'],
@@ -500,9 +590,24 @@ class ClassroomModeManager {
         this.setButtonLabel(this.elements.prevPageBtn, 'classroom.prevPage', 'Previous page');
         this.setButtonLabel(this.elements.nextPageBtn, 'classroom.nextPage', 'Next page');
         this.updateTimerButtonLabel();
-        this.setButtonLabel(this.elements.timerResetBtn, 'classroom.resetTimer', 'Reset timer');
-        this.setButtonLabel(this.elements.exitBtn, 'classroom.exit', 'Exit classroom mode');
-        const modeLabel = this.getText('classroom.modeActive', 'Classroom mode');
+        this.setButtonLabel(this.elements.timerResetBtn, 'classroom.resetTimer', 'Reset stopwatch');
+        this.setButtonLabel(this.elements.timerDisplay, 'classroom.stopwatch', 'Stopwatch');
+        this.setButtonLabel(this.elements.actionsBtn, 'classroom.actions', 'Classroom tools');
+        this.elements.actionsPanel?.setAttribute('aria-label', this.getText('classroom.actions', 'Classroom tools'));
+        const actionLabels = {
+            addPage: ['classroom.addPage', 'New page'],
+            timer: ['classroom.countdown', 'Countdown'],
+            randomPicker: ['classroom.randomPicker', 'Random picker'],
+            scoreboard: ['classroom.scoreboard', 'Scoreboard'],
+            teachingTools: ['classroom.teachingTools', 'Teaching tools']
+        };
+        this.actionButtons.forEach((button) => {
+            const [key, fallback] = actionLabels[button.dataset.classroomAction] || ['', 'Classroom action'];
+            this.setButtonLabel(button, key, fallback);
+        });
+        this.updateFullscreenState();
+        this.setButtonLabel(this.elements.exitBtn, 'classroom.exit', 'Exit teaching focus');
+        const modeLabel = this.getText('classroom.modeActive', 'Teaching focus');
         this.elements.bar?.setAttribute('aria-label', modeLabel);
     }
 }

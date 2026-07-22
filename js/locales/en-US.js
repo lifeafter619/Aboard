@@ -719,17 +719,24 @@ window.translations = {
         scoreboard: 'Score',
         insertImage: 'Insert Image',
         insertText: 'Insert Text',
-        classroomMode: 'Classroom'
+        classroomMode: 'Teaching Focus'
     },
 
     classroom: {
-        modeActive: 'Classroom mode',
+        modeActive: 'Teaching focus',
         prevPage: 'Previous page',
         nextPage: 'Next page',
-        startTimer: 'Start timer',
-        pauseTimer: 'Pause timer',
-        resetTimer: 'Reset timer',
-        exit: 'Exit classroom mode'
+        startTimer: 'Start stopwatch',
+        pauseTimer: 'Pause stopwatch',
+        resetTimer: 'Reset stopwatch',
+        stopwatch: 'Stopwatch',
+        actions: 'Class tools',
+        addPage: 'New page',
+        countdown: 'Countdown',
+        randomPicker: 'Random picker',
+        scoreboard: 'Scoreboard',
+        teachingTools: 'Teaching tools',
+        exit: 'Exit teaching focus'
     },
 
     // Random Picker

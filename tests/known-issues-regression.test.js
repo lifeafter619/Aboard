@@ -559,7 +559,10 @@ function testTextSelectionFlipIsNoOpAndCssHidesInvalidHandles() {
   assert.equal(redrawn, false, 'text flip should not redraw when nothing changed');
 
   const css = fs.readFileSync(path.join(__dirname, '..', 'css', 'modules', 'selection-controls.css'), 'utf8');
-  assert.match(css, /\.text-selection-only\s+\.selection-transform-handle/s, 'text selections should hide transform handles');
+  assert.match(css, /\.text-selection-only\s+#selection-flip-h-handle/s,
+    'text selections should hide the unsupported horizontal flip handle');
+  assert.doesNotMatch(css, /\.text-selection-only\s+\.selection-transform-handle/s,
+    'text selections should keep supported transform handles such as rotate 90 degrees');
   assert.match(css, /\.text-selection-only\s+\.resize-handle\.top\b/s, 'text selections should hide top edge resize handle');
   assert.match(css, /\.text-selection-only\s+\.resize-handle\.bottom\b/s, 'text selections should hide bottom edge resize handle');
 }

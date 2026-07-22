@@ -692,17 +692,24 @@ window.translations = {
         scoreboard: '計分板',
         insertImage: '插入圖片',
         insertText: '插入文字',
-        classroomMode: '課堂'
+        classroomMode: '專注授課'
     },
 
     classroom: {
-        modeActive: '課堂模式',
+        modeActive: '授課中',
         prevPage: '上一頁',
         nextPage: '下一頁',
-        startTimer: '開始計時',
-        pauseTimer: '暫停計時',
-        resetTimer: '重置計時',
-        exit: '退出課堂模式'
+        startTimer: '開始正計時',
+        pauseTimer: '暫停正計時',
+        resetTimer: '重設正計時',
+        stopwatch: '正計時',
+        actions: '課堂工具',
+        addPage: '新增頁',
+        countdown: '倒數計時',
+        randomPicker: '隨機點名',
+        scoreboard: '計分板',
+        teachingTools: '教具',
+        exit: '退出專注授課'
     },
 
     // Random Picker

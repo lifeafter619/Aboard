@@ -35,6 +35,7 @@ const CORE_TESTS = [
   'tests/session-write-lock-invalidation.test.js',
   'tests/startup-storage-resilience.test.js',
   'tests/background-pattern-panel-layout.test.js',
+  'tests/form-focus-ring-ux.test.js',
   'tests/classroom-mode-ux.test.js',
   'tests/classroom-mode-runtime.test.js',
   'tests/main-startup-storage-resilience.test.js'
@@ -74,6 +75,7 @@ const FULL_TESTS = [
   'tests/selection-layer-menu-ux.test.js',
   'tests/selection-color-popover-ux.test.js',
   'tests/background-pattern-panel-layout.test.js',
+  'tests/form-focus-ring-ux.test.js',
   'tests/classroom-mode-ux.test.js',
   'tests/classroom-mode-runtime.test.js',
   'tests/background-ui-plot-color-escaping.test.js',

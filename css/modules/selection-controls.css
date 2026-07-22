@@ -492,7 +492,7 @@
     background: transparent !important;
 }
 
-.text-selection-only .selection-transform-handle,
+.text-selection-only #selection-flip-h-handle,
 .text-selection-only .resize-handle.top,
 .text-selection-only .resize-handle.bottom {
     display: none !important;

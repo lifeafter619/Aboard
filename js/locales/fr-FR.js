@@ -670,17 +670,24 @@ window.translations = {
         scoreboard: 'Tableau',
         insertImage: 'Image',
         insertText: 'Texte',
-        classroomMode: 'Classe'
+        classroomMode: 'Mode enseignement'
     },
 
     classroom: {
-        modeActive: 'Mode classe',
+        modeActive: 'Enseignement en cours',
         prevPage: 'Page précédente',
         nextPage: 'Page suivante',
-        startTimer: 'Démarrer le minuteur',
-        pauseTimer: 'Mettre le minuteur en pause',
-        resetTimer: 'Réinitialiser le minuteur',
-        exit: 'Quitter le mode classe'
+        startTimer: 'Démarrer le chronomètre',
+        pauseTimer: 'Mettre le chronomètre en pause',
+        resetTimer: 'Réinitialiser le chronomètre',
+        stopwatch: 'Chronomètre',
+        actions: 'Outils de classe',
+        addPage: 'Nouvelle page',
+        countdown: 'Compte à rebours',
+        randomPicker: 'Tirage au sort',
+        scoreboard: 'Tableau des scores',
+        teachingTools: 'Outils pédagogiques',
+        exit: 'Quitter le mode enseignement'
     },
 
     // Teaching Tools

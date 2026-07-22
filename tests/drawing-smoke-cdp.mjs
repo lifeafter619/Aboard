@@ -860,6 +860,70 @@ async function main() {
       throw new Error(`Classroom timer did not start from the session dock: ${JSON.stringify(classroomTimerState)}`);
     }
 
+    const classroomPageBaseline = await evaluate(cdp, `(() => ({
+      currentPage: window.drawingBoard?.currentPage || 0,
+      pageCount: window.drawingBoard?.pages?.length || 0
+    }))()`);
+    const expectedClassroomPageCount = classroomPageBaseline.pageCount + 1;
+    const classroomActionsRect = await evaluate(cdp, `(() => {
+      const rect = document.getElementById('classroom-actions-btn').getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    })()`);
+    await click(cdp, classroomActionsRect.x, classroomActionsRect.y);
+    await waitUntil(() => evaluate(cdp, `!document.getElementById('classroom-actions-panel')?.hidden`), { timeoutMs: 3000 });
+
+    const classroomCountdownRect = await evaluate(cdp, `(() => {
+      const rect = document.getElementById('classroom-timer-action').getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    })()`);
+    await click(cdp, classroomCountdownRect.x, classroomCountdownRect.y);
+    await waitUntil(() => evaluate(cdp, `document.getElementById('timer-settings-modal')?.classList.contains('show')`), { timeoutMs: 5000 });
+    const timerFocusState = await evaluate(cdp, `(() => {
+      const input = document.getElementById('timer-hours');
+      const style = getComputedStyle(input);
+      return {
+        activeId: document.activeElement?.id || '',
+        outlineStyle: style.outlineStyle,
+        borderColor: style.borderColor,
+        boxShadow: style.boxShadow
+      };
+    })()`);
+    if (timerFocusState.activeId !== 'timer-hours'
+      || timerFocusState.outlineStyle !== 'none'
+      || timerFocusState.borderColor !== 'rgb(11, 87, 208)'
+      || !timerFocusState.boxShadow.includes('inset')) {
+      throw new Error(`Timer input should use one inset focus boundary: ${JSON.stringify(timerFocusState)}`);
+    }
+
+    const timerCloseRect = await evaluate(cdp, `(() => {
+      const rect = document.getElementById('timer-settings-close-btn').getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    })()`);
+    await click(cdp, timerCloseRect.x, timerCloseRect.y);
+    await waitUntil(() => evaluate(cdp, `!document.getElementById('timer-settings-modal')?.classList.contains('show')`), { timeoutMs: 3000 });
+    await click(cdp, classroomActionsRect.x, classroomActionsRect.y);
+    await waitUntil(() => evaluate(cdp, `!document.getElementById('classroom-actions-panel')?.hidden`), { timeoutMs: 3000 });
+
+    const classroomAddPageRect = await evaluate(cdp, `(() => {
+      const rect = document.getElementById('classroom-add-page-action').getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    })()`);
+    await click(cdp, classroomAddPageRect.x, classroomAddPageRect.y);
+    const classroomPageState = await waitUntil(async () => {
+      const state = await evaluate(cdp, `(() => ({
+        currentPage: window.drawingBoard?.currentPage || 0,
+        pageCount: window.drawingBoard?.pages?.length || 0,
+        panelHidden: !!document.getElementById('classroom-actions-panel')?.hidden,
+        status: document.getElementById('classroom-page-status')?.textContent?.trim() || ''
+      }))()`);
+      return state.pageCount === expectedClassroomPageCount ? state : null;
+    }, { timeoutMs: 3000 });
+    if (classroomPageState.currentPage !== classroomPageState.pageCount
+      || !classroomPageState.panelHidden
+      || classroomPageState.status !== `${classroomPageState.currentPage} / ${classroomPageState.pageCount}`) {
+      throw new Error(`Classroom new-page action did not stay in sync: ${JSON.stringify(classroomPageState)}`);
+    }
+
     const classroomExitRect = await evaluate(cdp, `(() => {
       const rect = document.getElementById('classroom-exit-btn').getBoundingClientRect();
       return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
