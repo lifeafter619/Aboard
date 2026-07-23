@@ -684,7 +684,20 @@ function setupEventListeners() {
         });
         
         bindIfPresent(document.getElementById('config-close-btn'), 'click', () => this.closeConfigPanel());
-        bindIfPresent(document.getElementById('feature-close-btn'), 'click', () => this.closeFeaturePanel());
+        bindIfPresent(document.getElementById('feature-close-btn'), 'click', () => {
+            this.closeFeaturePanel();
+            document.getElementById('more-btn')?.focus?.({ preventScroll: true });
+        });
+        const featureArea = document.getElementById('feature-area');
+        if (featureArea) {
+            featureArea.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    this.closeFeaturePanel();
+                    document.getElementById('more-btn')?.focus?.({ preventScroll: true });
+                }
+            });
+        }
         
         // History buttons
         bindIfPresent(document.getElementById('undo-btn'), 'click', () => {
@@ -785,12 +798,12 @@ function setupEventListeners() {
                 // Recalculate fit scale and re-center canvas for new viewport size
                 this.recalculateAndRecenterCanvas();
                 this.applyZoom(false); // Apply new fit scale without updating config-area
+                // Establish the toolbar anchor before positioning dependent panels.
+                this.repositionToolbarsOnResize();
                 // Update toolbar text visibility on resize
                 this.settingsManager.updateToolbarTextVisibility();
                 // Reposition config-area to stay properly positioned above toolbar
                 this.positionConfigArea();
-                // Reposition toolbars to ensure they stay within viewport
-                this.repositionToolbarsOnResize();
                 // Reposition modals to ensure they stay within viewport
                 this.repositionModalsOnResize();
                 this.positionCoordinatePointPanel();

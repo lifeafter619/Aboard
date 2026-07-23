@@ -7,7 +7,23 @@ function closeConfigPanel(board) {
 }
 
 function closeFeaturePanel() {
-    document.getElementById('feature-area')?.classList.remove('show');
+    const featureArea = document.getElementById('feature-area');
+    const moreButton = document.getElementById('more-btn');
+    const shouldRestoreFocus = Boolean(featureArea?.contains?.(document.activeElement));
+    featureArea?.classList.remove('show');
+    if (featureArea) {
+        featureArea.setAttribute('aria-hidden', 'true');
+    }
+    if (moreButton) {
+        moreButton.setAttribute('aria-expanded', 'false');
+    }
+    if (shouldRestoreFocus && typeof moreButton?.focus === 'function') {
+        try {
+            moreButton.focus({ preventScroll: true });
+        } catch (error) {
+            moreButton.focus();
+        }
+    }
 }
 
 function handleMoreFeaturePanelAfterAction(board) {

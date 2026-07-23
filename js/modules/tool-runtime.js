@@ -13,6 +13,48 @@ function removeClassIfPresent(element, className) {
     element?.classList?.remove(className);
 }
 
+function collapseFeatureArea(featureArea) {
+    removeClassIfPresent(featureArea, 'show');
+    if (featureArea) {
+        featureArea.setAttribute('aria-hidden', 'true');
+    }
+    const moreButton = getElement('more-btn');
+    if (moreButton) {
+        moreButton.setAttribute('aria-expanded', 'false');
+    }
+}
+
+function expandFeatureArea(featureArea) {
+    addClassIfPresent(featureArea, 'show');
+    if (featureArea) {
+        featureArea.setAttribute('aria-hidden', 'false');
+    }
+    const moreButton = getElement('more-btn');
+    if (moreButton) {
+        moreButton.setAttribute('aria-expanded', 'true');
+    }
+}
+
+function focusFirstFeatureAction(featureArea) {
+    const action = featureArea?.querySelector?.('#more-shape-btn')
+        || featureArea?.querySelector?.('button:not([disabled])');
+    if (!action || typeof action.focus !== 'function') {
+        return;
+    }
+    const focus = () => {
+        try {
+            action.focus({ preventScroll: true });
+        } catch (error) {
+            action.focus();
+        }
+    };
+    if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(focus);
+    } else {
+        focus();
+    }
+}
+
 function switchToPen() {
     this.setTool('pen', false);
 }
@@ -86,26 +128,27 @@ function setTool(tool, showConfig = true) {
                 this.bringElementToFront(configArea);
             }
             if (tool !== 'shape') {
-                removeClassIfPresent(featureArea, 'show');
+                collapseFeatureArea(featureArea);
             }
         }
     } else if (tool === 'more') {
         this.ensureMoreFeatureToolConfigListenersInitialized();
         const isFeatureAreaVisible = featureArea?.classList?.contains('show') || false;
         if (isFeatureAreaVisible) {
-            removeClassIfPresent(featureArea, 'show');
+            collapseFeatureArea(featureArea);
             removeClassIfPresent(configArea, 'show');
         } else {
-            addClassIfPresent(featureArea, 'show');
+            expandFeatureArea(featureArea);
             removeClassIfPresent(configArea, 'show');
             if (featureArea) {
                 this.positionFeatureArea();
                 this.bringElementToFront(featureArea);
             }
+            focusFirstFeatureAction(featureArea);
         }
     } else {
         removeClassIfPresent(configArea, 'show');
-        removeClassIfPresent(featureArea, 'show');
+        collapseFeatureArea(featureArea);
     }
 }
 

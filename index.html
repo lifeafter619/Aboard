@@ -575,7 +575,7 @@
     </div>
 
     <!-- Feature buttons area (independent, draggable, with edge snapping) -->
-    <div id="feature-area" class="feature-area">
+    <div id="feature-area" class="feature-area" role="region" aria-labelledby="more-btn" aria-hidden="true">
         <!-- Close button for feature panel -->
         <button id="feature-close-btn" class="config-close-btn" data-i18n-title="common.close" title="关闭" aria-label="关闭">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1769,7 +1769,7 @@
             </svg>
             <span data-i18n="toolbar.background">背景</span>
         </button>
-        <button id="more-btn" class="tool-btn" data-tool="more">
+        <button id="more-btn" class="tool-btn" data-tool="more" aria-controls="feature-area" aria-expanded="false">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="1"></circle>
                 <circle cx="12" cy="5" r="1"></circle>
@@ -2387,10 +2387,10 @@
         </div>
     </div>
 
-    <div id="portrait-orientation-overlay" aria-live="polite">
+    <div id="portrait-orientation-overlay" role="dialog" aria-modal="true" aria-labelledby="portrait-orientation-title" aria-describedby="portrait-orientation-tip" aria-live="polite">
         <div class="overlay-content">
-            <div class="overlay-title" data-i18n="app.rotateScreenTitle">请旋转屏幕</div>
-            <div class="overlay-tip" data-i18n="app.rotateScreenTip">检测到当前为竖屏模式。为获得正常排版与完整工具栏，请横屏使用。</div>
+            <div id="portrait-orientation-title" class="overlay-title" data-i18n="app.rotateScreenTitle">请旋转屏幕</div>
+            <div id="portrait-orientation-tip" class="overlay-tip" data-i18n="app.rotateScreenTip">检测到当前为竖屏模式。为获得正常排版与完整工具栏，请横屏使用。</div>
             <button id="portrait-orientation-continue-btn" class="portrait-continue-btn" type="button" data-i18n="common.confirm">继续使用</button>
         </div>
     </div>

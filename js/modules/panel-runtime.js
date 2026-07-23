@@ -8,9 +8,17 @@ function repositionToolbarsOnResize(board) {
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
     const isPortrait = windowHeight > windowWidth;
+    const useCompactPortraitToolbar = isPortrait && windowWidth <= 480;
     const toolbar = document.getElementById('toolbar');
 
-    if (isPortrait && toolbar && !toolbar.classList.contains('user-positioned')) {
+    if (useCompactPortraitToolbar && toolbar) {
+        toolbar.classList.remove('vertical');
+        toolbar.style.left = '50%';
+        toolbar.style.right = 'auto';
+        toolbar.style.top = 'auto';
+        toolbar.style.bottom = '10px';
+        toolbar.style.transform = 'translateX(-50%)';
+    } else if (isPortrait && toolbar && !toolbar.classList.contains('user-positioned')) {
         toolbar.classList.add('vertical');
         toolbar.style.right = '20px';
         toolbar.style.left = 'auto';
@@ -43,7 +51,10 @@ function repositionToolbarsOnResize(board) {
         }
 
         let rect = panel.getBoundingClientRect();
-        const appliedRelative = applyRelativePanelPosition(panel, rect, windowWidth, windowHeight, EDGE_SPACING);
+        const keepCompactToolbarPosition = panel === toolbar && useCompactPortraitToolbar;
+        const appliedRelative = keepCompactToolbarPosition
+            ? false
+            : applyRelativePanelPosition(panel, rect, windowWidth, windowHeight, EDGE_SPACING);
         if (appliedRelative) {
             rect = panel.getBoundingClientRect();
         }

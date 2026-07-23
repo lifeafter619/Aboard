@@ -94,15 +94,127 @@ function showBootstrapFailure(message) {
 }
 
 function bindPortraitOrientationContinue() {
+  const overlay = document.getElementById('portrait-orientation-overlay');
   const continueButton = document.getElementById('portrait-orientation-continue-btn');
-  if (!continueButton || continueButton.dataset.bound === 'true') {
+  if (!overlay || !continueButton || continueButton.dataset.bound === 'true') {
     return;
   }
 
-  continueButton.dataset.bound = 'true';
-  continueButton.addEventListener('click', () => {
+  const portraitQuery = '(orientation: portrait) and (max-width: 1024px)';
+  let restoreFocusTarget = null;
+  let overlayWasVisible = false;
+  let redirectingFocus = false;
+
+  const scheduleFrame = (callback) => {
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(callback);
+      return;
+    }
+    window.setTimeout(callback, 0);
+  };
+
+  const focusElement = (element) => {
+    if (!element || typeof element.focus !== 'function') {
+      return;
+    }
+    try {
+      element.focus({ preventScroll: true });
+    } catch (error) {
+      element.focus();
+    }
+  };
+
+  const isOverlayVisible = () => {
+    if (document.body?.classList.contains('portrait-orientation-dismissed')) {
+      return false;
+    }
+    const style = window.getComputedStyle?.(overlay);
+    return style ? style.display !== 'none' && style.visibility !== 'hidden' : false;
+  };
+
+  const focusContinueButton = () => {
+    if (document.activeElement === continueButton) {
+      return;
+    }
+    redirectingFocus = true;
+    focusElement(continueButton);
+    redirectingFocus = false;
+  };
+
+  const restoreFocus = () => {
+    const target = restoreFocusTarget || document.getElementById('pen-btn');
+    restoreFocusTarget = null;
+    scheduleFrame(() => {
+      if (target && target.isConnected !== false) {
+        focusElement(target);
+      }
+    });
+  };
+
+  const syncOverlayFocus = () => {
+    const visible = isOverlayVisible();
+    overlay.setAttribute('aria-hidden', visible ? 'false' : 'true');
+
+    if (visible) {
+      if (!overlayWasVisible) {
+        const activeElement = document.activeElement;
+        if (activeElement && activeElement !== document.body && !overlay.contains(activeElement)) {
+          restoreFocusTarget = activeElement;
+        }
+      }
+      overlayWasVisible = true;
+      focusContinueButton();
+      return;
+    }
+
+    if (overlayWasVisible) {
+      overlayWasVisible = false;
+      restoreFocus();
+    }
+  };
+
+  const dismissOverlay = () => {
     document.body?.classList.add('portrait-orientation-dismissed');
+    syncOverlayFocus();
+  };
+
+  continueButton.dataset.bound = 'true';
+  continueButton.addEventListener('click', dismissOverlay);
+
+  document.addEventListener('keydown', (event) => {
+    if (!isOverlayVisible()) {
+      return;
+    }
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      focusContinueButton();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      dismissOverlay();
+    }
+  }, true);
+
+  document.addEventListener('focusin', (event) => {
+    if (redirectingFocus || !isOverlayVisible() || overlay.contains(event.target)) {
+      return;
+    }
+    if (event.target && event.target !== document.body && typeof event.target.focus === 'function') {
+      restoreFocusTarget = event.target;
+    }
+    focusContinueButton();
+  }, true);
+
+  const mediaQuery = window.matchMedia?.(portraitQuery);
+  if (typeof mediaQuery?.addEventListener === 'function') {
+    mediaQuery.addEventListener('change', syncOverlayFocus);
+  } else if (typeof mediaQuery?.addListener === 'function') {
+    mediaQuery.addListener(syncOverlayFocus);
+  }
+  window.addEventListener('resize', () => {
+    scheduleFrame(syncOverlayFocus);
   });
+
+  scheduleFrame(syncOverlayFocus);
 }
 
 async function startAboard() {
