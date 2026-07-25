@@ -408,8 +408,16 @@ class ShapeDrawingManager {
             case 'ellipse':
                 this.drawEllipseWithStyle(this.previewCtx, this.startScreenPoint, this.endScreenPoint, true);
                 break;
+            case 'triangle':
+            case 'diamond':
+                this.drawPolygonWithStyle(
+                    this.previewCtx,
+                    this.getShapeSelectionPoints(this.currentShape, this.startScreenPoint, this.endScreenPoint),
+                    true
+                );
+                break;
         }
-        
+
         // Reset line dash
         this.previewCtx.setLineDash([]);
     }
@@ -436,8 +444,16 @@ class ShapeDrawingManager {
             case 'ellipse':
                 this.drawEllipseWithStyle(this.ctx, this.startPoint, this.endPoint, false);
                 break;
+            case 'triangle':
+            case 'diamond':
+                this.drawPolygonWithStyle(
+                    this.ctx,
+                    this.getShapeSelectionPoints(this.currentShape, this.startPoint, this.endPoint),
+                    false
+                );
+                break;
         }
-        
+
         // Reset context
         this.ctx.globalAlpha = 1.0;
         this.ctx.setLineDash([]);
@@ -498,6 +514,34 @@ class ShapeDrawingManager {
                 const radiusX = Math.abs(end.x - start.x);
                 const radiusY = Math.abs(end.y - start.y);
                 return this.sampleEllipsePoints(start, radiusX, radiusY, 36, true);
+            }
+            case 'triangle': {
+                const minX = Math.min(start.x, end.x);
+                const minY = Math.min(start.y, end.y);
+                const maxX = Math.max(start.x, end.x);
+                const maxY = Math.max(start.y, end.y);
+                const midX = (minX + maxX) / 2;
+                return [
+                    { x: midX, y: minY },
+                    { x: maxX, y: maxY },
+                    { x: minX, y: maxY },
+                    { x: midX, y: minY }
+                ];
+            }
+            case 'diamond': {
+                const minX = Math.min(start.x, end.x);
+                const minY = Math.min(start.y, end.y);
+                const maxX = Math.max(start.x, end.x);
+                const maxY = Math.max(start.y, end.y);
+                const midX = (minX + maxX) / 2;
+                const midY = (minY + maxY) / 2;
+                return [
+                    { x: midX, y: minY },
+                    { x: maxX, y: midY },
+                    { x: midX, y: maxY },
+                    { x: minX, y: midY },
+                    { x: midX, y: minY }
+                ];
             }
             case 'arrow':
             case 'doubleArrow':
@@ -597,6 +641,14 @@ class ShapeDrawingManager {
 
         if (stroke.shapeType === 'arrow' || stroke.shapeType === 'doubleArrow') {
             this.drawArrowLine(ctx, fallbackStart, fallbackEnd, stroke.shapeType === 'doubleArrow', false);
+        } else if (
+            (stroke.shapeType === 'triangle' || stroke.shapeType === 'diamond')
+            && styledShapeLineStyles.includes(this.lineStyle)
+            && Array.isArray(stroke.points) && stroke.points.length > 2
+        ) {
+            // Polygon vertices already carry any move/resize/rotation, so
+            // restyle directly from them instead of deriving start/end geometry.
+            this.drawPolygonWithStyle(ctx, stroke.points, false);
         } else if (stroke.shapeType && styledShapeLineStyles.includes(this.lineStyle)) {
             // Re-run the final drawing path so wavy/double/triple/multi (and
             // arrow line styles) survive redraw instead of collapsing to a
@@ -944,6 +996,73 @@ class ShapeDrawingManager {
         }
     }
     
+    /**
+     * Draw a closed polygon (triangle, diamond, ...) with the current line
+     * style. `points` is an ordered vertex list; a closing vertex equal to
+     * the first is optional.
+     */
+    drawPolygonWithStyle(ctx, points, isPreview = false) {
+        if (!ctx || !Array.isArray(points) || points.length < 3) return;
+
+        const closed = Math.hypot(
+            points[0].x - points[points.length - 1].x,
+            points[0].y - points[points.length - 1].y
+        ) < 0.001;
+        const vertices = closed ? points.slice(0, -1) : points;
+        if (vertices.length < 3) return;
+
+        const edges = vertices.map((vertex, index) => [
+            vertex,
+            vertices[(index + 1) % vertices.length]
+        ]);
+
+        switch (this.lineStyle) {
+            case 'wavy':
+                for (const [from, to] of edges) {
+                    this.drawWavyLine(ctx, from, to, isPreview);
+                }
+                break;
+            case 'double':
+            case 'triple':
+            case 'multi': {
+                const count = this.lineStyle === 'double'
+                    ? 2
+                    : this.lineStyle === 'triple' ? 3 : this.multiLineCount;
+                const spacing = this.multiLineSpacing || 4;
+                const centroid = vertices.reduce(
+                    (acc, vertex) => ({ x: acc.x + vertex.x / vertices.length, y: acc.y + vertex.y / vertices.length }),
+                    { x: 0, y: 0 }
+                );
+                for (let ring = 0; ring < count; ring++) {
+                    ctx.beginPath();
+                    vertices.forEach((vertex, index) => {
+                        const dx = vertex.x - centroid.x;
+                        const dy = vertex.y - centroid.y;
+                        const distance = Math.hypot(dx, dy);
+                        const inset = Math.min(ring * spacing, Math.max(0, distance - 1));
+                        const scale = distance > 0.001 ? (distance - inset) / distance : 1;
+                        const x = centroid.x + dx * scale;
+                        const y = centroid.y + dy * scale;
+                        if (index === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    });
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+                break;
+            }
+            default:
+                ctx.beginPath();
+                vertices.forEach((vertex, index) => {
+                    if (index === 0) ctx.moveTo(vertex.x, vertex.y);
+                    else ctx.lineTo(vertex.x, vertex.y);
+                });
+                ctx.closePath();
+                ctx.stroke();
+                break;
+        }
+    }
+
     drawRectangleWithStyle(ctx, start, end, isPreview = false) {
         if (!start || !end) return;
         

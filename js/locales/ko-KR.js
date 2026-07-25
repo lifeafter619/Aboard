@@ -114,6 +114,10 @@ window.translations = {
             rectangle: '사각형',
             circle: '원',
             ellipse: '타원',
+
+            triangle: '삼각형',
+
+            diamond: '마름모',
             arrow: '화살표',
             doubleArrow: '양방향 화살표',
             arrowSize: '화살표 크기',
@@ -194,23 +198,7 @@ window.translations = {
         }
     },
 
-    selection: {
-        edit: '편집',
-        color: '색상',
-        copy: '복사',
-        delete: '삭제',
-        done: '완료',
-        rotate90: '90° 회전',
-        flipH: '좌우 반전',
-        layer: '레이어',
-        layerFront: '맨 앞으로',
-        layerBack: '맨 뒤로',
-        layerUp: '앞으로 한 단계',
-        layerDown: '뒤로 한 단계',
-        group: '그룹',
-        ungroup: '그룹 해제',
-        position: '위치'
-    },
+
 
     // Line Style Modal
     lineStyleModal: {
@@ -219,14 +207,7 @@ window.translations = {
         preview: '미리보기'
     },
 
-    // Time Display
-    timeDisplay: {
-        options: '시간 표시 옵션',
-        showDate: '날짜 표시',
-        showTime: '시간 표시',
-        settings: '설정',
-        fullscreenDisplay: '전체 화면 표시'
-    },
+
 
     // Background
     background: {

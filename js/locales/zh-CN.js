@@ -128,6 +128,10 @@ window.translations = {
             rectangle: '矩形',
             circle: '圆形',
             ellipse: '椭圆',
+
+            triangle: '三角形',
+
+            diamond: '菱形',
             arrow: '箭头',
             doubleArrow: '双箭头',
             arrowSize: '箭头大小',
@@ -208,23 +212,7 @@ window.translations = {
         }
     },
 
-    selection: {
-        edit: '编辑',
-        color: '颜色',
-        copy: '复制',
-        delete: '删除',
-        done: '完成',
-        rotate90: '旋转90°',
-        flipH: '水平翻转',
-        layer: '图层',
-        layerFront: '置于顶层',
-        layerBack: '置于底层',
-        layerUp: '上移一层',
-        layerDown: '下移一层',
-        group: '组合',
-        ungroup: '取消组合',
-        position: '位置'
-    },
+
 
     // Line Style Modal
     lineStyleModal: {
@@ -233,13 +221,7 @@ window.translations = {
         preview: '预览'
     },
 
-    // Time Display
-    timeDisplay: {
-        options: '时间显示选项',
-        showDate: '显示日期',
-        showTime: '显示时间',
-        settings: '设置'
-    },
+
 
     // Background
     background: {

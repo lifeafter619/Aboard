@@ -114,6 +114,10 @@ window.translations = {
             rectangle: '四角形',
             circle: '円',
             ellipse: '楕円',
+
+            triangle: '三角形',
+
+            diamond: 'ひし形',
             arrow: '矢印',
             doubleArrow: '双方向矢印',
             arrowSize: '矢印のサイズ',
@@ -194,23 +198,7 @@ window.translations = {
         }
     },
 
-    selection: {
-        edit: '編集',
-        color: '色',
-        copy: 'コピー',
-        delete: '削除',
-        done: '完了',
-        rotate90: '90°回転',
-        flipH: '左右反転',
-        layer: 'レイヤー',
-        layerFront: '最前面へ',
-        layerBack: '最背面へ',
-        layerUp: '前面へ',
-        layerDown: '背面へ',
-        group: 'グループ化',
-        ungroup: 'グループ解除',
-        position: '位置'
-    },
+
 
     // Line Style Modal
     lineStyleModal: {
@@ -219,14 +207,7 @@ window.translations = {
         preview: 'プレビュー'
     },
 
-    // Time Display
-    timeDisplay: {
-        options: '時刻表示オプション',
-        showDate: '日付を表示',
-        showTime: '時刻を表示',
-        settings: '設定',
-        fullscreenDisplay: 'フルスクリーン表示'
-    },
+
 
     // Background
     background: {

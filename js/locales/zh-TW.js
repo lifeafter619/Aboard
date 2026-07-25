@@ -24,7 +24,11 @@ window.translations = {
         help: '幫助',
         export: '匯出',
         restoreSize: '恢復大小',
-        keepCentered: '保持置中'
+        keepCentered: '保持置中',
+        preview: '預覽',
+        settings: '設定',
+        inputRequired: '請輸入內容。',
+        dragToMove: '拖動以移動'
     },
 
     // Gestures
@@ -35,7 +39,12 @@ window.translations = {
     errors: {
         lazyLoadFailed: '載入{feature}失敗，請重新整理頁面後再試。',
         sessionWriteConflict: '另一個 Aboard 分頁正在使用自動儲存；目前分頁的變更暫時不會自動儲存。請關閉另一個分頁後繼續。',
-        sessionDataClearedElsewhere: '另一個分頁已清除儲存的白板資料。請先匯出仍需保留的內容，再重新載入目前分頁。'
+        sessionDataClearedElsewhere: '另一個分頁已清除儲存的白板資料。請先匯出仍需保留的內容，再重新載入目前分頁。',
+        fileReadFailed: '無法讀取所選檔案，請檢查檔案是否損毀後重試。',
+        storageWriteFailed: '儲存失敗，請檢查瀏覽器儲存權限後重試。',
+        sessionSaveFailed: '板書自動儲存失敗，目前內容可能無法復原。請儘快匯出備份，或在設定中清理儲存空間。',
+        clearLocalDataBlocked: '本地快取清理被另一個已開啟的 Aboard 視窗阻止。請關閉其它 Aboard 分頁後重試。',
+        clearLocalDataFailed: '本地快取清理未完成，請稍後重試。'
     },
 
     prompts: {
@@ -119,6 +128,8 @@ window.translations = {
             rectangle: '矩形',
             circle: '圓形',
             ellipse: '橢圓',
+            triangle: '三角形',
+            diamond: '菱形',
             arrow: '箭頭',
             doubleArrow: '雙箭頭',
             arrowSize: '箭頭大小',
@@ -199,23 +210,7 @@ window.translations = {
         }
     },
 
-    selection: {
-        edit: '編輯',
-        color: '顏色',
-        copy: '複製',
-        delete: '刪除',
-        done: '完成',
-        rotate90: '旋轉90°',
-        flipH: '水平翻轉',
-        layer: '圖層',
-        layerFront: '置於頂層',
-        layerBack: '置於底層',
-        layerUp: '上移一層',
-        layerDown: '下移一層',
-        group: '群組',
-        ungroup: '取消群組',
-        position: '位置'
-    },
+
 
     // Line Style Modal
     lineStyleModal: {
@@ -224,20 +219,12 @@ window.translations = {
         preview: '預覽'
     },
 
-    // Time Display
-    timeDisplay: {
-        options: '時間顯示選項',
-        showDate: '顯示日期',
-        showTime: '顯示時間',
-        settings: '設定',
-        fullscreenDisplay: '全螢幕顯示'
-    },
-
     // Background
     background: {
         title: '背景',
         color: '背景顏色',
         pattern: '背景圖案',
+        imagePrefix: '圖片',
         blank: '空白',
         none: '無',
         dots: '點陣',
@@ -380,6 +367,8 @@ window.translations = {
         diff: {
             title: '設定差異',
             message: '偵測到匯入設定與目前設定存在差異：',
+            current: '目前',
+            new: '新',
             oldValue: '目前值',
             newValue: '新值',
             confirm: '確認更新',
@@ -403,6 +392,8 @@ window.translations = {
             themeHint: '選擇套用主題',
             themeColor: '主題色',
             showZoomControls: '顯示縮放控件',
+            showToolbarText: '顯示工具列文字',
+            showToolbarTextHint: '是否在工具列按鈕中顯示文字標籤',
             showZoomControlsHint: '勾選後，在畫布上方顯示縮放控件',
             showImportExportBtn: '顯示匯入匯出按鈕',
             showImportExportBtnHint: '勾選後，在縮放控件旁顯示匯入匯出按鈕',
@@ -470,7 +461,19 @@ window.translations = {
                 verdana: 'Verdana',
                 georgia: 'Georgia',
                 trebuchet: 'Trebuchet MS',
-                impact: 'Impact'
+                impact: 'Impact',
+                notoSansSC: '思源黑體',
+                notoSerifSC: '思源宋體',
+                lxgwWenKai: '霞鶩文楷',
+                sourceHanSansSC: '思源黑體 CN',
+                sourceHanSerifSC: '思源宋體 CN',
+                inter: 'Inter',
+                roboto: 'Roboto',
+                openSans: 'Open Sans',
+                lora: 'Lora',
+                jetBrainsMono: 'JetBrains Mono',
+                kaiTi: '楷體',
+                stXingkai: '華文行楷（手寫）'
             },
             edgeSnap: '啟用邊緣吸附',
             edgeSnapHint: '拖動控制面板時自動吸附到屏幕邊緣',
@@ -658,6 +661,7 @@ window.translations = {
             dateFormatMDY: '月-日-年 (01-01-2024)',
             dateFormatDMY: '日-月-年 (01-01-2024)',
             dateFormatChinese: '中文 (2024年1月1日)',
+            dateFormatAuto: '自動 (跟隨系統)',
             colorSettings: '顏色設定',
             colorSettingsHint: '設定時間顯示的字體和背景顏色',
             colorHint: '設定時間顯示的字體和背景顏色',
@@ -783,6 +787,10 @@ window.translations = {
         showTime: '顯示時間',
         settings: '設定',
         fullscreenDisplay: '全螢幕顯示',
+        am: '上午',
+        pm: '下午',
+        titleFontSize: '標題/日期字體大小',
+        timeFontSize: '時間字體大小',
         displayOptions: '顯示選項',
         dateAndTime: '日期和時間',
         dateOnly: '僅日期',
@@ -841,6 +849,8 @@ window.translations = {
         opacityLabel: '透明度：目前',
         fullscreenFontSize: '全螢幕字體大小',
         fullscreenFontSizeLabel: '全螢幕字體大小：目前',
+        titleFontSize: '標題字體大小',
+        timeFontSize: '時間字體大小',
         soundSettings: '聲音設定',
         playSound: '倒計時結束時播放提示音',
         preview: '試聽',
@@ -850,6 +860,7 @@ window.translations = {
         loopCount: '循環次數',
         loopInterval: '循環間隔',
         uploadCustomAudio: '上傳自定義音頻',
+        customSoundQuotaExceeded: '儲存空間不足，請刪除一些自定義鈴聲。',
         soundPresets: {
             classBell: '開始鈴聲(10s)',
             examEnd: '考試結束(4s)',
@@ -947,6 +958,9 @@ window.translations = {
         fileNamePrefixLabel: '檔名前綴',
         fileNamePlaceholder: '輸入檔名',
         fileNameHint: '匯出多個頁面時，會自動在檔名後附加頁碼',
+        selectAtLeastOnePage: '請至少選擇一頁',
+        paginationRequired: '需要分頁',
+        noPages: '沒有可用頁面',
         failed: '匯出失敗，請再試一次'
     },
 

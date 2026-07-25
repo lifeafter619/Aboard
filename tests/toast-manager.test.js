@@ -10,8 +10,15 @@ function createElement(tagName, documentRef) {
     children: [],
     parentElement: null,
     listeners: {},
+    attributes: {},
     _innerHTML: '',
     _textContent: '',
+    setAttribute(name, value) {
+      element.attributes[name] = String(value);
+    },
+    getAttribute(name) {
+      return element.attributes[name] ?? null;
+    },
     classList: {
       add(className) {
         if (!element.className.split(/\s+/).includes(className)) {
@@ -36,6 +43,9 @@ function createElement(tagName, documentRef) {
     },
     addEventListener(type, handler) {
       element.listeners[type] = handler;
+    },
+    removeEventListener(type) {
+      delete element.listeners[type];
     },
     remove() {
       if (!element.parentElement) return;
@@ -75,20 +85,25 @@ function createDocumentStub() {
 }
 
 function loadToastManager(document) {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'modules', 'toast-manager.js'), 'utf8');
+  const source = fs
+    .readFileSync(path.join(__dirname, '..', 'js', 'features', 'toast', 'toast-manager.js'), 'utf8')
+    .replace(/^export class ToastManager/m, 'class ToastManager')
+    .replace(/^export function registerToastManagerGlobal/m, 'function registerToastManagerGlobal');
   const sandbox = {
     window: {},
     document,
     requestAnimationFrame(callback) {
       callback();
     },
-    setTimeout(callback) {
-      callback();
-    }
+    setTimeout() {
+      // Never fire timers: keeps the toast mounted for assertions.
+      return 0;
+    },
+    clearTimeout() {}
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
-  vm.runInContext(source, sandbox, { filename: 'toast-manager.js' });
+  vm.runInContext(`${source}\nwindow.ToastManager = ToastManager;`, sandbox, { filename: 'toast-manager.js' });
   return sandbox.window.ToastManager;
 }
 

@@ -209,8 +209,7 @@ function isPublicAssetPath(reqPath) {
         '/index.html',
         '/manifest.json',
         '/sw.js',
-        '/version.txt',
-        '/announcements.json'
+        '/version.txt'
     ]);
     if (allowedExactPaths.has(normalizedPath)) {
         return true;

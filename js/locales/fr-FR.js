@@ -114,6 +114,10 @@ window.translations = {
             rectangle: 'Rectangle',
             circle: 'Cercle',
             ellipse: 'Ellipse',
+
+            triangle: 'Triangle',
+
+            diamond: 'Losange',
             arrow: 'Flèche',
             doubleArrow: 'Double flèche',
             arrowSize: 'Taille de flèche',
@@ -192,23 +196,7 @@ window.translations = {
         }
     },
 
-    selection: {
-        edit: 'Modifier',
-        color: 'Couleur',
-        copy: 'Copier',
-        delete: 'Supprimer',
-        done: 'Terminé',
-        rotate90: 'Rotation 90°',
-        flipH: 'Retourner horizontalement',
-        layer: 'Calque',
-        layerFront: 'Mettre au premier plan',
-        layerBack: 'Envoyer à l’arrière',
-        layerUp: 'Avancer d’un niveau',
-        layerDown: 'Reculer d’un niveau',
-        group: 'Grouper',
-        ungroup: 'Dissocier',
-        position: 'Position'
-    },
+
 
     // Line Style Modal
     lineStyleModal: {
@@ -217,14 +205,7 @@ window.translations = {
         preview: 'Aperçu'
     },
 
-    // Time Display
-    timeDisplay: {
-        options: 'Options d\'affichage de l\'heure',
-        showDate: 'Afficher la date',
-        showTime: 'Afficher l\'heure',
-        settings: 'Paramètres',
-        fullscreenDisplay: 'Plein écran'
-    },
+
 
     // Background
     background: {

@@ -114,6 +114,10 @@ window.translations = {
             rectangle: 'Rechteck',
             circle: 'Kreis',
             ellipse: 'Ellipse',
+
+            triangle: 'Dreieck',
+
+            diamond: 'Raute',
             arrow: 'Pfeil',
             doubleArrow: 'Doppelpfeil',
             arrowSize: 'Pfeilgröße',
@@ -194,23 +198,7 @@ window.translations = {
         }
     },
 
-    selection: {
-        edit: 'Bearbeiten',
-        color: 'Farbe',
-        copy: 'Kopieren',
-        delete: 'Löschen',
-        done: 'Fertig',
-        rotate90: '90° drehen',
-        flipH: 'Horizontal spiegeln',
-        layer: 'Ebene',
-        layerFront: 'In den Vordergrund',
-        layerBack: 'In den Hintergrund',
-        layerUp: 'Eine Ebene nach vorne',
-        layerDown: 'Eine Ebene nach hinten',
-        group: 'Gruppieren',
-        ungroup: 'Gruppierung aufheben',
-        position: 'Position'
-    },
+
 
     // Line Style Modal
     lineStyleModal: {
@@ -219,14 +207,7 @@ window.translations = {
         preview: 'Vorschau'
     },
 
-    // Time Display
-    timeDisplay: {
-        options: 'Zeitanzeigeoptionen',
-        showDate: 'Datum anzeigen',
-        showTime: 'Uhrzeit anzeigen',
-        settings: 'Einstellungen',
-        fullscreenDisplay: 'Vollbildanzeige'
-    },
+
 
     // Background
     background: {

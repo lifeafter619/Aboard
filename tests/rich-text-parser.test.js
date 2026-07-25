@@ -14,16 +14,8 @@ function loadRichTextParser() {
   return sandbox.window.RichTextParser;
 }
 
-async function loadRuntimeRichTextParser() {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'infra', 'rich-text-parser.js'), 'utf8')
-    .replace(/^export class RichTextParser/m, 'class RichTextParser')
-    .replace(/^export function registerRichTextParserGlobal/m, 'function registerRichTextParserGlobal');
-  const sandbox = { window: {} };
-  sandbox.globalThis = sandbox;
-  vm.createContext(sandbox);
-  vm.runInContext(`${source}\nregisterRichTextParserGlobal(window);`, sandbox, { filename: 'infra-rich-text-parser.js' });
-  return sandbox.window.RichTextParser;
-}
+// The legacy js/modules copy was removed; only the infra parser exists now,
+// so all tests exercise the single real implementation.
 
 function testFormattedUrlDoesNotIncludeGeneratedMarkupInHref() {
   const RichTextParser = loadRichTextParser();
@@ -49,7 +41,7 @@ function testUnsafeStyleDirectivesRenderContentWithoutStyleAttribute() {
 }
 
 async function testRuntimeParserRejectsUnsafeStyleDirectives() {
-  const RichTextParser = await loadRuntimeRichTextParser();
+  const RichTextParser = loadRichTextParser();
 
   assert.equal(
     RichTextParser.parse('[color=red;background:url(javascript:alert(1))]Title[/color]'),
@@ -62,7 +54,7 @@ async function testRuntimeParserRejectsUnsafeStyleDirectives() {
 }
 
 async function testUserTextThatLooksLikeLinkPlaceholderStaysText() {
-  const RichTextParser = await loadRuntimeRichTextParser();
+  const RichTextParser = loadRichTextParser();
 
   assert.equal(
     RichTextParser.parse('Keep %%ABOARD_LINK_0%% literal'),

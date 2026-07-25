@@ -208,6 +208,8 @@
 
 ### D2. `announcements.json` 是死配置：编辑它发公告永远不生效
 
+> **已修复（2026-07-25）**：采用方案 1（删除）。`announcements.json`、`build-static.js` 复制条目、`server.js` 白名单条目均已移除，`server-static-paths.test.js` 通过。
+
 - **严重度**：低（维护者陷阱，非用户可见故障）
 - **验证方式**：静态确认（全仓库仅 `scripts/build-static.js` 复制它、`server.js` 白名单它，无任何 fetch；实际公告内容来自 `js/features/announcement/announcement-manager.js` 读 `i18n.t('settings.announcement.content')`，即 locale 文件）
 - **背景**：git 历史（8dabc75）显示该文件曾是公告数据源，后被 i18n 方案替代成为遗留。
@@ -218,6 +220,8 @@
 
 ### D3. 非核心语言缺 90–117 个键，UI 大面积回退英文；locale 测试只检查 2 个键
 
+> **部分修复（2026-07-25）**：zh-TW 已补齐全部缺键（parity=0）；`locale-files.test.js` 已加入"以 zh-CN 为基准的键 parity 断言"（其余语言按当前缺口设 allowance，只许缩小）与"顶层 section 不得重复"断言。另发现并修复：全部 8 个语言文件存在重复的 `selection`/`timeDisplay` 顶层块（后者静默覆盖前者），已去重。de/fr/es/ja/ko 的补译仍待做。
+
 - **严重度**：低（不崩，观感问题；zh-TW 用户会看到简体回退）
 - **验证方式**：静态确认（审查时以 zh-CN 801 键为基准统计：fr-FR/es-ES 缺 117、de-DE 缺 106、ja-JP/ko-KR 缺 92、zh-TW 缺 34；缺失键含 `export.selectAtLeastOnePage`、`timer.customSoundQuotaExceeded`、`settings.display.showToolbarText` 等）
 - **位置**：`js/locales/*.js` 与 `js/locales/overrides.js`；测试缺口在 `tests/locale-files.test.js`（只断言 `common.keepCentered` 与 `gestures.pinchZoom` 两个键，不含键 parity、不含 help/ 子目录）
@@ -227,6 +231,8 @@
 - **提醒**：本轮已新增的键：`randomPicker.rangeMin/rangeMax`（8 语言已补齐）、`errors.sessionSaveFailed`（**只补了 zh-CN 与 en-US**，其余 6 语言靠回退链——补译时记得带上）。
 
 ### D4. 死代码副本与"自测自"的失效测试清理
+
+> **大部分已修复（2026-07-25）**：已删除 `js/modules/gif-manager.js`、`js/modules/rich-text-parser.js`、`js/modules/dialog-manager.js`、`js/modules/toast-manager.js`、`js/text-insertion.js`、`js/app/critical-modules.js`、`js/app/performance-config.js`；`rich-text-parser.test.js` 改为单副本测试，`toast-manager.test.js` 已改指向 features 版。**未删**：`js/stroke-controls.js` —— SelectionManager 的构造门槛（`drawingEngine && strokeControls`，见 `create-board-runtime-dependencies.js` 与 `board-construction.js`）依赖其实例存在，直接删除会导致选择功能整体不创建，需要先重构构造链再删。
 
 - **严重度**：低（当前零线上影响；风险是未来误接回旧副本导致双实例/旧逻辑复活）
 - **验证方式**：静态确认（已核对实际加载链：`index.html` → `js/app/bootstrap.js` → `create-app.js` 注册的是 infra/features 版；`js/app/legacy-manifest.js` 不含以下 modules 旧拷贝）

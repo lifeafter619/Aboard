@@ -13,7 +13,6 @@ const INCLUDED_PATHS = [
     'img',
     'js',
     'sounds',
-    'announcements.json',
     'index.html',
     'manifest.json',
     'sw.js',
