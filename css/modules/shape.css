@@ -262,7 +262,7 @@
 /* Shape hint text */
 .shape-hint {
     font-size: 12px;
-    color: #777;
+    color: #666;
     margin-top: 12px;
     padding: 10px 12px;
     background: linear-gradient(135deg, #f8f9fa 0%, #f0f1f2 100%);

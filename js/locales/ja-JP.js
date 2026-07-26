@@ -536,6 +536,10 @@ window.translations = {
                 '• 設定で無限キャンバスまたはページモードを切り替え',
                 '• タッチとマウス入力の両方をサポート',
                 '',
+                '[color=#007AFF]リンク：[/color]',
+                '• GitHubプロジェクト：https://github.com/lifeafter619/Aboard',
+                '• 作者ブログ：https://66619.eu.org',
+                '',
                 'クリエイティブな作業をお楽しみください！'
             ]
         },
@@ -640,6 +644,10 @@ window.translations = {
         classroomMode: '授業集中'
     },
 
+    canvas: {
+        drawingSurface: 'ホワイトボード描画エリア'
+    },
+
     classroom: {
         modeActive: '授業中',
         prevPage: '前のページ',
@@ -654,6 +662,7 @@ window.translations = {
         randomPicker: 'ランダム指名',
         scoreboard: 'スコアボード',
         teachingTools: '教具',
+        laserPointer: 'レーザーポインター',
         exit: '授業集中を終了'
     },
 

@@ -54,6 +54,8 @@ function testClassroomControlBarExistsOutsideFeaturePanel() {
     'classroom-eraser-btn',
     'classroom-select-btn',
     'classroom-pan-btn',
+    'classroom-laser-btn',
+    'classroom-laser-overlay',
     'classroom-pen-settings-btn',
     'classroom-pen-settings',
     'classroom-pen-size-slider',
@@ -85,6 +87,9 @@ function testClassroomControlBarExistsOutsideFeaturePanel() {
     const toolMarkup = getElementMarkup(indexHtml, `classroom-${tool}-btn`);
     assert.match(toolMarkup, new RegExp(`data-classroom-tool="${tool}"`), `classroom dock should expose the ${tool} tool`);
   });
+
+  const laserMarkup = getElementMarkup(indexHtml, 'classroom-laser-btn');
+  assert.match(laserMarkup, /aria-pressed="false"/, 'laser pointer should expose its inactive state');
 
   ['#000000', '#FF3B30', '#0A63C9', '#16815A'].forEach((color) => {
     assert.match(indexHtml, new RegExp(`data-classroom-color="${color}"`, 'i'), `classroom pen settings should expose ${color}`);
@@ -132,6 +137,10 @@ function testClassroomRuntimeOwnsModeStatePaginationAndTimer() {
   assert.match(classroomMode, /scoreboard-feature-btn/, 'classroom tools should reuse the scoreboard');
   assert.match(classroomMode, /more-teaching-tools-btn/, 'classroom tools should reuse teaching tools');
   assert.match(classroomMode, /this\.board\.toggleFullscreen\?\.\(\)/, 'classroom mode should expose fullscreen without exiting');
+  assert.match(classroomMode, /setLaserActive/, 'classroom mode should own laser pointer activation');
+  assert.match(classroomMode, /stopImmediatePropagation/, 'laser pointer input should not leak to drawing handlers');
+  assert.doesNotMatch(classroomMode, /historyManager\.(?:saveState|push|add)/,
+    'laser pointer should never create persistent drawing history');
 }
 
 function testClassroomModeUsesStableResponsiveDocks() {
@@ -151,6 +160,10 @@ function testClassroomModeUsesStableResponsiveDocks() {
     'quick color controls should preserve a 44px touch target');
   assert.match(css, /\.classroom-actions-panel\.show:not\(\[hidden\]\)\s*{[^}]*display:\s*grid/s,
     'classroom tools should use progressive disclosure');
+  assert.match(css, /#classroom-laser-overlay\s*{[^}]*position:\s*fixed[^}]*pointer-events:\s*none/s,
+    'laser pointer should render in a non-interactive full-screen overlay');
+  assert.match(css, /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*#classroom-laser-overlay/s,
+    'laser pointer should respect reduced-motion preferences');
 }
 
 function testClassroomControlsDoNotLeakPointerInputToCanvas() {
@@ -173,7 +186,7 @@ function testClassroomModeLocaleKeysExist() {
     [
       'modeActive', 'prevPage', 'nextPage', 'startTimer', 'pauseTimer', 'resetTimer',
       'stopwatch', 'actions', 'addPage', 'countdown', 'randomPicker', 'scoreboard',
-      'teachingTools', 'exit'
+      'teachingTools', 'laserPointer', 'exit'
     ].forEach((key) => {
       assert.match(source, new RegExp(`${key}:`), `${fileName} should translate classroom.${key}`);
     });

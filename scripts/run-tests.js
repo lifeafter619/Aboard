@@ -38,6 +38,7 @@ const CORE_TESTS = [
   'tests/background-pattern-panel-layout.test.js',
   'tests/form-focus-ring-ux.test.js',
   'tests/panel-adaptation-ux.test.js',
+  'tests/active-control-aria.test.js',
   'tests/classroom-mode-ux.test.js',
   'tests/classroom-mode-runtime.test.js',
   'tests/main-startup-storage-resilience.test.js'
@@ -80,6 +81,7 @@ const FULL_TESTS = [
   'tests/background-pattern-panel-layout.test.js',
   'tests/form-focus-ring-ux.test.js',
   'tests/panel-adaptation-ux.test.js',
+  'tests/active-control-aria.test.js',
   'tests/classroom-mode-ux.test.js',
   'tests/classroom-mode-runtime.test.js',
   'tests/background-ui-plot-color-escaping.test.js',

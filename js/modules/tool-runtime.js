@@ -13,6 +13,16 @@ function removeClassIfPresent(element, className) {
     element?.classList?.remove(className);
 }
 
+function setActiveButtonState(button, active) {
+    if (!button) {
+        return;
+    }
+    button.classList?.toggle?.('active', active);
+    if (button.hasAttribute?.('aria-pressed')) {
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    }
+}
+
 function collapseFeatureArea(featureArea) {
     removeClassIfPresent(featureArea, 'show');
     if (featureArea) {
@@ -156,7 +166,7 @@ function updateUI() {
     const configArea = getElement('config-area');
 
     document.querySelectorAll('.tool-btn').forEach(btn => {
-        btn.classList.remove('active');
+        setActiveButtonState(btn, false);
     });
     
     document.querySelectorAll('.config-panel').forEach(panel => {
@@ -169,35 +179,35 @@ function updateUI() {
         shapeFeatureBtn.classList.toggle('active', tool === 'shape');
     }
     if (tool === 'pen') {
-        addClassIfPresent(getElement('pen-btn'), 'active');
+        setActiveButtonState(getElement('pen-btn'), true);
         addClassIfPresent(getElement('pen-config'), 'active');
         this.canvas.style.cursor = 'crosshair';
     } else if (tool === 'shape') {
-        addClassIfPresent(getElement('more-btn'), 'active');
+        setActiveButtonState(getElement('more-btn'), true);
         addClassIfPresent(getElement('shape-config'), 'active');
         this.canvas.style.cursor = 'crosshair';
     } else if (tool === 'pan') {
-        addClassIfPresent(getElement('pan-btn'), 'active');
+        setActiveButtonState(getElement('pan-btn'), true);
         this.canvas.style.cursor = 'grab';
     } else if (tool === 'select') {
-        addClassIfPresent(getElement('select-btn'), 'active');
+        setActiveButtonState(getElement('select-btn'), true);
         addClassIfPresent(getElement('select-config'), 'active');
         this.canvas.style.cursor = 'default';
     } else if (tool === 'eraser') {
-        addClassIfPresent(getElement('eraser-btn'), 'active');
+        setActiveButtonState(getElement('eraser-btn'), true);
         addClassIfPresent(getElement('eraser-config'), 'active');
         this.canvas.style.cursor = 'pointer';
         const currentShape = this.drawingEngine.eraserShape === 'rectangle' ? 'rectangle' : 'circle';
         document.querySelectorAll('.eraser-shape-btn').forEach((btn) => {
-            btn.classList.toggle('active', btn.dataset.eraserShape === currentShape);
+            setActiveButtonState(btn, btn.dataset.eraserShape === currentShape);
         });
         this.syncEraserSizeControls();
     } else if (tool === 'background') {
-        addClassIfPresent(getElement('background-btn'), 'active');
+        setActiveButtonState(getElement('background-btn'), true);
         addClassIfPresent(getElement('background-config'), 'active');
         this.canvas.style.cursor = 'default';
     } else if (tool === 'more') {
-        addClassIfPresent(getElement('more-btn'), 'active');
+        setActiveButtonState(getElement('more-btn'), true);
         const featureArea = getElement('feature-area');
         if (featureArea?.classList?.contains('show')) {
             this.positionFeatureArea();

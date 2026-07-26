@@ -160,6 +160,15 @@ window.locale_translation_overrides = (() => {
                 settings: '設定',
                 dragToMove: 'ドラッグして移動'
             },
+            errors: {
+                fileReadFailed: '選択したファイルを読み取れませんでした。ファイルが破損していないか確認して、もう一度お試しください。',
+                storageWriteFailed: '保存できませんでした。ブラウザーのストレージ権限を確認して、もう一度お試しください。',
+                sessionSaveFailed: 'ホワイトボードの自動保存に失敗しました。現在の内容を復元できない可能性があります。早めにバックアップをエクスポートするか、設定で保存領域を整理してください。',
+                sessionWriteConflict: '別の Aboard タブが自動保存を使用しています。このタブの変更は一時的に自動保存されません。別のタブを閉じてから続行してください。',
+                sessionDataClearedElsewhere: '別のタブで保存済みのホワイトボードデータが消去されました。必要な内容をエクスポートしてから、このタブを再読み込みしてください。',
+                clearLocalDataBlocked: '開いている別の Aboard ウィンドウにより、ローカルキャッシュの消去がブロックされました。他の Aboard タブを閉じてから、もう一度お試しください。',
+                clearLocalDataFailed: 'ローカルキャッシュの消去が完了しませんでした。後でもう一度お試しください。'
+            },
             teachingTools: {
                 increaseCount: '{tool} の数を増やす',
                 decreaseCount: '{tool} の数を減らす'
@@ -196,7 +205,8 @@ window.locale_translation_overrides = (() => {
                     oldValue: '旧値',
                     newValue: '新値',
                     confirm: '確認してインポート',
-                    cancel: 'キャンセル'
+                    cancel: 'キャンセル',
+                    noChanges: '差分はありません。設定内容は同一です。'
                 },
                 display: {
                     showImportExportBtn: 'インポート/エクスポートボタンを表示',
@@ -276,12 +286,16 @@ window.locale_translation_overrides = (() => {
                 timeFontSize: '時刻文字サイズ',
                 minimal: '最小表示',
                 minimalMode: '最小表示（ダブルクリックで復元）',
-                preview: '試聴'
+                preview: '試聴',
+                customSoundQuotaExceeded: '保存領域が不足しています。カスタム通知音をいくつか削除してください。'
             },
             export: {
                 selectAtLeastOnePage: '少なくとも1ページを選択してください',
                 paginationRequired: 'この機能を使うにはページ分割モードを有効にしてください',
                 noPages: 'エクスポートできるページがありません'
+            },
+            projectPackage: {
+                rasterFallbackUnavailable: 'プロジェクト内容を完全に保持するためのラスター形式のページデータを利用できません。'
             }
         },
         'ko-KR': {
@@ -292,6 +306,15 @@ window.locale_translation_overrides = (() => {
                 preview: '미리보기',
                 settings: '설정',
                 dragToMove: '드래그하여 이동'
+            },
+            errors: {
+                fileReadFailed: '선택한 파일을 읽을 수 없습니다. 파일이 손상되지 않았는지 확인한 후 다시 시도하세요.',
+                storageWriteFailed: '저장하지 못했습니다. 브라우저 저장소 권한을 확인한 후 다시 시도하세요.',
+                sessionSaveFailed: '화이트보드 자동 저장에 실패했습니다. 현재 내용을 복구하지 못할 수 있습니다. 가능한 한 빨리 백업을 내보내거나 설정에서 저장 공간을 정리하세요.',
+                sessionWriteConflict: '다른 Aboard 탭에서 자동 저장을 사용 중입니다. 현재 탭의 변경 사항은 당분간 자동 저장되지 않습니다. 다른 탭을 닫은 후 계속하세요.',
+                sessionDataClearedElsewhere: '다른 탭에서 저장된 화이트보드 데이터를 삭제했습니다. 필요한 내용을 먼저 내보낸 다음 현재 탭을 새로고침하세요.',
+                clearLocalDataBlocked: '열려 있는 다른 Aboard 창 때문에 로컬 캐시를 삭제할 수 없습니다. 다른 Aboard 탭을 닫은 후 다시 시도하세요.',
+                clearLocalDataFailed: '로컬 캐시 삭제가 완료되지 않았습니다. 잠시 후 다시 시도하세요.'
             },
             teachingTools: {
                 increaseCount: '{tool} 수 늘리기',
@@ -329,7 +352,8 @@ window.locale_translation_overrides = (() => {
                     oldValue: '이전 값',
                     newValue: '새 값',
                     confirm: '확인 후 가져오기',
-                    cancel: '취소'
+                    cancel: '취소',
+                    noChanges: '차이가 없습니다. 설정이 완전히 동일합니다.'
                 },
                 display: {
                     showImportExportBtn: '가져오기/내보내기 버튼 표시',
@@ -409,12 +433,16 @@ window.locale_translation_overrides = (() => {
                 timeFontSize: '시간 글꼴 크기',
                 minimal: '최소 표시',
                 minimalMode: '최소 표시 모드(더블클릭으로 복원)',
-                preview: '미리듣기'
+                preview: '미리듣기',
+                customSoundQuotaExceeded: '저장 공간이 부족합니다. 사용자 지정 알림음을 일부 삭제하세요.'
             },
             export: {
                 selectAtLeastOnePage: '최소 한 페이지를 선택하세요',
                 paginationRequired: '이 기능을 사용하려면 페이지 모드를 먼저 활성화해야 합니다',
                 noPages: '내보낼 페이지가 없습니다'
+            },
+            projectPackage: {
+                rasterFallbackUnavailable: '프로젝트 내용을 완전히 보존하는 데 필요한 래스터 페이지 데이터를 사용할 수 없습니다.'
             }
         },
         'fr-FR': {
@@ -425,6 +453,15 @@ window.locale_translation_overrides = (() => {
                 preview: 'Apercu',
                 settings: 'Parametres',
                 dragToMove: 'Faire glisser pour deplacer'
+            },
+            errors: {
+                fileReadFailed: 'Impossible de lire le fichier sélectionné. Vérifiez qu\'il n\'est pas endommagé, puis réessayez.',
+                storageWriteFailed: 'Échec de l\'enregistrement. Vérifiez les autorisations de stockage du navigateur, puis réessayez.',
+                sessionSaveFailed: 'L\'enregistrement automatique du tableau blanc a échoué. Le contenu actuel risque de ne pas pouvoir être restauré. Exportez rapidement une sauvegarde ou libérez de l\'espace dans les paramètres.',
+                sessionWriteConflict: 'Un autre onglet Aboard utilise l\'enregistrement automatique. Les modifications de cet onglet ne seront temporairement pas enregistrées automatiquement. Fermez l\'autre onglet pour continuer.',
+                sessionDataClearedElsewhere: 'Un autre onglet a effacé les données enregistrées du tableau blanc. Exportez d\'abord le contenu à conserver, puis rechargez cet onglet.',
+                clearLocalDataBlocked: 'Le nettoyage du cache local est bloqué par une autre fenêtre Aboard ouverte. Fermez les autres onglets Aboard, puis réessayez.',
+                clearLocalDataFailed: 'Le nettoyage du cache local n\'a pas pu être terminé. Réessayez plus tard.'
             },
             teachingTools: {
                 increaseCount: 'Augmenter le nombre de {tool}',
@@ -462,7 +499,8 @@ window.locale_translation_overrides = (() => {
                     oldValue: 'Ancienne valeur',
                     newValue: 'Nouvelle valeur',
                     confirm: 'Confirmer l\'importation',
-                    cancel: 'Annuler'
+                    cancel: 'Annuler',
+                    noChanges: 'Aucune différence détectée. Les réglages sont identiques.'
                 },
                 display: {
                     showImportExportBtn: 'Afficher les boutons d\'import/export',
@@ -571,12 +609,16 @@ window.locale_translation_overrides = (() => {
                 opacity: 'Opacite',
                 opacityLabel: 'Opacite : Actuelle',
                 fullscreenFontSize: 'Taille de police en plein ecran',
-                fullscreenFontSizeLabel: 'Taille de police en plein ecran : Actuelle'
+                fullscreenFontSizeLabel: 'Taille de police en plein ecran : Actuelle',
+                customSoundQuotaExceeded: 'Espace de stockage insuffisant. Supprimez quelques sons personnalisés.'
             },
             export: {
                 selectAtLeastOnePage: 'Veuillez selectionner au moins une page',
                 paginationRequired: 'Cette fonctionnalite necessite d\'activer le mode pagine',
                 noPages: 'Aucune page disponible a exporter'
+            },
+            projectPackage: {
+                rasterFallbackUnavailable: 'Les données de page matricielles nécessaires pour préserver entièrement le projet ne sont pas disponibles.'
             }
         },
         'es-ES': {
@@ -587,6 +629,15 @@ window.locale_translation_overrides = (() => {
                 preview: 'Vista previa',
                 settings: 'Configuracion',
                 dragToMove: 'Arrastra para mover'
+            },
+            errors: {
+                fileReadFailed: 'No se pudo leer el archivo seleccionado. Comprueba que no esté dañado y vuelve a intentarlo.',
+                storageWriteFailed: 'No se pudo guardar. Comprueba los permisos de almacenamiento del navegador y vuelve a intentarlo.',
+                sessionSaveFailed: 'Falló el guardado automático de la pizarra. Es posible que no se pueda recuperar el contenido actual. Exporta una copia de seguridad cuanto antes o libera espacio desde los ajustes.',
+                sessionWriteConflict: 'Otra pestaña de Aboard está usando el guardado automático. Los cambios de esta pestaña no se guardarán automáticamente por el momento. Cierra la otra pestaña para continuar.',
+                sessionDataClearedElsewhere: 'Otra pestaña borró los datos guardados de la pizarra. Exporta primero el contenido que necesites conservar y después recarga esta pestaña.',
+                clearLocalDataBlocked: 'Otra ventana de Aboard abierta impide limpiar la caché local. Cierra las demás pestañas de Aboard y vuelve a intentarlo.',
+                clearLocalDataFailed: 'No se pudo completar la limpieza de la caché local. Vuelve a intentarlo más tarde.'
             },
             teachingTools: {
                 increaseCount: 'Aumentar la cantidad de {tool}',
@@ -624,7 +675,8 @@ window.locale_translation_overrides = (() => {
                     oldValue: 'Valor anterior',
                     newValue: 'Valor nuevo',
                     confirm: 'Confirmar importacion',
-                    cancel: 'Cancelar'
+                    cancel: 'Cancelar',
+                    noChanges: 'No hay diferencias. La configuración es idéntica.'
                 },
                 display: {
                     showImportExportBtn: 'Mostrar botones de importar/exportar',
@@ -733,12 +785,16 @@ window.locale_translation_overrides = (() => {
                 opacity: 'Opacidad',
                 opacityLabel: 'Opacidad: Actual',
                 fullscreenFontSize: 'Tamano de fuente en pantalla completa',
-                fullscreenFontSizeLabel: 'Tamano de fuente en pantalla completa: Actual'
+                fullscreenFontSizeLabel: 'Tamano de fuente en pantalla completa: Actual',
+                customSoundQuotaExceeded: 'No hay espacio de almacenamiento suficiente. Elimina algunos sonidos personalizados.'
             },
             export: {
                 selectAtLeastOnePage: 'Selecciona al menos una pagina',
                 paginationRequired: 'Esta funcion requiere activar primero el modo paginado',
                 noPages: 'No hay paginas disponibles para exportar'
+            },
+            projectPackage: {
+                rasterFallbackUnavailable: 'No están disponibles los datos de página rasterizados necesarios para conservar todo el contenido del proyecto.'
             }
         },
         'de-DE': {
@@ -749,6 +805,15 @@ window.locale_translation_overrides = (() => {
                 preview: 'Vorschau',
                 settings: 'Einstellungen',
                 dragToMove: 'Zum Verschieben ziehen'
+            },
+            errors: {
+                fileReadFailed: 'Die ausgewählte Datei konnte nicht gelesen werden. Prüfen Sie, ob sie beschädigt ist, und versuchen Sie es erneut.',
+                storageWriteFailed: 'Speichern fehlgeschlagen. Prüfen Sie die Speicherberechtigung des Browsers und versuchen Sie es erneut.',
+                sessionSaveFailed: 'Die automatische Speicherung des Whiteboards ist fehlgeschlagen. Der aktuelle Inhalt kann möglicherweise nicht wiederhergestellt werden. Exportieren Sie möglichst bald eine Sicherung oder geben Sie in den Einstellungen Speicherplatz frei.',
+                sessionWriteConflict: 'Ein anderer Aboard-Tab verwendet die automatische Speicherung. Änderungen in diesem Tab werden vorübergehend nicht automatisch gespeichert. Schließen Sie den anderen Tab, um fortzufahren.',
+                sessionDataClearedElsewhere: 'Ein anderer Tab hat die gespeicherten Whiteboard-Daten gelöscht. Exportieren Sie zuerst alle Inhalte, die Sie behalten möchten, und laden Sie diesen Tab anschließend neu.',
+                clearLocalDataBlocked: 'Ein anderes geöffnetes Aboard-Fenster blockiert das Löschen des lokalen Caches. Schließen Sie die anderen Aboard-Tabs und versuchen Sie es erneut.',
+                clearLocalDataFailed: 'Der lokale Cache konnte nicht vollständig gelöscht werden. Versuchen Sie es später erneut.'
             },
             teachingTools: {
                 increaseCount: 'Anzahl fur {tool} erhohen',
@@ -786,7 +851,8 @@ window.locale_translation_overrides = (() => {
                     oldValue: 'Alter Wert',
                     newValue: 'Neuer Wert',
                     confirm: 'Import bestatigen',
-                    cancel: 'Abbrechen'
+                    cancel: 'Abbrechen',
+                    noChanges: 'Keine Unterschiede gefunden. Die Einstellungen sind identisch.'
                 },
                 display: {
                     showImportExportBtn: 'Import-/Export-Schaltflachen anzeigen',
@@ -895,12 +961,16 @@ window.locale_translation_overrides = (() => {
                 opacity: 'Transparenz',
                 opacityLabel: 'Transparenz: Aktuell',
                 fullscreenFontSize: 'Schriftgrosse im Vollbild',
-                fullscreenFontSizeLabel: 'Schriftgrosse im Vollbild: Aktuell'
+                fullscreenFontSizeLabel: 'Schriftgrosse im Vollbild: Aktuell',
+                customSoundQuotaExceeded: 'Nicht genügend Speicherplatz. Löschen Sie einige benutzerdefinierte Töne.'
             },
             export: {
                 selectAtLeastOnePage: 'Bitte wahlen Sie mindestens eine Seite aus',
                 paginationRequired: 'Diese Funktion erfordert den paginierten Modus',
                 noPages: 'Keine Seiten zum Exportieren verfugbar'
+            },
+            projectPackage: {
+                rasterFallbackUnavailable: 'Die Rasterseitendaten, die zur vollständigen Erhaltung des Projektinhalts erforderlich sind, sind nicht verfügbar.'
             }
         }
     };

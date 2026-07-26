@@ -96,7 +96,7 @@
         <div id="gif-layer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;"></div>
 
         <!-- Main drawing canvas -->
-        <canvas id="canvas"></canvas>
+        <canvas id="canvas" data-i18n-aria-label="canvas.drawingSurface" aria-label="白板绘图区域"></canvas>
     </div>
     
     <!-- Eraser cursor overlay -->
@@ -126,41 +126,41 @@
             <div class="config-group">
                 <label data-i18n="tools.pen.type">Pen Type</label>
                 <div class="button-size-options pen-type-grid">
-                    <button class="pen-type-btn icon-label-option-btn active" data-pen-type="normal">
+                    <button class="pen-type-btn icon-label-option-btn active" data-pen-type="normal" aria-pressed="true">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 19l7-7 3 3-7 7-3-3z"/>
                             <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
                         </svg>
                         <span data-i18n="tools.pen.normal">Normal</span>
                     </button>
-                    <button class="pen-type-btn icon-label-option-btn" data-pen-type="pencil">
+                    <button class="pen-type-btn icon-label-option-btn" data-pen-type="pencil" aria-pressed="false">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
                         </svg>
                         <span data-i18n="tools.pen.pencil">Pencil</span>
                     </button>
-                    <button class="pen-type-btn icon-label-option-btn" data-pen-type="ballpoint">
+                    <button class="pen-type-btn icon-label-option-btn" data-pen-type="ballpoint" aria-pressed="false">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M15.5 3l5 5L7 21.5 2 22l.5-5L15.5 3z"/>
                             <line x1="14" y1="6" x2="18" y2="10"/>
                         </svg>
                         <span data-i18n="tools.pen.ballpoint">Ballpoint</span>
                     </button>
-                    <button class="pen-type-btn icon-label-option-btn" data-pen-type="fountain">
+                    <button class="pen-type-btn icon-label-option-btn" data-pen-type="fountain" aria-pressed="false">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M20 2l2 2-8 8-2-2 8-8z"/>
                             <path d="M12 12c-2 2-4 6-4 8h8c0-2-2-6-4-8z"/>
                         </svg>
                         <span data-i18n="tools.pen.fountain">Fountain</span>
                     </button>
-                    <button class="pen-type-btn icon-label-option-btn" data-pen-type="brush">
+                    <button class="pen-type-btn icon-label-option-btn" data-pen-type="brush" aria-pressed="false">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z"/>
                             <path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/>
                         </svg>
                         <span data-i18n="tools.pen.brush">Brush</span>
                     </button>
-                    <button class="pen-type-btn icon-label-option-btn" data-pen-type="marker">
+                    <button class="pen-type-btn icon-label-option-btn" data-pen-type="marker" aria-pressed="false">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M14 3l7 7-3 3-7-7z"></path>
                             <path d="M4 14l7 7"></path>
@@ -216,20 +216,20 @@
             <div class="config-group">
                 <label data-i18n="tools.shape.type">Shape Type</label>
                 <div class="button-size-options shape-type-grid">
-                    <button class="shape-type-btn active" data-shape-type="line">
+                    <button class="shape-type-btn active" data-shape-type="line" aria-pressed="true">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="5" y1="19" x2="19" y2="5"></line>
                         </svg>
                         <span data-i18n="tools.shape.line">Line</span>
                     </button>
-                    <button class="shape-type-btn" data-shape-type="arrow">
+                    <button class="shape-type-btn" data-shape-type="arrow" aria-pressed="false">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="5" y1="19" x2="19" y2="5"></line>
                             <polyline points="10 5 19 5 19 14"></polyline>
                         </svg>
                         <span data-i18n="tools.shape.arrow">Arrow</span>
                     </button>
-                    <button class="shape-type-btn" data-shape-type="doubleArrow">
+                    <button class="shape-type-btn" data-shape-type="doubleArrow" aria-pressed="false">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                             <polyline points="15 8 19 12 15 16"></polyline>
@@ -237,31 +237,31 @@
                         </svg>
                         <span data-i18n="tools.shape.doubleArrow">Double Arrow</span>
                     </button>
-                    <button class="shape-type-btn" data-shape-type="rectangle">
+                    <button class="shape-type-btn" data-shape-type="rectangle" aria-pressed="false">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                         </svg>
                         <span data-i18n="tools.shape.rectangle">Rectangle</span>
                     </button>
-                    <button class="shape-type-btn" data-shape-type="circle">
+                    <button class="shape-type-btn" data-shape-type="circle" aria-pressed="false">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="9"></circle>
                         </svg>
                         <span data-i18n="tools.shape.circle">Circle</span>
                     </button>
-                    <button class="shape-type-btn" data-shape-type="ellipse">
+                    <button class="shape-type-btn" data-shape-type="ellipse" aria-pressed="false">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <ellipse cx="12" cy="12" rx="10" ry="6"></ellipse>
                         </svg>
                         <span data-i18n="tools.shape.ellipse">Ellipse</span>
                     </button>
-                    <button class="shape-type-btn" data-shape-type="triangle">
+                    <button class="shape-type-btn" data-shape-type="triangle" aria-pressed="false">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
                             <polygon points="12 4 21 20 3 20"></polygon>
                         </svg>
                         <span data-i18n="tools.shape.triangle">Triangle</span>
                     </button>
-                    <button class="shape-type-btn" data-shape-type="diamond">
+                    <button class="shape-type-btn" data-shape-type="diamond" aria-pressed="false">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
                             <polygon points="12 3 21 12 12 21 3 12"></polygon>
                         </svg>
@@ -323,13 +323,13 @@
             <div class="config-group">
                 <label data-i18n="tools.eraser.shape">形状</label>
                 <div class="button-size-options eraser-shape-options">
-                    <button class="eraser-shape-btn active" data-eraser-shape="circle">
+                    <button class="eraser-shape-btn active" data-eraser-shape="circle" aria-pressed="true">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"/>
                         </svg>
                         <span data-i18n="tools.eraser.shapeCircle">圆形</span>
                     </button>
-                    <button class="eraser-shape-btn" data-eraser-shape="rectangle">
+                    <button class="eraser-shape-btn" data-eraser-shape="rectangle" aria-pressed="false">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="3" y="3" width="18" height="18" rx="2"/>
                         </svg>
@@ -372,13 +372,13 @@
             <div class="config-group config-group-compact">
                 <label data-i18n="background.pattern">背景图案</label>
                 <div class="button-size-options pattern-grid-compact" id="pattern-grid">
-                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn active" data-pattern="blank">
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn active" data-pattern="blank" aria-pressed="true">
                         <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                             <rect x="4.5" y="5" width="15" height="14" rx="2"></rect>
                         </svg>
                         <span class="pattern-option-label" data-i18n="background.blank">空白</span>
                     </button>
-                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="dots">
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="dots" aria-pressed="false">
                         <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                             <circle cx="7" cy="7" r="1.5"></circle>
                             <circle cx="12" cy="7" r="1.5"></circle>
@@ -392,21 +392,21 @@
                         </svg>
                         <span class="pattern-option-label" data-i18n="background.dots">点阵</span>
                     </button>
-                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="grid">
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="grid" aria-pressed="false">
                         <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
                             <rect x="4.5" y="4.5" width="15" height="15" rx="1.5"></rect>
                             <path d="M9.5 4.5v15M14.5 4.5v15M4.5 9.5h15M4.5 14.5h15"></path>
                         </svg>
                         <span class="pattern-option-label" data-i18n="background.grid">方格</span>
                     </button>
-                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="tianzige">
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="tianzige" aria-pressed="false">
                         <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
                             <rect x="4.5" y="4.5" width="15" height="15" rx="1.5"></rect>
                             <path d="M12 4.5v15M4.5 12h15"></path>
                         </svg>
                         <span class="pattern-option-label" data-i18n="background.tianzige">田字格</span>
                     </button>
-                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="english-lines">
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="english-lines" aria-pressed="false">
                         <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
                             <path d="M4 6.5h16M4 10h16"></path>
                             <path d="M4 13.5h16" stroke-dasharray="2.2 2.2"></path>
@@ -414,7 +414,7 @@
                         </svg>
                         <span class="pattern-option-label" data-i18n="background.english4line">四线格</span>
                     </button>
-                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="music-staff">
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="music-staff" aria-pressed="false">
                         <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
                             <path d="M4 6h16M4 9h16M4 12h16M4 15h16M4 18h16"></path>
                             <path d="M13.5 7.5v7"></path>
@@ -422,7 +422,7 @@
                         </svg>
                         <span class="pattern-option-label" data-i18n="background.musicStaff">五线谱</span>
                     </button>
-                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn pattern-coordinate-choice" data-pattern="coordinate">
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn pattern-coordinate-choice" data-pattern="coordinate" aria-pressed="false">
                         <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                             <path d="M5 19.5h14M5 19.5V5"></path>
                             <path d="M16 8l3-3 3 3"></path>
@@ -432,7 +432,7 @@
                         </svg>
                         <span class="pattern-option-label" data-i18n="background.coordinate">坐标系</span>
                     </button>
-                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn pattern-coordinate-choice" data-pattern="polar">
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn pattern-coordinate-choice" data-pattern="polar" aria-pressed="false">
                         <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
                             <circle cx="12" cy="12" r="2.5"></circle>
                             <circle cx="12" cy="12" r="5.5"></circle>
@@ -441,7 +441,7 @@
                         </svg>
                         <span class="pattern-option-label" data-i18n="background.polar">极坐标</span>
                     </button>
-                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="image" id="image-pattern-btn">
+                    <button class="pattern-option-btn icon-label-option-btn pattern-choice-btn" data-pattern="image" id="image-pattern-btn" aria-pressed="false">
                         <svg class="pattern-option-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
                             <rect x="4" y="5" width="16" height="14" rx="2"></rect>
                             <circle cx="9" cy="10" r="1.5"></circle>
@@ -520,19 +520,19 @@
             <div class="config-group">
                 <label data-i18n="tools.select.mode">Selection Mode</label>
                 <div class="button-size-options select-mode-options">
-                    <button class="select-mode-btn active" data-mode="click">
+                    <button class="select-mode-btn active" data-mode="click" aria-pressed="true">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M4 4l7.07 17 2.51-7.39L21 11.07z"/>
                         </svg>
                         <span data-i18n="tools.select.clickMode">Click</span>
                     </button>
-                    <button class="select-mode-btn" data-mode="rectangle">
+                    <button class="select-mode-btn" data-mode="rectangle" aria-pressed="false">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="4 2"/>
                         </svg>
                         <span data-i18n="tools.select.rectMode">Box Select</span>
                     </button>
-                    <button class="select-mode-btn" data-mode="lasso">
+                    <button class="select-mode-btn" data-mode="lasso" aria-pressed="false">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2C6.48 2 2 5.58 2 10c0 3.07 2.12 5.73 5.2 7.12L6 22l4.5-3.5C11 18.83 11.5 19 12 19c5.52 0 10-3.58 10-8S17.52 2 12 2z" stroke-dasharray="4 2"/>
                         </svg>
@@ -690,6 +690,8 @@
         </button>
     </div>
 
+    <canvas id="classroom-laser-overlay" aria-hidden="true" hidden></canvas>
+
     <!-- Classroom mode controls -->
     <div id="classroom-mode-bar" role="toolbar" aria-label="授课中" tabindex="-1" hidden>
         <div class="classroom-tool-dock">
@@ -719,6 +721,14 @@
                     <path d="M14 10V4a2 2 0 0 0-4 0v6"></path>
                     <path d="M10 10.5V6a2 2 0 0 0-4 0v8"></path>
                     <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"></path>
+                </svg>
+            </button>
+            <button id="classroom-laser-btn" type="button" class="classroom-tool-btn classroom-laser-btn" title="激光笔" aria-label="激光笔" aria-pressed="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 20l6.5-6.5"></path>
+                    <path d="M9 15l-2-2 7.5-7.5 2 2z"></path>
+                    <path d="M17 3v-2M21 7h2M19.8 4.2l1.4-1.4"></path>
+                    <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"></circle>
                 </svg>
             </button>
             <span class="classroom-dock-divider" aria-hidden="true"></span>
@@ -1734,7 +1744,7 @@
             </svg>
             <span>重做</span>
         </button>
-        <button id="pen-btn" class="tool-btn active" data-tool="pen">
+        <button id="pen-btn" class="tool-btn active" data-tool="pen" aria-pressed="true">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
                 <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
@@ -1743,7 +1753,7 @@
             </svg>
             <span data-i18n="toolbar.pen">笔</span>
         </button>
-        <button id="pan-btn" class="tool-btn" data-tool="pan">
+        <button id="pan-btn" class="tool-btn" data-tool="pan" aria-pressed="false">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
                 <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
@@ -1752,14 +1762,14 @@
             </svg>
             <span data-i18n="toolbar.move">移动</span>
         </button>
-        <button id="select-btn" class="tool-btn" data-tool="select">
+        <button id="select-btn" class="tool-btn" data-tool="select" aria-pressed="false">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path>
                 <path d="M13 13l6 6"></path>
             </svg>
             <span data-i18n="toolbar.select">选择</span>
         </button>
-        <button id="eraser-btn" class="tool-btn" data-tool="eraser">
+        <button id="eraser-btn" class="tool-btn" data-tool="eraser" aria-pressed="false">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M20 20H7L3 16 12 7 17 12"></path>
                 <path d="M7 20l5-5"></path>
@@ -1773,7 +1783,7 @@
             </svg>
             <span data-i18n="toolbar.clear">清空</span>
         </button>
-        <button id="background-btn" class="tool-btn" data-tool="background">
+        <button id="background-btn" class="tool-btn" data-tool="background" aria-pressed="false">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                 <circle cx="8.5" cy="8.5" r="1.5"></circle>
@@ -1781,7 +1791,7 @@
             </svg>
             <span data-i18n="toolbar.background">背景</span>
         </button>
-        <button id="more-btn" class="tool-btn" data-tool="more" aria-controls="feature-area" aria-expanded="false">
+        <button id="more-btn" class="tool-btn" data-tool="more" aria-controls="feature-area" aria-expanded="false" aria-pressed="false">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="1"></circle>
                 <circle cx="12" cy="5" r="1"></circle>

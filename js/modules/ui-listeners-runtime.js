@@ -5,6 +5,18 @@ function bindIfPresent(element, eventName, handler, options) {
         element?.addEventListener?.(eventName, handler, options);
 }
 
+function setActiveButtonState(button, active) {
+        if (!button) {
+            return;
+        }
+        button.classList?.toggle?.('active', active);
+        button.setAttribute?.('aria-pressed', active ? 'true' : 'false');
+}
+
+function setExclusiveButtonState(buttons, activeButton) {
+        buttons.forEach((button) => setActiveButtonState(button, button === activeButton));
+}
+
 function normalizeSettingsNumberInputValue(rawValue, {
         min,
         max,
@@ -116,8 +128,7 @@ function setupToolConfigListeners() {
                     return;
                 }
                 this.drawingEngine.setPenType(penType);
-                document.querySelectorAll('.pen-type-btn').forEach(b => b.classList.remove('active'));
-                targetButton.classList.add('active');
+                setExclusiveButtonState(document.querySelectorAll('.pen-type-btn'), targetButton);
             });
         });
         
@@ -230,8 +241,7 @@ function setupToolConfigListeners() {
             btn.addEventListener('click', (e) => {
                 const targetBtn = e.currentTarget;
                 this.drawingEngine.setEraserShape(targetBtn.dataset.eraserShape);
-                document.querySelectorAll('.eraser-shape-btn').forEach(b => b.classList.remove('active'));
-                targetBtn.classList.add('active');
+                setExclusiveButtonState(document.querySelectorAll('.eraser-shape-btn'), targetBtn);
                 // Update cursor shape
                 this.updateEraserCursorShape();
             });
@@ -334,13 +344,13 @@ function setupShapeToolConfigListeners() {
         }
 
         document.querySelectorAll('.shape-type-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.shapeType === this.shapeDrawingManager.currentShape);
+            setActiveButtonState(btn, btn.dataset.shapeType === this.shapeDrawingManager.currentShape);
             btn.addEventListener('click', (e) => {
                 const targetButton = e.currentTarget;
                 const shapeType = targetButton.dataset.shapeType;
                 this.shapeDrawingManager.setShape(shapeType);
-                document.querySelectorAll('.shape-type-btn').forEach(b => b.classList.remove('active'));
-                targetButton.classList.add('active');
+                setExclusiveButtonState(document.querySelectorAll('.shape-type-btn'), targetButton);
+                setActiveButtonState(targetButton, true);
 
                 if (arrowSizeGroup) {
                     arrowSizeGroup.style.display = (shapeType === 'arrow' || shapeType === 'doubleArrow') ? '' : 'none';
@@ -363,10 +373,9 @@ function setupShapeToolConfigListeners() {
 
 function setupSelectToolConfigListeners() {
         document.querySelectorAll('.select-mode-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.mode === this.selectionManager?.selectionMode);
+            setActiveButtonState(btn, btn.dataset.mode === this.selectionManager?.selectionMode);
             btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.select-mode-btn').forEach(b => b.classList.remove('active'));
-                e.currentTarget.classList.add('active');
+                setExclusiveButtonState(document.querySelectorAll('.select-mode-btn'), e.currentTarget);
                 const mode = e.currentTarget.dataset.mode;
                 if (this.selectionManager) {
                     this.selectionManager.selectionMode = mode;
@@ -1607,6 +1616,7 @@ function setupSettingsListeners() {
 }
 
 window.AboardUiListenersRuntime = {
+    setActiveButtonState,
     normalizeSettingsNumberInputValue,
     normalizeCanvasDimensionValue,
     setupToolConfigListeners(board) {

@@ -1,6 +1,6 @@
 {
   "name": "aboard",
-  "version": "2.4.6",
+  "version": "2.5.0",
   "description": "一个简约的web白板，更适合老师体质",
   "scripts": {
     "build": "node scripts/build-static.js",

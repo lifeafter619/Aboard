@@ -535,6 +535,10 @@ window.translations = {
                 '• Wechseln Sie in den Einstellungen zwischen unbegrenzter Leinwand oder Seitenmodus',
                 '• Unterstützt Touch- und Mauseingabe',
                 '',
+                '[color=#007AFF]Links:[/color]',
+                '• GitHub-Projekt: https://github.com/lifeafter619/Aboard',
+                '• Blog des Autors: https://66619.eu.org',
+                '',
                 'Viel Spaß beim Erstellen!'
             ]
         },
@@ -662,6 +666,10 @@ window.translations = {
         classroomMode: 'Unterrichtsfokus'
     },
 
+    canvas: {
+        drawingSurface: 'Zeichenfläche des Whiteboards'
+    },
+
     classroom: {
         modeActive: 'Unterrichtsfokus',
         prevPage: 'Vorherige Seite',
@@ -676,6 +684,7 @@ window.translations = {
         randomPicker: 'Zufallsauswahl',
         scoreboard: 'Punktestand',
         teachingTools: 'Lehrmittel',
+        laserPointer: 'Laserpointer',
         exit: 'Unterrichtsfokus verlassen'
     },
 

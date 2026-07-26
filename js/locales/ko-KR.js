@@ -536,6 +536,10 @@ window.translations = {
                 '• 설정에서 무한 캔버스 또는 페이지 모드로 전환',
                 '• 터치 및 마우스 입력 모두 지원',
                 '',
+                '[color=#007AFF]링크:[/color]',
+                '• GitHub 프로젝트: https://github.com/lifeafter619/Aboard',
+                '• 개발자 블로그: https://66619.eu.org',
+                '',
                 '창의적인 작업을 즐기세요!'
             ]
         },
@@ -640,6 +644,10 @@ window.translations = {
         classroomMode: '수업 집중'
     },
 
+    canvas: {
+        drawingSurface: '화이트보드 그리기 영역'
+    },
+
     classroom: {
         modeActive: '수업 중',
         prevPage: '이전 페이지',
@@ -654,6 +662,7 @@ window.translations = {
         randomPicker: '무작위 지명',
         scoreboard: '점수판',
         teachingTools: '교구',
+        laserPointer: '레이저 포인터',
         exit: '수업 집중 종료'
     },
 

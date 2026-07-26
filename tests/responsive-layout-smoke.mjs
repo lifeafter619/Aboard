@@ -46,6 +46,14 @@ const STATES = [
     nonOverlap: [['#config-area', '#toolbar']]
   },
   {
+    name: 'shape-config',
+    setup: `async () => {
+      window.drawingBoard?.setTool?.('shape', true);
+    }`,
+    selectors: ['#toolbar', '#history-controls', '#pagination-controls', '#config-area'],
+    nonOverlap: [['#config-area', '#toolbar']]
+  },
+  {
     name: 'background-config',
     setup: `async () => {
       window.drawingBoard?.setTool?.('background', true);
@@ -128,6 +136,43 @@ const STATES = [
       '#classroom-actions-btn',
       '#classroom-fullscreen-btn',
       '#classroom-exit-btn'
+    ],
+    nonOverlap: [['.classroom-tool-dock', '.classroom-session-dock']]
+  },
+  {
+    name: 'classroom-laser',
+    setup: `async () => {
+      const board = window.drawingBoard;
+      if (!board?.classroomModeManager && typeof window.AboardClassroomModeManager === 'function') {
+        board.classroomModeManager = new window.AboardClassroomModeManager(board);
+      }
+      board?.classroomModeManager?.enter?.();
+      window.__laserHistoryLengthBefore = board?.historyManager?.history?.length ?? 0;
+      const button = document.getElementById('classroom-laser-btn');
+      const rect = button?.getBoundingClientRect?.();
+      const hitTarget = rect
+        ? document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+        : null;
+      window.__laserButtonHitTarget = Boolean(button && (hitTarget === button || button.contains(hitTarget)));
+      button?.click?.();
+      document.dispatchEvent(new PointerEvent('pointermove', {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 1,
+        pointerType: 'mouse',
+        isPrimary: true,
+        buttons: 0,
+        clientX: Math.round(window.innerWidth / 2),
+        clientY: Math.round(window.innerHeight / 2)
+      }));
+      board?.classroomModeManager?.renderLaserFrame?.();
+    }`,
+    selectors: [
+      '#classroom-mode-bar',
+      '#classroom-laser-overlay',
+      '.classroom-tool-dock',
+      '.classroom-session-dock',
+      '#classroom-laser-btn[aria-pressed="true"]'
     ],
     nonOverlap: [['.classroom-tool-dock', '.classroom-session-dock']]
   },
@@ -562,6 +607,33 @@ async function runState(cdp, viewport, state) {
       }
     }
 
+    if (state.name === 'shape-config') {
+      const configArea = document.getElementById('config-area');
+      const shapePanel = document.querySelector('#shape-config.active');
+      if (!isVisible(shapePanel)) {
+        issues.push({ type: 'shape-panel-not-visible' });
+      }
+      if (isVisible(configArea)) {
+        if (hasHorizontalOverflow(configArea)) {
+          issues.push({
+            type: 'horizontal-overflow',
+            selector: '#config-area',
+            clientWidth: configArea.clientWidth,
+            scrollWidth: configArea.scrollWidth
+          });
+        }
+        const overflowY = getComputedStyle(configArea).overflowY;
+        if (configArea.scrollHeight > configArea.clientHeight + 2 && !['auto', 'scroll'].includes(overflowY)) {
+          issues.push({
+            type: 'shape-panel-not-scrollable',
+            overflowY,
+            clientHeight: configArea.clientHeight,
+            scrollHeight: configArea.scrollHeight
+          });
+        }
+      }
+    }
+
     if (state.name.startsWith('background')) {
       ['#config-area', '#background-config', '#pattern-grid', '#background-coordinate-actions'].forEach((selector) => {
         const element = document.querySelector(selector);
@@ -615,6 +687,50 @@ async function runState(cdp, viewport, state) {
           issues.push({ type: 'classroom-ui-not-hidden', selector });
         }
       });
+
+      if (state.name === 'classroom-laser') {
+        if (window.__laserButtonHitTarget !== true) {
+          issues.push({ type: 'laser-button-not-hit-target' });
+        }
+        const overlay = document.getElementById('classroom-laser-overlay');
+        const context = overlay?.getContext?.('2d');
+        if (overlay && context) {
+          const scaleX = overlay.width / window.innerWidth;
+          const scaleY = overlay.height / window.innerHeight;
+          const sampleSize = Math.max(8, Math.round(24 * Math.max(scaleX, scaleY)));
+          const sampleX = Math.max(0, Math.round((window.innerWidth / 2) * scaleX - sampleSize / 2));
+          const sampleY = Math.max(0, Math.round((window.innerHeight / 2) * scaleY - sampleSize / 2));
+          const pixels = context.getImageData(sampleX, sampleY, sampleSize, sampleSize).data;
+          let paintedPixels = 0;
+          for (let index = 3; index < pixels.length; index += 4) {
+            if (pixels[index] > 0) paintedPixels += 1;
+          }
+          if (paintedPixels === 0) {
+            const manager = window.drawingBoard?.classroomModeManager;
+            issues.push({
+              type: 'laser-overlay-blank',
+              pointer: manager?.currentLaserPoint || null,
+              trailPointCount: manager?.laserPoints?.length ?? null,
+              framePending: Boolean(manager?.laserFrameId),
+              overlayWidth: overlay.width,
+              overlayHeight: overlay.height,
+              sampleX,
+              sampleY,
+              sampleSize,
+              documentHidden: document.hidden
+            });
+          }
+        }
+
+        const historyLength = window.drawingBoard?.historyManager?.history?.length ?? 0;
+        if (historyLength !== window.__laserHistoryLengthBefore) {
+          issues.push({
+            type: 'laser-mutated-history',
+            before: window.__laserHistoryLengthBefore,
+            after: historyLength
+          });
+        }
+      }
     }
 
     return {
@@ -638,6 +754,7 @@ async function runResponsiveChecks(cdp, screenshotDir = '', viewports = VIEWPORT
       mobile: viewport.mobile
     });
     await cdp.send('Page.navigate', { url: BASE_URL });
+    await cdp.send('Page.bringToFront');
     await waitUntil(() => evaluate(cdp, 'location.href.startsWith("http://127.0.0.1") && document.readyState === "complete"'), { timeoutMs: 15000 });
     await waitUntil(() => evaluate(cdp, '!!window.drawingBoard?.drawingEngine'), { timeoutMs: 15000 });
     await wait(500);
@@ -725,6 +842,7 @@ async function main() {
     cdp = createCdpClient(await connectWebSocket(target.webSocketDebuggerUrl));
     await cdp.send('Runtime.enable');
     await cdp.send('Page.enable');
+    await cdp.send('Page.bringToFront');
     const failures = await runResponsiveChecks(cdp, screenshotDir, activeViewports, activeStates);
     if (failures.length > 0) {
       throw new Error(`Responsive layout failures:\\n${JSON.stringify(failures, null, 2)}`);

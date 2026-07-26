@@ -532,6 +532,10 @@ window.translations = {
                 '• Cambie entre lienzo infinito o modo de paginación en la configuración',
                 '• Compatible con entrada táctil y de mouse',
                 '',
+                '[color=#007AFF]Enlaces:[/color]',
+                '• Proyecto en GitHub: https://github.com/lifeafter619/Aboard',
+                '• Blog del autor: https://66619.eu.org',
+                '',
                 '¡Disfrute de su trabajo creativo!'
             ]
         },
@@ -654,6 +658,10 @@ window.translations = {
         classroomMode: 'Enfoque docente'
     },
 
+    canvas: {
+        drawingSurface: 'Área de dibujo de la pizarra'
+    },
+
     classroom: {
         modeActive: 'Enfoque docente',
         prevPage: 'Página anterior',
@@ -668,6 +676,7 @@ window.translations = {
         randomPicker: 'Selección aleatoria',
         scoreboard: 'Marcador',
         teachingTools: 'Herramientas didácticas',
+        laserPointer: 'Puntero láser',
         exit: 'Salir del enfoque docente'
     },
 

@@ -704,6 +704,10 @@ window.translations = {
         classroomMode: 'Teaching Focus'
     },
 
+    canvas: {
+        drawingSurface: 'Whiteboard drawing area'
+    },
+
     classroom: {
         modeActive: 'Teaching focus',
         prevPage: 'Previous page',
@@ -718,6 +722,7 @@ window.translations = {
         randomPicker: 'Random picker',
         scoreboard: 'Scoreboard',
         teachingTools: 'Teaching tools',
+        laserPointer: 'Laser pointer',
         exit: 'Exit teaching focus'
     },
 

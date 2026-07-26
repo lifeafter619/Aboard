@@ -15,8 +15,13 @@ function createElementStub(id) {
     disabled: false,
     hidden: false,
     value: '',
+    width: 0,
+    height: 0,
     focusCount: 0,
     dataset: {},
+    style: {
+      setProperty() {}
+    },
     classList: {
       add(className) {
         classes.add(className);
@@ -64,6 +69,23 @@ function createElementStub(id) {
     },
     focus() {
       this.focusCount += 1;
+    },
+    querySelector() {
+      return null;
+    },
+    getContext() {
+      return {
+        setTransform() {},
+        clearRect() {},
+        save() {},
+        restore() {},
+        beginPath() {},
+        moveTo() {},
+        lineTo() {},
+        stroke() {},
+        arc() {},
+        fill() {}
+      };
     }
   };
 }
@@ -76,6 +98,8 @@ function createContext() {
     'classroom-eraser-btn',
     'classroom-select-btn',
     'classroom-pan-btn',
+    'classroom-laser-btn',
+    'classroom-laser-overlay',
     'classroom-pen-settings-btn',
     'classroom-pen-settings',
     'classroom-pen-size-slider',
@@ -131,6 +155,7 @@ function createContext() {
   elements['classroom-actions-panel'].hidden = true;
   const bodyClasses = new Set();
 
+  const documentListeners = new Map();
   const document = {
     body: {
       classList: {
@@ -164,13 +189,32 @@ function createContext() {
     querySelector() {
       return null;
     },
-    addEventListener() {},
+    addEventListener(eventName, handler) {
+      const handlers = documentListeners.get(eventName) || [];
+      handlers.push(handler);
+      documentListeners.set(eventName, handlers);
+    },
     fullscreenElement: null
   };
 
+  const windowListeners = new Map();
   const window = {
     document,
-    addEventListener() {},
+    innerWidth: 1280,
+    innerHeight: 720,
+    devicePixelRatio: 1,
+    addEventListener(eventName, handler) {
+      const handlers = windowListeners.get(eventName) || [];
+      handlers.push(handler);
+      windowListeners.set(eventName, handlers);
+    },
+    matchMedia() {
+      return { matches: false };
+    },
+    requestAnimationFrame() {
+      return 1;
+    },
+    cancelAnimationFrame() {},
     i18n: {
       t(key) {
         return {
@@ -187,6 +231,7 @@ function createContext() {
           'classroom.randomPicker': 'Random picker',
           'classroom.scoreboard': 'Scoreboard',
           'classroom.teachingTools': 'Teaching tools',
+          'classroom.laserPointer': 'Laser pointer',
           'classroom.exit': 'Exit teaching focus',
           'toolbar.fullscreen': 'Fullscreen',
           'toolbar.exitFullscreen': 'Exit fullscreen'
@@ -240,7 +285,18 @@ function createContext() {
   };
   context.globalThis = context;
 
-  return { context, elements, bodyClasses, clock };
+  return {
+    context,
+    elements,
+    bodyClasses,
+    clock,
+    dispatchDocumentEvent(eventName, event) {
+      (documentListeners.get(eventName) || []).forEach((handler) => handler(event));
+    },
+    dispatchWindowEvent(eventName, event = {}) {
+      (windowListeners.get(eventName) || []).forEach((handler) => handler(event));
+    }
+  };
 }
 
 function loadClassroomMode(context) {
@@ -461,8 +517,72 @@ function testTimerTracksWallClockNotTicks() {
     'timer should keep running after reset and track time from the reset point');
 }
 
+function testLaserPointerIsTransientAndConsumesCanvasInput() {
+  const { context, elements, dispatchDocumentEvent } = createContext();
+  vm.createContext(context);
+  loadClassroomMode(context);
+
+  let historyWrites = 0;
+  const board = {
+    currentPage: 1,
+    pages: [{}],
+    drawingEngine: {
+      currentTool: 'pen',
+      currentColor: '#000000',
+      penSize: 5,
+      setColor() {},
+      setPenSize() {}
+    },
+    historyManager: {
+      canUndo() { return false; },
+      canRedo() { return false; },
+      saveState() { historyWrites += 1; }
+    },
+    exitShapeMode() {},
+    setTool() {},
+    updatePaginationUI() {},
+    toggleCoordinateSettingsPanel() {},
+    toggleCoordinatePointPanel() {}
+  };
+
+  const manager = new context.window.AboardClassroomModeManager(board);
+  manager.enter();
+  manager.setLaserActive(true);
+
+  assert.equal(manager.isLaserActive, true);
+  assert.equal(elements['classroom-laser-btn'].getAttribute('aria-pressed'), 'true');
+  assert.equal(elements['classroom-laser-overlay'].hidden, false);
+
+  const pointerEvent = {
+    pointerId: 7,
+    pointerType: 'pen',
+    clientX: 320,
+    clientY: 180,
+    button: 0,
+    buttons: 1,
+    isPrimary: true,
+    target: { closest() { return null; } },
+    preventDefaultCalled: false,
+    stopImmediatePropagationCalled: false,
+    preventDefault() { this.preventDefaultCalled = true; },
+    stopImmediatePropagation() { this.stopImmediatePropagationCalled = true; }
+  };
+  dispatchDocumentEvent('pointerdown', pointerEvent);
+
+  assert.equal(pointerEvent.preventDefaultCalled, true, 'laser input should suppress browser drawing gestures');
+  assert.equal(pointerEvent.stopImmediatePropagationCalled, true, 'laser input should not reach canvas drawing listeners');
+  assert.ok(manager.laserPoints.length > 0, 'laser contact should create an in-memory trail');
+  assert.equal(historyWrites, 0, 'laser trail should not touch drawing history');
+
+  manager.setLaserActive(false);
+  assert.equal(elements['classroom-laser-btn'].getAttribute('aria-pressed'), 'false');
+  assert.equal(elements['classroom-laser-overlay'].hidden, true);
+  assert.equal(manager.laserPoints.length, 0, 'turning the laser off should clear its transient trail');
+}
+
 (function main() {
   testEnterExitAndPaginationBehavior();
   testTimerTracksWallClockNotTicks();
+  testLaserPointerIsTransientAndConsumesCanvasInput();
   console.log('classroom-mode-runtime.test: all assertions passed');
 })();

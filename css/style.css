@@ -2817,6 +2817,27 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
 }
 
 /* Touch device specific improvements */
+@media (any-pointer: coarse) {
+    button,
+    .color-btn,
+    .pen-type-btn,
+    .icon-label-option-btn,
+    .shape-type-btn,
+    .select-mode-btn,
+    .feature-btn,
+    .config-close-btn,
+    .sound-preset-btn,
+    [role="button"] {
+        min-width: var(--touch-target-size);
+        min-height: var(--touch-target-size);
+    }
+
+    .color-btn {
+        width: var(--touch-target-size);
+        height: var(--touch-target-size);
+    }
+}
+
 @media (hover: none) and (pointer: coarse) {
     /* Larger touch targets on touch devices */
     button, 

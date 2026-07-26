@@ -11,6 +11,22 @@
     touch-action: manipulation;
 }
 
+#classroom-laser-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2395;
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    pointer-events: none;
+    touch-action: none;
+}
+
+body.classroom-mode-active #classroom-laser-overlay:not([hidden]) {
+    display: block;
+}
+
 #classroom-mode-bar[hidden] {
     display: none !important;
 }
@@ -32,7 +48,7 @@ body.classroom-mode-active #classroom-mode-bar {
     justify-content: center;
     gap: 6px;
     width: max-content;
-    min-width: 432px;
+    min-width: 486px;
     max-width: calc(100vw - 24px);
     padding: 6px;
     border: 1px solid #d7dcde;
@@ -133,6 +149,12 @@ body.classroom-mode-active #time-display {
     border-color: var(--theme-color, #0a63c9);
     background: var(--theme-color, #0a63c9);
     color: #f8fbfc;
+}
+
+.classroom-laser-btn[aria-pressed="true"] {
+    border-color: #c62828;
+    background: #c62828;
+    color: #fff;
 }
 
 .classroom-tool-btn:disabled,
@@ -516,6 +538,11 @@ body.classroom-mode-active #time-display {
         gap: 3px;
     }
 
+    .classroom-tool-dock {
+        display: grid;
+        grid-template-columns: repeat(4, var(--classroom-control-size));
+    }
+
     #classroom-page-status {
         min-width: 48px;
     }
@@ -618,5 +645,9 @@ body.classroom-mode-active #time-display {
     .classroom-tool-btn,
     .classroom-control-btn {
         transition: none;
+    }
+
+    #classroom-laser-overlay {
+        filter: none;
     }
 }

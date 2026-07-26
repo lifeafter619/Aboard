@@ -18,6 +18,33 @@ function loadLocaleFile(fileName) {
   return context.window.translations;
 }
 
+function loadLocaleOverrides() {
+  const source = fs.readFileSync(path.join(localesDir, 'overrides.js'), 'utf8');
+  const context = { window: {}, console };
+  vm.createContext(context);
+  new vm.Script(source, { filename: 'overrides.js' }).runInContext(context);
+  return context.window.locale_translation_overrides || {};
+}
+
+function deepMerge(target, source) {
+  for (const [key, value] of Object.entries(source || {})) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      target[key] = deepMerge(
+        target[key] && typeof target[key] === 'object' ? target[key] : {},
+        value
+      );
+    } else {
+      target[key] = value;
+    }
+  }
+  return target;
+}
+
+function loadEffectiveLocale(fileName, overrides) {
+  const localeId = fileName.replace(/\.js$/, '');
+  return deepMerge(loadLocaleFile(fileName), overrides[localeId]);
+}
+
 function testLocaleFilesAreValidScripts() {
   const localeFiles = fs
     .readdirSync(localesDir)
@@ -76,18 +103,19 @@ function testNoDuplicateTopLevelSections() {
   }
 }
 
-// Known translation gaps vs zh-CN. These counts may only shrink — new keys
-// must be added to every locale (or its allowance lowered here after backfill).
+// Effective dictionaries include the locale-specific override layer used by
+// the browser runtime. Every supported locale must match the baseline exactly.
 const MISSING_KEY_ALLOWANCE = {
-  'de-DE.js': 118,
-  'es-ES.js': 129,
-  'fr-FR.js': 129,
-  'ja-JP.js': 104,
-  'ko-KR.js': 104
+  'de-DE.js': 0,
+  'es-ES.js': 0,
+  'fr-FR.js': 0,
+  'ja-JP.js': 0,
+  'ko-KR.js': 0
 };
 
 function testKeyParityAgainstBaseline() {
-  const baseline = new Set(flattenKeys(loadLocaleFile('zh-CN.js')));
+  const overrides = loadLocaleOverrides();
+  const baseline = new Set(flattenKeys(loadEffectiveLocale('zh-CN.js', overrides)));
   const localeFiles = fs
     .readdirSync(localesDir)
     .filter(
@@ -95,7 +123,7 @@ function testKeyParityAgainstBaseline() {
     );
 
   for (const fileName of localeFiles) {
-    const keys = new Set(flattenKeys(loadLocaleFile(fileName)));
+    const keys = new Set(flattenKeys(loadEffectiveLocale(fileName, overrides)));
     const missing = [...baseline].filter((key) => !keys.has(key));
     const allowance = MISSING_KEY_ALLOWANCE[fileName] ?? 0;
     assert.ok(

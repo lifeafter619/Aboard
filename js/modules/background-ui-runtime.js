@@ -35,6 +35,11 @@ function escapeBackgroundUiHtml(value) {
             .replace(/'/g, '&#39;');
 }
 
+function setActiveButtonState(button, active) {
+        button?.classList?.toggle?.('active', active);
+        button?.setAttribute?.('aria-pressed', active ? 'true' : 'false');
+}
+
 function renderCoordinatePlotList(currentPattern) {
         const plotList = document.getElementById('coordinate-plot-list');
         if (!plotList) return;
@@ -148,18 +153,14 @@ function updateBackgroundUI() {
 
         // Update background color buttons
         document.querySelectorAll('.color-btn[data-bg-color]').forEach(btn => {
-            if (btn.dataset.bgColor === this.backgroundManager.backgroundColor) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
+            setActiveButtonState(btn, btn.dataset.bgColor === this.backgroundManager.backgroundColor);
         });
         
         // Update pattern buttons
         document.querySelectorAll('#pattern-grid .pattern-option-btn').forEach(btn => {
             const isPatternMatch = btn.dataset.pattern && btn.dataset.pattern === currentPattern;
             const isUploadedMatch = activeUploadedImage && btn.dataset.imageId === activeUploadedImage.id;
-            btn.classList.toggle('active', !!(isPatternMatch || isUploadedMatch));
+            setActiveButtonState(btn, !!(isPatternMatch || isUploadedMatch));
         });
         
         // Update custom color picker
@@ -343,6 +344,11 @@ function updateBackgroundUI() {
         if (!this.backgroundManager.supportsMovableOrigin(currentPattern)) {
             this.disableCoordinateOriginDragMode();
             this.setCoordinatePointMode(false);
+        }
+
+        const configArea = document.getElementById('config-area');
+        if (this.drawingEngine?.currentTool === 'background' && configArea?.classList.contains('show')) {
+            this.positionConfigArea?.();
         }
     
 }

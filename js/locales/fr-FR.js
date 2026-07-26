@@ -532,6 +532,10 @@ window.translations = {
                 '• Basculez entre le canevas infini ou le mode pagination dans les paramètres',
                 '• Prend en charge les entrées tactiles et souris',
                 '',
+                '[color=#007AFF]Liens :[/color]',
+                '• Projet GitHub : https://github.com/lifeafter619/Aboard',
+                '• Blog de l\'auteur : https://66619.eu.org',
+                '',
                 'Profitez de votre travail créatif!'
             ]
         },
@@ -654,6 +658,10 @@ window.translations = {
         classroomMode: 'Mode enseignement'
     },
 
+    canvas: {
+        drawingSurface: 'Zone de dessin du tableau blanc'
+    },
+
     classroom: {
         modeActive: 'Enseignement en cours',
         prevPage: 'Page précédente',
@@ -668,6 +676,7 @@ window.translations = {
         randomPicker: 'Tirage au sort',
         scoreboard: 'Tableau des scores',
         teachingTools: 'Outils pédagogiques',
+        laserPointer: 'Pointeur laser',
         exit: 'Quitter le mode enseignement'
     },
 

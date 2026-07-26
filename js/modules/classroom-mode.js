@@ -9,10 +9,19 @@ class ClassroomModeManager {
         this.timerInterval = null;
         this.bound = false;
         this.supportedTools = new Set(['pen', 'eraser', 'select', 'pan']);
+        this.isLaserActive = false;
+        this.laserPointerId = null;
+        this.laserPoints = [];
+        this.currentLaserPoint = null;
+        this.laserFrameId = 0;
+        this.laserTrailLifetime = 800;
+        this.laserContext = null;
 
         this.elements = {
             bar: document.getElementById('classroom-mode-bar'),
             modeStatus: document.getElementById('classroom-mode-status'),
+            laserBtn: document.getElementById('classroom-laser-btn'),
+            laserOverlay: document.getElementById('classroom-laser-overlay'),
             penSettingsBtn: document.getElementById('classroom-pen-settings-btn'),
             penSettings: document.getElementById('classroom-pen-settings'),
             penSizeSlider: document.getElementById('classroom-pen-size-slider'),
@@ -35,6 +44,11 @@ class ClassroomModeManager {
         this.colorButtons = Array.from(document.querySelectorAll?.('[data-classroom-color]') || []);
         this.actionButtons = Array.from(document.querySelectorAll?.('[data-classroom-action]') || []);
 
+        if (this.elements.laserOverlay) {
+            this.elements.laserOverlay.hidden = true;
+            this.elements.laserOverlay.setAttribute('hidden', '');
+        }
+
         this.bindEvents();
         this.syncBoardState();
         this.updateLocalizedLabels();
@@ -48,6 +62,9 @@ class ClassroomModeManager {
 
         this.toolButtons.forEach((button) => {
             button.addEventListener('click', () => this.selectTool(button.dataset.classroomTool));
+        });
+        this.elements.laserBtn?.addEventListener('click', () => {
+            this.setLaserActive(!this.isLaserActive);
         });
         this.colorButtons.forEach((button) => {
             button.addEventListener('click', () => this.setColor(button.dataset.classroomColor));
@@ -91,6 +108,19 @@ class ClassroomModeManager {
         }, true);
         document.addEventListener('keydown', (event) => this.handleKeydown(event), true);
         document.addEventListener('fullscreenchange', () => this.updateFullscreenState());
+        ['pointerdown', 'pointermove', 'pointerup', 'pointercancel'].forEach((eventName) => {
+            document.addEventListener(eventName, (event) => {
+                this.handleLaserPointerEvent(eventName, event);
+            }, { capture: true, passive: false });
+        });
+        document.addEventListener('pointerout', (event) => this.handleLaserPointerOut(event), true);
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.clearLaserTrail();
+            }
+        });
+        window.addEventListener('resize', () => this.resizeLaserOverlay());
+        window.addEventListener('blur', () => this.clearLaserTrail());
     }
 
     handleKeydown(event) {
@@ -109,6 +139,13 @@ class ClassroomModeManager {
             event.stopPropagation?.();
             this.setPenSettingsOpen(false);
             this.elements.penSettingsBtn?.focus?.({ preventScroll: true });
+            return;
+        }
+        if (this.isLaserActive) {
+            event.preventDefault();
+            event.stopPropagation?.();
+            this.setLaserActive(false);
+            this.elements.laserBtn?.focus?.({ preventScroll: true });
             return;
         }
         if (this.hasBlockingOverlay()) {
@@ -156,6 +193,7 @@ class ClassroomModeManager {
             return;
         }
 
+        this.setLaserActive(false);
         this.isActive = false;
         this.setPenSettingsOpen(false);
         this.setActionsOpen(false);
@@ -189,16 +227,230 @@ class ClassroomModeManager {
         this.board.toggleCoordinatePointPanel?.(false);
     }
 
+    setLaserActive(active) {
+        const shouldActivate = Boolean(active && this.isActive);
+        if (this.isLaserActive === shouldActivate) {
+            this.updateToolState();
+            return;
+        }
+
+        this.isLaserActive = shouldActivate;
+        this.laserPointerId = null;
+        if (shouldActivate) {
+            this.closeTransientSurfaces();
+            this.resizeLaserOverlay();
+            if (this.elements.laserOverlay) {
+                this.elements.laserOverlay.hidden = false;
+                this.elements.laserOverlay.removeAttribute('hidden');
+            }
+            document.body?.classList.add('classroom-laser-active');
+        } else {
+            document.body?.classList.remove('classroom-laser-active');
+            this.clearLaserTrail();
+            if (this.elements.laserOverlay) {
+                this.elements.laserOverlay.hidden = true;
+                this.elements.laserOverlay.setAttribute('hidden', '');
+            }
+        }
+        this.updateToolState();
+    }
+
+    resizeLaserOverlay() {
+        const overlay = this.elements.laserOverlay;
+        if (!overlay) {
+            return;
+        }
+        const pixelRatio = Math.max(1, Math.min(3, Number(window.devicePixelRatio) || 1));
+        const width = Math.max(1, Number(window.innerWidth) || 1);
+        const height = Math.max(1, Number(window.innerHeight) || 1);
+        overlay.width = Math.round(width * pixelRatio);
+        overlay.height = Math.round(height * pixelRatio);
+        this.laserContext = overlay.getContext?.('2d') || null;
+        this.laserContext?.setTransform?.(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        if (this.isLaserActive) {
+            this.renderLaserFrame();
+        }
+    }
+
+    handleLaserPointerEvent(eventName, event) {
+        if (!this.isActive || !this.isLaserActive || event?.isPrimary === false) {
+            return;
+        }
+        if (this.hasBlockingOverlay()) {
+            this.setLaserActive(false);
+            return;
+        }
+        if (event.target?.closest?.('#classroom-mode-bar')) {
+            if (eventName === 'pointermove' && event.pointerType === 'mouse') {
+                this.currentLaserPoint = null;
+                this.scheduleLaserFrame();
+            }
+            return;
+        }
+
+        const pointerType = event.pointerType || 'mouse';
+        if (eventName === 'pointerdown') {
+            if (event.button !== undefined && event.button !== 0) {
+                return;
+            }
+            this.laserPointerId = event.pointerId ?? null;
+            this.appendLaserPoint(event.clientX, event.clientY);
+            this.consumeLaserEvent(event);
+            return;
+        }
+
+        if (eventName === 'pointermove') {
+            const isMouseHover = pointerType === 'mouse' && (event.buttons === undefined || event.buttons <= 1);
+            const isContactPointer = this.laserPointerId !== null && event.pointerId === this.laserPointerId;
+            if (!isMouseHover && !isContactPointer) {
+                return;
+            }
+            this.appendLaserPoint(event.clientX, event.clientY);
+            this.consumeLaserEvent(event);
+            return;
+        }
+
+        const isTrackedPointer = this.laserPointerId !== null && event.pointerId === this.laserPointerId;
+        if (!isTrackedPointer && pointerType !== 'mouse') {
+            return;
+        }
+        this.laserPointerId = null;
+        if (pointerType === 'mouse' && eventName === 'pointerup') {
+            this.appendLaserPoint(event.clientX, event.clientY);
+        } else {
+            this.currentLaserPoint = null;
+            this.scheduleLaserFrame();
+        }
+        this.consumeLaserEvent(event);
+    }
+
+    handleLaserPointerOut(event) {
+        if (!this.isLaserActive || event.pointerType !== 'mouse' || event.relatedTarget) {
+            return;
+        }
+        this.currentLaserPoint = null;
+        this.scheduleLaserFrame();
+    }
+
+    consumeLaserEvent(event) {
+        event.preventDefault?.();
+        event.stopImmediatePropagation?.();
+    }
+
+    prefersReducedMotion() {
+        return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+    }
+
+    appendLaserPoint(x, y) {
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+            return;
+        }
+        const point = { x, y, time: Date.now() };
+        this.currentLaserPoint = point;
+        if (this.prefersReducedMotion()) {
+            this.laserPoints = [];
+        } else {
+            const minimumTime = point.time - this.laserTrailLifetime;
+            this.laserPoints = this.laserPoints.filter((entry) => entry.time >= minimumTime);
+            this.laserPoints.push(point);
+        }
+        this.scheduleLaserFrame();
+    }
+
+    scheduleLaserFrame() {
+        if (this.laserFrameId) {
+            return;
+        }
+        if (typeof window.requestAnimationFrame !== 'function') {
+            this.renderLaserFrame();
+            return;
+        }
+        this.laserFrameId = window.requestAnimationFrame(() => {
+            this.laserFrameId = 0;
+            this.renderLaserFrame();
+        });
+    }
+
+    renderLaserFrame() {
+        const context = this.laserContext;
+        if (!context || !this.elements.laserOverlay) {
+            return;
+        }
+        const width = Math.max(1, Number(window.innerWidth) || 1);
+        const height = Math.max(1, Number(window.innerHeight) || 1);
+        context.clearRect(0, 0, width, height);
+        if (!this.isLaserActive) {
+            return;
+        }
+
+        const now = Date.now();
+        const reducedMotion = this.prefersReducedMotion();
+        if (!reducedMotion) {
+            this.laserPoints = this.laserPoints.filter((point) => now - point.time <= this.laserTrailLifetime);
+            context.save();
+            context.lineCap = 'round';
+            context.lineJoin = 'round';
+            context.lineWidth = 5;
+            context.strokeStyle = '#e31b23';
+            context.shadowColor = 'rgba(227, 27, 35, 0.55)';
+            context.shadowBlur = 10;
+            for (let index = 1; index < this.laserPoints.length; index += 1) {
+                const previous = this.laserPoints[index - 1];
+                const point = this.laserPoints[index];
+                context.globalAlpha = Math.max(0, 1 - ((now - point.time) / this.laserTrailLifetime));
+                context.beginPath();
+                context.moveTo(previous.x, previous.y);
+                context.lineTo(point.x, point.y);
+                context.stroke();
+            }
+            context.restore();
+        }
+
+        if (this.currentLaserPoint) {
+            context.save();
+            context.globalAlpha = 1;
+            context.fillStyle = '#f20d19';
+            context.shadowColor = 'rgba(242, 13, 25, 0.75)';
+            context.shadowBlur = 14;
+            context.beginPath();
+            context.arc(this.currentLaserPoint.x, this.currentLaserPoint.y, 6, 0, Math.PI * 2);
+            context.fill();
+            context.restore();
+        }
+
+        if (!reducedMotion && this.laserPoints.length > 0) {
+            this.scheduleLaserFrame();
+        }
+    }
+
+    clearLaserTrail() {
+        this.laserPointerId = null;
+        this.laserPoints = [];
+        this.currentLaserPoint = null;
+        if (this.laserFrameId) {
+            window.cancelAnimationFrame?.(this.laserFrameId);
+            this.laserFrameId = 0;
+        }
+        this.laserContext?.clearRect?.(
+            0,
+            0,
+            Math.max(1, Number(window.innerWidth) || 1),
+            Math.max(1, Number(window.innerHeight) || 1)
+        );
+    }
+
     selectTool(tool) {
         if (!this.supportedTools.has(tool)) {
             return;
         }
+        this.setLaserActive(false);
         this.board.setTool?.(tool, false);
         this.closeTransientSurfaces();
         this.updateToolState();
     }
 
     togglePenSettings() {
+        this.setLaserActive(false);
         const shouldOpen = !this.isPenSettingsOpen();
         if (shouldOpen && this.board.drawingEngine?.currentTool !== 'pen') {
             this.board.setTool?.('pen', false);
@@ -257,6 +509,7 @@ class ClassroomModeManager {
     }
 
     runClassroomAction(action) {
+        this.setLaserActive(false);
         this.setActionsOpen(false);
         this.elements.actionsBtn?.focus?.({ preventScroll: true });
         if (action === 'addPage') {
@@ -285,6 +538,7 @@ class ClassroomModeManager {
         if (!/^#[0-9a-f]{6}$/i.test(String(color || ''))) {
             return;
         }
+        this.setLaserActive(false);
         this.board.drawingEngine?.setColor?.(color);
         this.syncBasePenColorControls(color);
         this.board.setTool?.('pen', false);
@@ -397,10 +651,12 @@ class ClassroomModeManager {
     updateToolState() {
         const currentTool = this.board.drawingEngine?.currentTool || 'pen';
         this.toolButtons.forEach((button) => {
-            const active = button.dataset.classroomTool === currentTool;
+            const active = !this.isLaserActive && button.dataset.classroomTool === currentTool;
             button.classList.toggle('active', active);
             button.setAttribute('aria-pressed', active ? 'true' : 'false');
         });
+        this.elements.laserBtn?.classList.toggle('active', this.isLaserActive);
+        this.elements.laserBtn?.setAttribute('aria-pressed', this.isLaserActive ? 'true' : 'false');
     }
 
     syncPenSettings() {
@@ -579,6 +835,7 @@ class ClassroomModeManager {
             const [key, fallback] = toolLabels[button.dataset.classroomTool] || ['', 'Tool'];
             this.setButtonLabel(button, key, fallback);
         });
+        this.setButtonLabel(this.elements.laserBtn, 'classroom.laserPointer', 'Laser pointer');
         this.setButtonLabel(this.elements.penSettingsBtn, 'tools.pen.colorAndSize', 'Color and size');
         this.colorButtons.forEach((button) => {
             const colorName = button.dataset.colorName || 'black';

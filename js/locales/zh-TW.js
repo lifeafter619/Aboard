@@ -699,6 +699,10 @@ window.translations = {
         classroomMode: '專注授課'
     },
 
+    canvas: {
+        drawingSurface: '白板繪圖區域'
+    },
+
     classroom: {
         modeActive: '授課中',
         prevPage: '上一頁',
@@ -713,6 +717,7 @@ window.translations = {
         randomPicker: '隨機點名',
         scoreboard: '計分板',
         teachingTools: '教具',
+        laserPointer: '雷射筆',
         exit: '退出專注授課'
     },
 
