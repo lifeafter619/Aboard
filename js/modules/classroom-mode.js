@@ -418,7 +418,8 @@ class ClassroomModeManager {
             context.restore();
         }
 
-        if (!reducedMotion && this.laserPoints.length > 0) {
+        if (!reducedMotion && this.laserPoints.length > 0
+            && typeof window.requestAnimationFrame === 'function') {
             this.scheduleLaserFrame();
         }
     }
