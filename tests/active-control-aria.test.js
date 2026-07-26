@@ -8,6 +8,7 @@ const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
 const styleCss = fs.readFileSync(path.join(rootDir, 'css', 'style.css'), 'utf8');
 const shapeCss = fs.readFileSync(path.join(rootDir, 'css', 'modules', 'shape.css'), 'utf8');
 const uiRuntimeSource = fs.readFileSync(path.join(rootDir, 'js', 'modules', 'ui-listeners-runtime.js'), 'utf8');
+const uiCoreRuntimeSource = fs.readFileSync(path.join(rootDir, 'js', 'modules', 'ui-listeners-core-runtime.js'), 'utf8');
 const toolRuntimeSource = fs.readFileSync(path.join(rootDir, 'js', 'modules', 'tool-runtime.js'), 'utf8');
 const backgroundRuntimeSource = fs.readFileSync(path.join(rootDir, 'js', 'modules', 'background-ui-runtime.js'), 'utf8');
 
@@ -44,6 +45,80 @@ function createButton() {
       return attributes.get(name) ?? null;
     }
   };
+}
+
+function createInteractiveButton(dataset) {
+  const button = createButton();
+  button.dataset = dataset;
+  button.listeners = {};
+  button.addEventListener = (eventName, handler) => {
+    button.listeners[eventName] = button.listeners[eventName] || [];
+    button.listeners[eventName].push(handler);
+  };
+  button.click = () => {
+    (button.listeners.click || []).forEach((handler) => handler({ currentTarget: button }));
+  };
+  return button;
+}
+
+// Behavioral check against the runtime that main.js actually wires
+// (uiListenersCoreRuntime.setupToolConfigListeners): clicking a pen-type or
+// eraser-shape button must flip aria-pressed for the whole group.
+function testWiredCoreRuntimeSyncsAriaPressed() {
+  const penButtons = [
+    createInteractiveButton({ penType: 'normal' }),
+    createInteractiveButton({ penType: 'pencil' })
+  ];
+  const eraserButtons = [
+    createInteractiveButton({ eraserShape: 'circle' }),
+    createInteractiveButton({ eraserShape: 'rectangle' })
+  ];
+  const sandbox = {
+    console,
+    document: {
+      getElementById: () => null,
+      querySelector: () => null,
+      querySelectorAll: (selector) => {
+        if (selector === '.pen-type-btn') return penButtons;
+        if (selector === '.eraser-shape-btn') return eraserButtons;
+        return [];
+      }
+    },
+    window: {}
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(uiCoreRuntimeSource, sandbox, { filename: 'ui-listeners-core-runtime.js' });
+  const coreRuntime = sandbox.window.AboardUiListenersCoreRuntime;
+  assert.equal(typeof coreRuntime?.setupToolConfigListeners, 'function',
+    'core runtime should expose the tool config listener setup used by main.js');
+
+  const board = {
+    drawingEngine: {
+      setPenType() {},
+      setColor() {},
+      setEraserShape() {},
+      setPenSize() {},
+      setEraserSize() {},
+      currentTool: 'pen'
+    },
+    updateEraserCursorShape() {},
+    syncEraserSizeControls() {}
+  };
+  coreRuntime.setupToolConfigListeners(board);
+
+  penButtons[1].click();
+  assert.equal(penButtons[1].getAttribute('aria-pressed'), 'true',
+    'clicked pen type should be announced as pressed');
+  assert.equal(penButtons[0].getAttribute('aria-pressed'), 'false',
+    'previous pen type should be announced as not pressed');
+  assert.equal(penButtons[1].classList.contains('active'), true);
+
+  eraserButtons[1].click();
+  assert.equal(eraserButtons[1].getAttribute('aria-pressed'), 'true',
+    'clicked eraser shape should be announced as pressed');
+  assert.equal(eraserButtons[0].getAttribute('aria-pressed'), 'false',
+    'previous eraser shape should be announced as not pressed');
 }
 
 function testSharedPressedStateHelper() {
@@ -109,6 +184,7 @@ function testHybridTouchTargetsAndHintContrast() {
 }
 
 testSharedPressedStateHelper();
+testWiredCoreRuntimeSyncsAriaPressed();
 testEveryExclusiveControlUsesPressedState();
 testCanvasHasLocalizedAccessibleName();
 testHybridTouchTargetsAndHintContrast();

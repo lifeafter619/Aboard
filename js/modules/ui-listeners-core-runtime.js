@@ -1,6 +1,18 @@
 // Visible-core UI listeners extracted from ui-listeners-runtime.js
 // These listeners power controls the user sees and can use immediately on first load.
 
+function setActiveButtonState(button, active) {
+        if (!button) {
+            return;
+        }
+        button.classList?.toggle?.('active', active);
+        button.setAttribute?.('aria-pressed', active ? 'true' : 'false');
+}
+
+function setExclusiveButtonState(buttons, activeButton) {
+        buttons.forEach((button) => setActiveButtonState(button, button === activeButton));
+}
+
 function setupToolConfigListeners() {
         const customColorPicker = document.getElementById('custom-color-picker');
         const customColorPickerBtn = document.querySelector('label[for="custom-color-picker"]');
@@ -22,8 +34,7 @@ function setupToolConfigListeners() {
                     return;
                 }
                 this.drawingEngine.setPenType(penType);
-                document.querySelectorAll('.pen-type-btn').forEach(b => b.classList.remove('active'));
-                targetButton.classList.add('active');
+                setExclusiveButtonState(document.querySelectorAll('.pen-type-btn'), targetButton);
             });
         });
         
@@ -93,36 +104,15 @@ function setupToolConfigListeners() {
             });
         }
 
-        if (shapeSizeSlider) {
-            shapeSizeSlider.addEventListener('input', (e) => {
-                const size = parseInt(e.target.value, 10);
-                this.drawingEngine.setPenSize(size);
-                if (shapeSizeValue) {
-                    shapeSizeValue.textContent = size;
-                }
-                if (penSizeSlider) {
-                    penSizeSlider.value = size;
-                }
-                if (penSizeValue) {
-                    penSizeValue.textContent = size;
-                }
+        // Note: shape-size-slider input handling lives in
+        // AboardUiListenersRuntime.setupShapeToolConfigListeners (deferred init)
+        // to avoid double-binding; the pen slider above keeps it visually in sync.
 
-                if (arrowSizeSlider && arrowSizeValue) {
-                    if (parseInt(arrowSizeSlider.value, 10) < size) {
-                        arrowSizeSlider.value = size;
-                        arrowSizeValue.textContent = size;
-                        this.shapeDrawingManager?.setArrowSize?.(size);
-                    }
-                }
-            });
-        }
-        
         document.querySelectorAll('.eraser-shape-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const targetBtn = e.currentTarget;
                 this.drawingEngine.setEraserShape(targetBtn.dataset.eraserShape);
-                document.querySelectorAll('.eraser-shape-btn').forEach(b => b.classList.remove('active'));
-                targetBtn.classList.add('active');
+                setExclusiveButtonState(document.querySelectorAll('.eraser-shape-btn'), targetBtn);
                 this.updateEraserCursorShape();
             });
         });
