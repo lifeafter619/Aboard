@@ -22,6 +22,7 @@ const MIME_TYPES = {
     '.webp': 'image/webp',
     '.ico': 'image/x-icon',
     '.txt': 'text/plain; charset=utf-8',
+    '.webmanifest': 'application/manifest+json; charset=utf-8',
     '.mp3': 'audio/mpeg',
     '.wav': 'audio/wav',
     '.woff': 'font/woff',
@@ -276,7 +277,13 @@ function serveStatic(req, reqPath, res) {
         if (hasFileStats) {
             cacheHeaders['Last-Modified'] = stats.mtime.toUTCString();
             if (isNotModifiedSince(req, stats)) {
-                res.writeHead(304, withSecurityHeaders(cacheHeaders));
+                const notModifiedHeaders = { ...cacheHeaders };
+                if (COMPRESSIBLE_EXTENSIONS.has(ext)) {
+                    // Keep 304 cache-key semantics consistent with the 200
+                    // path, which varies on Accept-Encoding.
+                    notModifiedHeaders.Vary = 'Accept-Encoding';
+                }
+                res.writeHead(304, withSecurityHeaders(notModifiedHeaders));
                 res.end();
                 return;
             }

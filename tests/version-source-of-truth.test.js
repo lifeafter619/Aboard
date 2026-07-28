@@ -44,10 +44,29 @@ function testServiceWorkerCacheVersionUsesVersionTxt() {
   assert.equal(match[1], version, 'Service Worker cache version should match version.txt');
 }
 
+function testBuildPipelineEmbedsVersionTxtInBootstrap() {
+  const bootstrap = readText('js/app/bootstrap.js');
+  const buildScript = readText('scripts/build-static.js');
+  const placeholder = '__ABOARD_BUILD_VERSION_PLACEHOLDER__';
+
+  assert.match(bootstrap, /const\s+embeddedBuildVersion\s*=\s*'__ABOARD_BUILD_VERSION_PLACEHOLDER__'/,
+    'source bootstrap should expose the build-version placeholder');
+  assert.match(buildScript, /normalizedPath\s*===\s*'js\/app\/bootstrap\.js'/,
+    'static build should identify the bootstrap module for version injection');
+  assert.match(buildScript, /content\s*=\s*content\.replace\(BUILD_VERSION_PLACEHOLDER,\s*version\)/,
+    'static build should replace the bootstrap placeholder with version.txt');
+  assert.equal(
+    bootstrap.split(placeholder).length - 1,
+    2,
+    'bootstrap should use the placeholder only for the embedded value and its source-tree fallback check'
+  );
+}
+
 function run() {
   testPackageMetadataUsesVersionTxt();
   testReadmeBadgeUsesVersionTxt();
   testServiceWorkerCacheVersionUsesVersionTxt();
+  testBuildPipelineEmbedsVersionTxtInBootstrap();
   console.log('version-source-of-truth.test: all assertions passed');
 }
 

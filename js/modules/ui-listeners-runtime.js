@@ -1446,7 +1446,8 @@ function setupSettingsListeners() {
             }
         };
 
-        document.addEventListener('mousedown', bringFloatingPanelToFront);
+        // pointerdown fires for mouse, touch, and pen — a parallel mousedown
+        // binding would double-bump the z-index counter per click.
         document.addEventListener('pointerdown', bringFloatingPanelToFront);
 }
 

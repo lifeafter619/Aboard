@@ -245,27 +245,9 @@ class EdgeDrawingManager {
             return false; // Near hypotenuse, don't block
         }
         
-        // Point is inside the set square area (upper-left triangle) and not near any edge
-        // Only block if the point is truly in the interior of the upper-left triangle
-        const interiorMargin = this.edgeTolerance * 2;
-        const effectiveWidth = width - interiorMargin * 2;
-        const effectiveHeight = height - interiorMargin * 2;
-        
-        // Guard against division by zero for very small tools
-        if (effectiveWidth <= 0 || effectiveHeight <= 0) {
-            return false; // Tool is too small to have a meaningful interior
-        }
-        
-        if (lx > tx + interiorMargin && ly > ty + interiorMargin) {
-            // Check if still within the upper-left triangle (accounting for margin)
-            const marginNormalizedX = (lx - tx - interiorMargin) / effectiveWidth;
-            const marginNormalizedY = (ly - ty - interiorMargin) / effectiveHeight;
-            if (marginNormalizedX + marginNormalizedY < 0.8) {
-                return true; // Block drawing in the interior
-            }
-        }
-        
-        return false;
+        // Edge proximity was handled above, so every remaining point in the
+        // upper-left triangle is tool body and must be blocked.
+        return true;
     }
     
     /**

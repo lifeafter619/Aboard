@@ -166,6 +166,22 @@ function testInfraBrowserCheckAvoidsEvalAndDetectsMissingModernApis() {
   );
 }
 
+function testInfraBrowserCheckDelegatesToLegacyPreflightWhenAvailable() {
+  const BrowserCheck = loadInfraBrowserCheck();
+  let initCalls = 0;
+  const win = createModernWindow(() => {});
+  win.BrowserCheck = {
+    init() {
+      initCalls += 1;
+    }
+  };
+
+  BrowserCheck.init(win, createDocumentStub());
+
+  assert.equal(initCalls, 1,
+    'module startup should reuse the legacy-safe preflight checker instead of running a divergent second implementation');
+}
+
 function testLegacyBrowserCheckAvoidsEvalAndDetectsMissingModernApis() {
   let evalCalls = 0;
   let warnings = null;
@@ -217,6 +233,7 @@ function testLegacyBrowserCheckWarnsWhenModuleSyntaxIsTooOld() {
   testIndexLoadsLegacyBrowserCheckBeforeModuleBootstrap();
   testLegacyBrowserCheckUsesLegacyParseableSyntax();
   testInfraBrowserCheckAvoidsEvalAndDetectsMissingModernApis();
+  testInfraBrowserCheckDelegatesToLegacyPreflightWhenAvailable();
   testLegacyBrowserCheckAvoidsEvalAndDetectsMissingModernApis();
   testLegacyBrowserCheckWarnsWhenModuleSyntaxIsTooOld();
   console.log('browser-check-no-eval.test: all assertions passed');

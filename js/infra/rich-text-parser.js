@@ -64,9 +64,13 @@ function linkifyEscapedText(text) {
     return `${placeholder}${suffix}`;
   });
 
+  return { text: withPlaceholders, links };
+}
+
+function restoreEscapedLinks(text, links) {
   return links.reduce((result, { placeholder, url }) => (
     result.split(placeholder).join(`<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--theme-color, #007AFF); text-decoration: none;">${url}</a>`)
-  ), withPlaceholders);
+  ), text);
 }
 
 export class RichTextParser {
@@ -95,7 +99,8 @@ export class RichTextParser {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
 
-    result = linkifyEscapedText(result);
+    const linkified = linkifyEscapedText(result);
+    result = linkified.text;
     result = result.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
     result = result.replace(/__(.*?)__/g, '<u>$1</u>');
     result = result.replace(/\[color=([^\]]+)\](.*?)\[\/color\]/g, (_, color, content) => {
@@ -124,7 +129,7 @@ export class RichTextParser {
       }).join('');
     }
 
-    return result;
+    return restoreEscapedLinks(result, linkified.links);
   }
 }
 

@@ -599,7 +599,12 @@ async function restoreSession() {
                 if (settings.backgroundPattern) this.backgroundManager.backgroundPattern = settings.backgroundPattern;
                 if (typeof settings.bgOpacity !== 'undefined') this.backgroundManager.bgOpacity = settings.bgOpacity;
                 if (typeof settings.patternIntensity !== 'undefined') this.backgroundManager.patternIntensity = settings.patternIntensity;
-                if (typeof settings.patternDensity !== 'undefined') this.backgroundManager.patternDensity = settings.patternDensity;
+                if (typeof settings.patternDensity !== 'undefined') {
+                    const restoredDensity = parseFloat(settings.patternDensity);
+                    this.backgroundManager.patternDensity = Number.isFinite(restoredDensity) && restoredDensity > 0
+                        ? Math.min(3, Math.max(0.2, restoredDensity))
+                        : 1;
+                }
                 resetTransientBackgroundMediaState(this.backgroundManager);
                 this.backgroundManager.backgroundImage = null;
                 if (typeof settings.coordinateOriginX !== 'undefined') {
@@ -748,6 +753,9 @@ async function restoreSession() {
                             result.reason || 'The decoder returned no image data.'
                         );
                     }
+                    rasterFallbackPages.delete(pageNumber);
+                    this.pageRasterFallbackBases.delete(pageNumber);
+                    this.pageRasterFallbackScaledBases?.delete?.(pageNumber);
                 });
             }
 
@@ -812,6 +820,20 @@ async function restoreSession() {
                     }
 
                     this.currentPage = snapshotPageIndex + 1;
+                }
+            } else if (
+                shouldMergeSyncSnapshot
+                && Object.prototype.hasOwnProperty.call(syncSnapshot || {}, 'currentPageScene')
+            ) {
+                const staleBitmapPage = Math.max(1, Number(syncSnapshot?.currentPage || this.currentPage || 1));
+                const staleBitmapIndex = staleBitmapPage - 1;
+                if (
+                    Array.isArray(this.pages)
+                    && staleBitmapIndex >= 0
+                    && staleBitmapIndex < this.pages.length
+                    && !rasterFallbackPages.has(staleBitmapPage)
+                ) {
+                    this.pages[staleBitmapIndex] = null;
                 }
             }
 

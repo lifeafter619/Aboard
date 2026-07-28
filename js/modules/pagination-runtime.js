@@ -343,7 +343,6 @@ function restorePageSnapshot(pageIndex) {
             return false;
         }
 
-        this.pages[pageIndex] = snapshot;
         clearCanvasPixels.call(this);
         this.ctx.putImageData(snapshot, 0, 0);
         return true;
@@ -483,8 +482,11 @@ function nextOrAddPage() {
     
 }
 
-function goToPage(pageNumber) {
-        const normalizedPage = normalizePageNumber(pageNumber, this.currentPage);
+function goToPage(pageNumber, options = {}) {
+        const requestedPage = normalizePageNumber(pageNumber, this.currentPage);
+        const normalizedPage = options.allowCreate === false
+            ? Math.min(requestedPage, Math.max(1, this.pages.length))
+            : requestedPage;
         if (normalizedPage === this.currentPage) {
             this.updatePaginationUI();
             return;
@@ -549,8 +551,8 @@ function loadPage(pageNumber) {
     
 }
 
-async function goToPageAsync(pageNumber) {
-        const pendingBackgroundPromise = goToPage.call(this, pageNumber) || this._pendingBackgroundPromise;
+async function goToPageAsync(pageNumber, options = {}) {
+        const pendingBackgroundPromise = goToPage.call(this, pageNumber, options) || this._pendingBackgroundPromise;
         if (pendingBackgroundPromise) {
             await pendingBackgroundPromise;
         }
@@ -672,6 +674,7 @@ function updatePaginationUI() {
 
         if (pageInput) {
             pageInput.value = this.currentPage;
+            pageInput.max = this.pages.length;
         }
         if (pageTotal) {
             pageTotal.textContent = `/ ${this.pages.length}`;
@@ -726,11 +729,11 @@ window.AboardPaginationRuntime = {
     nextOrAddPage(board) {
         return nextOrAddPage.call(board);
     },
-    goToPage(board, pageNumber) {
-        return goToPage.call(board, pageNumber);
+    goToPage(board, pageNumber, options) {
+        return goToPage.call(board, pageNumber, options);
     },
-    goToPageAsync(board, pageNumber) {
-        return goToPageAsync.call(board, pageNumber);
+    goToPageAsync(board, pageNumber, options) {
+        return goToPageAsync.call(board, pageNumber, options);
     },
     loadPage(board, pageNumber) {
         return loadPage.call(board, pageNumber);

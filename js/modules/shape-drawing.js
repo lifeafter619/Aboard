@@ -163,8 +163,13 @@ class ShapeDrawingManager {
 
         // Sync preview canvas size with main canvas position and size on screen
         const rect = this.canvas.getBoundingClientRect();
-        const dpr = this.cachedDpr;
-        
+        // Refresh the cached DPR every sync: dragging the window to a monitor
+        // with a different scale factor changes devicePixelRatio, and a stale
+        // value leaves the preview blurry and clearPreview misaligned.
+        const dpr = window.devicePixelRatio || 1;
+        const dprChanged = dpr !== this.cachedDpr;
+        this.cachedDpr = dpr;
+
         // Calculate the CSS scale factor of the main canvas
         // This is the ratio of displayed size to actual size
         // Guard against division by zero when canvas is hidden
@@ -173,7 +178,7 @@ class ShapeDrawingManager {
         
         // Only resize if dimensions actually changed (avoid expensive operations)
         // Note: Position is always updated after this block regardless of resize
-        const needsResize = !this.lastCanvasRect ||
+        const needsResize = dprChanged || !this.lastCanvasRect ||
             this.lastCanvasRect.width !== rect.width ||
             this.lastCanvasRect.height !== rect.height;
         
@@ -207,8 +212,8 @@ class ShapeDrawingManager {
         // Get position relative to the canvas bounding rect (screen coordinates)
         const rect = this.canvas.getBoundingClientRect();
         return {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
+            x: Math.max(0, Math.min(e.clientX - rect.left, rect.width)),
+            y: Math.max(0, Math.min(e.clientY - rect.top, rect.height))
         };
     }
     
@@ -359,14 +364,15 @@ class ShapeDrawingManager {
         ctx.lineWidth = lineWidth;
         
         // Apply line style
-        this.applyLineStyle(ctx);
+        this.applyLineStyle(ctx, isPreview);
     }
     
-    applyLineStyle(ctx) {
+    applyLineStyle(ctx, isPreview = false) {
         ctx.setLineDash([]);
         
         // Calculate visual spacing based on density value
-        const spacing = Math.max(2, 400 / Math.max(1, this.dashDensity));
+        const spacing = Math.max(2, 400 / Math.max(1, this.dashDensity))
+            * this.getPreviewScaleFactor(isPreview);
 
         switch(this.lineStyle) {
             case 'dashed':

@@ -98,6 +98,9 @@ function serializeStroke(stroke, drawingEngine) {
         tool: stroke.tool,
         lineStyle: stroke.lineStyle || 'solid',
         dashDensity: stroke.dashDensity || 10,
+        multiLineCount: stroke.multiLineCount || null,
+        multiLineSpacing: stroke.multiLineSpacing || null,
+        breakIndices: Array.isArray(stroke.breakIndices) ? [...stroke.breakIndices] : [],
         renderMode: stroke.renderMode || null,
         shapeType: stroke.shapeType || null,
         shapeStart: stroke.shapeStart ? { ...stroke.shapeStart } : null,
@@ -150,6 +153,11 @@ function normalizeStroke(stroke) {
         size: toFiniteOptionalNumber(stroke.size, 0),
         lineStyle: stroke.lineStyle || 'solid',
         dashDensity: toFiniteOptionalNumber(stroke.dashDensity, 10),
+        multiLineCount: toFiniteOptionalNumber(stroke.multiLineCount, null),
+        multiLineSpacing: toFiniteOptionalNumber(stroke.multiLineSpacing, null),
+        breakIndices: Array.isArray(stroke.breakIndices)
+            ? stroke.breakIndices.map(value => Number(value)).filter(value => Number.isInteger(value) && value > 0)
+            : [],
         shapeStart: normalizeOptionalPoint(stroke.shapeStart),
         shapeEnd: normalizeOptionalPoint(stroke.shapeEnd),
         shapeDashDensity: toFiniteOptionalNumber(stroke.shapeDashDensity, null),

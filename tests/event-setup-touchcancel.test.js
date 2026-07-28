@@ -80,7 +80,11 @@ function createBoard(canvasTarget) {
   let touchPinchStartCalls = 0;
   let pointerPinchStartCalls = 0;
   let drawingCompleteCalls = 0;
+  let startDrawingCalls = 0;
   let drawCalls = 0;
+  let undoCalls = 0;
+  let redoCalls = 0;
+  let doubleTapCalls = 0;
   const capturedPointers = [];
   const drawBatchCalls = [];
 
@@ -105,6 +109,7 @@ function createBoard(canvasTarget) {
       clearVectorScene() {},
       setVectorPreviewVisible() {},
       startDrawing() {
+        startDrawingCalls += 1;
         this.isDrawing = true;
       },
       startPanning() {},
@@ -118,11 +123,13 @@ function createBoard(canvasTarget) {
       }
     },
     settingsManager: {
+      touchZoomEnabled: true,
       updateToolbarTextVisibility() {}
     },
     historyManager: {
-      undo() { return false; },
-      redo() { return false; }
+      undo() { undoCalls += 1; return true; },
+      redo() { redoCalls += 1; return true; },
+      lastRestoreHadSceneState: true
     },
     strokeControls: {
       isActive: false,
@@ -172,6 +179,7 @@ function createBoard(canvasTarget) {
     },
     handlePointerPinchStart() {
       pointerPinchStartCalls += 1;
+      if (!this.settingsManager.touchZoomEnabled) return;
       this.isPinching = true;
       this.hasTwoFingers = true;
     },
@@ -187,15 +195,21 @@ function createBoard(canvasTarget) {
     discardCurrentStroke() {
       this.drawingEngine.isDrawing = false;
     },
+    handleDoubleTap() {
+      doubleTapCalls += 1;
+    },
     stopDraggingCoordinateOrigin() {},
     scheduleRenderQualityUpdate() {},
     updateEraserCursor() {},
     showEraserCursor() {},
     hideEraserCursor() {},
+    updateUI() {},
+    saveSessionDebounced() {},
     setupToolConfigListeners() {},
     setupKeyboardShortcuts() {},
     setupDraggablePanels() {},
     setupCanvasZoom() {},
+    calculateCanvasFitScale() { return 1; },
     syncInteractiveOverlays() {},
     recalculateAndRecenterCanvas() {},
     applyZoom() {},
@@ -216,6 +230,9 @@ function createBoard(canvasTarget) {
     get drawingCompleteCalls() {
       return drawingCompleteCalls;
     },
+    get startDrawingCalls() {
+      return startDrawingCalls;
+    },
     get drawCalls() {
       return drawCalls;
     },
@@ -224,6 +241,15 @@ function createBoard(canvasTarget) {
     },
     get capturedPointers() {
       return capturedPointers;
+    },
+    get undoCalls() {
+      return undoCalls;
+    },
+    get redoCalls() {
+      return redoCalls;
+    },
+    get doubleTapCalls() {
+      return doubleTapCalls;
     }
   };
 }
@@ -330,7 +356,9 @@ function testPenAndTouchPinchUsesPointerPath() {
     pointerId: 2,
     clientX: 30,
     clientY: 10,
-    isPrimary: false,
+    // Primary is scoped per pointer type, so a finger remains primary while
+    // a pen from the same digitizer is also active.
+    isPrimary: true,
     button: 0,
     shiftKey: false,
     target
@@ -448,6 +476,120 @@ function testPenPointerDownCapturesPointerToCanvas() {
   assert.deepEqual(board.capturedPointers, [7], 'pen drawing should capture the active pointer on the canvas');
 }
 
+function testPrimaryTouchCannotTakeOverActivePenWhenTouchZoomIsDisabled() {
+  const { runtime, canvasTarget, documentTarget } = loadEventSetupRuntime();
+  const board = createBoard(canvasTarget);
+  board.settingsManager.touchZoomEnabled = false;
+  runtime.setupEventListeners(board);
+
+  const pointerDownHandler = documentTarget.listeners.get('pointerdown');
+  const pointerUpHandler = documentTarget.listeners.get('pointerup');
+  const target = { closest() { return null; } };
+
+  pointerDownHandler({
+    pointerType: 'pen', pointerId: 11, clientX: 10, clientY: 10,
+    isPrimary: true, button: 0, shiftKey: false, target
+  });
+  pointerDownHandler({
+    pointerType: 'touch', pointerId: 22, clientX: 30, clientY: 30,
+    isPrimary: true, button: 0, shiftKey: false, target
+  });
+  pointerUpHandler({
+    pointerType: 'touch', pointerId: 22, clientX: 30, clientY: 30,
+    isPrimary: true, button: 0, target
+  });
+
+  assert.equal(board.startDrawingCalls, 1,
+    'a primary touch pointer must not restart an active pen stroke when touch zoom is disabled');
+  assert.equal(board.drawingCompleteCalls, 0,
+    'lifting the ignored touch pointer must not finish the active pen stroke');
+  assert.equal(board.drawingEngine.isDrawing, true);
+}
+
+function testSecondTouchDoesNotFreezePenStrokeWhenTouchZoomIsDisabled() {
+  const { runtime, canvasTarget, documentTarget } = loadEventSetupRuntime();
+  const board = createBoard(canvasTarget);
+  board.settingsManager.touchZoomEnabled = false;
+  runtime.setupEventListeners(board);
+
+  const pointerDownHandler = documentTarget.listeners.get('pointerdown');
+  const pointerMoveHandler = documentTarget.listeners.get('pointermove');
+  const target = { closest() { return null; } };
+
+  pointerDownHandler({
+    pointerType: 'pen', pointerId: 11, clientX: 10, clientY: 10,
+    isPrimary: true, button: 0, shiftKey: false, target
+  });
+  assert.equal(board.drawingEngine.isDrawing, true);
+
+  // A palm/second finger lands outside the canvas (e.g. on the toolbar).
+  pointerDownHandler({
+    pointerType: 'touch', pointerId: 22, clientX: 300, clientY: 30,
+    isPrimary: true, button: 0, shiftKey: false, target
+  });
+
+  assert.equal(board.pointerPinchStartCalls, 0,
+    'with touch zoom disabled, a second pointer must not enter the pointer-pinch state');
+  assert.equal(board.isPointerPinching || false, false);
+
+  pointerMoveHandler({
+    pointerType: 'pen', pointerId: 11, clientX: 40, clientY: 40,
+    isPrimary: true, buttons: 1, target,
+    getCoalescedEvents() { return []; }
+  });
+
+  assert.equal(board.drawCalls, 1,
+    'the pen stroke must keep drawing after a second touch when touch zoom is disabled '
+    + '(audit-2026-07-26 M2: pinch branch used to swallow every pointermove)');
+}
+
+function performSingleTouchTap(canvasTarget, x = 20, y = 20) {
+  canvasTarget.listeners.get('touchstart')({
+    touches: [{ identifier: 1, clientX: x, clientY: y }],
+    preventDefault() {}
+  });
+  canvasTarget.listeners.get('touchend')({
+    touches: [],
+    changedTouches: [{ identifier: 1, clientX: x, clientY: y }],
+    preventDefault() {}
+  });
+}
+
+function testDoubleTapZoomRequiresPanToolAndTouchZoom() {
+  const { runtime, canvasTarget } = loadEventSetupRuntime();
+  const board = createBoard(canvasTarget);
+  board.drawingEngine.currentTool = 'pen';
+  runtime.setupEventListeners(board);
+
+  performSingleTouchTap(canvasTarget);
+  performSingleTouchTap(canvasTarget);
+
+  assert.equal(board.doubleTapCalls, 0,
+    'double taps while drawing must not unexpectedly zoom the canvas');
+}
+
+function testSimultaneousMultiTouchEndTriggersUndo() {
+  const { runtime, canvasTarget } = loadEventSetupRuntime();
+  const board = createBoard(canvasTarget);
+  runtime.setupEventListeners(board);
+
+  board.isPotentialGesture = true;
+  board.isPotentialTap = false;
+  board.maxTouchesInGesture = 2;
+  board.gestureStartTime = Date.now();
+  canvasTarget.listeners.get('touchend')({
+    touches: [],
+    changedTouches: [
+      { identifier: 1, clientX: 10, clientY: 10 },
+      { identifier: 2, clientX: 20, clientY: 10 }
+    ],
+    preventDefault() {}
+  });
+
+  assert.equal(board.undoCalls, 1,
+    'a two-finger tap must undo even when both fingers are reported in one touchend');
+}
+
 function run() {
   testTouchCancelEndsPinchGestureAndClearsFlags();
   testPureTouchPinchUsesTouchPathOnly();
@@ -455,6 +597,10 @@ function run() {
   testPrimaryPointerCancelCompletesActiveDrawing();
   testPointerMoveFallsBackWhenCoalescedEventsAreEmpty();
   testPenPointerDownCapturesPointerToCanvas();
+  testPrimaryTouchCannotTakeOverActivePenWhenTouchZoomIsDisabled();
+  testSecondTouchDoesNotFreezePenStrokeWhenTouchZoomIsDisabled();
+  testDoubleTapZoomRequiresPanToolAndTouchZoom();
+  testSimultaneousMultiTouchEndTriggersUndo();
   console.log('event-setup-touchcancel.test: all assertions passed');
 }
 

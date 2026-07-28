@@ -1082,7 +1082,12 @@ class PWAManager {
     }
 
     async collectStartupUpdateState({ timeoutMs = UPDATE_CHECK_TIMEOUT } = {}) {
-        const currentVersion = this.getEmbeddedBuildVersion() || this.version || await this.loadVersion();
+        const knownCurrentVersion = this.getEmbeddedBuildVersion() || this.version || null;
+        const currentVersion = knownCurrentVersion || await this.resolveWithTimeout(
+            this.loadVersion(),
+            timeoutMs,
+            this.latestAvailableVersion || null
+        );
         const latestVersion = navigator.onLine
             ? await this.resolveWithTimeout(
                 this.getLatestAvailableVersion(),

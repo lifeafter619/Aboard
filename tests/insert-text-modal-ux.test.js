@@ -205,8 +205,30 @@ function testBackdropClickAlsoRestoresFocus() {
   assert.equal(document.activeElement, trigger, 'backdrop dismissal should restore focus to the opener');
 }
 
+function testCanvasFontFamilyQuoting() {
+  const { InsertTextManager } = loadInsertTextManagerPrototype();
+  const normalize = InsertTextManager.prototype.normalizeFontFamilyForCanvas;
+
+  assert.equal(
+    normalize.call({}, 'SourceHanSans-Regular.min, sans-serif'),
+    '"SourceHanSans-Regular.min", sans-serif',
+    'custom font identifiers must be quoted even when they contain no spaces'
+  );
+  assert.equal(
+    normalize.call({}, '123Display, system-ui'),
+    '"123Display", system-ui',
+    'font identifiers that start with a digit must be quoted'
+  );
+  assert.equal(
+    normalize.call({}, 'Custom"Face\\Alt, monospace'),
+    '"Custom\\"Face\\\\Alt", monospace',
+    'quotes and backslashes in custom family names must be escaped'
+  );
+}
+
 (function main() {
   testInsertTextModalSupportsDialogSemanticsAndFocusRestoration();
   testBackdropClickAlsoRestoresFocus();
+  testCanvasFontFamilyQuoting();
   console.log('insert-text-modal-ux.test: all assertions passed');
 })();

@@ -149,9 +149,42 @@ async function startPostVisibleStartup(app, { win = window, doc = document } = {
   }
 
   app.postVisibleStartupPromise = (async () => {
-    await loadLegacyScripts(POST_VISIBLE_STARTUP_SCRIPTS, { doc });
-    await loadLegacyScripts(POST_VISIBLE_SERVICE_SCRIPTS, { doc });
-    await loadLegacyScripts(POST_VISIBLE_BOARD_DEPENDENCY_SCRIPTS, { doc });
+    const scriptGroups = [
+      ['feature', POST_VISIBLE_STARTUP_SCRIPTS],
+      ['service', POST_VISIBLE_SERVICE_SCRIPTS],
+      ['board dependency', POST_VISIBLE_BOARD_DEPENDENCY_SCRIPTS]
+    ];
+    const scriptFailures = [];
+
+    for (const [label, scripts] of scriptGroups) {
+      try {
+        const result = await loadLegacyScripts(scripts, { doc, continueOnError: true });
+        for (const failure of result?.failures || []) {
+          scriptFailures.push({ group: label, ...failure });
+        }
+      } catch (error) {
+        scriptFailures.push({ group: label, error });
+      }
+    }
+
+    if (scriptFailures.length > 0) {
+      console.warn(
+        `Aboard post-visible scripts had ${scriptFailures.length} isolated load failure(s); continuing startup:`,
+        scriptFailures
+      );
+      const featureLabel = 'Aboard startup features';
+      const translatedMessage = win.i18n?.t?.('errors.lazyLoadFailed', { feature: featureLabel });
+      const message = translatedMessage && translatedMessage !== 'errors.lazyLoadFailed'
+        ? translatedMessage
+        : `Failed to load ${featureLabel}. Please refresh and try again.`;
+      const toastManager = app.drawingBoard?.settingsManager?.toastManager;
+      if (toastManager?.show) {
+        toastManager.show(message, 'error');
+      } else {
+        win.appDialog?.showAlert?.(message, 'error');
+      }
+    }
+    app.postVisibleScriptFailures = scriptFailures;
 
     const postVisibleServices = await createAppServices(win);
     app.services = {

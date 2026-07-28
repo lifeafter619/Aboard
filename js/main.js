@@ -153,7 +153,6 @@ class DrawingBoard {
             historyManager: options.historyManager,
             backgroundManager: options.backgroundManager,
             imageControls: options.imageControls,
-            strokeControls: options.strokeControls,
             selectionManager: options.selectionManager,
             teachingToolsManager: options.teachingToolsManager,
             shapeDrawingManager: options.shapeDrawingManager,
@@ -164,7 +163,6 @@ class DrawingBoard {
         this.historyManager = coreRuntimeDependencies.historyManager;
         this.backgroundManager = coreRuntimeDependencies.backgroundManager;
         this.imageControls = coreRuntimeDependencies.imageControls;
-        this.strokeControls = coreRuntimeDependencies.strokeControls;
         this.selectionManager = coreRuntimeDependencies.selectionManager;
         const timeDisplayDependencies = boardConstruction.createTimeDisplayDependencies?.(options, this.settingsManager) || {
             timeDisplayManager: options.timeDisplayManager,
@@ -193,6 +191,8 @@ class DrawingBoard {
             eraser: 'eraser-btn',
             background: 'background-btn',
             select: 'select-btn',
+            pan: 'pan-btn',
+            more: 'more-btn',
             // Shape tool is launched from the More menu button.
             shape: 'more-shape-btn'
         };
@@ -274,6 +274,7 @@ class DrawingBoard {
         // Maps pointerId to { x, y, pointerType } for tracking touch and pen inputs
         // Used to detect pinch gestures when using stylus/pen + finger combinations
         this.activePointers = new Map();
+        this.activeDrawingPointerId = null;
         
         // Canvas scale limits
         this.MIN_CANVAS_SCALE = 0.5;
@@ -1176,11 +1177,11 @@ class DrawingBoard {
     nextOrAddPage() {
         return paginationRuntime.nextOrAddPage?.(this);
     }
-    goToPage(pageNumber) {
-        return paginationRuntime.goToPage?.(this, pageNumber);
+    goToPage(pageNumber, options) {
+        return paginationRuntime.goToPage?.(this, pageNumber, options);
     }
-    goToPageAsync(pageNumber) {
-        return paginationRuntime.goToPageAsync?.(this, pageNumber);
+    goToPageAsync(pageNumber, options) {
+        return paginationRuntime.goToPageAsync?.(this, pageNumber, options);
     }
     loadPage(pageNumber) {
         return paginationRuntime.loadPage?.(this, pageNumber);
@@ -1329,9 +1330,6 @@ class DrawingBoard {
                 this.selectionManager?.isDragging
                 || this.selectionManager?.isResizing
                 || this.selectionManager?.isRotating
-                || this.strokeControls?.isDragging
-                || this.strokeControls?.isResizing
-                || this.strokeControls?.isRotating
             ),
             isTextInputBusy: Boolean(
                 this.insertTextManager?.isInputting

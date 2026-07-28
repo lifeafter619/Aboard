@@ -11,7 +11,10 @@ const ENTRY_FILES = [
 const LEGACY_MANIFEST_ARRAY_NAMES = [
   'VISIBLE_CORE_SERVICE_SCRIPTS',
   'VISIBLE_CORE_BOARD_DEPENDENCY_SCRIPTS',
-  'VISIBLE_CORE_STARTUP_SCRIPTS'
+  'VISIBLE_CORE_STARTUP_SCRIPTS',
+  'POST_VISIBLE_SERVICE_SCRIPTS',
+  'POST_VISIBLE_BOARD_DEPENDENCY_SCRIPTS',
+  'POST_VISIBLE_STARTUP_SCRIPTS'
 ];
 
 const IMPORT_RE = /^\s*import\s+(?:[^'";]+?\s+from\s+)?['"]([^'"]+)['"]/gm;
@@ -106,7 +109,7 @@ function testEssentialCacheCoversOfflineBootstrapImportClosure() {
   );
 }
 
-function testEssentialCacheCoversVisibleCoreLegacyStartupAssets() {
+function testEssentialCacheCoversLegacyStartupAssets() {
   const essentialAssets = readEssentialCoreAssets();
   const requiredAssets = LEGACY_MANIFEST_ARRAY_NAMES.flatMap((arrayName) => readLegacyManifestArray(arrayName));
   const missingAssets = requiredAssets.filter((assetPath) => !essentialAssets.has(assetPath));
@@ -114,7 +117,7 @@ function testEssentialCacheCoversVisibleCoreLegacyStartupAssets() {
   assert.deepEqual(
     missingAssets,
     [],
-    `ESSENTIAL_CORE_ASSETS is missing visible-core legacy startup assets: ${missingAssets.join(', ')}`
+    `ESSENTIAL_CORE_ASSETS is missing legacy startup assets: ${missingAssets.join(', ')}`
   );
 }
 
@@ -210,6 +213,168 @@ function testCorePrecacheCoversIndexStylesheets() {
     [],
     `CORE_ASSETS is missing stylesheet entries used by index.html: ${missingAssets.join(', ')}`
   );
+}
+
+async function testNavigationTimeoutFallsBackAndRefreshesInBackground() {
+  const source = `${readText('sw.js')}\n;globalThis.__swTestExports = { navigationNetworkFirst };`;
+  let resolveNetwork;
+  const networkResponsePromise = new Promise((resolve) => {
+    resolveNetwork = resolve;
+  });
+  const cachedResponse = new Response('<html>cached</html>', {
+    headers: { 'content-type': 'text/html' }
+  });
+  const cacheWrites = [];
+  const cache = {
+    async match(key) {
+      assert.equal(key, './index.html');
+      return cachedResponse.clone();
+    },
+    async put(key, response) {
+      cacheWrites.push({ key, body: await response.text() });
+    }
+  };
+  const sandbox = {
+    console: { warn() {} },
+    self: {
+      location: { origin: 'https://example.test' },
+      addEventListener() {}
+    },
+    caches: { async open() { return cache; } },
+    fetch() { return networkResponsePromise; },
+    Headers,
+    Request,
+    Response,
+    Promise,
+    Set,
+    URL,
+    setTimeout,
+    clearTimeout
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox, { filename: 'sw.js' });
+
+  let backgroundRefresh = null;
+  const event = {
+    waitUntil(promise) {
+      backgroundRefresh = promise;
+    }
+  };
+  const response = await sandbox.__swTestExports.navigationNetworkFirst(
+    { url: 'https://example.test/board', mode: 'navigate' },
+    { timeoutMs: 1, event }
+  );
+
+  assert.equal(await response.text(), '<html>cached</html>',
+    'a stalled navigation should quickly return the cached app shell');
+  assert.ok(backgroundRefresh, 'the late network request should keep running as service-worker background work');
+
+  resolveNetwork(new Response('<html>fresh</html>', { status: 200 }));
+  await backgroundRefresh;
+  assert.deepEqual(cacheWrites, [{ key: './index.html', body: '<html>fresh</html>' }],
+    'a late successful navigation should refresh the cached app shell');
+}
+
+async function testFailedNavigationResponseFallsBackToCachedShell() {
+  const source = `${readText('sw.js')}\n;globalThis.__swTestExports = { navigationNetworkFirst };`;
+  const cachedResponse = new Response('<html>cached</html>');
+  const cache = {
+    async match() {
+      return cachedResponse.clone();
+    },
+    async put() {
+      assert.fail('an unsuccessful navigation response must not replace the cached shell');
+    }
+  };
+  const sandbox = {
+    console: { warn() {} },
+    self: { location: { origin: 'https://example.test' }, addEventListener() {} },
+    caches: { async open() { return cache; } },
+    async fetch() { return new Response('gateway error', { status: 502 }); },
+    Headers,
+    Request,
+    Response,
+    Promise,
+    Set,
+    URL,
+    setTimeout,
+    clearTimeout
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox, { filename: 'sw.js' });
+
+  const response = await sandbox.__swTestExports.navigationNetworkFirst(
+    { url: 'https://example.test/board', mode: 'navigate' },
+    { timeoutMs: 50 }
+  );
+  assert.equal(await response.text(), '<html>cached</html>',
+    'a 5xx navigation should use the cached app shell instead of showing a server error page');
+}
+
+async function testRangeAudioUsesAFullResponseCache() {
+  const source = `${readText('sw.js')}\n;globalThis.__swTestExports = { handleMediaRequest, MEDIA_CACHE_NAME };`;
+  const audioBytes = Uint8Array.from({ length: 10 }, (_, index) => index);
+  let cachedResponse = null;
+  let fetchCalls = 0;
+  const cache = {
+    async match() {
+      return cachedResponse?.clone() || null;
+    },
+    async put(_request, response) {
+      cachedResponse = response.clone();
+    }
+  };
+  const sandbox = {
+    console: { warn() {} },
+    self: {
+      location: { origin: 'https://example.test' },
+      addEventListener() {}
+    },
+    caches: { async open() { return cache; } },
+    async fetch(request) {
+      fetchCalls += 1;
+      assert.equal(request.headers.has('range'), false,
+        'the cache-filling media request must remove Range so the response is complete');
+      return new Response(audioBytes, {
+        status: 200,
+        headers: { 'content-type': 'audio/mpeg' }
+      });
+    },
+    Headers,
+    Request,
+    Response,
+    Promise,
+    Set,
+    URL,
+    Uint8Array,
+    setTimeout,
+    clearTimeout
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox, { filename: 'sw.js' });
+
+  const firstResponse = await sandbox.__swTestExports.handleMediaRequest(new Request(
+    'https://example.test/sounds/class-bell.MP3',
+    { headers: { Range: 'bytes=2-5' } }
+  ));
+  assert.equal(firstResponse.status, 206);
+  assert.equal(firstResponse.headers.get('content-range'), 'bytes 2-5/10');
+  assert.deepEqual([...new Uint8Array(await firstResponse.arrayBuffer())], [2, 3, 4, 5]);
+  assert.equal(fetchCalls, 1, 'the first range request should fetch one complete media response');
+
+  sandbox.fetch = async () => {
+    throw new Error('offline');
+  };
+  const cachedRangeResponse = await sandbox.__swTestExports.handleMediaRequest(new Request(
+    'https://example.test/sounds/class-bell.MP3',
+    { headers: { Range: 'bytes=6-' } }
+  ));
+  assert.equal(cachedRangeResponse.status, 206);
+  assert.deepEqual([...new Uint8Array(await cachedRangeResponse.arrayBuffer())], [6, 7, 8, 9],
+    'later range requests should be sliced from the cached complete response while offline');
 }
 
 function testInstallablePwaIconsExistAndArePrecached() {
@@ -311,9 +476,12 @@ async function testOptionalPrecacheLimitsConcurrentFetches() {
 
 async function run() {
   testEssentialCacheCoversOfflineBootstrapImportClosure();
-  testEssentialCacheCoversVisibleCoreLegacyStartupAssets();
+  testEssentialCacheCoversLegacyStartupAssets();
   testCorePrecacheExcludesLargeLazyAssets();
   testRuntimeCacheCoversLazyTimerAudioAssets();
+  await testNavigationTimeoutFallsBackAndRefreshesInBackground();
+  await testFailedNavigationResponseFallsBackToCachedShell();
+  await testRangeAudioUsesAFullResponseCache();
   testCorePrecacheCoversIndexClassicScripts();
   testCorePrecacheCoversIndexStylesheets();
   testInstallablePwaIconsExistAndArePrecached();

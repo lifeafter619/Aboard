@@ -2,11 +2,10 @@
 // Handles selection of drawn strokes, images, and text
 
 class SelectionManager {
-    constructor(canvas, ctx, drawingEngine, strokeControls) {
+    constructor(canvas, ctx, drawingEngine) {
         this.canvas = canvas;
         this.ctx = ctx;
         this.drawingEngine = drawingEngine;
-        this.strokeControls = strokeControls;
         this.textManager = null; // Set later via setTextManager
         this.historyManager = null; // Set later via setHistoryManager
         this.backgroundManager = null; // Set later via setBackgroundManager
@@ -260,7 +259,7 @@ class SelectionManager {
     }
 
     getTopRenderableAtPoint(x, y) {
-        const renderables = this.drawingEngine.getRenderableObjects(this.textManager?.textObjects || []);
+        const renderables = this.drawingEngine.getSelectableRenderableObjects(this.textManager?.textObjects || []);
         for (let i = renderables.length - 1; i >= 0; i--) {
             const renderable = renderables[i];
             if (renderable.type === 'group') {
@@ -272,7 +271,7 @@ class SelectionManager {
                 });
                 for (let j = members.length - 1; j >= 0; j--) {
                     const member = members[j];
-                    if (member.type === 'stroke' && this.drawingEngine.isPointNearStroke(x, y, member.item, this.drawingEngine.SELECTION_THRESHOLD)) {
+                    if (member.type === 'stroke' && this.drawingEngine.isPointNearStroke(x, y, member.item, this.drawingEngine.getStrokeHitThreshold(member.item))) {
                         return { type: 'group', groupId: renderable.groupId };
                     }
                     if (member.type === 'image' && this.hitImageAtPoint(member.item, x, y)) {
@@ -282,7 +281,7 @@ class SelectionManager {
                         return { type: 'group', groupId: renderable.groupId };
                     }
                 }
-            } else if (renderable.type === 'stroke' && this.drawingEngine.isPointNearStroke(x, y, renderable.item, this.drawingEngine.SELECTION_THRESHOLD)) {
+            } else if (renderable.type === 'stroke' && this.drawingEngine.isPointNearStroke(x, y, renderable.item, this.drawingEngine.getStrokeHitThreshold(renderable.item))) {
                 return { type: 'stroke', index: renderable.index };
             } else if (renderable.type === 'image' && this.hitImageAtPoint(renderable.item, x, y)) {
                 return { type: 'image', index: renderable.index };
@@ -332,7 +331,7 @@ class SelectionManager {
     }
     
     createSelectionControls() {
-        // Create selection controls overlay similar to stroke-controls
+        // Create the selection controls overlay.
         const controlsHTML = `
             <div id="selection-controls-overlay" class="image-controls-overlay" style="display: none; z-index: 1500;">
                 <div id="selection-controls-box" class="image-controls-box">
@@ -1230,7 +1229,7 @@ class SelectionManager {
             return;
         }
 
-        const renderables = this.drawingEngine.getRenderableObjects(this.textManager?.textObjects || []);
+        const renderables = this.drawingEngine.getSelectableRenderableObjects(this.textManager?.textObjects || []);
         const selectedRenderable = this.selectionType === 'group'
             ? renderables.find(renderable => renderable.type === 'group' && renderable.groupId === this.selectedGroupId)
             : renderables.find(renderable =>
@@ -1323,6 +1322,7 @@ class SelectionManager {
     
     deactivate() {
         this.isActive = false;
+        this.commitPendingSelectionChanges();
         this.clearSelection();
         this.canvas.style.cursor = 'default';
     }
@@ -1387,6 +1387,7 @@ class SelectionManager {
         }
         
         // If not on any object, deselect everything
+        this.commitPendingSelectionChanges();
         this.clearSelection();
         
         return false;
@@ -2988,6 +2989,9 @@ class SelectionManager {
             this.clipboard = null;
             return false;
         }
+        if (this.isCoordinateSelection() || this.selectionType === 'background') {
+            return false;
+        }
         const cachedStrokes = [];
         const cachedImages = [];
         const cachedTexts = [];
@@ -3143,6 +3147,9 @@ class SelectionManager {
             tool: stroke.tool,
             lineStyle: stroke.lineStyle || 'solid',
             dashDensity: stroke.dashDensity || 10,
+            multiLineCount: stroke.multiLineCount || null,
+            multiLineSpacing: stroke.multiLineSpacing || null,
+            breakIndices: Array.isArray(stroke.breakIndices) ? [...stroke.breakIndices] : [],
             renderMode: stroke.renderMode || null,
             shapeType: stroke.shapeType || null,
             shapeStart: stroke.shapeStart ? { ...stroke.shapeStart } : null,
@@ -3312,9 +3319,7 @@ class SelectionManager {
     finishSelection() {
         // Only save history if something was actually changed (moved, resized, rotated)
         // Copy and delete operations already save history themselves
-        if (this.hasUnsavedChanges) {
-            this.saveHistory();
-        }
+        this.commitPendingSelectionChanges();
         this.clearSelection();
     }
     
@@ -3551,6 +3556,9 @@ class SelectionManager {
                     const imgCX = img.x + img.width / 2;
                     img.x = 2 * cx - imgCX - img.width / 2;
                     img.flipHorizontal = !(img.flipHorizontal || false);
+                    if (img.rotation) {
+                        img.rotation = -img.rotation;
+                    }
                 }
             }
             if (this.textManager) {
@@ -3612,6 +3620,9 @@ class SelectionManager {
                     const imgCY = img.y + img.height / 2;
                     img.y = 2 * cy - imgCY - img.height / 2;
                     img.flipVertical = !(img.flipVertical || false);
+                    if (img.rotation) {
+                        img.rotation = -img.rotation;
+                    }
                 }
             }
             if (this.textManager) {
@@ -3672,6 +3683,13 @@ class SelectionManager {
             this.isCoordinateSelection() ||
             this.selectedIndex !== null ||
             (this.isCompoundSelection() && (this.selectedStrokes.length > 0 || this.selectedImages.length > 0 || this.selectedTexts.length > 0));
+    }
+
+    commitPendingSelectionChanges() {
+        if (!this.hasUnsavedChanges) return false;
+        this.saveHistory();
+        this.hasUnsavedChanges = false;
+        return true;
     }
     
     clearSelection(options = {}) {
@@ -3773,6 +3791,7 @@ class SelectionManager {
     
     // Box selection methods
     startBoxSelection(e) {
+        this.commitPendingSelectionChanges();
         this.clearSelection();
         this.isBoxSelecting = true;
         const pos = this.getClientPos(e);
@@ -3829,6 +3848,7 @@ class SelectionManager {
         const foundStrokes = [];
         for (let i = 0; i < this.drawingEngine.strokes.length; i++) {
             const stroke = this.drawingEngine.strokes[i];
+            if (!this.drawingEngine.isSelectableStroke(stroke)) continue;
             const bounds = this.drawingEngine.getStrokeBounds(stroke);
             if (bounds && this.rectsIntersect(canvasSelRect, bounds)) {
                 foundStrokes.push(i);
@@ -4236,6 +4256,7 @@ class SelectionManager {
     
     // Lasso selection methods
     startLassoSelection(e) {
+        this.commitPendingSelectionChanges();
         this.clearSelection();
         this.isLassoSelecting = true;
         const pos = this.getClientPos(e);
@@ -4287,6 +4308,7 @@ class SelectionManager {
         const foundStrokes = [];
         for (let i = 0; i < this.drawingEngine.strokes.length; i++) {
             const stroke = this.drawingEngine.strokes[i];
+            if (!this.drawingEngine.isSelectableStroke(stroke)) continue;
             const bounds = this.drawingEngine.getStrokeBounds(stroke);
             if (!bounds) continue;
             // Check if center of stroke bounds is inside lasso
@@ -4314,6 +4336,10 @@ class SelectionManager {
             const cx = bounds.x + bounds.width / 2;
             const cy = bounds.y + bounds.height / 2;
             if (this.pointInPolygon(cx, cy, canvasLassoPoints)) {
+                foundImages.push(i);
+                continue;
+            }
+            if (this.polygonIntersectsRect(canvasLassoPoints, bounds)) {
                 foundImages.push(i);
             }
         }

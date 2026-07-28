@@ -108,10 +108,18 @@ function setupEventListeners() {
                     pointerType: e.pointerType
                 });
                 
-                // Check for multi-touch pinch gesture (2+ pointers)
-                if (this.activePointers.size >= 2 && shouldUsePointerPinch()) {
+                // Check for multi-touch pinch gesture (2+ pointers). When touch
+                // zoom is disabled, handlePointerPinchStart would bail without
+                // discarding the stroke or setting isPinching, so entering the
+                // pointer-pinch state here would only freeze the in-progress
+                // stroke (every pointermove gets swallowed by the pinch branch).
+                if (this.activePointers.size >= 2 && shouldUsePointerPinch()
+                    && this.settingsManager.touchZoomEnabled) {
                     this.isPointerPinching = true;
                     this.handlePointerPinchStart();
+                    if (this.isPinching) {
+                        this.activeDrawingPointerId = null;
+                    }
                 }
             }
             
@@ -121,18 +129,16 @@ function setupEventListeners() {
             // If pinching, don't start drawing
             if (this.isPinching) return;
 
+            // Pointer types each have their own "primary" pointer. A primary
+            // finger must not restart a stroke already owned by a pen.
+            if (this.activeDrawingPointerId != null
+                && e.pointerId !== this.activeDrawingPointerId) {
+                return;
+            }
+
             const closest = getEventTargetClosest(e.target);
 
             // Skip if clicking on UI elements (except canvas)
-            // 如果正在编辑笔迹，点击工具栏或属性栏时自动保存
-                if (this.strokeControls.isActive && 
-                    (closest('#toolbar') || closest('#config-area'))) {
-                    this.strokeControls.hideControls();
-                    if (this.historyManager) {
-                        this.historyManager.saveState();
-                    }
-                }
-                
                 if (closest('#toolbar') || 
                     closest('#config-area') || 
                     closest('#history-controls') || 
@@ -165,36 +171,6 @@ function setupEventListeners() {
                 }
             }
             
-            // 如果正在编辑笔迹，点击画布其他位置时自动保存并切换到笔模式
-            if (this.strokeControls.isActive) {
-                const rect = this.canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                
-                // Check if clicking inside the stroke controls overlay
-                if (!closest('#stroke-controls-overlay')) {
-                    // Clicking outside the stroke controls commits the edit.
-                    // Middle-button/Shift-drag still belongs to panning and
-                    // must not start an accidental pen stroke here.
-                    this.strokeControls.hideControls();
-                    if (this.historyManager) {
-                        this.historyManager.saveState();
-                    }
-                    if (e.button === 1
-                        || (e.button === 0 && e.shiftKey)
-                        || this.drawingEngine.currentTool === 'pan') {
-                        this.drawingEngine.startPanning(e);
-                        this.scheduleRenderQualityUpdate();
-                        return;
-                    }
-                    this.setTool('pen', false);
-                    captureCanvasPointer(this, e);
-                    // Continue with pen drawing by calling startDrawing
-                    this.drawingEngine.startDrawing(e);
-                    return;
-                }
-            }
-
             const isPanGesture = e.button === 1
                 || (e.button === 0 && e.shiftKey)
                 || this.drawingEngine.currentTool === 'pan';
@@ -216,6 +192,11 @@ function setupEventListeners() {
                 }
                 const addedPoint = this.backgroundManager.addCoordinatePoint(point.x, point.y);
                 if (addedPoint?.duplicate) {
+                    this.showCoordinateToast(
+                        'background.pointAlreadyExists',
+                        'A coordinate point already exists at this position',
+                        'warning'
+                    );
                     return;
                 }
                 this.resetSelectedCoordinateLineConnection();
@@ -240,13 +221,15 @@ function setupEventListeners() {
                 }
                 
                 if (this.backgroundManager.isPointNearCoordinateOrigin(x, y)) {
-                    if (this.drawingEngine.currentTool === 'background') {
-                        // In background mode, single click to drag
+                    if (this.drawingEngine.currentTool === 'background'
+                        || this.drawingEngine.currentTool === 'pan') {
+                        // Hold-to-drag the origin marker. The old pan-mode
+                        // double-click pickup left the origin glued to the
+                        // cursor with no button held until the next click.
                         this.isDraggingCoordinateOrigin = true;
                         this.coordinateOriginDragStart = { x: e.clientX, y: e.clientY };
                         return;
                     }
-                    // In pan mode, we'll handle this in dblclick event
                 }
             }
             
@@ -272,6 +255,7 @@ function setupEventListeners() {
                     return;
                 }
                 captureCanvasPointer(this, e);
+                this.activeDrawingPointerId = e.pointerId;
                 this.shapeDrawingManager.startDrawing(e);
                 this.scheduleRenderQualityUpdate();
             } else if (this.drawingEngine.currentTool === 'pen' || this.drawingEngine.currentTool === 'eraser') {
@@ -280,6 +264,7 @@ function setupEventListeners() {
                     return;
                 }
                 captureCanvasPointer(this, e);
+                this.activeDrawingPointerId = e.pointerId;
                 this.drawingEngine.startDrawing(e);
                 this.scheduleRenderQualityUpdate();
                 // Show eraser cursor only when actually erasing on canvas
@@ -310,6 +295,11 @@ function setupEventListeners() {
 
             // Ignore pointer move if we are pinching (avoids conflict with touchmove)
             if (this.hasTwoFingers || this.isPinching) return;
+
+            if (this.activeDrawingPointerId != null
+                && e.pointerId !== this.activeDrawingPointerId) {
+                return;
+            }
 
             // Don't draw when dragging panels or teaching tools
             if (this.isDraggingPanel || (this.teachingToolsManager && this.teachingToolsManager.isInteracting)) {
@@ -379,6 +369,10 @@ function setupEventListeners() {
             }
 
             if (!e.isPrimary) return;
+            if (this.activeDrawingPointerId != null
+                && e.pointerId !== this.activeDrawingPointerId) {
+                return;
+            }
             this.stopDraggingCoordinateOrigin();
             if (this.drawingEngine.currentTool === 'select' && this.selectionManager.isBoxSelecting) {
                 this.selectionManager.endBoxSelection(e);
@@ -387,6 +381,7 @@ function setupEventListeners() {
                 this.selectionManager.endLassoSelection(e);
             }
             this.handleDrawingComplete();
+            this.activeDrawingPointerId = null;
             this.drawingEngine.stopPanning();
             this.scheduleRenderQualityUpdate();
             // Hide eraser cursor when erasing stops
@@ -412,32 +407,18 @@ function setupEventListeners() {
                     this.isPointerPinching = false;
                 }
             }
-            if (e.isPrimary) {
+            if (e.isPrimary
+                && (this.activeDrawingPointerId == null
+                    || e.pointerId === this.activeDrawingPointerId)) {
                 this.stopDraggingCoordinateOrigin();
                 this.handleDrawingComplete();
+                this.activeDrawingPointerId = null;
                 this.drawingEngine.stopPanning();
             }
             this.scheduleRenderQualityUpdate();
             // Hide eraser cursor when pointer is cancelled
             if (this.drawingEngine.currentTool === 'eraser') {
                 this.hideEraserCursor();
-            }
-        });
-        
-        // Double-click handler for coordinate origin selection in pan mode
-        this.canvas.addEventListener('dblclick', (e) => {
-            // In pan mode, double-click to select coordinate origin
-            if (this.drawingEngine.currentTool === 'pan' && 
-                this.backgroundManager.supportsMovableOrigin()) {
-                const point = this.getLogicalCanvasPointFromEvent(e);
-                const { x, y } = point;
-                
-                if (this.backgroundManager.isPointNearCoordinateOrigin(x, y)) {
-                    this.isDraggingCoordinateOrigin = true;
-                    this.coordinateOriginDragStart = { x: e.clientX, y: e.clientY };
-                    // Visual feedback - change cursor
-                    this.canvas.style.cursor = 'move';
-                }
             }
         });
         
@@ -483,6 +464,7 @@ function setupEventListeners() {
                 // If we were drawing (via pointer events), stop it
                 if (this.drawingEngine.isDrawing) {
                     this.discardCurrentStroke();
+                    this.activeDrawingPointerId = null;
                 }
 
                 // If we were panning (via pointer events), stop it to let pinch handle it
@@ -501,7 +483,8 @@ function setupEventListeners() {
                 this.isPotentialGesture = true;
 
                 // Single tap detection specific
-                this.isPotentialTap = true;
+                this.isPotentialTap = this.settingsManager.touchZoomEnabled
+                    && this.drawingEngine.currentTool === 'pan';
                 this.currentTapStart = {
                     x: e.touches[0].clientX,
                     y: e.touches[0].clientY,
@@ -581,8 +564,10 @@ function setupEventListeners() {
                 return;
             }
             
+            const allTouchesLifted = e.touches.length === 0;
+
             // Tap detection
-            if (e.changedTouches.length === 1 && e.touches.length === 0) { // All fingers lifted
+            if (e.changedTouches.length === 1 && allTouchesLifted) {
                 // Double tap logic (single finger)
                 if (this.isPotentialTap) {
                     const tapTime = Date.now();
@@ -602,43 +587,42 @@ function setupEventListeners() {
                         this.lastTapPos = { ...this.currentTapStart };
                     }
                 }
+            }
 
-                // Multi-touch gesture (Undo/Redo)
-                // Only if not a valid double-tap candidate (to avoid conflict, although double tap is 1 finger)
-                if (this.isPotentialGesture && !this.isPotentialTap) {
-                    const gestureTime = Date.now();
-                    if (gestureTime - this.gestureStartTime < 400) { // 400ms for multi-touch tap
-                        if (this.maxTouchesInGesture === 2) {
-                            // 2-finger tap: Undo
-                            if (this.historyManager.undo()) {
-                                if (!this.historyManager.lastRestoreHadSceneState) {
-                                    this.drawingEngine.clearStrokes();
-                                    this.drawingEngine.stampedImages = [];
-                                    this.drawingEngine.objectGroups = [];
-                                    this.insertTextManager?.clearTextObjects?.();
-                                    this.drawingEngine.clearVectorScene();
-                                    this.drawingEngine.setVectorPreviewVisible(false);
-                                }
-                                this.updateUI();
-                                this.saveSessionDebounced();
+            // Multi-touch gesture (Undo/Redo). Some touch drivers report all
+            // lifted fingers in one touchend, so this cannot depend on
+            // changedTouches.length being exactly one.
+            if (allTouchesLifted && this.isPotentialGesture && !this.isPotentialTap) {
+                const gestureTime = Date.now();
+                if (gestureTime - this.gestureStartTime < 400) {
+                    if (this.maxTouchesInGesture === 2) {
+                        if (this.historyManager.undo()) {
+                            if (!this.historyManager.lastRestoreHadSceneState) {
+                                this.drawingEngine.clearStrokes();
+                                this.drawingEngine.stampedImages = [];
+                                this.drawingEngine.objectGroups = [];
+                                this.insertTextManager?.clearTextObjects?.();
+                                this.drawingEngine.clearVectorScene();
+                                this.drawingEngine.setVectorPreviewVisible(false);
                             }
-                            e.preventDefault();
-                        } else if (this.maxTouchesInGesture === 3) {
-                            // 3-finger tap: Redo
-                            if (this.historyManager.redo()) {
-                                if (!this.historyManager.lastRestoreHadSceneState) {
-                                    this.drawingEngine.clearStrokes();
-                                    this.drawingEngine.stampedImages = [];
-                                    this.drawingEngine.objectGroups = [];
-                                    this.insertTextManager?.clearTextObjects?.();
-                                    this.drawingEngine.clearVectorScene();
-                                    this.drawingEngine.setVectorPreviewVisible(false);
-                                }
-                                this.updateUI();
-                                this.saveSessionDebounced();
-                            }
-                            e.preventDefault();
+                            this.updateUI();
+                            this.saveSessionDebounced();
                         }
+                        e.preventDefault();
+                    } else if (this.maxTouchesInGesture === 3) {
+                        if (this.historyManager.redo()) {
+                            if (!this.historyManager.lastRestoreHadSceneState) {
+                                this.drawingEngine.clearStrokes();
+                                this.drawingEngine.stampedImages = [];
+                                this.drawingEngine.objectGroups = [];
+                                this.insertTextManager?.clearTextObjects?.();
+                                this.drawingEngine.clearVectorScene();
+                                this.drawingEngine.setVectorPreviewVisible(false);
+                            }
+                            this.updateUI();
+                            this.saveSessionDebounced();
+                        }
+                        e.preventDefault();
                     }
                 }
             }
@@ -777,10 +761,13 @@ function setupEventListeners() {
         const pageInput = document.getElementById('page-input');
         bindIfPresent(document.getElementById('prev-page-btn'), 'click', () => this.prevPage());
         bindIfPresent(document.getElementById('next-or-add-page-btn'), 'click', () => this.nextOrAddPage());
-        bindIfPresent(pageInput, 'change', (e) => this.goToPage(parseInt(e.target.value, 10)));
+        bindIfPresent(pageInput, 'change', (e) => this.goToPage(
+            parseInt(e.target.value, 10),
+            { allowCreate: false }
+        ));
         bindIfPresent(pageInput, 'keydown', (e) => {
             if (e.key === 'Enter') {
-                this.goToPage(parseInt(e.target.value, 10));
+                this.goToPage(parseInt(e.target.value, 10), { allowCreate: false });
             }
         });
         
@@ -795,8 +782,8 @@ function setupEventListeners() {
             this.syncInteractiveOverlays();
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(() => {
-                // Recalculate fit scale and re-center canvas for new viewport size
-                this.recalculateAndRecenterCanvas();
+                // Refresh fit scale without discarding the user's pan position.
+                this.canvasFitScale = this.calculateCanvasFitScale();
                 this.applyZoom(false); // Apply new fit scale without updating config-area
                 // Establish the toolbar anchor before positioning dependent panels.
                 this.repositionToolbarsOnResize();

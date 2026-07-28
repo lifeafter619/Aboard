@@ -35,6 +35,92 @@ function getActiveExportFormat() {
     return document.querySelector('.export-format-btn.active')?.dataset.format || 'png';
 }
 
+function captureExportInteractionState(drawingBoard) {
+    const historyManager = drawingBoard?.historyManager;
+    const selectionManager = drawingBoard?.selectionManager;
+    return {
+        history: historyManager ? {
+            manager: historyManager,
+            history: historyManager.history,
+            historyStep: historyManager.historyStep,
+            lastRestoreHadSceneState: historyManager.lastRestoreHadSceneState
+        } : null,
+        selection: selectionManager ? {
+            manager: selectionManager,
+            selectionType: selectionManager.selectionType,
+            selectedIndex: selectionManager.selectedIndex,
+            selectedGroupId: selectionManager.selectedGroupId,
+            selectedStrokes: selectionManager.selectedStrokes,
+            selectedImages: selectionManager.selectedImages,
+            selectedTexts: selectionManager.selectedTexts,
+            selectedCoordinatePointIds: selectionManager.selectedCoordinatePointIds,
+            selectedCoordinateGroupId: selectionManager.selectedCoordinateGroupId,
+            coordinateDragStartPositions: selectionManager.coordinateDragStartPositions,
+            multiRotation: selectionManager.multiRotation,
+            multiRotationCenter: selectionManager.multiRotationCenter,
+            multiBounds: selectionManager.multiBounds,
+            multiStrokeRotateStart: selectionManager.multiStrokeRotateStart,
+            multiImageRotateStart: selectionManager.multiImageRotateStart,
+            multiTextRotateStart: selectionManager.multiTextRotateStart,
+            hasUnsavedChanges: selectionManager.hasUnsavedChanges,
+            hasDragMoved: selectionManager.hasDragMoved
+        } : null
+    };
+}
+
+function restoreExportInteractionState(state) {
+    const historyState = state?.history;
+    if (historyState?.manager) {
+        historyState.manager.history = historyState.history;
+        historyState.manager.historyStep = historyState.historyStep;
+        historyState.manager.lastRestoreHadSceneState = historyState.lastRestoreHadSceneState;
+    }
+
+    const selectionState = state?.selection;
+    const selectionManager = selectionState?.manager;
+    if (!selectionManager) {
+        return;
+    }
+
+    selectionManager.selectionType = selectionState.selectionType;
+    selectionManager.selectedIndex = selectionState.selectedIndex;
+    selectionManager.selectedGroupId = selectionState.selectedGroupId;
+    selectionManager.selectedStrokes = selectionState.selectedStrokes;
+    selectionManager.selectedImages = selectionState.selectedImages;
+    selectionManager.selectedTexts = selectionState.selectedTexts;
+    selectionManager.selectedCoordinatePointIds = selectionState.selectedCoordinatePointIds;
+    selectionManager.selectedCoordinateGroupId = selectionState.selectedCoordinateGroupId;
+    selectionManager.coordinateDragStartPositions = selectionState.coordinateDragStartPositions;
+    selectionManager.multiRotation = selectionState.multiRotation;
+    selectionManager.multiRotationCenter = selectionState.multiRotationCenter;
+    selectionManager.multiBounds = selectionState.multiBounds;
+    selectionManager.multiStrokeRotateStart = selectionState.multiStrokeRotateStart;
+    selectionManager.multiImageRotateStart = selectionState.multiImageRotateStart;
+    selectionManager.multiTextRotateStart = selectionState.multiTextRotateStart;
+    selectionManager.hasDragMoved = selectionState.hasDragMoved;
+
+    selectionManager.drawingEngine?.deselectStroke?.();
+    selectionManager.drawingEngine?.deselectImage?.();
+    if (selectionManager.textManager) {
+        selectionManager.textManager.selectedTextIndex = null;
+    }
+    if (selectionState.selectionType === 'stroke') {
+        selectionManager.drawingEngine?.selectStroke?.(selectionState.selectedIndex);
+    } else if (selectionState.selectionType === 'image') {
+        selectionManager.drawingEngine?.selectImage?.(selectionState.selectedIndex);
+    } else if (selectionState.selectionType === 'text' && selectionManager.textManager) {
+        selectionManager.textManager.selectedTextIndex = selectionState.selectedIndex;
+    }
+
+    if (selectionState.selectionType) {
+        selectionManager.showControls?.();
+        selectionManager.redrawWithSelection?.();
+    } else {
+        selectionManager.hideControls?.();
+    }
+    selectionManager.hasUnsavedChanges = selectionState.hasUnsavedChanges;
+}
+
 class ExportManager {
     constructor(canvas, bgCanvas, drawingBoard = null) {
         this.canvas = canvas;
@@ -768,6 +854,64 @@ class ExportManager {
         link.href = dataURL;
         link.click();
     }
+
+    async captureCurrentPageImage(filename, format, quality) {
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = this.canvas.width;
+        tempCanvas.height = this.canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        await this.renderCurrentPageToCanvas(tempCanvas, tempCtx);
+
+        let outputCanvas = tempCanvas;
+        if (format === 'jpeg') {
+            const opaqueCanvas = document.createElement('canvas');
+            opaqueCanvas.width = tempCanvas.width;
+            opaqueCanvas.height = tempCanvas.height;
+            const opaqueCtx = opaqueCanvas.getContext('2d');
+            opaqueCtx.fillStyle = this.drawingBoard?.backgroundManager?.backgroundColor || '#FFFFFF';
+            opaqueCtx.fillRect(0, 0, opaqueCanvas.width, opaqueCanvas.height);
+            opaqueCtx.drawImage(tempCanvas, 0, 0);
+            outputCanvas = opaqueCanvas;
+        }
+
+        const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+        const blob = await new Promise((resolve, reject) => {
+            outputCanvas.toBlob(result => {
+                if (result) resolve(result);
+                else reject(new Error('Failed to encode exported page image.'));
+            }, mimeType, format === 'jpeg' ? quality : undefined);
+        });
+        return {
+            filename: `${filename}.${format}`,
+            bytes: new Uint8Array(await blob.arrayBuffer())
+        };
+    }
+
+    async getProjectManagerForArchive() {
+        let projectManager = this.drawingBoard?.projectManager || null;
+        if (!projectManager && typeof this.drawingBoard?.getProjectManager === 'function') {
+            projectManager = await this.drawingBoard.getProjectManager();
+        }
+        if (!projectManager?.ensureZipLibrary || !projectManager?.downloadBlob) {
+            throw new Error('ZIP export support is unavailable.');
+        }
+        return projectManager;
+    }
+
+    async downloadImageArchive(files, baseFilename) {
+        const projectManager = await this.getProjectManagerForArchive();
+        const zipLibrary = await projectManager.ensureZipLibrary();
+        const entries = {};
+        files.forEach(file => {
+            entries[file.filename] = file.bytes;
+        });
+        const zipBytes = zipLibrary.zipSync(entries, { level: 6 });
+        const safeFilename = String(baseFilename || 'aboard-export').replace(/[\\/:*?"<>|]/g, '-');
+        projectManager.downloadBlob(
+            new Blob([zipBytes], { type: 'application/zip' }),
+            `${safeFilename}.zip`
+        );
+    }
     
     async exportCanvas() {
         const scope = getActiveImageExportScope();
@@ -823,14 +967,21 @@ class ExportManager {
         }
 
         const currentPage = this.drawingBoard.currentPage;
+        const interactionState = captureExportInteractionState(this.drawingBoard);
         try {
+            const files = [];
             for (let pageNum = 1; pageNum <= this.drawingBoard.pages.length; pageNum++) {
                 await this.goToExportPage(pageNum);
-                await this.exportSinglePage(`${baseFilename}-${pageNum}`, format, quality);
+                files.push(await this.captureCurrentPageImage(`${baseFilename}-${pageNum}`, format, quality));
             }
+            await this.downloadImageArchive(files, baseFilename);
         } finally {
-            if (currentPage !== this.drawingBoard.currentPage) {
-                await this.goToExportPage(currentPage);
+            try {
+                if (currentPage !== this.drawingBoard.currentPage) {
+                    await this.goToExportPage(currentPage);
+                }
+            } finally {
+                restoreExportInteractionState(interactionState);
             }
         }
     }
@@ -850,15 +1001,22 @@ class ExportManager {
         const selectedPages = Array.from(selectedButtons).map(btn => parseInt(btn.dataset.pageNum, 10));
         selectedPages.sort((a, b) => a - b);
         const currentPage = this.drawingBoard.currentPage;
+        const interactionState = captureExportInteractionState(this.drawingBoard);
 
         try {
+            const files = [];
             for (const pageNum of selectedPages) {
                 await this.goToExportPage(pageNum);
-                await this.exportSinglePage(`${baseFilename}-${pageNum}`, format, quality);
+                files.push(await this.captureCurrentPageImage(`${baseFilename}-${pageNum}`, format, quality));
             }
+            await this.downloadImageArchive(files, baseFilename);
         } finally {
-            if (currentPage !== this.drawingBoard.currentPage) {
-                await this.goToExportPage(currentPage);
+            try {
+                if (currentPage !== this.drawingBoard.currentPage) {
+                    await this.goToExportPage(currentPage);
+                }
+            } finally {
+                restoreExportInteractionState(interactionState);
             }
         }
     }

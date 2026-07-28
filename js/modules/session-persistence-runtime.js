@@ -451,6 +451,18 @@ async function saveSession() {
             this.sessionSaveDirtyWhileRecoveryBlocked = true;
             return;
         }
+        if (this.pageRasterFallbackPages instanceof Set) {
+            Array.from(this.pageRasterFallbackPages).forEach((pageNumber) => {
+                const base = this.getPageRasterFallbackBase?.(pageNumber)
+                    || this.pageRasterFallbackBases?.get?.(pageNumber)
+                    || null;
+                if (base) return;
+                console.warn(`Page ${pageNumber} is marked as a raster fallback but has no base image; treating it as a normal page so autosave can continue.`);
+                this.pageRasterFallbackPages.delete(pageNumber);
+                this.pageRasterFallbackBases?.delete?.(pageNumber);
+                this.pageRasterFallbackScaledBases?.delete?.(pageNumber);
+            });
+        }
         const saveRequestId = (this.sessionSaveRequestId || 0) + 1;
         this.sessionSaveRequestId = saveRequestId;
         try {

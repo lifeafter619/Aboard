@@ -321,7 +321,6 @@ function applyPanTransform() {
 function syncInteractiveOverlays() {
         this.backgroundManager?.renderCoordinateOverlay?.();
         this.selectionManager?.updateControlBox?.();
-        this.strokeControls?.updateControlBox?.();
         if (this.imageControls?.isActive) {
             this.imageControls.updateControlBox();
         }
@@ -333,6 +332,7 @@ function syncInteractiveOverlays() {
         if (this.insertTextManager?.isActive) {
             this.insertTextManager.updateOverlay?.();
         }
+        this.teachingToolsManager?.redrawTools?.();
         this.syncVectorPreviewState();
 
 }
@@ -388,7 +388,6 @@ function shouldUseVectorPreview() {
             this.insertImageManager?.isActive ||
             this.insertTextManager?.isActive ||
             this.selectionManager?.hasSelection?.() ||
-            this.strokeControls?.isActive ||
             (this.drawingEngine.isDrawing && !hasLiveDrawingPreview) ||
             (this.shapeDrawingManager?.isDrawing && !this.shapeDrawingManager?.previewCanvas)
         );

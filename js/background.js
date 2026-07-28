@@ -1,6 +1,20 @@
 // Background Management Module
 // Handles background colors, patterns, and rendering
 
+const PATTERN_DENSITY_MIN = 0.2;
+const PATTERN_DENSITY_MAX = 3.0;
+const PATTERN_DENSITY_DEFAULT = 1.0;
+
+function sanitizePatternDensity(value, fallback = PATTERN_DENSITY_DEFAULT) {
+    const fallbackNumeric = typeof fallback === 'number' ? fallback : parseFloat(fallback);
+    const safeFallback = Number.isFinite(fallbackNumeric) && fallbackNumeric > 0
+        ? Math.min(PATTERN_DENSITY_MAX, Math.max(PATTERN_DENSITY_MIN, fallbackNumeric))
+        : PATTERN_DENSITY_DEFAULT;
+    const numeric = typeof value === 'number' ? value : parseFloat(value);
+    if (!Number.isFinite(numeric) || numeric <= 0) return safeFallback;
+    return Math.min(PATTERN_DENSITY_MAX, Math.max(PATTERN_DENSITY_MIN, numeric));
+}
+
 function safeBackgroundStorageGetItem(key) {
     try {
         return localStorage.getItem(key);
@@ -47,7 +61,7 @@ class BackgroundManager {
         const savedCoordinateOriginY = parseFloat(safeBackgroundStorageGetItem('coordinateOriginY'));
         this.bgOpacity = Number.isNaN(savedBgOpacity) ? 1.0 : savedBgOpacity;
         this.patternIntensity = Number.isNaN(savedPatternIntensity) ? 0.5 : savedPatternIntensity;
-        this.patternDensity = Number.isNaN(savedPatternDensity) ? 1.0 : savedPatternDensity;
+        this.patternDensity = sanitizePatternDensity(savedPatternDensity);
         this.backgroundImage = null;
         this.backgroundImageData = safeBackgroundStorageGetItem('backgroundImageData') || null;
         this.backgroundImageLoadToken = 0;
@@ -136,6 +150,7 @@ class BackgroundManager {
         this.coordinateOverlayCtx = null;
         this.coordinateOverlaySvg = null;
         this.backgroundPatternSvg = null;
+        this.backgroundPatternMarkup = '';
         let savedCoordinateOverlayState = null;
         try {
             savedCoordinateOverlayState = JSON.parse(safeBackgroundStorageGetItem('coordinateOverlayState') || 'null');
@@ -422,6 +437,8 @@ class BackgroundManager {
     }
     
     drawBackgroundPattern() {
+        this.ensureSafePatternDensity();
+
         if (this.renderBackgroundPatternLayer()) {
             return;
         }
@@ -432,6 +449,12 @@ class BackgroundManager {
 
         this.bgCtx.save();
         this.bgCtx.globalCompositeOperation = 'source-over';
+        // The legacy canvas fallback painters below work in physical pixels
+        // (spacings multiplied by dpr, loops bounded by bgCanvas.width), but
+        // bgCtx is pre-scaled by dpr — reset to identity so spacing matches
+        // the SVG layer (20 / density CSS px) instead of coming out dpr× too
+        // large. restore() below brings the dpr transform back.
+        this.bgCtx.setTransform(1, 0, 0, 1, 0, 0);
 
         const dpr = window.devicePixelRatio || 1;
         const patternColor = this.getPatternColor();
@@ -536,16 +559,33 @@ class BackgroundManager {
         const { svg, logicalWidth, logicalHeight } = svgData;
         if (this.backgroundPattern === 'blank' || this.backgroundPattern === 'image') {
             svg.style.display = 'none';
-            svg.innerHTML = '';
+            if (this.backgroundPatternMarkup) {
+                svg.innerHTML = '';
+                this.backgroundPatternMarkup = '';
+            }
             return true;
         }
 
         svg.style.display = 'block';
-        svg.innerHTML = this.getBackgroundPatternSvgMarkup(logicalWidth, logicalHeight);
+        const markup = this.getBackgroundPatternSvgMarkup(logicalWidth, logicalHeight);
+        if (markup !== this.backgroundPatternMarkup) {
+            svg.innerHTML = markup;
+            this.backgroundPatternMarkup = markup;
+        }
         return true;
     }
 
+    ensureSafePatternDensity() {
+        const safeDensity = sanitizePatternDensity(this.patternDensity);
+        if (safeDensity !== this.patternDensity) {
+            console.warn(`[Background] patternDensity ${this.patternDensity} out of range, clamped to ${safeDensity}`);
+            this.patternDensity = safeDensity;
+        }
+        return safeDensity;
+    }
+
     getBackgroundPatternSvgMarkup(logicalWidth, logicalHeight) {
+        this.ensureSafePatternDensity();
         switch (this.backgroundPattern) {
             case 'dots':
                 return this.renderDotsPatternSvg(logicalWidth, logicalHeight);
@@ -570,15 +610,7 @@ class BackgroundManager {
         const spacing = 20 / this.patternDensity;
         const patternColor = this.getPatternColor();
         const radius = Math.max(0.7, Math.min(2.2, 1.1 / Math.sqrt(Math.max(this.patternDensity, 0.2))));
-        const parts = [];
-
-        for (let x = spacing; x < logicalWidth; x += spacing) {
-            for (let y = spacing; y < logicalHeight; y += spacing) {
-                parts.push(`<circle cx="${x}" cy="${y}" r="${radius}" fill="${patternColor}"></circle>`);
-            }
-        }
-
-        return `<g class="background-pattern-dots">${parts.join('')}</g>`;
+        return `<defs><pattern id="aboard-dots-pattern" width="${spacing}" height="${spacing}" patternUnits="userSpaceOnUse" overflow="visible"><circle cx="0" cy="0" r="${radius}" fill="${patternColor}"></circle></pattern></defs><rect x="0" y="0" width="${logicalWidth}" height="${logicalHeight}" fill="url(#aboard-dots-pattern)"></rect>`;
     }
 
     renderGridPatternSvg(logicalWidth, logicalHeight) {
@@ -600,29 +632,19 @@ class BackgroundManager {
     renderTianzigePatternSvg(logicalWidth, logicalHeight) {
         const cellSize = 60 / this.patternDensity;
         const patternColor = this.getPatternColor();
-        const outer = [];
-        const inner = [];
-
-        for (let x = 0; x < logicalWidth; x += cellSize) {
-            for (let y = 0; y < logicalHeight; y += cellSize) {
-                outer.push(`<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" fill="none" stroke="${patternColor}" stroke-width="2"></rect>`);
-                inner.push(`M ${x + cellSize / 2} ${y} L ${x + cellSize / 2} ${y + cellSize}`);
-                inner.push(`M ${x} ${y + cellSize / 2} L ${x + cellSize} ${y + cellSize / 2}`);
-                inner.push(`M ${x} ${y} L ${x + cellSize} ${y + cellSize}`);
-                inner.push(`M ${x + cellSize} ${y} L ${x} ${y + cellSize}`);
-            }
-        }
-
-        return `${outer.join('')}<path d="${inner.join(' ')}" fill="none" stroke="${patternColor}" stroke-width="0.5"></path>`;
+        const half = cellSize / 2;
+        const tilePath = `M 0 0 H ${cellSize} V ${cellSize} H 0 Z M ${half} 0 V ${cellSize} M 0 ${half} H ${cellSize}`;
+        return `<defs><pattern id="aboard-tianzige-pattern" width="${cellSize}" height="${cellSize}" patternUnits="userSpaceOnUse"><path d="${tilePath}" fill="none" stroke="${patternColor}" stroke-width="0.5"></path></pattern></defs><rect x="0" y="0" width="${logicalWidth}" height="${logicalHeight}" fill="url(#aboard-tianzige-pattern)"></rect>`;
     }
 
     renderEnglishLinesPatternSvg(logicalWidth, logicalHeight) {
         const lineHeight = 60 / this.patternDensity;
+        const groupStep = lineHeight * 1.5;
         const patternColor = this.getPatternColor();
         const midlineColor = this.isLightBackground() ? 'rgba(255, 0, 0, 0.3)' : 'rgba(255, 100, 100, 0.5)';
         const parts = [];
 
-        for (let y = lineHeight; y < logicalHeight; y += lineHeight) {
+        for (let y = lineHeight; y < logicalHeight; y += groupStep) {
             parts.push(`<line x1="0" y1="${y}" x2="${logicalWidth}" y2="${y}" stroke="${patternColor}" stroke-width="1"></line>`);
             parts.push(`<line x1="0" y1="${y + lineHeight / 4}" x2="${logicalWidth}" y2="${y + lineHeight / 4}" stroke="${patternColor}" stroke-width="0.5" stroke-dasharray="5 5"></line>`);
             parts.push(`<line x1="0" y1="${y + lineHeight / 2}" x2="${logicalWidth}" y2="${y + lineHeight / 2}" stroke="${midlineColor}" stroke-width="1"></line>`);
@@ -974,8 +996,7 @@ class BackgroundManager {
         const isCurrentInitialization = () => initToken === this.gifInitToken
             && expectedSource === this.backgroundImageData
             && this.backgroundPattern === 'image'
-            && imgElement.getAttribute('src') === expectedSource
-            && document.getElementById('background-image-element') === imgElement;
+            && imgElement.getAttribute('src') === expectedSource;
 
         // Ensure SuperGif is loaded
         if (!window.SuperGif) {
@@ -1019,7 +1040,9 @@ class BackgroundManager {
             gifInstance = new SuperGif({
                 gif: imgElement,
                 auto_play: !this.isImagePaused,
-                loop_mode: this.gifLoopCount === 0 ? true : false,
+                // Keep libgif running between loops. The outer loop counter
+                // decides when a finite-loop GIF should pause.
+                loop_mode: true,
                 vp_t: 0, vp_l: 0,
                 on_end: () => {
                    this.handleGifLoop(gifInstance, initToken, expectedSource);
@@ -1076,7 +1099,10 @@ class BackgroundManager {
     }
     
     setGifLoopCount(count) {
-        this.gifLoopCount = count;
+        const normalizedCount = Number(count);
+        this.gifLoopCount = Number.isFinite(normalizedCount)
+            ? Math.max(0, Math.floor(normalizedCount))
+            : 0;
         // Re-init gif to apply loop mode if needed or just reset counter
         // SuperGif doesn't allow changing loop_mode dynamically easily.
         // But we handle loop counting manually in handleGifLoop mostly.
@@ -1147,15 +1173,6 @@ class BackgroundManager {
                 this.bgCtx.lineTo(x + cellSize, y + cellSize / 2);
                 this.bgCtx.stroke();
                 
-                this.bgCtx.beginPath();
-                this.bgCtx.moveTo(x, y);
-                this.bgCtx.lineTo(x + cellSize, y + cellSize);
-                this.bgCtx.stroke();
-                
-                this.bgCtx.beginPath();
-                this.bgCtx.moveTo(x + cellSize, y);
-                this.bgCtx.lineTo(x, y + cellSize);
-                this.bgCtx.stroke();
             }
         }
     }
@@ -1163,8 +1180,9 @@ class BackgroundManager {
     drawEnglishLinesPattern(dpr, patternColor) {
         const baseLineHeight = 60 * dpr;
         const lineHeight = baseLineHeight / this.patternDensity;
+        const groupStep = lineHeight * 1.5;
         
-        for (let y = lineHeight; y < this.bgCanvas.height; y += lineHeight) {
+        for (let y = lineHeight; y < this.bgCanvas.height; y += groupStep) {
             this.bgCtx.strokeStyle = patternColor;
             this.bgCtx.lineWidth = 1 * dpr;
             this.bgCtx.beginPath();
@@ -1969,8 +1987,17 @@ class BackgroundManager {
         let y = (origin.y - canvasY) / unitSize;
 
         if (snap) {
-            x = Math.round(x);
-            y = Math.round(y);
+            if (this.backgroundPattern === 'polar') {
+                const radius = Math.hypot(x, y);
+                const angleStep = this.getPolarAngleStep() * Math.PI / 180;
+                const snappedRadius = Math.round(radius);
+                const snappedAngle = Math.round(Math.atan2(y, x) / angleStep) * angleStep;
+                x = this.roundToDecimals(snappedRadius * Math.cos(snappedAngle), decimals);
+                y = this.roundToDecimals(snappedRadius * Math.sin(snappedAngle), decimals);
+            } else {
+                x = Math.round(x);
+                y = Math.round(y);
+            }
         } else {
             x = this.roundToDecimals(x, decimals);
             y = this.roundToDecimals(y, decimals);
@@ -2465,9 +2492,11 @@ class BackgroundManager {
 
     addCoordinatePoint(canvasX, canvasY, options = {}) {
         const point = this.canvasLogicalToMathPoint(canvasX, canvasY, options);
+        const duplicateThreshold = options.duplicateThreshold
+            ?? Math.min(12, this.getCoordinateUnitSize() * 0.4);
         const duplicatePoint =
             this.findCoordinatePointByMathPosition(point.x, point.y) ||
-            this.findCoordinatePointNearCanvasPoint(canvasX, canvasY, options.duplicateThreshold ?? 12);
+            this.findCoordinatePointNearCanvasPoint(canvasX, canvasY, duplicateThreshold);
         if (duplicatePoint) {
             return {
                 ...duplicatePoint,
@@ -3126,15 +3155,17 @@ class BackgroundManager {
     }
     
     setPatternDensity(density) {
-        this.patternDensity = density;
-        safeBackgroundStorageSetItem('patternDensity', density);
+        this.patternDensity = sanitizePatternDensity(density, this.patternDensity);
+        safeBackgroundStorageSetItem('patternDensity', this.patternDensity);
         this.drawBackground();
     }
     
     setBackgroundImage(imageData) {
         const loadToken = (this.backgroundImageLoadToken || 0) + 1;
         this.backgroundImageLoadToken = loadToken;
-        const preserveTransform = this.imageTransform.width > 0 && this.imageTransform.height > 0;
+        const preserveTransform = imageData === this.backgroundImageData
+            && this.imageTransform.width > 0
+            && this.imageTransform.height > 0;
         const existingTransform = preserveTransform ? { ...this.imageTransform } : null;
         
         return new Promise((resolve) => {
@@ -3176,6 +3207,7 @@ class BackgroundManager {
                 }
 
                 this.backgroundPattern = 'image';
+                safeBackgroundStorageSetItem('backgroundPattern', 'image');
                 this.drawBackground();
                 this.emitBackgroundUiState();
                 resolve(true);
@@ -3242,6 +3274,7 @@ class BackgroundManager {
         if (this.backgroundPattern === 'image') {
             this.drawBackground();
         }
+        window.drawingBoard?.imageControls?.syncFromBackgroundTransform?.();
     }
     
     updateImageTransform(transform) {

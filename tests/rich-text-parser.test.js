@@ -27,6 +27,17 @@ function testFormattedUrlDoesNotIncludeGeneratedMarkupInHref() {
   );
 }
 
+function testUrlFormattingMarkersRemainLiteralInsideLink() {
+  const RichTextParser = loadRichTextParser();
+  const url = 'https://example.com/study__guide__v2.pdf';
+  const html = RichTextParser.parse(url);
+
+  assert.equal(
+    html,
+    `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--theme-color, #007AFF); text-decoration: none;">${url}</a>`
+  );
+}
+
 function testUnsafeStyleDirectivesRenderContentWithoutStyleAttribute() {
   const RichTextParser = loadRichTextParser();
 
@@ -68,6 +79,7 @@ async function testUserTextThatLooksLikeLinkPlaceholderStaysText() {
 
 async function main() {
   testFormattedUrlDoesNotIncludeGeneratedMarkupInHref();
+  testUrlFormattingMarkersRemainLiteralInsideLink();
   testUnsafeStyleDirectivesRenderContentWithoutStyleAttribute();
   await testRuntimeParserRejectsUnsafeStyleDirectives();
   await testUserTextThatLooksLikeLinkPlaceholderStaysText();

@@ -300,6 +300,7 @@ window.translations = {
         connectPointsEnabled: '점선 그리기가 켜졌습니다',
         connectPointsDisabled: '점선 그리기가 꺼졌습니다',
         pointAdded: '좌표점이 추가되었습니다',
+        pointAlreadyExists: '이 위치에 이미 좌표점이 있습니다',
         pointsCleared: '좌표점이 삭제되었습니다',
         plotAdded: '함수 그래프가 추가되었습니다',
         plotUpdated: '함수 그래프가 업데이트되었습니다',
@@ -765,6 +766,7 @@ window.translations = {
         loopPlayback: '반복 재생',
         loopCount: '반복 횟수',
         loopInterval: '반복 간격',
+        secondsUnit: '초',
         uploadCustomAudio: '사용자 정의 오디오 업로드',
         soundPresets: {
             classBell: '수업 종 (10초)',
@@ -909,6 +911,7 @@ window.translations = {
         legacyCompatibilityDisabled: '구버전 .aboard 가져오기 호환이 비활성화되어 있습니다. 먼저 설정에서 구버전 호환 가져오기를 켜 주세요.',
         zipLoaderUnavailable: 'ZIP 라이브러리 로더를 사용할 수 없습니다.',
         zipLoadFailed: 'ZIP 라이브러리를 불러오지 못했습니다.',
+        imageDimensionsTooLarge: '프로젝트에 크기 또는 픽셀 수가 너무 큰 이미지가 포함되어 있습니다.',
         legacyLoaderUnavailable: '구버전 호환 로더를 사용할 수 없습니다.',
         legacyModuleLoadFailed: '구버전 프로젝트 호환 모듈을 불러오지 못했습니다.',
         base64DecoderUnavailable: 'Base64 디코더를 사용할 수 없습니다.',
@@ -924,6 +927,9 @@ window.translations = {
         unsafePath: '안전하지 않은 프로젝트 패키지 경로입니다: {path}',
         tooManyPages: '프로젝트 패키지에 포함된 페이지가 너무 많습니다.',
         assetTooLarge: '프로젝트 패키지에 너무 큰 자산이 포함되어 있습니다: {path}',
+        entryTooLarge: '프로젝트 패키지에 너무 큰 파일이 포함되어 있습니다: {path}',
+        packageTooLarge: '프로젝트 패키지의 압축 해제 크기가 너무 커서 가져올 수 없습니다.',
+        corruptPackage: '이 프로젝트 패키지가 손상되어 가져올 수 없습니다.',
         assetsTooLarge: '프로젝트 패키지에 포함된 자산이 너무 많습니다.'
     },
 

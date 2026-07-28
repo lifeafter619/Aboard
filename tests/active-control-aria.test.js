@@ -173,11 +173,41 @@ function testCanvasHasLocalizedAccessibleName() {
     'drawing canvas accessible name should follow the active locale');
 }
 
-function testHybridTouchTargetsAndHintContrast() {
+function testHybridInputKeepsCompactConfigControlsAndHintContrast() {
+  assert.doesNotMatch(
+    styleCss,
+    /@media\s*\(any-pointer:\s*coarse\)\s*{[\s\S]*?(?:button|\.color-btn)[\s\S]*?min-height:\s*var\(--touch-target-size\)/,
+    'a secondary touch input should not enlarge every control on mouse-first devices'
+  );
   assert.match(
     styleCss,
-    /@media\s*\(any-pointer:\s*coarse\)\s*{[\s\S]*?\.color-btn[\s\S]*?min-height:\s*var\(--touch-target-size\)/,
-    'hybrid touch devices should retain full-size touch targets even when a mouse is present'
+    /\.config-close-btn\s*{[^}]*width:\s*28px[^}]*height:\s*28px[^}]*min-width:\s*28px[^}]*min-height:\s*28px/s,
+    'the config close button should keep a compact visual size'
+  );
+  assert.match(
+    styleCss,
+    /\.config-close-btn::after\s*{[^}]*width:\s*var\(--touch-target-size,\s*44px\)[^}]*height:\s*var\(--touch-target-size,\s*44px\)/s,
+    'the compact close button should retain an extended touch hit area'
+  );
+  assert.match(
+    styleCss,
+    /@media\s*\(hover:\s*none\)\s*and\s*\(pointer:\s*coarse\)\s*{[\s\S]*?min-height:\s*var\(--touch-target-size\)/,
+    'touch-first devices should retain full-size touch targets'
+  );
+  assert.match(
+    styleCss,
+    /#config-area\s+button,\s*#config-area\s+\[role="button"\]\s*{[^}]*min-width:\s*0[^}]*min-height:\s*0/s,
+    'configuration controls should stay compact regardless of input media queries'
+  );
+  assert.match(
+    styleCss,
+    /#config-area\s+\.color-btn\s*{[^}]*width:\s*36px[^}]*height:\s*36px[^}]*min-width:\s*36px[^}]*min-height:\s*36px/s,
+    'configuration color swatches should use a fixed compact visual size'
+  );
+  assert.match(
+    indexHtml,
+    /href="css\/style\.css\?v=20260727-compact-panel"/,
+    'the main stylesheet URL should change when compact panel rules ship so cache-first clients refresh it'
   );
   assert.match(shapeCss, /\.shape-hint\s*{[^}]*color:\s*#(?:666|[0-5][0-9a-f]{2})\b/is,
     'small shape guidance text should use a comfortably readable foreground color');
@@ -187,5 +217,5 @@ testSharedPressedStateHelper();
 testWiredCoreRuntimeSyncsAriaPressed();
 testEveryExclusiveControlUsesPressedState();
 testCanvasHasLocalizedAccessibleName();
-testHybridTouchTargetsAndHintContrast();
+testHybridInputKeepsCompactConfigControlsAndHintContrast();
 console.log('active-control-aria.test: all assertions passed');

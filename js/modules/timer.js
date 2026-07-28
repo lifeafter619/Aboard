@@ -641,7 +641,10 @@ class TimerInstance {
     }
     
     displayTime(milliseconds) {
-        const totalSeconds = Math.floor(milliseconds / 1000);
+        const normalizedMilliseconds = Math.max(0, milliseconds);
+        const totalSeconds = this.mode === 'countdown'
+            ? Math.ceil(normalizedMilliseconds / 1000)
+            : Math.floor(normalizedMilliseconds / 1000);
         const hours = Math.floor(totalSeconds / 3600);
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
@@ -826,8 +829,26 @@ class TimerInstance {
             }
         }
     }
+
+    stopFinishSound() {
+        if (this.currentAudio) {
+            this.currentAudio.pause();
+            try {
+                this.currentAudio.currentTime = 0;
+            } catch (error) {
+                console.warn('Failed to rewind timer audio:', error);
+            }
+            this.currentAudio = null;
+        }
+        if (this.loopTimeoutId !== null) {
+            clearTimeout(this.loopTimeoutId);
+            this.loopTimeoutId = null;
+        }
+        this.currentLoopIteration = 0;
+    }
     
     resetTimer() {
+        this.stopFinishSound();
         if (this.intervalId) {
             clearInterval(this.intervalId);
             this.intervalId = null;
@@ -991,6 +1012,7 @@ class TimerInstance {
     }
     
     adjustTimer() {
+        this.stopFinishSound();
         // Show settings modal to adjust this timer
         this.manager.showSettingsModalForTimer(this);
     }
@@ -1102,7 +1124,10 @@ class TimerInstance {
         }
         
         // Format time
-        const totalSeconds = Math.floor(milliseconds / 1000);
+        const normalizedMilliseconds = Math.max(0, milliseconds);
+        const totalSeconds = this.mode === 'countdown'
+            ? Math.ceil(normalizedMilliseconds / 1000)
+            : Math.floor(normalizedMilliseconds / 1000);
         const hours = Math.floor(totalSeconds / 3600);
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
@@ -1162,17 +1187,7 @@ class TimerInstance {
             this.intervalId = null;
         }
         
-        // Stop any playing audio
-        if (this.currentAudio) {
-            this.currentAudio.pause();
-            this.currentAudio = null;
-        }
-        
-        // Clear any pending loop timeout
-        if (this.loopTimeoutId) {
-            clearTimeout(this.loopTimeoutId);
-            this.loopTimeoutId = null;
-        }
+        this.stopFinishSound();
 
         // Remove event listeners
         if (this.mouseMoveHandler) {

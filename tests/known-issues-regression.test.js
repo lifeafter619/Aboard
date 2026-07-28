@@ -946,6 +946,25 @@ async function testPreparedPwaUpdateTimeoutShowsUserFeedback() {
   );
 }
 
+async function testStartupVersionResolutionUsesTheUpdateTimeout() {
+  const { PWAManager, timers } = loadPwaManagerHarness();
+  const manager = new PWAManager();
+  manager.getEmbeddedBuildVersion = () => null;
+  manager.loadVersion = () => new Promise(() => {});
+  manager.getLatestAvailableVersion = async () => null;
+  manager.getServiceWorkerRegistration = async () => null;
+
+  const pendingState = manager.collectStartupUpdateState({ timeoutMs: 25 });
+  await Promise.resolve();
+
+  const versionTimeout = [...timers.timeouts.values()].find((entry) => entry.delay === 25);
+  assert.ok(versionTimeout, 'startup version resolution must be guarded by the update timeout');
+  versionTimeout.callback();
+
+  const state = await pendingState;
+  assert.equal(state.currentVersion, null, 'a timed-out version read should degrade to the known version fallback');
+}
+
 async function main() {
   testHistoryRestoresMismatchedImageDataWithoutDirectPut();
   testOversizeHistoryEntriesPreserveUndoWithSceneStateOnly();
@@ -963,6 +982,7 @@ async function main() {
   testRotatedBackgroundImageResizeUsesLocalPointerDelta();
   await testImmediatePwaUpdateWaitsForInstallingWorkerToBecomeWaiting();
   await testPreparedPwaUpdateTimeoutShowsUserFeedback();
+  await testStartupVersionResolutionUsesTheUpdateTimeout();
   console.log('known-issues-regression.test: all assertions passed');
 }
 

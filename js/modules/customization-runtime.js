@@ -30,6 +30,8 @@ function findCustomizationDataItem(container, selector, datasetKey, value) {
                 .find(item => item?.dataset?.[datasetKey] === targetValue) || null;
 }
 
+const ALWAYS_VISIBLE_TOOLS = ['settings'];
+
 function initToolbarCustomization() {
         const toolbarList = document.getElementById('toolbar-customization-list');
         if (!toolbarList) return;
@@ -42,15 +44,25 @@ function initToolbarCustomization() {
             try {
                 const order = JSON.parse(savedToolbarOrder);
                 this.reorderToolbarItems(toolbarList, order);
+                this.applyToolbarOrder();
             } catch (e) {
                 console.error('Error loading toolbar order:', e);
             }
         }
+
+        ALWAYS_VISIBLE_TOOLS.forEach(tool => {
+            const checkbox = document.getElementById(`toolbar-show-${tool}`);
+            if (checkbox) {
+                checkbox.checked = true;
+                checkbox.disabled = true;
+            }
+        });
         
         if (savedToolbarVisibility) {
             try {
                 const visibility = JSON.parse(savedToolbarVisibility);
                 Object.keys(visibility).forEach(tool => {
+                    if (ALWAYS_VISIBLE_TOOLS.includes(tool)) return;
                     const checkbox = document.getElementById(`toolbar-show-${tool}`);
                     if (checkbox) {
                         checkbox.checked = visibility[tool];
@@ -130,6 +142,7 @@ function saveToolbarVisibility() {
                 visibility[item.dataset.tool] = checkbox.checked;
             }
         });
+        ALWAYS_VISIBLE_TOOLS.forEach(tool => { visibility[tool] = true; });
         safeCustomizationStorageSetItem('toolbarVisibility', JSON.stringify(visibility), 'toolbar');
     
 }
@@ -140,6 +153,7 @@ function getToolToButtonIdMap() {
             'redo': 'redo-btn',
             'pen': 'pen-btn',
             'pan': 'pan-btn',
+            'select': 'select-btn',
             'eraser': 'eraser-btn',
             'clear': 'clear-btn',
             'background': 'background-btn',
@@ -159,6 +173,9 @@ function applyToolbarOrder() {
             if (!toolbar) return;
             
             const toolToButtonId = this.getToolToButtonIdMap();
+            const orderedButtonIds = new Set(
+                order.map(tool => toolToButtonId[tool]).filter(Boolean)
+            );
             
             order.forEach(tool => {
                 const btnId = toolToButtonId[tool];
@@ -167,6 +184,10 @@ function applyToolbarOrder() {
                     toolbar.appendChild(btn);
                 }
             });
+
+            Array.from(toolbar.querySelectorAll('.tool-btn'))
+                .filter(btn => btn.id && !orderedButtonIds.has(btn.id))
+                .forEach(btn => toolbar.appendChild(btn));
         } catch (e) {
             console.error('Error applying toolbar order:', e);
         }
@@ -185,6 +206,7 @@ function applyToolbarVisibility(visibility) {
         }
         
         const toolToButtonId = this.getToolToButtonIdMap();
+        ALWAYS_VISIBLE_TOOLS.forEach(tool => { visibility[tool] = true; });
         
         Object.keys(visibility).forEach(tool => {
             const btnId = toolToButtonId[tool];
@@ -428,6 +450,14 @@ function applyControlButtonVisibility(settings) {
                 export: safeCustomizationStorageGetItem('controlShowExport', 'control button') !== 'false'
             };
         }
+        const displaySettings = this.settingsManager || {};
+        settings = {
+            ...settings,
+            zoom: settings.zoom && displaySettings.showZoomControls !== false,
+            fullscreen: settings.fullscreen && displaySettings.showFullscreenBtn !== false,
+            import: settings.import && displaySettings.showImportExportBtn !== false,
+            export: settings.export && displaySettings.showImportExportBtn !== false
+        };
         
         // Zoom buttons (zoom-out, zoom-input, zoom-in)
         const zoomOutBtn = document.getElementById('zoom-out-btn');

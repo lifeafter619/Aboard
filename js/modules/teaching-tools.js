@@ -1513,8 +1513,8 @@ class TeachingToolsManager {
         const radians = (angle * Math.PI) / 180;
         const cos = Math.cos(radians);
         const sin = Math.sin(radians);
-        const nx = (cos * (px - cx)) + (sin * (py - cy)) + cx;
-        const ny = (cos * (py - cy)) - (sin * (px - cx)) + cy;
+        const nx = (cos * (px - cx)) - (sin * (py - cy)) + cx;
+        const ny = (sin * (px - cx)) + (cos * (py - cy)) + cy;
         return { x: nx, y: ny };
     }
     
@@ -1539,19 +1539,12 @@ class TeachingToolsManager {
             return false;
         }
         
-        // Get position relative to the overlay element
-        const overlay = tool.overlay;
-        if (!overlay) return false;
-        
-        const rect = overlay.getBoundingClientRect();
-        
-        // Get position relative to overlay (0,0 is top-left)
-        const relX = clientX - rect.left;
-        const relY = clientY - rect.top;
+        const canvasPoint = this.screenToCanvasCoords(clientX, clientY);
+        const localPoint = this.transformToToolSpace(canvasPoint.x, canvasPoint.y, tool);
         
         // Normalize to 0-1 range
-        const normalizedX = relX / rect.width;
-        const normalizedY = relY / rect.height;
+        const normalizedX = (localPoint.x - tool.x) / tool.width;
+        const normalizedY = (localPoint.y - tool.y) / tool.height;
         
         // Check if point is below the diagonal line from top-right (1,0) to bottom-left (0,1)
         // The line equation: normalizedX + normalizedY = 1

@@ -99,7 +99,9 @@ export function createBoardDependencies(win = window) {
     storageManager: instantiateWithFallback('StorageManager', StorageManager, [], createNoopStorageManager),
     collapsibleManager: instantiateWithFallback('CollapsibleManager', CollapsibleManager, [], createNoopCollapsibleManager),
     announcementManager: instantiateWithFallback('AnnouncementManager', AnnouncementManager, [], createNoopAnnouncementManager),
-    helpSystem: instantiateWithFallback('HelpSystem', HelpSystem, [], createNoopHelpSystem),
+    helpSystem: typeof HelpSystem === 'function'
+      ? instantiateWithFallback('HelpSystem', HelpSystem, [], createNoopHelpSystem)
+      : undefined,
     timeDisplayManager,
     timeDisplayControls: typeof TimeDisplayControls === 'function' && timeDisplayManager
       ? instantiateWithFallback('TimeDisplayControls', TimeDisplayControls, [timeDisplayManager])

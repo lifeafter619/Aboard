@@ -120,8 +120,49 @@ async function testAudioFallbackOnlyNotifiesOnce() {
   assert.equal(fallbackCount, 1, 'audio fallback should notify exactly once per failed playback');
 }
 
+function testResetStopsActiveAlarmAndCountdownRoundsUp() {
+  const TimerInstance = loadTimerInstanceClass();
+  const proto = TimerInstance.prototype;
+  let pauseCount = 0;
+  const timeDisplay = { textContent: '', classList: { remove() {}, add() {} } };
+  const timer = {
+    mode: 'countdown',
+    countdownDuration: 10000,
+    remainingTime: 250,
+    intervalId: null,
+    currentAudio: {
+      currentTime: 4,
+      pause() { pauseCount += 1; }
+    },
+    loopTimeoutId: setTimeout(() => {}, 10000),
+    currentLoopIteration: 2,
+    isRunning: true,
+    isPaused: false,
+    displayElement: {
+      querySelector(selector) {
+        return selector === '.timer-display-time' ? timeDisplay : null;
+      }
+    },
+    updatePlayPauseButton() {},
+    updateTimerDisplayClass() {},
+    stopFinishSound: proto.stopFinishSound,
+    displayTime: proto.displayTime
+  };
+
+  proto.displayTime.call(timer, 250);
+  assert.equal(timeDisplay.textContent, '00:00:01',
+    'a running countdown must not display zero before it has finished');
+
+  proto.resetTimer.call(timer);
+  assert.equal(pauseCount, 1, 'resetting a timer must stop an active alarm');
+  assert.equal(timer.currentAudio, null);
+  assert.equal(timer.loopTimeoutId, null);
+  assert.equal(timer.currentLoopIteration, 0);
+}
+
 (async function main() {
   await testAudioFallbackOnlyNotifiesOnce();
+  testResetStopsActiveAlarmAndCountdownRoundsUp();
   console.log('timer-audio-fallback.test: all assertions passed');
 })().catch((error) => {
   console.error(error);

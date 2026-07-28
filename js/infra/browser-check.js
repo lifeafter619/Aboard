@@ -32,6 +32,12 @@ export class BrowserCheck {
   }
 
   static init(win = window, doc = document) {
+    const preflightCheck = win?.BrowserCheck;
+    if (preflightCheck && preflightCheck !== this && typeof preflightCheck.init === 'function') {
+      preflightCheck.init();
+      return;
+    }
+
     const warnings = [];
 
     if (!win.HTMLCanvasElement) {

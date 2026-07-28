@@ -34,6 +34,7 @@ class InsertImageManager {
         this.isDragging = false;
         this.isResizing = false;
         this.isRotating = false;
+        this.activeGesturePointerKey = null;
 
         this.dragStartPos = { x: 0, y: 0 };
         this.dragStartImagePos = { x: 0, y: 0 };
@@ -134,6 +135,36 @@ class InsertImageManager {
     }
 
     setupEventListeners() {
+        const getInsertImageGestureKey = (e) => {
+            if (Number.isFinite(e?.pointerId)) return `pointer:${e.pointerId}`;
+            if (String(e?.type || '').startsWith('touch')) {
+                const touch = e.changedTouches?.[0] || e.touches?.[0];
+                return touch ? `touch:${touch.identifier}` : null;
+            }
+            return String(e?.type || '').startsWith('mouse') ? 'mouse' : null;
+        };
+        const claimInsertImageGesture = (e) => {
+            if (this.activeGesturePointerKey !== null) return false;
+            const key = getInsertImageGestureKey(e);
+            if (!key) return false;
+            this.activeGesturePointerKey = key;
+            return true;
+        };
+        const eventOwnsInsertImageGesture = (e) => {
+            if (this.activeGesturePointerKey === null) return false;
+            if (Number.isFinite(e?.pointerId)) {
+                return this.activeGesturePointerKey === `pointer:${e.pointerId}`;
+            }
+            if (String(e?.type || '').startsWith('touch')) {
+                const touches = e.changedTouches?.length ? e.changedTouches : e.touches;
+                return Array.from(touches || []).some(
+                    touch => this.activeGesturePointerKey === `touch:${touch.identifier}`
+                );
+            }
+            return this.activeGesturePointerKey === 'mouse'
+                && String(e?.type || '').startsWith('mouse');
+        };
+
         // File input change
         this.fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -169,6 +200,7 @@ class InsertImageManager {
                     !hasClass('rotate-handle') &&
                     !closest('.resize-handle') &&
                     !closest('.rotate-handle')) {
+                    if (!claimInsertImageGesture(e)) return;
                     this.startDrag(e);
                 }
             }
@@ -183,6 +215,7 @@ class InsertImageManager {
             const startResize = (e) => {
                 e.stopPropagation();
                 e.preventDefault?.();
+                if (!claimInsertImageGesture(e)) return;
                 this.startResize(e, handle.dataset.handle);
             };
             handle.addEventListener('mousedown', startResize);
@@ -194,6 +227,7 @@ class InsertImageManager {
         const startRotate = (e) => {
             e.stopPropagation();
             e.preventDefault?.();
+            if (!claimInsertImageGesture(e)) return;
             this.startRotate(e);
         };
         this.rotateHandle.addEventListener('mousedown', startRotate);
@@ -214,6 +248,7 @@ class InsertImageManager {
 
         // Global move/up events
         const handleMove = (e) => {
+            if (!eventOwnsInsertImageGesture(e)) return;
             if ((this.isDragging || this.isResizing || this.isRotating) && e.type === 'touchmove') {
                 e.preventDefault();
             }
@@ -222,10 +257,12 @@ class InsertImageManager {
             else if (this.isRotating) this.rotate(e);
         };
 
-        const handleEnd = () => {
+        const handleEnd = (e) => {
+            if (!eventOwnsInsertImageGesture(e)) return;
             this.stopDrag();
             this.stopResize();
             this.stopRotate();
+            this.activeGesturePointerKey = null;
         };
 
         document.addEventListener('mousemove', handleMove);

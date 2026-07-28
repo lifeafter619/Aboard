@@ -6,8 +6,10 @@
 const SW_VERSION = '2.5.0';
 const CORE_CACHE_NAME = `aboard-core-${SW_VERSION}`;
 const RUNTIME_CACHE_NAME = `aboard-runtime-${SW_VERSION}`;
+const MEDIA_CACHE_NAME = `aboard-media-${SW_VERSION}`;
 const RUNTIME_CACHE_MAX_ENTRIES = 24;
 const OPTIONAL_PRECACHE_CONCURRENCY = 6;
+const NAVIGATION_NETWORK_TIMEOUT_MS = 2000;
 const RUNTIME_CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'worker', 'image', 'font', 'manifest', 'audio']);
 const RUNTIME_CACHEABLE_EXTENSIONS = /\.(?:css|gif|ico|jpe?g|js|json|mp3|png|svg|wav|webp|woff2?)$/i;
 const LOCALE_ASSETS = [
@@ -37,7 +39,7 @@ const CORE_ASSETS = [
   './img/icon.svg',
   './img/icon-192.png',
   './img/icon-512.png',
-  './css/style.css',
+  './css/style.css?v=20260727-compact-panel',
   './css/modules/time-display.css',
   './css/modules/feature-area.css',
   './css/modules/pagination.css',
@@ -82,7 +84,6 @@ const CORE_ASSETS = [
   './js/history.js',
   './js/background.js',
   './js/image-controls.js',
-  './js/stroke-controls.js',
   './js/selection.js',
   './js/collapsible.js',
   './js/time-display.js',
@@ -232,6 +233,153 @@ async function cacheFirst(request) {
   return response;
 }
 
+async function navigationNetworkFirst(
+  request,
+  { timeoutMs = NAVIGATION_NETWORK_TIMEOUT_MS, event = null } = {}
+) {
+  const cache = await caches.open(CORE_CACHE_NAME);
+  const networkPromise = fetch(request).then(async (response) => {
+    if (canStoreResponse(response)) {
+      try {
+        await cache.put('./index.html', response.clone());
+      } catch (error) {
+        console.warn('Failed to refresh the cached app shell:', error);
+      }
+    }
+    return response;
+  });
+  const backgroundRefresh = networkPromise.then(() => undefined, (error) => {
+    console.warn('Background app-shell refresh failed:', error);
+  });
+
+  let timeoutId = null;
+  const timeoutPromise = new Promise((resolve) => {
+    timeoutId = setTimeout(() => resolve({ timedOut: true }), timeoutMs);
+  });
+
+  try {
+    const result = await Promise.race([
+      networkPromise.then((response) => ({ timedOut: false, response })),
+      timeoutPromise
+    ]);
+    if (!result.timedOut) {
+      if (result.response?.ok) {
+        return result.response;
+      }
+      const cached = await cache.match('./index.html');
+      return cached || result.response;
+    }
+
+    const cached = await cache.match('./index.html');
+    if (cached) {
+      event?.waitUntil?.(backgroundRefresh);
+      return cached;
+    }
+
+    return await networkPromise;
+  } catch (error) {
+    const cached = await cache.match('./index.html');
+    if (cached) {
+      return cached;
+    }
+    throw error;
+  } finally {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
+function isMediaAssetUrl(url) {
+  return /\/sounds\/[^/]+\.(?:mp3|wav)$/i.test(url.pathname);
+}
+
+function createFullMediaRequest(request) {
+  const headers = new Headers(request.headers);
+  headers.delete('range');
+  return new Request(request, { headers });
+}
+
+async function getFullMediaResponse(request) {
+  const cache = await caches.open(MEDIA_CACHE_NAME);
+  const fullRequest = createFullMediaRequest(request);
+  const cached = await cache.match(fullRequest);
+  if (cached) {
+    return cached;
+  }
+
+  const response = await fetch(fullRequest);
+  if (canStoreResponse(response)) {
+    try {
+      await cache.put(fullRequest, response.clone());
+    } catch (error) {
+      console.warn('Failed to cache complete media response:', request.url, error);
+    }
+  }
+  return response;
+}
+
+function parseByteRange(rangeHeader, size) {
+  const match = /^bytes=(\d*)-(\d*)$/i.exec(String(rangeHeader || '').trim());
+  if (!match || (!match[1] && !match[2]) || size <= 0) {
+    return null;
+  }
+
+  let start;
+  let end;
+  if (!match[1]) {
+    const suffixLength = Number(match[2]);
+    if (!Number.isSafeInteger(suffixLength) || suffixLength <= 0) {
+      return null;
+    }
+    start = Math.max(size - suffixLength, 0);
+    end = size - 1;
+  } else {
+    start = Number(match[1]);
+    end = match[2] ? Number(match[2]) : size - 1;
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end)) {
+      return null;
+    }
+    end = Math.min(end, size - 1);
+  }
+
+  if (start < 0 || start >= size || end < start) {
+    return null;
+  }
+  return { start, end };
+}
+
+async function handleMediaRequest(request) {
+  const fullResponse = await getFullMediaResponse(request);
+  const rangeHeader = request.headers.get('range');
+  if (!rangeHeader || fullResponse.status !== 200) {
+    return fullResponse;
+  }
+
+  const body = await fullResponse.arrayBuffer();
+  const range = parseByteRange(rangeHeader, body.byteLength);
+  if (!range) {
+    return new Response(null, {
+      status: 416,
+      headers: {
+        'Accept-Ranges': 'bytes',
+        'Content-Range': `bytes */${body.byteLength}`
+      }
+    });
+  }
+
+  const headers = new Headers(fullResponse.headers);
+  headers.delete('content-encoding');
+  headers.set('accept-ranges', 'bytes');
+  headers.set('content-range', `bytes ${range.start}-${range.end}/${body.byteLength}`);
+  headers.set('content-length', String(range.end - range.start + 1));
+  return new Response(body.slice(range.start, range.end + 1), {
+    status: 206,
+    statusText: 'Partial Content',
+    headers
+  });
+}
+
 // Assets that must be available for the shell to boot at all. If any of these
 // fails to cache during install, the new Service Worker is genuinely broken and
 // must not activate.
@@ -239,7 +387,7 @@ const ESSENTIAL_CORE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './css/style.css',
+  './css/style.css?v=20260727-compact-panel',
   './js/modules/i18n.js',
   './js/modules/file-validation.js',
   './js/collapsible.js',
@@ -249,7 +397,6 @@ const ESSENTIAL_CORE_ASSETS = [
   './js/history.js',
   './js/background.js',
   './js/image-controls.js',
-  './js/stroke-controls.js',
   './js/selection.js',
   './js/modules/edge-drawing.js',
   './js/modules/teaching-tools.js',
@@ -279,6 +426,22 @@ const ESSENTIAL_CORE_ASSETS = [
   './js/modules/tool-runtime.js',
   './js/modules/ui-listeners-core-runtime.js',
   './js/main.js',
+  './js/modules/pwa-manager.js',
+  './js/modules/help-system.js',
+  './js/time-display.js',
+  './js/modules/time-display-controls.js',
+  './js/modules/time-display-settings.js',
+  './js/modules/coordinate-panel-runtime.js',
+  './js/modules/overlay-ui-runtime.js',
+  './js/modules/ui-listeners-runtime.js',
+  './js/modules/font-management-runtime.js',
+  './js/modules/config-import-runtime.js',
+  './js/modules/background-ui-runtime.js',
+  './js/modules/cache-runtime.js',
+  './js/modules/customization-runtime.js',
+  './js/modules/uploaded-images-runtime.js',
+  './js/modules/coordinate-origin-runtime.js',
+  './js/modules/coordinate-tools-runtime.js',
   './js/app/bootstrap.js',
   './js/app/create-app.js',
   './js/app/create-app-context.js',
@@ -362,7 +525,7 @@ self.addEventListener('message', event => {
 });
 
 self.addEventListener('activate', event => {
-  const cacheWhitelist = [CORE_CACHE_NAME, RUNTIME_CACHE_NAME];
+  const cacheWhitelist = [CORE_CACHE_NAME, RUNTIME_CACHE_NAME, MEDIA_CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => Promise.all(
       cacheNames.map(cacheName => {
@@ -390,6 +553,11 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  if (isMediaAssetUrl(url)) {
+    event.respondWith(handleMediaRequest(request));
+    return;
+  }
+
   if (isRangeRequest(request)) {
     return;
   }
@@ -400,12 +568,7 @@ self.addEventListener('fetch', event => {
   }
 
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request).catch(async () => {
-        const cache = await caches.open(CORE_CACHE_NAME);
-        return cache.match('./index.html');
-      })
-    );
+    event.respondWith(navigationNetworkFirst(request, { event }));
     return;
   }
 

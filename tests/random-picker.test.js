@@ -152,9 +152,29 @@ function testLargeNoRepeatNumberRangeStillPicksRandomResult() {
   );
 }
 
+function testTitleOnlyUpdatePreservesNoRepeatProgress() {
+  const document = createDocumentStub();
+  const RandomPickerInstance = loadRandomPickerInstance(document);
+  const instance = new RandomPickerInstance(1, { showSettings() {}, remove() {} }, {
+    mode: 'number',
+    min: 1,
+    max: 10,
+    allowRepeats: false
+  });
+  instance.remainingNumbers = [2, 4, 6];
+  instance.remainingNumberCount = 3;
+
+  instance.updateConfig({ title: 'Updated title' });
+
+  assert.deepEqual(instance.remainingNumbers, [2, 4, 6],
+    'changing unrelated settings must preserve no-repeat number progress');
+  assert.equal(instance.remainingNumberCount, 3);
+}
+
 function main() {
   testInitialTitleIsInsertedAsText();
   testLargeNoRepeatNumberRangeStillPicksRandomResult();
+  testTitleOnlyUpdatePreservesNoRepeatProgress();
   console.log('random-picker.test: all assertions passed');
 }
 

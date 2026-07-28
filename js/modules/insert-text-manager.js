@@ -54,6 +54,7 @@ class InsertTextManager {
         this.isDragging = false;
         this.isResizing = false;
         this.isRotating = false;
+        this.activeGesturePointerKey = null;
 
         this.dragStartPos = { x: 0, y: 0 };
         this.dragStartTextPos = { x: 0, y: 0 };
@@ -727,6 +728,36 @@ class InsertTextManager {
         });
 
         // Overlay Events
+        const getInsertTextGestureKey = (e) => {
+            if (Number.isFinite(e?.pointerId)) return `pointer:${e.pointerId}`;
+            if (String(e?.type || '').startsWith('touch')) {
+                const touch = e.changedTouches?.[0] || e.touches?.[0];
+                return touch ? `touch:${touch.identifier}` : null;
+            }
+            return String(e?.type || '').startsWith('mouse') ? 'mouse' : null;
+        };
+        const claimInsertTextGesture = (e) => {
+            if (this.activeGesturePointerKey !== null) return false;
+            const key = getInsertTextGestureKey(e);
+            if (!key) return false;
+            this.activeGesturePointerKey = key;
+            return true;
+        };
+        const eventOwnsInsertTextGesture = (e) => {
+            if (this.activeGesturePointerKey === null) return false;
+            if (Number.isFinite(e?.pointerId)) {
+                return this.activeGesturePointerKey === `pointer:${e.pointerId}`;
+            }
+            if (String(e?.type || '').startsWith('touch')) {
+                const touches = e.changedTouches?.length ? e.changedTouches : e.touches;
+                return Array.from(touches || []).some(
+                    touch => this.activeGesturePointerKey === `touch:${touch.identifier}`
+                );
+            }
+            return this.activeGesturePointerKey === 'mouse'
+                && String(e?.type || '').startsWith('mouse');
+        };
+
         const handleDragStart = (e) => {
             e.stopPropagation();
             const target = e.target;
@@ -741,6 +772,7 @@ class InsertTextManager {
                     !closest('.resize-handle') &&
                     !closest('.rotate-handle') &&
                     !closest('.text-controls-toolbar')) {
+                    if (!claimInsertTextGesture(e)) return;
                     this.startDrag(e);
                 }
             }
@@ -755,6 +787,7 @@ class InsertTextManager {
             const startResize = (e) => {
                 e.stopPropagation();
                 e.preventDefault?.();
+                if (!claimInsertTextGesture(e)) return;
                 this.startResize(e, handle.dataset.handle);
             };
             handle.addEventListener('mousedown', startResize);
@@ -766,6 +799,7 @@ class InsertTextManager {
         const startRotate = (e) => {
             e.stopPropagation();
             e.preventDefault?.();
+            if (!claimInsertTextGesture(e)) return;
             this.startRotate(e);
         };
         this.rotateHandle.addEventListener('mousedown', startRotate);
@@ -782,6 +816,7 @@ class InsertTextManager {
 
         // Global Move/Up
         const handleMove = (e) => {
+            if (!eventOwnsInsertTextGesture(e)) return;
             if ((this.isDragging || this.isResizing || this.isRotating) && e.type === 'touchmove') {
                 e.preventDefault();
             }
@@ -790,10 +825,12 @@ class InsertTextManager {
             else if (this.isRotating) this.rotate(e);
         };
 
-        const handleEnd = () => {
+        const handleEnd = (e) => {
+            if (!eventOwnsInsertTextGesture(e)) return;
             this.stopDrag();
             this.stopResize();
             this.stopRotate();
+            this.activeGesturePointerKey = null;
         };
 
         document.addEventListener('mousemove', handleMove);
@@ -807,6 +844,10 @@ class InsertTextManager {
     }
 
     trigger() {
+        if (this.isActive) {
+            this.showModal(true);
+            return;
+        }
         // Reset state for new text
         this.textConfig = {
             text: '',
@@ -1435,12 +1476,22 @@ class InsertTextManager {
 
     normalizeFontFamilyForCanvas(fontFamily) {
         if (!fontFamily || typeof fontFamily !== 'string') return 'sans-serif';
+        const genericFamilies = new Set([
+            'serif', 'sans-serif', 'monospace', 'cursive', 'fantasy',
+            'system-ui', 'ui-serif', 'ui-sans-serif', 'ui-monospace',
+            'ui-rounded', 'emoji', 'math', 'fangsong'
+        ]);
         return fontFamily.split(',')
             .map(part => part.trim())
             .filter(Boolean)
             .map(part => {
-                const normalized = part.replace(/^["']|["']$/g, '').trim();
-                return !/\s/.test(normalized) ? normalized : `"${normalized}"`;
+                const quote = part[0];
+                const normalized = ((quote === '"' || quote === "'") && part.endsWith(quote)
+                    ? part.slice(1, -1)
+                    : part).trim();
+                if (genericFamilies.has(normalized.toLowerCase())) return normalized;
+                const escaped = normalized.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                return `"${escaped}"`;
             })
             .join(', ');
     }

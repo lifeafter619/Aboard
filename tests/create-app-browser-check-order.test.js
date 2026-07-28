@@ -6,6 +6,7 @@ const vm = require('node:vm');
 function loadCreateAppWithHooks({
   events,
   createAppServices,
+  loadLegacyScripts: loadLegacyScriptsHook,
   resolveLegacyConstructor = () => null,
   warnings = []
 }) {
@@ -54,10 +55,10 @@ function loadCreateAppWithHooks({
       return {};
     },
     createAppServices,
-    loadLegacyScripts(scripts) {
+    loadLegacyScripts: loadLegacyScriptsHook || ((scripts) => {
       events.push(`loadLegacyScripts:${scripts.join(',')}`);
       return Promise.resolve();
-    },
+    }),
     resolveLegacyConstructor,
     BrowserCheck: {
       init() {
@@ -251,9 +252,104 @@ async function testPostVisibleStartupSurvivesDeferredOptionalFeatureFailures() {
   );
 }
 
+async function testPostVisibleStartupInstantiatesDeferredHelpSystem() {
+  const events = [];
+  let helpInitCalls = 0;
+
+  class FakeHelpSystem {
+    init() {
+      helpInitCalls += 1;
+    }
+  }
+
+  const { startPostVisibleStartup, win, doc } = loadCreateAppWithHooks({
+    events,
+    async createAppServices() {
+      return {};
+    },
+    resolveLegacyConstructor(_win, className) {
+      return className === 'AboardHelpSystem' ? FakeHelpSystem : null;
+    }
+  });
+
+  const app = {
+    bridge: { setPwaManager() {} },
+    services: {},
+    drawingBoard: {
+      uploadedImages: [],
+      loadUploadedImages() {
+        return [];
+      }
+    },
+    boardDependencies: {}
+  };
+
+  await startPostVisibleStartup(app, { win, doc });
+
+  assert.ok(app.drawingBoard.helpSystem instanceof FakeHelpSystem,
+    'post-visible startup should replace the intentionally absent help dependency with the real implementation');
+  assert.equal(helpInitCalls, 1, 'deferred HelpSystem should initialize exactly once');
+}
+
+async function testPostVisibleScriptFailureDoesNotAbortLaterStartup() {
+  const events = [];
+  const warnings = [];
+  const toasts = [];
+  let batchCalls = 0;
+
+  const { startPostVisibleStartup, win, doc } = loadCreateAppWithHooks({
+    events,
+    warnings,
+    loadLegacyScripts() {
+      batchCalls += 1;
+      if (batchCalls === 1) {
+        return Promise.reject(new Error('transient post-visible script failure'));
+      }
+      return Promise.resolve({ failures: [] });
+    },
+    async createAppServices() {
+      events.push('createAppServices');
+      return {};
+    }
+  });
+
+  const app = {
+    bridge: { setPwaManager() {} },
+    services: {},
+    drawingBoard: {
+      settingsManager: {
+        toastManager: {
+          show(message, type) {
+            toasts.push({ message, type });
+          }
+        }
+      },
+      uploadedImages: [],
+      loadUploadedImages() {
+        return [];
+      }
+    },
+    boardDependencies: {}
+  };
+
+  await assert.doesNotReject(
+    startPostVisibleStartup(app, { win, doc }),
+    'one failed post-visible script batch must not abort all later startup work'
+  );
+
+  assert.equal(batchCalls, 3, 'all post-visible script batches should still be attempted');
+  assert.ok(events.includes('createAppServices'), 'post-visible services should initialize after an isolated script failure');
+  assert.ok(warnings.some((entry) => entry.includes('post-visible scripts')),
+    'isolated post-visible script failures should remain visible in diagnostics');
+  assert.equal(toasts.length, 1, 'a final post-visible script failure should be visible to the user');
+  assert.equal(toasts[0].type, 'error');
+}
+
 (async function main() {
   await testBrowserCheckRunsBeforeServiceCreation();
   await testPostVisibleStartupSurvivesDeferredOptionalFeatureFailures();
+  await testPostVisibleStartupInstantiatesDeferredHelpSystem();
+  await testPostVisibleScriptFailureDoesNotAbortLaterStartup();
   console.log('create-app-browser-check-order.test: all assertions passed');
 })().catch((error) => {
   console.error(error);

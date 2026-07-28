@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { loadClassicScript } from '../js/app/legacy-script-loader.js';
+import { loadClassicScript, loadLegacyScripts } from '../js/app/legacy-script-loader.js';
 
 const scriptLoaderSource = fs.readFileSync(
   path.join(process.cwd(), 'js', 'infra', 'script-loader.js'),
@@ -62,7 +62,7 @@ function createDocumentStub(existingScripts = []) {
   return {
     baseURI: 'http://localhost/',
     get scripts() {
-      return scripts;
+      return scripts.filter((script) => !script.isRemoved);
     },
     head: {
       appendChild(script) {
@@ -76,6 +76,9 @@ function createDocumentStub(existingScripts = []) {
     },
     getAppendCount() {
       return appendCount;
+    },
+    getAppendedScripts() {
+      return [...scripts];
     }
   };
 }
@@ -167,12 +170,50 @@ async function testLegacyGlobalEquivalentRelativePathsDoNotDuplicateScripts() {
   assert.equal(doc.getAppendCount(), 0);
 }
 
+async function testLegacyScriptRetriesOnceAfterTransientFailure() {
+  const doc = createDocumentStub();
+  const resultPromise = raceWithTimeout(
+    loadClassicScript('js/modules/retry-once.js', { doc, retries: 1 }),
+    100
+  );
+
+  doc.getAppendedScripts()[0].dispatch('error');
+  await Promise.resolve();
+
+  assert.equal(doc.getAppendCount(), 2, 'a transient load error should append one retry script');
+  doc.getAppendedScripts()[1].dispatch('load');
+
+  const result = await resultPromise;
+  assert.equal(result.status, 'resolved', 'the retry should allow the legacy script load to recover');
+  assert.equal(result.value.dataset.loaded, 'true');
+}
+
+async function testLegacyScriptBatchCanCollectFailuresWithoutRejecting() {
+  const doc = createDocumentStub();
+  const batchPromise = loadLegacyScripts(
+    ['js/modules/failed.js', 'js/modules/loaded.js'],
+    { doc, retries: 0, continueOnError: true }
+  );
+  await Promise.resolve();
+
+  const [failedScript, loadedScript] = doc.getAppendedScripts();
+  failedScript.dispatch('error');
+  loadedScript.dispatch('load');
+
+  const result = await batchPromise;
+  assert.equal(result.failures.length, 1, 'the batch result should expose the isolated failed script');
+  assert.equal(result.failures[0].src, 'js/modules/failed.js');
+  assert.equal(result.loaded.length, 1, 'successful scripts in the same batch should still complete');
+}
+
 async function run() {
   await testExistingLoadedScriptWithoutMarkerResolvesImmediately();
   await testEquivalentRelativePathsDoNotDuplicateScripts();
   await testLegacyExistingLoadedScriptWithoutMarkerResolvesImmediately();
   await testLegacyGlobalExistingLoadedScriptWithoutMarkerResolvesImmediately();
   await testLegacyGlobalEquivalentRelativePathsDoNotDuplicateScripts();
+  await testLegacyScriptRetriesOnceAfterTransientFailure();
+  await testLegacyScriptBatchCanCollectFailuresWithoutRejecting();
   console.log('script-loader-existing-script.test: all assertions passed');
 }
 

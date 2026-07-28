@@ -20,7 +20,7 @@ function getPendingScriptLoadMap(doc) {
   return pendingLoads;
 }
 
-export function loadClassicScript(src, { doc = document } = {}) {
+export function loadClassicScript(src, { doc = document, retries = 1 } = {}) {
   const targetUrl = toAbsoluteUrl(doc, src);
   const pendingLoads = getPendingScriptLoadMap(doc);
 
@@ -43,34 +43,46 @@ export function loadClassicScript(src, { doc = document } = {}) {
     existingScript.remove();
   }
 
+  const retryLimit = Number.isInteger(retries) && retries > 0 ? retries : 0;
+  let retryCount = 0;
+
   const promise = new Promise((resolve, reject) => {
-    const script = doc.createElement('script');
+    const startAttempt = () => {
+      const script = doc.createElement('script');
 
-    const cleanup = () => {
-      script.removeEventListener('load', handleLoad);
-      script.removeEventListener('error', handleError);
+      const cleanup = () => {
+        script.removeEventListener('load', handleLoad);
+        script.removeEventListener('error', handleError);
+      };
+
+      const handleLoad = () => {
+        script.dataset.loaded = 'true';
+        cleanup();
+        resolve(script);
+      };
+
+      const handleError = () => {
+        cleanup();
+        script.remove();
+        if (retryCount < retryLimit) {
+          retryCount += 1;
+          startAttempt();
+          return;
+        }
+        reject(new Error(`Failed to load legacy script after ${retryCount + 1} attempt(s): ${src}`));
+      };
+
+      script.addEventListener('load', handleLoad, { once: true });
+      script.addEventListener('error', handleError, { once: true });
+
+      script.src = src;
+      script.async = false;
+      script.defer = true;
+      script.dataset.loaded = 'false';
+      doc.head.appendChild(script);
     };
 
-    const handleLoad = () => {
-      script.dataset.loaded = 'true';
-      cleanup();
-      resolve(script);
-    };
-
-    const handleError = () => {
-      cleanup();
-      script.remove();
-      reject(new Error(`Failed to load legacy script: ${src}`));
-    };
-
-    script.addEventListener('load', handleLoad, { once: true });
-    script.addEventListener('error', handleError, { once: true });
-
-    script.src = src;
-    script.async = false;
-    script.defer = true;
-    script.dataset.loaded = 'false';
-    doc.head.appendChild(script);
+    startAttempt();
   });
 
   const loadPromise = promise.then((script) => {
@@ -90,5 +102,28 @@ export function loadClassicScript(src, { doc = document } = {}) {
 }
 
 export async function loadLegacyScripts(scripts = LEGACY_STARTUP_SCRIPTS, options = {}) {
-  await Promise.all(scripts.map((src) => loadClassicScript(src, options)));
+  const results = await Promise.allSettled(
+    scripts.map((src) => Promise.resolve().then(() => loadClassicScript(src, options)))
+  );
+  const loaded = [];
+  const failures = [];
+
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      loaded.push({ src: scripts[index], script: result.value });
+      return;
+    }
+    failures.push({ src: scripts[index], error: result.reason });
+  });
+
+  if (failures.length > 0 && !options.continueOnError) {
+    const error = new Error(
+      `Failed to load ${failures.length} legacy script(s): ${failures.map(({ src }) => src).join(', ')}`
+    );
+    error.errors = failures.map((failure) => failure.error);
+    error.failures = failures;
+    throw error;
+  }
+
+  return { loaded, failures, results };
 }

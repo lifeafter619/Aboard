@@ -51,6 +51,22 @@ function testPackageExposesBrowserSmokeScript() {
   assert.match(testRunner, /tests\/responsive-layout-smoke\.mjs/, 'full suite runner should include responsive layout browser coverage');
 }
 
+function testRetiredStrokeEditorIsNotLoaded() {
+  const manifest = readText('js/app/legacy-manifest.js');
+  const serviceWorker = readText('sw.js');
+  const runtimeDependencies = readText('js/app/create-board-runtime-dependencies.js');
+  const legacyConstruction = readText('js/modules/board-construction.js');
+
+  assert.doesNotMatch(manifest, /stroke-controls\.js/,
+    'the unreachable legacy stroke editor should not be loaded during startup');
+  assert.doesNotMatch(serviceWorker, /stroke-controls\.js/,
+    'the unreachable legacy stroke editor should not occupy the offline cache');
+  assert.doesNotMatch(runtimeDependencies, /\bStrokeControls\b/,
+    'selection construction should not depend on the retired stroke editor');
+  assert.doesNotMatch(legacyConstruction, /\bStrokeControls\b/,
+    'legacy fallback construction should not depend on the retired stroke editor');
+}
+
 function testPaginationControlsUseCompactTargets() {
   const html = readText('index.html');
   const css = readText('css/modules/pagination.css');
@@ -303,6 +319,15 @@ function testProductionSourcesAvoidPromiseFinallyForLegacyWebViews() {
   );
 }
 
+function testLegacyStartupAvoidsAggregateError() {
+  const loader = readText('js/app/legacy-script-loader.js');
+  assert.doesNotMatch(
+    loader,
+    /\bAggregateError\b/,
+    'legacy startup must not depend on AggregateError, which is newer than the supported browser baseline'
+  );
+}
+
 function testStylesAvoidHasSelectorForLegacyWebViews() {
   const cssRoot = path.join(REPO_ROOT, 'css');
   const offenders = fs.readdirSync(cssRoot, { withFileTypes: true }).flatMap((entry) => {
@@ -379,6 +404,7 @@ function run() {
   testPortraitOverlayHasContinuePath();
   testScriptsDirectoryIsNotGloballyIgnored();
   testPackageExposesBrowserSmokeScript();
+  testRetiredStrokeEditorIsNotLoaded();
   testPaginationControlsUseCompactTargets();
   testTimeDisplayAreaStylesLiveInModule();
   testCoordinateToolStylesLiveInModule();
@@ -391,6 +417,7 @@ function run() {
   testNonFirstPaintCssModulesAreDeferred();
   testProductionSourcesAvoidReplaceAllForLegacyWebViews();
   testProductionSourcesAvoidPromiseFinallyForLegacyWebViews();
+  testLegacyStartupAvoidsAggregateError();
   testStylesAvoidHasSelectorForLegacyWebViews();
   testHtmlAvoidsInlineFixedModalWidths();
   testAnnouncementModalResponsiveMinimumWidthIsApplied();

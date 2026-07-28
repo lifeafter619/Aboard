@@ -159,12 +159,58 @@ function testStoredStyledTriangleRestylesFromItsPoints() {
   assert.deepEqual(polygonCalls[0], stroke.points, 'redraw should reuse the (possibly transformed) stored points');
 }
 
+// Regression (audit-2026-07-26 M4): moving the window to a monitor with a
+// different scale factor changes devicePixelRatio; the preview canvas must
+// re-render its buffer instead of reusing the DPR cached at creation time.
+function testPreviewCanvasResizesWhenDevicePixelRatioChanges() {
+  const context = {
+    window: { devicePixelRatio: 1 },
+    console,
+    Math, Number, String, Boolean, Array, Object
+  };
+  context.globalThis = context;
+  vm.createContext(context);
+  vm.runInContext(
+    fs.readFileSync(path.join(__dirname, '..', 'js', 'modules', 'shape-drawing.js'), 'utf8'),
+    context,
+    { filename: 'shape-drawing.js' }
+  );
+
+  const manager = Object.create(context.window.ShapeDrawingManager.prototype);
+  const transforms = [];
+  manager.canvas = {
+    offsetWidth: 800,
+    getBoundingClientRect() {
+      return { left: 0, top: 0, width: 800, height: 600 };
+    }
+  };
+  manager.previewCanvas = { width: 0, height: 0, style: {} };
+  manager.previewCtx = {
+    setTransform(...args) { transforms.push(args); }
+  };
+  manager.cachedDpr = 1;
+  manager.lastCanvasRect = { width: 800, height: 600 };
+
+  // Same CSS size, unchanged DPR: no resize expected.
+  manager.syncPreviewCanvas();
+  assert.equal(transforms.length, 0, 'unchanged DPR and size must not trigger a resize');
+
+  // The window moves to a 2x monitor: buffer and transform must follow.
+  context.window.devicePixelRatio = 2;
+  manager.syncPreviewCanvas();
+  assert.equal(manager.previewCanvas.width, 1600, 'buffer width must use the fresh DPR');
+  assert.equal(manager.previewCanvas.height, 1200, 'buffer height must use the fresh DPR');
+  assert.deepEqual(plain(transforms.at(-1)), [2, 0, 0, 2, 0, 0], 'context transform must use the fresh DPR');
+  assert.equal(manager.cachedDpr, 2, 'cached DPR must be refreshed');
+}
+
 function main() {
   testTrianglePointsFormClosedApexUpPolygon();
   testDiamondPointsFormClosedMidpointPolygon();
   testSolidPolygonDrawsClosedPath();
   testWavyPolygonDrawsOneWavyLinePerEdge();
   testStoredStyledTriangleRestylesFromItsPoints();
+  testPreviewCanvasResizesWhenDevicePixelRatioChanges();
   console.log('shape-polygon.test: all assertions passed');
 }
 

@@ -300,6 +300,7 @@ window.translations = {
         connectPointsEnabled: '点線表示を有効にしました',
         connectPointsDisabled: '点線表示を無効にしました',
         pointAdded: '座標点を追加しました',
+        pointAlreadyExists: 'この位置には既に座標点があります',
         pointsCleared: '座標点を消去しました',
         plotAdded: '関数グラフを追加しました',
         plotUpdated: '関数グラフを更新しました',
@@ -765,6 +766,7 @@ window.translations = {
         loopPlayback: 'ループ再生',
         loopCount: 'ループ回数',
         loopInterval: 'ループ間隔',
+        secondsUnit: '秒',
         uploadCustomAudio: 'カスタムオーディオをアップロード',
         soundPresets: {
             classBell: 'クラスベル (10秒)',
@@ -909,6 +911,7 @@ window.translations = {
         legacyCompatibilityDisabled: '旧版 .aboard インポート互換が無効です。先に設定で旧版互換インポートを有効にしてください。',
         zipLoaderUnavailable: 'ZIP ライブラリのローダーを利用できません。',
         zipLoadFailed: 'ZIP ライブラリの読み込みに失敗しました。',
+        imageDimensionsTooLarge: 'プロジェクトに寸法またはピクセル数が大きすぎる画像が含まれています。',
         legacyLoaderUnavailable: '旧版互換ローダーを利用できません。',
         legacyModuleLoadFailed: '旧版プロジェクト互換モジュールの読み込みに失敗しました。',
         base64DecoderUnavailable: 'Base64 デコーダーを利用できません。',
@@ -924,6 +927,9 @@ window.translations = {
         unsafePath: '安全でないプロジェクトパッケージのパスです：{path}',
         tooManyPages: 'プロジェクトパッケージに含まれるページ数が多すぎます。',
         assetTooLarge: 'プロジェクトパッケージに大きすぎるアセットが含まれています：{path}',
+        entryTooLarge: 'プロジェクトパッケージに大きすぎるファイルが含まれています：{path}',
+        packageTooLarge: 'プロジェクトパッケージは展開後のサイズが大きすぎるためインポートできません。',
+        corruptPackage: 'このプロジェクトパッケージは破損しているためインポートできません。',
         assetsTooLarge: 'プロジェクトパッケージに埋め込まれたアセットが多すぎます。'
     },
 

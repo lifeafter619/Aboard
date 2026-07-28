@@ -296,6 +296,7 @@ window.translations = {
         connectPointsEnabled: 'Ligne des points activée',
         connectPointsDisabled: 'Ligne des points désactivée',
         pointAdded: 'Point de coordonnées ajouté',
+        pointAlreadyExists: 'Un point de coordonnées existe déjà à cet emplacement',
         pointsCleared: 'Points de coordonnées effacés',
         plotAdded: 'Courbe ajoutée',
         plotUpdated: 'Courbe mise à jour',
@@ -625,24 +626,6 @@ window.translations = {
             fullscreenFontSizeHint: 'Ajuster la taille de police de l\'affichage de l\'heure en plein écran, plage 10%-85%',
             customColor: 'Couleur personnalisée'
         },
-        about: {
-            title: 'À propos d\'Aboard',
-            version: 'Version',
-            description: 'Aboard est une application de tableau blanc minimaliste mais puissante, conçue pour le travail créatif et la prise de notes efficace.',
-            features: 'Fonctionnalités principales',
-            feature1: 'Expérience de dessin fluide',
-            feature2: 'Types de stylo riches',
-            feature3: 'Outil gomme flexible',
-            feature4: 'Motifs d\'arrière-plan riches (points, grille, Tianzige, ligne anglaise 4, etc.)',
-            feature5: 'Exporter en images PNG',
-            feature6: 'Fonctionnalité Annuler/Rétablir',
-            feature7: 'Support tactile complet',
-            feature8: 'Mode plein écran',
-            feature9: 'Sauvegarde automatique',
-            feature10: 'Support multilingue',
-            license: 'Licence Open Source',
-            github: 'Dépôt GitHub'
-        }
     },
 
     // Feature Area
@@ -741,7 +724,7 @@ window.translations = {
 
     // Timer
     timer: {
-        title: 'Paramètres du minuteur',
+        settingsTitle: 'Paramètres du minuteur',
         mode: 'Mode',
         countdown: 'Compte à rebours',
         stopwatch: 'Chronomètre',
@@ -770,6 +753,7 @@ window.translations = {
         loopPlayback: 'Lecture en boucle',
         loopCount: 'Nombre de boucles',
         loopInterval: 'Intervalle de boucle',
+        secondsUnit: 'sec',
         uploadCustomAudio: 'Télécharger audio personnalisé',
         soundPresets: {
             classBell: 'Cloche de classe (10s)',
@@ -906,6 +890,7 @@ Profitez de votre travail créatif !`,
         legacyCompatibilityDisabled: 'La compatibilité d’import .aboard héritée est désactivée. Activez-la d’abord dans les paramètres.',
         zipLoaderUnavailable: 'Le chargeur de bibliothèque ZIP n\'est pas disponible.',
         zipLoadFailed: 'Impossible de charger la bibliothèque ZIP.',
+        imageDimensionsTooLarge: 'Le projet contient une image dont les dimensions ou le nombre de pixels sont trop importants.',
         legacyLoaderUnavailable: 'Le chargeur de compatibilité héritée n\'est pas disponible.',
         legacyModuleLoadFailed: 'Impossible de charger le module de compatibilité des anciens projets.',
         base64DecoderUnavailable: 'Le décodeur Base64 n\'est pas disponible.',
@@ -921,6 +906,9 @@ Profitez de votre travail créatif !`,
         unsafePath: 'Chemin non sûr dans le paquet de projet : {path}',
         tooManyPages: 'Le paquet de projet contient trop de pages.',
         assetTooLarge: 'Le paquet de projet contient une ressource trop volumineuse : {path}',
+        entryTooLarge: 'Le paquet de projet contient un fichier trop volumineux : {path}',
+        packageTooLarge: 'Le paquet de projet est trop volumineux une fois décompressé et ne peut pas être importé.',
+        corruptPackage: 'Ce paquet de projet est endommagé et ne peut pas être importé.',
         assetsTooLarge: 'Le paquet de projet contient trop de ressources intégrées.'
     },
 

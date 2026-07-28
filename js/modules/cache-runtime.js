@@ -54,12 +54,26 @@ function getCacheKeyGroups() {
             'toolbarSize', 'configScale', 'controlPosition', 'edgeSnapEnabled', 'touchZoomEnabled',
             'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn',
             'showToolbarText', 'keepMorePanelOpen', 'canvasWidth', 'canvasHeight', 'canvasPreset',
-            'themeColor', 'globalFont', 'language', 'patternPreferences', 'modalSizePreferences', 'modalCenterPreferences', 'toolbarOrder',
+            'themeColor', 'globalFont', 'locale', 'customFonts', 'fontPreferences', 'fontPreviewSettings',
+            'patternPreferences', 'modalSizePreferences', 'modalCenterPreferences', 'toolbarOrder',
             'toolbarVisibility', 'controlShowZoom', 'controlShowPagination', 'controlShowTime',
-            'controlShowFullscreen', 'controlShowImport', 'controlShowExport', 'penType',
+            'controlShowFullscreen', 'controlShowImport', 'controlShowExport', 'controlButtonOrder',
+            'updatePreference', 'legacyProjectImportEnabled', 'aboardLocalePreferenceMode',
+            'aboardDownloadedLocales', 'aboardDeferredLocaleSuggestionDismissed', 'collapsedSections',
+            'penType',
             'penLineStyle', 'penDashDensity', 'penMultiLineCount', 'penMultiLineSpacing',
-            'eraserShape', 'eraserSize', 'lineStyle'
+            'eraserShape', 'eraserSize', 'lineStyle',
+            'shapeLineStyle', 'shapeDashDensity', 'shapeWaveDensity', 'shapeMultiLineCount',
+            'shapeMultiLineSpacing', 'shapeArrowSize',
+            'timeDisplayEnabled', 'timeDisplayMode', 'timeDisplayTimeFormat', 'timeDisplayDateFormat',
+            'timeDisplayColor', 'timeDisplayBgColor', 'timeDisplayFontSize', 'timeDisplayOpacity',
+            'timeDisplayShowDate', 'timeDisplayShowTime', 'timeDisplayFullscreenMode',
+            'timeDisplayFullscreenFontSize', 'timeDisplayFullscreenTitleFontSize',
+            'timeDisplayFullscreenColor', 'timeDisplayFullscreenBgColor',
+            'timeDisplayFullscreenOpacity', 'timeDisplayTimezone',
+            'scoreboard_data', 'randomPickerConfig', 'timerCustomSounds', 'hideAnnouncement'
         ]);
+        const settingsKeyPrefixes = ['scoreboard_data_'];
         const canvasKeys = new Set([
             'savedCanvasData', 'savedBgCanvasData', 'savedCanvasTimestamp',
             'savedCurrentPage', 'pageBackgrounds', 'pageScenes',
@@ -69,15 +83,41 @@ function getCacheKeyGroups() {
             'imageTransform', 'imageSize',
             'coordinateOriginX', 'coordinateOriginY', 'coordinateOverlayState',
             'backgroundOutsideLayerOrder',
-            'uploadedImages',
+            'uploadedImages', 'floatingGifs',
             'canvasScale', 'panOffsetX', 'panOffsetY', 'canvasViewStateVersion',
             'aboardSessionSizeEstimate',
             this?.syncSessionSnapshotKey || 'aboardSyncSessionSnapshot',
             'aboardPlannedUpdateReload'
         ]);
+        const canvasKeyPrefixes = [];
         const internalKeys = new Set([CACHE_SESSION_WRITE_EPOCH_KEY]);
-        return { settingsKeys, canvasKeys, internalKeys };
+        return { settingsKeys, settingsKeyPrefixes, canvasKeys, canvasKeyPrefixes, internalKeys };
     
+}
+
+function cacheKeyMatches(key, exactKeys, prefixes = []) {
+        return exactKeys.has(key) || prefixes.some(prefix => key.startsWith(prefix));
+}
+
+function removeCacheKeyGroup(storage, storageLabel, exactKeys, prefixes = []) {
+        let succeeded = true;
+        exactKeys.forEach(key => {
+            succeeded = safeCacheStorageRemoveItem(storage, key, storageLabel) && succeeded;
+        });
+        if (prefixes.length === 0) {
+            return succeeded;
+        }
+
+        const storageKeys = getStorageKeysSafely(storage, storageLabel);
+        if (storageKeys === null) {
+            return false;
+        }
+        storageKeys.forEach(key => {
+            if (prefixes.some(prefix => key.startsWith(prefix))) {
+                succeeded = safeCacheStorageRemoveItem(storage, key, storageLabel) && succeeded;
+            }
+        });
+        return succeeded;
 }
 
 function getStorageEntrySize(key, value) {
@@ -304,7 +344,13 @@ function formatBytes(bytes) {
 }
 
 async function getCacheSizeSummary() {
-        const { settingsKeys, canvasKeys, internalKeys: groupedInternalKeys = new Set() } = this.getCacheKeyGroups();
+        const {
+            settingsKeys,
+            settingsKeyPrefixes = [],
+            canvasKeys,
+            canvasKeyPrefixes = [],
+            internalKeys: groupedInternalKeys = new Set()
+        } = this.getCacheKeyGroups();
         const summary = { settings: 0, canvas: 0, other: 0 };
         const internalKeys = new Set([this.cacheStorageSizeSnapshotKey, ...groupedInternalKeys]);
         const addStorageUsage = (storage, storageLabel) => {
@@ -316,8 +362,8 @@ async function getCacheSizeSummary() {
                 if (!key || internalKeys.has(key)) return;
                 const val = safeCacheStorageGetItem(storage, key, storageLabel);
                 const size = this.getStorageEntrySize(key, val);
-                if (settingsKeys.has(key)) summary.settings += size;
-                else if (canvasKeys.has(key)) summary.canvas += size;
+                if (cacheKeyMatches(key, settingsKeys, settingsKeyPrefixes)) summary.settings += size;
+                else if (cacheKeyMatches(key, canvasKeys, canvasKeyPrefixes)) summary.canvas += size;
                 else summary.other += size;
             });
         };
@@ -385,7 +431,13 @@ async function updateCacheSizeDisplay() {
 }
 
 async function clearSelectedCache(options) {
-        const { settingsKeys, canvasKeys, internalKeys = new Set() } = this.getCacheKeyGroups();
+        const {
+            settingsKeys,
+            settingsKeyPrefixes = [],
+            canvasKeys,
+            canvasKeyPrefixes = [],
+            internalKeys = new Set()
+        } = this.getCacheKeyGroups();
         let cleanupSucceeded = true;
 
         if (typeof this.isSessionWriteAllowed === 'function' && !this.isSessionWriteAllowed()) {
@@ -398,30 +450,34 @@ async function clearSelectedCache(options) {
             if (!cleared) {
                 return false;
             }
-            canvasKeys.forEach(key => {
-                cleanupSucceeded = safeCacheStorageRemoveItem(localStorage, key, 'localStorage') && cleanupSucceeded;
-                cleanupSucceeded = safeCacheStorageRemoveItem(sessionStorage, key, 'sessionStorage') && cleanupSucceeded;
-            });
+            cleanupSucceeded = removeCacheKeyGroup(
+                localStorage, 'localStorage', canvasKeys, canvasKeyPrefixes
+            ) && cleanupSucceeded;
+            cleanupSucceeded = removeCacheKeyGroup(
+                sessionStorage, 'sessionStorage', canvasKeys, canvasKeyPrefixes
+            ) && cleanupSucceeded;
         }
 
         if (options.settings) {
-            settingsKeys.forEach(key => {
-                cleanupSucceeded = safeCacheStorageRemoveItem(localStorage, key, 'localStorage') && cleanupSucceeded;
-                cleanupSucceeded = safeCacheStorageRemoveItem(sessionStorage, key, 'sessionStorage') && cleanupSucceeded;
-            });
+            cleanupSucceeded = removeCacheKeyGroup(
+                localStorage, 'localStorage', settingsKeys, settingsKeyPrefixes
+            ) && cleanupSucceeded;
+            cleanupSucceeded = removeCacheKeyGroup(
+                sessionStorage, 'sessionStorage', settingsKeys, settingsKeyPrefixes
+            ) && cleanupSucceeded;
         }
 
         if (options.other) {
-            const preserved = new Set(internalKeys);
-            if (!options.settings) settingsKeys.forEach(k => preserved.add(k));
-            if (!options.canvas) canvasKeys.forEach(k => preserved.add(k));
+            const shouldPreserve = key => internalKeys.has(key)
+                || (!options.settings && cacheKeyMatches(key, settingsKeys, settingsKeyPrefixes))
+                || (!options.canvas && cacheKeyMatches(key, canvasKeys, canvasKeyPrefixes));
 
             const localKeys = getStorageKeysSafely(localStorage, 'localStorage');
             if (localKeys === null) {
                 cleanupSucceeded = false;
             } else {
                 localKeys.forEach(key => {
-                    if (!preserved.has(key)) {
+                    if (!shouldPreserve(key)) {
                         cleanupSucceeded = safeCacheStorageRemoveItem(localStorage, key, 'localStorage') && cleanupSucceeded;
                     }
                 });
@@ -431,7 +487,7 @@ async function clearSelectedCache(options) {
                 cleanupSucceeded = false;
             } else {
                 sessionKeys.forEach(key => {
-                    if (!preserved.has(key)) {
+                    if (!shouldPreserve(key)) {
                         cleanupSucceeded = safeCacheStorageRemoveItem(sessionStorage, key, 'sessionStorage') && cleanupSucceeded;
                     }
                 });

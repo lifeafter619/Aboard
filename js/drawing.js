@@ -66,6 +66,8 @@ class DrawingEngine {
         // Drawing buffer
         this.points = [];
         this.lastPoint = null;
+        this.strokeBreakIndices = [];
+        this.pendingStrokeBreak = false;
         
         // Edge drawing support
         this.edgeDrawingManager = null;
@@ -1181,9 +1183,19 @@ class DrawingEngine {
         }
 
         const appearance = this.getSvgStrokeAppearance(stroke);
-        const pathData = this.buildSvgPathFromPoints(stroke.points);
+        const pathData = this.getStrokePointSegments(stroke)
+            .map(segment => this.buildSvgPathFromPoints(segment))
+            .filter(Boolean)
+            .join(' ');
         const strokeColor = this.escapeSvgAttribute(stroke.color || this.currentColor);
         const dashMarkup = appearance.dashArray ? ` stroke-dasharray="${appearance.dashArray}"` : '';
+
+        if (stroke.lineStyle === 'multi') {
+            const markup = this.getMultiLineStrokePaths(stroke).map(points => (
+                `<path d="${this.buildSvgPathFromPoints(points)}" fill="none" stroke="${strokeColor}" stroke-width="${appearance.lineWidth}" stroke-linecap="${appearance.lineCap}" stroke-linejoin="${appearance.lineJoin}" stroke-opacity="${appearance.opacity}" />`
+            )).join('');
+            return `<g class="stroke-multi-line">${markup}</g>`;
+        }
 
         if (stroke.points.length === 1) {
             const point = stroke.points[0];
@@ -1548,6 +1560,8 @@ class DrawingEngine {
         this.multiLineLastPerpY = 0;
         this.multiLineLastPoints = null;
         this.multiLinePendingPoint = null;
+        this.strokeBreakIndices = [];
+        this.pendingStrokeBreak = false;
         
         // Check for edge snapping when pen tool is active
         if (this.currentTool === 'pen' && this.edgeDrawingManager) {
@@ -1605,7 +1619,10 @@ class DrawingEngine {
             if (this.currentTool === 'pen' && this.edgeDrawingManager) {
                 const processed = this.edgeDrawingManager.processDrawingPoint(pos.x, pos.y);
                 if (processed.blocked) {
-                    // Point is inside a tool, don't draw this segment
+                    if (this.points.length > 0) {
+                        this.pendingStrokeBreak = true;
+                        this.lastPoint = null;
+                    }
                     continue;
                 }
                 if (processed.snapped) {
@@ -1623,6 +1640,10 @@ class DrawingEngine {
                 continue;
             }
 
+            if (this.pendingStrokeBreak && this.points.length > 0) {
+                this.strokeBreakIndices.push(this.points.length);
+            }
+            this.pendingStrokeBreak = false;
             this.points.push(pos);
             validPoints.push(pos);
             this.lastPoint = pos;
@@ -1666,7 +1687,15 @@ class DrawingEngine {
             this.ctx.moveTo(startPoint.x, startPoint.y);
 
             let prevPoint = startPoint;
-            for (const p of validPoints) {
+            const breakIndices = new Set(this.strokeBreakIndices);
+            for (let i = 0; i < validPoints.length; i++) {
+                const p = validPoints[i];
+                const pointIndex = startIndex + i;
+                if (breakIndices.has(pointIndex)) {
+                    this.ctx.moveTo(p.x, p.y);
+                    prevPoint = p;
+                    continue;
+                }
                 this.ctx.lineTo(p.x, p.y);
 
                 // Accumulate stroke length so dashed/dotted phase stays
@@ -1685,7 +1714,7 @@ class DrawingEngine {
             for (let i = 0; i < validPoints.length; i++) {
                 const currIndex = startIndex + i;
                 // Need previous point
-                if (currIndex === 0) continue;
+                if (currIndex === 0 || this.strokeBreakIndices.includes(currIndex)) continue;
 
                 const prevPoint = this.points[currIndex - 1];
                 const currPoint = this.points[currIndex];
@@ -2023,6 +2052,9 @@ class DrawingEngine {
                     tool: this.currentTool,
                     lineStyle: isEraserStroke ? 'solid' : this.penLineStyle,
                     dashDensity: isEraserStroke ? 10 : this.penDashDensity,
+                    multiLineCount: isEraserStroke ? null : this.penMultiLineCount,
+                    multiLineSpacing: isEraserStroke ? null : this.penMultiLineSpacing,
+                    breakIndices: [...this.strokeBreakIndices],
                     eraserShape: isEraserStroke ? this.eraserShape : null,
                     rotation: 0, // Initialize rotation property
                     layerOrder: this.getNextLayerOrder(),
@@ -2033,6 +2065,8 @@ class DrawingEngine {
             
             this.points = [];
             this.lastPoint = null;
+            this.strokeBreakIndices = [];
+            this.pendingStrokeBreak = false;
             window.drawingBoard?.syncVectorPreviewState?.(true);
             return true;
         }
@@ -2201,6 +2235,84 @@ class DrawingEngine {
         }
         return null;
     }
+
+    getStrokeRenderedHalfWidth(stroke) {
+        const size = Number(stroke?.size) || 0;
+        const styleExtent = this.getStrokeStyleOuterExtent(stroke);
+        switch (stroke?.penType) {
+            case 'brush':
+                return (size * 1.5) / 2 + styleExtent;
+            case 'marker':
+                return (size * 2.2) / 2 + styleExtent;
+            default:
+                return size / 2 + styleExtent;
+        }
+    }
+
+    getStrokeStyleOuterExtent(stroke) {
+        const lineStyle = stroke?.shapeLineStyle || stroke?.lineStyle || 'solid';
+        let count = 1;
+        if (lineStyle === 'double') count = 2;
+        else if (lineStyle === 'triple') count = 3;
+        else if (lineStyle === 'multi') {
+            count = Number(stroke?.shapeMultiLineCount ?? stroke?.multiLineCount) || 2;
+        }
+        if (count <= 1) return 0;
+        const spacing = Number(stroke?.shapeMultiLineSpacing ?? stroke?.multiLineSpacing) || 10;
+        return Math.max(0, (count - 1) * spacing / 2);
+    }
+
+    getStrokePointSegments(stroke) {
+        const points = Array.isArray(stroke?.points) ? stroke.points : [];
+        if (points.length === 0) return [];
+        const breakIndices = new Set((stroke.breakIndices || []).filter(index => Number.isInteger(index)));
+        const segments = [[]];
+        points.forEach((point, index) => {
+            if (index > 0 && breakIndices.has(index)) segments.push([]);
+            segments[segments.length - 1].push(point);
+        });
+        return segments.filter(segment => segment.length > 0);
+    }
+
+    getMultiLineStrokePaths(stroke) {
+        const count = Math.max(2, Math.min(10, Number(stroke?.multiLineCount) || 2));
+        const spacing = Math.max(1, Number(stroke?.multiLineSpacing) || 10);
+        const offsets = Array.from({ length: count }, (_value, index) => (
+            index * spacing - ((count - 1) * spacing / 2)
+        ));
+        const paths = [];
+
+        for (const segment of this.getStrokePointSegments(stroke)) {
+            if (segment.length === 1) {
+                offsets.forEach(offset => paths.push([{ x: segment[0].x, y: segment[0].y + offset }]));
+                continue;
+            }
+            const normals = [];
+            for (let index = 0; index < segment.length - 1; index++) {
+                const dx = segment[index + 1].x - segment[index].x;
+                const dy = segment[index + 1].y - segment[index].y;
+                const length = Math.hypot(dx, dy) || 1;
+                normals.push({ x: -dy / length, y: dx / length });
+            }
+            const vertexNormals = segment.map((_point, index) => {
+                if (index === 0) return normals[0];
+                if (index === segment.length - 1) return normals[normals.length - 1];
+                const x = normals[index - 1].x + normals[index].x;
+                const y = normals[index - 1].y + normals[index].y;
+                const length = Math.hypot(x, y) || 1;
+                return { x: x / length, y: y / length };
+            });
+            offsets.forEach(offset => paths.push(segment.map((point, index) => ({
+                x: point.x + vertexNormals[index].x * offset,
+                y: point.y + vertexNormals[index].y * offset
+            }))));
+        }
+        return paths;
+    }
+
+    getStrokeHitThreshold(stroke) {
+        return Math.max(this.SELECTION_THRESHOLD, this.getStrokeRenderedHalfWidth(stroke));
+    }
     
     isPointNearStroke(x, y, stroke, threshold) {
         // Check if point is within threshold distance of any segment in the stroke
@@ -2262,7 +2374,7 @@ class DrawingEngine {
         }
         
         // Add padding based on stroke size
-        const padding = stroke.size * 2;
+        const padding = stroke.size * 2 + this.getStrokeStyleOuterExtent(stroke);
         
         return {
             x: minX - padding,
@@ -2293,6 +2405,9 @@ class DrawingEngine {
             tool: stroke.tool,
             lineStyle: stroke.lineStyle || 'solid',
             dashDensity: stroke.dashDensity || 10,
+            multiLineCount: stroke.multiLineCount || null,
+            multiLineSpacing: stroke.multiLineSpacing || null,
+            breakIndices: Array.isArray(stroke.breakIndices) ? [...stroke.breakIndices] : [],
             renderMode: stroke.renderMode || null,
             shapeType: stroke.shapeType || null,
             shapeStart: stroke.shapeStart ? {
@@ -2339,6 +2454,59 @@ class DrawingEngine {
         this.selectedStrokeIndex = null;
         this.cleanupGroups();
 
+        return true;
+    }
+
+    redrawComplexPenStroke(stroke) {
+        const renderers = {
+            pencil: this.drawPencilStroke,
+            ballpoint: this.drawBallpointStroke,
+            fountain: this.drawFountainStroke,
+            brush: this.drawBrushStroke,
+            marker: this.drawMarkerStroke
+        };
+        const renderer = renderers[stroke?.penType];
+        if (typeof renderer !== 'function') return false;
+
+        const previousState = {
+            currentTool: this.currentTool,
+            currentColor: this.currentColor,
+            penSize: this.penSize,
+            penType: this.penType,
+            penLineStyle: this.penLineStyle,
+            penDashDensity: this.penDashDensity,
+            accumulatedDistance: this.accumulatedDistance
+        };
+
+        try {
+            this.currentTool = 'pen';
+            this.currentColor = stroke.color;
+            this.penSize = stroke.size;
+            this.penType = stroke.penType;
+            this.penLineStyle = stroke.lineStyle || 'solid';
+            this.penDashDensity = stroke.dashDensity || 10;
+            this.accumulatedDistance = 0;
+            this.setupDrawingContext();
+
+            for (const points of this.getStrokePointSegments(stroke)) {
+                if (points.length === 1) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(points[0].x, points[0].y);
+                    this.ctx.lineTo(points[0].x, points[0].y);
+                    this.ctx.stroke();
+                    continue;
+                }
+                for (let index = 1; index < points.length; index++) {
+                    const previous = points[index - 1];
+                    const current = points[index];
+                    const distance = Math.hypot(current.x - previous.x, current.y - previous.y);
+                    this.accumulatedDistance += distance;
+                    renderer.call(this, previous, current, distance);
+                }
+            }
+        } finally {
+            Object.assign(this, previousState);
+        }
         return true;
     }
     
@@ -2410,6 +2578,26 @@ class DrawingEngine {
                     break;
             }
         }
+
+        if (stroke.tool !== 'eraser' && stroke.lineStyle === 'multi') {
+            for (const points of this.getMultiLineStrokePaths(stroke)) {
+                if (points.length === 0) continue;
+                this.ctx.beginPath();
+                this.ctx.moveTo(points[0].x, points[0].y);
+                if (points.length === 1) this.ctx.lineTo(points[0].x, points[0].y);
+                for (let index = 1; index < points.length; index++) {
+                    this.ctx.lineTo(points[index].x, points[index].y);
+                }
+                this.ctx.stroke();
+            }
+            this.ctx.restore();
+            return;
+        }
+
+        if (stroke.tool !== 'eraser' && this.redrawComplexPenStroke(stroke)) {
+            this.ctx.restore();
+            return;
+        }
         
         // Draw the stroke
         if (stroke.points.length > 0) {
@@ -2421,11 +2609,22 @@ class DrawingEngine {
                 return;
             }
 
+            const breakIndices = new Set(stroke.breakIndices || []);
             this.ctx.beginPath();
             this.ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+
+            if (stroke.points.length === 1) {
+                this.ctx.lineTo(stroke.points[0].x, stroke.points[0].y);
+            }
             
             for (let i = 1; i < stroke.points.length; i++) {
-                this.ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+                if (breakIndices.has(i)) {
+                    this.ctx.stroke();
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(stroke.points[i].x, stroke.points[i].y);
+                } else {
+                    this.ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+                }
             }
             
             this.ctx.stroke();
@@ -2497,6 +2696,25 @@ class DrawingEngine {
             this.layerCounter = Math.max(this.layerCounter, item.layerOrder + 1);
         }
         return item.layerOrder;
+    }
+
+    isSelectableStroke(stroke) {
+        return !!stroke && stroke.tool !== 'eraser';
+    }
+
+    getSelectableRenderableObjects(textObjects = []) {
+        return this.getRenderableObjects(textObjects).filter(renderable => {
+            if (renderable.type === 'stroke') {
+                return this.isSelectableStroke(renderable.item);
+            }
+            if (renderable.type === 'group') {
+                const members = renderable.members || [];
+                return members.some(member =>
+                    member.type !== 'stroke' || this.isSelectableStroke(member.item)
+                );
+            }
+            return true;
+        });
     }
 
     getRenderableObjects(textObjects = []) {

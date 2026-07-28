@@ -37,6 +37,7 @@ class ImageControls {
         this.isDragging = false;
         this.isResizing = false;
         this.isRotating = false;
+        this.activeGesturePointerKey = null;
         this.isConfirmed = safeImageControlsStorageGetItem('backgroundImageConfirmed') === 'true'; // Track if image has been confirmed
         
         // Constants
@@ -142,24 +143,57 @@ class ImageControls {
     }
     
     setupEventListeners() {
+        const getImageControlsGestureKey = (e) => {
+            if (Number.isFinite(e?.pointerId)) return `pointer:${e.pointerId}`;
+            if (String(e?.type || '').startsWith('touch')) {
+                const touch = e.changedTouches?.[0] || e.touches?.[0];
+                return touch ? `touch:${touch.identifier}` : null;
+            }
+            return String(e?.type || '').startsWith('mouse') ? 'mouse' : null;
+        };
+        const claimImageControlsGesture = (e) => {
+            if (this.activeGesturePointerKey !== null) return false;
+            const key = getImageControlsGestureKey(e);
+            if (!key) return false;
+            this.activeGesturePointerKey = key;
+            return true;
+        };
+        const eventOwnsImageControlsGesture = (e) => {
+            if (this.activeGesturePointerKey === null) return false;
+            if (Number.isFinite(e?.pointerId)) {
+                return this.activeGesturePointerKey === `pointer:${e.pointerId}`;
+            }
+            if (String(e?.type || '').startsWith('touch')) {
+                const touches = e.changedTouches?.length ? e.changedTouches : e.touches;
+                return Array.from(touches || []).some(
+                    touch => this.activeGesturePointerKey === `touch:${touch.identifier}`
+                );
+            }
+            return this.activeGesturePointerKey === 'mouse'
+                && String(e?.type || '').startsWith('mouse');
+        };
+
         const handleDragStart = (e) => {
             e.stopPropagation();
-            if (e.type !== 'mousemove') {
-                e.preventDefault?.();
-            }
             const target = e.target;
             const closest = typeof target?.closest === 'function'
                 ? target.closest.bind(target)
                 : () => null;
             const hasClass = (className) => Boolean(target?.classList?.contains?.(className));
+
+            if (hasClass('flip-handle') || closest('.flip-handle') || closest('.image-controls-toolbar')) {
+                return;
+            }
+
+            if (e.type !== 'mousemove') {
+                e.preventDefault?.();
+            }
             if (target === this.controlBox || closest('.image-controls-box') === this.controlBox) {
-                if (!hasClass('resize-handle') && 
+                if (!hasClass('resize-handle') &&
                     !hasClass('rotate-handle') &&
-                    !hasClass('flip-handle') &&
                     !closest('.resize-handle') &&
-                    !closest('.rotate-handle') &&
-                    !closest('.flip-handle') &&
-                    !closest('.image-controls-toolbar')) {
+                    !closest('.rotate-handle')) {
+                    if (!claimImageControlsGesture(e)) return;
                     this.startDrag(e);
                 }
             }
@@ -174,6 +208,7 @@ class ImageControls {
             const startResize = (e) => {
                 e.stopPropagation();
                 e.preventDefault?.();
+                if (!claimImageControlsGesture(e)) return;
                 this.startResize(e, handle.dataset.handle);
             };
             handle.addEventListener('mousedown', startResize);
@@ -185,6 +220,7 @@ class ImageControls {
         const startRotate = (e) => {
             e.stopPropagation();
             e.preventDefault?.();
+            if (!claimImageControlsGesture(e)) return;
             this.startRotate(e);
         };
         this.rotateHandle.addEventListener('mousedown', startRotate);
@@ -205,6 +241,7 @@ class ImageControls {
         
         // Global move events
         const handleMove = (e) => {
+            if (!eventOwnsImageControlsGesture(e)) return;
             if (this.isDragging) {
                 this.drag(e);
             } else if (this.isResizing) {
@@ -223,10 +260,12 @@ class ImageControls {
             }
         }, { passive: false });
         
-        const handleEnd = () => {
+        const handleEnd = (e) => {
+            if (!eventOwnsImageControlsGesture(e)) return;
             this.stopDrag();
             this.stopResize();
             this.stopRotate();
+            this.activeGesturePointerKey = null;
         };
         document.addEventListener('mouseup', handleEnd);
         document.addEventListener('pointerup', handleEnd);
@@ -331,6 +370,24 @@ class ImageControls {
     hideControls() {
         this.isActive = false;
         this.overlay.style.display = 'none';
+    }
+
+    syncFromBackgroundTransform() {
+        if (!this.isActive) return false;
+        const transform = this.backgroundManager.imageTransform;
+        if (!transform || !(transform.width > 0) || !(transform.height > 0)) {
+            return false;
+        }
+        this.imagePosition.x = transform.x;
+        this.imagePosition.y = transform.y;
+        this.imageSize.width = transform.width;
+        this.imageSize.height = transform.height;
+        this.imageRotation = transform.rotation || 0;
+        this.imageScale = 1;
+        this.flipHorizontal = !!transform.flipHorizontal;
+        this.flipVertical = !!transform.flipVertical;
+        this.updateControlBox();
+        return true;
     }
     
     confirmImage() {

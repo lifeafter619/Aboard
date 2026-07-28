@@ -54,14 +54,9 @@ function createCoreRuntimeDependencies(options, refs) {
     const historyManager = options.historyManager || instantiatePreferredLegacyClass(['AboardHistoryManager', 'HistoryManager'], [refs.canvas, refs.ctx]);
     const backgroundManager = options.backgroundManager || instantiatePreferredLegacyClass(['AboardBackgroundManager', 'BackgroundManager'], [refs.bgCanvas, refs.bgCtx]);
     const imageControls = options.imageControls || (backgroundManager ? instantiatePreferredOptionalLegacyClass('ImageControls', ['AboardImageControls', 'ImageControls'], [backgroundManager]) : null);
-    const strokeControls = options.strokeControls || (
-        drawingEngine && historyManager
-            ? instantiatePreferredOptionalLegacyClass('StrokeControls', ['AboardStrokeControls', 'StrokeControls'], [drawingEngine, refs.canvas, refs.ctx, historyManager])
-            : null
-    );
     const selectionManager = options.selectionManager || (
-        drawingEngine && strokeControls
-            ? instantiatePreferredOptionalLegacyClass('SelectionManager', ['AboardSelectionManager', 'SelectionManager'], [refs.canvas, refs.ctx, drawingEngine, strokeControls])
+        drawingEngine
+            ? instantiatePreferredOptionalLegacyClass('SelectionManager', ['AboardSelectionManager', 'SelectionManager'], [refs.canvas, refs.ctx, drawingEngine])
             : null
     );
 
@@ -95,7 +90,6 @@ function createCoreRuntimeDependencies(options, refs) {
         historyManager,
         backgroundManager,
         imageControls,
-        strokeControls,
         selectionManager,
         teachingToolsManager,
         shapeDrawingManager,

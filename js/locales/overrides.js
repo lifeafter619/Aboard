@@ -526,27 +526,6 @@ window.locale_translation_overrides = (() => {
                     unlimitedZoom: 'Autoriser le zoom illimite',
                     unlimitedZoomHint: 'Le zoom par defaut monte desormais a 1000 % ; activez cette option pour continuer jusqu\'a 500x'
                 },
-                about: {
-                    projectIntro: 'Presentation du projet',
-                    description1: 'Aboard est un tableau blanc web minimaliste concu pour l\'enseignement et les presentations.',
-                    description2: 'Il offre un dessin fluide et des options d\'arriere-plan riches pour laisser vos idees s\'exprimer librement.',
-                    mainFeatures: 'Fonctionnalites principales',
-                    features: {
-                        penTypes: 'Plusieurs types de stylo (normal, crayon, stylo bille, plume, pinceau)',
-                        smartEraser: 'Gomme intelligente (formes ronde et carree)',
-                        richPatterns: 'Motifs d\'arriere-plan varies (points, grille, Tianzige, lignes anglaises, etc.)',
-                        adjustable: 'Densite et transparence des motifs reglables',
-                        canvasModes: 'Mode de toile paginee avec formats predefinis (A4, A3, B5, etc.)',
-                        customSize: 'Taille et ratio de toile personnalisables',
-                        draggable: 'Barre d\'outils et panneaux deplacables (avec disposition verticale)',
-                        undoRedo: 'Annuler/Retablir jusqu\'a 50 etapes',
-                        smartZoom: 'Zoom intelligent (Ctrl + molette, centre sur la souris)',
-                        responsive: 'Interface responsive pour differentes tailles d\'ecran'
-                    },
-                    techStack: 'Pile technique',
-                    tech: 'HTML5 Canvas • Vanilla JavaScript • CSS3',
-                    licenseType: 'Licence MIT'
-                },
                 time: {
                     timezoneHint: 'Choisissez le fuseau horaire affiche',
                     timeFormatHint: 'Choisissez le format d\'affichage de l\'heure',
@@ -596,7 +575,6 @@ window.locale_translation_overrides = (() => {
                 confirmReset: 'Reinitialiser tous les scores ?'
             },
             timer: {
-                settingsTitle: 'Parametres du minuteur',
                 selectMode: 'Selectionner le mode',
                 timerTitle: 'Titre du minuteur',
                 setTime: 'Definir l\'heure',
@@ -702,27 +680,6 @@ window.locale_translation_overrides = (() => {
                     unlimitedZoom: 'Permitir zoom ilimitado',
                     unlimitedZoomHint: 'El zoom predeterminado ahora llega al 1000 %; activalo para seguir ampliando hasta 500x'
                 },
-                about: {
-                    projectIntro: 'Introduccion del proyecto',
-                    description1: 'Aboard es una pizarra web minimalista pensada para clases y presentaciones.',
-                    description2: 'Ofrece dibujo fluido y ricas opciones de fondo para que tus ideas se expresen con libertad.',
-                    mainFeatures: 'Funciones principales',
-                    features: {
-                        penTypes: 'Varios tipos de lapiz (normal, lapiz, boligrafo, pluma y pincel)',
-                        smartEraser: 'Borrador inteligente (formas circular y cuadrada)',
-                        richPatterns: 'Patrones de fondo variados (puntos, cuadricula, Tianzige, lineas inglesas, etc.)',
-                        adjustable: 'Densidad y transparencia del patron ajustables',
-                        canvasModes: 'Modo de lienzo paginado con tamanos predefinidos (A4, A3, B5, etc.)',
-                        customSize: 'Tamano y proporcion del lienzo personalizables',
-                        draggable: 'Barra de herramientas y paneles movibles (con disposicion vertical)',
-                        undoRedo: 'Deshacer/Rehacer hasta 50 pasos',
-                        smartZoom: 'Zoom inteligente (Ctrl + rueda, centrado en el puntero)',
-                        responsive: 'Interfaz adaptable para distintos tamanos de pantalla'
-                    },
-                    techStack: 'Tecnologias',
-                    tech: 'HTML5 Canvas • Vanilla JavaScript • CSS3',
-                    licenseType: 'Licencia MIT'
-                },
                 time: {
                     timezoneHint: 'Elige la zona horaria que deseas mostrar',
                     timeFormatHint: 'Elige el formato de hora',
@@ -772,7 +729,6 @@ window.locale_translation_overrides = (() => {
                 confirmReset: 'Restablecer todas las puntuaciones?'
             },
             timer: {
-                settingsTitle: 'Configuracion del temporizador',
                 selectMode: 'Seleccionar modo',
                 timerTitle: 'Titulo del temporizador',
                 setTime: 'Definir tiempo',
@@ -877,27 +833,6 @@ window.locale_translation_overrides = (() => {
                 canvas: {
                     unlimitedZoom: 'Unbegrenztes Zoomen erlauben',
                     unlimitedZoomHint: 'Standardmassig ist jetzt ein Zoom bis 1000 % moglich; aktiviert lasst sich weiter bis 500x vergrosern'
-                },
-                about: {
-                    projectIntro: 'Projektubersicht',
-                    description1: 'Aboard ist ein minimalistisches Web-Whiteboard fur Unterricht und Prasentationen.',
-                    description2: 'Es bietet flussiges Zeichnen und vielseitige Hintergrundoptionen, damit Ideen frei dargestellt werden konnen.',
-                    mainFeatures: 'Hauptfunktionen',
-                    features: {
-                        penTypes: 'Mehrere Stifttypen (Normal, Bleistift, Kugelschreiber, Fuller, Pinsel)',
-                        smartEraser: 'Intelligenter Radierer (rund und eckig)',
-                        richPatterns: 'Vielfaltige Hintergrundmuster (Punkte, Raster, Tianzige, Englischlinien usw.)',
-                        adjustable: 'Anpassbare Musterdichte und Transparenz',
-                        canvasModes: 'Paginierter Leinwandmodus mit vordefinierten Grossen (A4, A3, B5 usw.)',
-                        customSize: 'Benutzerdefinierte Leinwandgrosse und Seitenverhaltnisse',
-                        draggable: 'Verschiebbare Werkzeugleiste und Bedienfelder (mit vertikalem Layout)',
-                        undoRedo: 'Ruckgangig/Wiederholen mit bis zu 50 Schritten',
-                        smartZoom: 'Intelligenter Zoom (Strg + Mausrad, zentriert auf den Zeiger)',
-                        responsive: 'Responsive Oberflache fur unterschiedliche Bildschirmgrossen'
-                    },
-                    techStack: 'Technik-Stack',
-                    tech: 'HTML5 Canvas • Vanilla JavaScript • CSS3',
-                    licenseType: 'MIT-Lizenz'
                 },
                 time: {
                     timezoneHint: 'Wahle die anzuzeigende Zeitzone',

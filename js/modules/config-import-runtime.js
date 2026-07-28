@@ -1,6 +1,8 @@
 // Extracted runtime from main.js
 // Preserves legacy board instance semantics by invoking methods with board as this.
 
+const UNSAFE_CONFIG_KEY_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype']);
+
 function coerceConfigImportInputValue(input, type, fallbackValue) {
         if (!input) {
             return fallbackValue;
@@ -197,8 +199,13 @@ function showConfigDiffModal(diff, newSettings) {
                         : input.value;
                     const value = coerceConfigImportInputValue(input, type, fallbackValue);
 
-                    // Set deep value
+                    // Set deep value. Reject prototype-polluting path segments:
+                    // imported config keys are attacker-controlled data.
                     const parts = key.split('.');
+                    if (parts.some((part) => UNSAFE_CONFIG_KEY_SEGMENTS.has(part))) {
+                        console.warn(`Skipped unsafe config key: ${key}`);
+                        return;
+                    }
                     let current = pendingSettings;
                     for (let i = 0; i < parts.length - 1; i++) {
                         if (!current[parts[i]]) current[parts[i]] = {};

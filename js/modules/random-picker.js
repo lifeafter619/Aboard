@@ -492,30 +492,24 @@ class RandomPickerInstance {
             startBtnEl?.classList.remove('is-stop');
         }
 
-        // If mode changed or names changed, reset remaining
-        if (newConfig.mode !== this.config.mode ||
-            JSON.stringify(newConfig.names) !== JSON.stringify(this.config.names)) {
-            this.remainingNames = [...(newConfig.names || [])];
+        const previousConfig = this.config;
+        const nextConfig = normalizeRandomPickerConfig({ ...previousConfig, ...newConfig });
+        const namesChanged = nextConfig.mode !== previousConfig.mode
+            || JSON.stringify(nextConfig.names) !== JSON.stringify(previousConfig.names);
+        const numberPoolChanged = nextConfig.mode === 'number' && (
+            previousConfig.mode !== 'number'
+            || nextConfig.min !== previousConfig.min
+            || nextConfig.max !== previousConfig.max
+            || nextConfig.allowRepeats !== previousConfig.allowRepeats
+        );
+
+        if (namesChanged) {
+            this.remainingNames = [...(nextConfig.names || [])];
         }
 
-        // If number range changed, reset remaining numbers
-        if (newConfig.min !== this.config.min || newConfig.max !== this.config.max) {
-            // We need to defer this because this.config is not updated yet
-            // But we can check newConfig values
-        }
-
-        this.config = normalizeRandomPickerConfig({ ...this.config, ...newConfig });
-
-        // Check if we need to reset numbers (after config update)
-        // If we are in number mode, or just switched to it, reset to be safe if range changed
-        // Optimization: only reset if needed, but for now simple is better
-        if (this.config.mode === 'number') {
-             // If array length doesn't match range, or if empty and we want to start fresh?
-             // Simplest: If the range implies a different set than what we might track, reset.
-             // For now, let's just ensure if we run out, we refill.
-             // Explicit reset is better done if the User changes settings.
-             // Since updateConfig is called from Settings Save, it is appropriate to reset here.
-             this.resetRemainingNumbers();
+        this.config = nextConfig;
+        if (numberPoolChanged) {
+            this.resetRemainingNumbers();
         }
 
         // Update title

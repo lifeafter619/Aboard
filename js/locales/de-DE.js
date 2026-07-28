@@ -298,6 +298,7 @@ window.translations = {
         connectPointsEnabled: 'Punktlinie aktiviert',
         connectPointsDisabled: 'Punktlinie deaktiviert',
         pointAdded: 'Koordinatenpunkt hinzugefügt',
+        pointAlreadyExists: 'An dieser Position ist bereits ein Koordinatenpunkt vorhanden',
         pointsCleared: 'Koordinatenpunkte gelöscht',
         plotAdded: 'Funktionsgraph hinzugefügt',
         plotUpdated: 'Funktionsgraph aktualisiert',
@@ -633,24 +634,6 @@ window.translations = {
             fullscreenFontSizeHint: 'Schriftgröße der Vollbild-Zeitanzeige anpassen, Bereich 10%-85%',
             customColor: 'Benutzerdefinierte Farbe'
         },
-        about: {
-            title: 'Über Aboard',
-            version: 'Version',
-            description: 'Aboard ist eine minimalistische, aber leistungsstarke Whiteboard-Anwendung, die für kreative Arbeit und effiziente Notizen entwickelt wurde.',
-            features: 'Hauptfunktionen',
-            feature1: 'Reibungslose Zeichenerfahrung',
-            feature2: 'Vielfältige Stifttypen',
-            feature3: 'Flexibles Radiergummi-Werkzeug',
-            feature4: 'Reichhaltige Hintergrundmuster (Punkte, Raster, Tianzige, Englisch 4-Linien usw.)',
-            feature5: 'Export als PNG-Bilder',
-            feature6: 'Rückgängig/Wiederholen-Funktionalität',
-            feature7: 'Vollständige Touch-Unterstützung',
-            feature8: 'Vollbildmodus',
-            feature9: 'Automatisches Speichern',
-            feature10: 'Mehrsprachige Unterstützung',
-            license: 'Open-Source-Lizenz',
-            github: 'GitHub-Repository'
-        }
     },
 
     // Feature Area
@@ -783,6 +766,7 @@ window.translations = {
         loopPlayback: 'Schleifenwiedergabe',
         loopCount: 'Schleifenzähler',
         loopInterval: 'Wiederholungsintervall',
+        secondsUnit: 'Sek.',
         uploadCustomAudio: 'Benutzerdefiniertes Audio hochladen',
         soundPresets: {
             classBell: 'Schulglocke (10s)',
@@ -927,6 +911,7 @@ Viel Spaß bei Ihrer kreativen Arbeit!`,
         legacyCompatibilityDisabled: 'Die alte .aboard-Importkompatibilität ist deaktiviert. Aktivieren Sie sie zuerst in den Einstellungen.',
         zipLoaderUnavailable: 'ZIP-Bibliotheks-Loader ist nicht verfügbar.',
         zipLoadFailed: 'Die ZIP-Bibliothek konnte nicht geladen werden.',
+        imageDimensionsTooLarge: 'Das Projekt enthält ein Bild mit zu großen Abmessungen oder zu vielen Pixeln.',
         legacyLoaderUnavailable: 'Loader für alte Kompatibilität ist nicht verfügbar.',
         legacyModuleLoadFailed: 'Das alte Projekt-Kompatibilitätsmodul konnte nicht geladen werden.',
         base64DecoderUnavailable: 'Base64-Decoder ist nicht verfügbar.',
@@ -942,6 +927,9 @@ Viel Spaß bei Ihrer kreativen Arbeit!`,
         unsafePath: 'Unsicherer Pfad im Projektpaket: {path}',
         tooManyPages: 'Das Projektpaket enthält zu viele Seiten.',
         assetTooLarge: 'Das Projektpaket enthält eine zu große Ressource: {path}',
+        entryTooLarge: 'Das Projektpaket enthält eine zu große Datei: {path}',
+        packageTooLarge: 'Das Projektpaket ist entpackt zu groß und kann nicht importiert werden.',
+        corruptPackage: 'Dieses Projektpaket ist beschädigt und kann nicht importiert werden.',
         assetsTooLarge: 'Das Projektpaket enthält zu viele eingebettete Ressourcen.'
     },
 

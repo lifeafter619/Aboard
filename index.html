@@ -11,7 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="img/icon.svg">
     <title>Aboard - 简约白板</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=20260727-compact-panel">
     <link rel="stylesheet" href="css/modules/time-display.css">
     <link rel="stylesheet" href="css/modules/feature-area.css">
     <link rel="stylesheet" href="css/modules/pagination.css">
@@ -681,7 +681,7 @@
                 <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
         </button>
-        <input type="number" id="page-input" class="page-input" value="1" min="1" data-i18n-title="page.jumpPlaceholder" data-i18n-aria-label="page.jumpPlaceholder" title="输入页码跳转" aria-label="输入页码跳转">
+        <input type="number" id="page-input" class="page-input" value="1" min="1" max="1" data-i18n-title="page.jumpPlaceholder" data-i18n-aria-label="page.jumpPlaceholder" title="输入页码跳转" aria-label="输入页码跳转">
         <span id="page-total">/ 1</span>
         <button id="next-or-add-page-btn" class="page-nav-btn" data-i18n-title="page.next" title="下一页" aria-label="下一页">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1031,7 +1031,7 @@
                                     <span data-i18n="settings.general.toolbarTools.more">更多</span>
                                 </div>
                                 <div class="toolbar-item" data-tool="settings" draggable="true">
-                                    <input type="checkbox" id="toolbar-show-settings" checked data-i18n-title="settings.general.toolbarTools.settings" data-i18n-aria-label="settings.general.toolbarTools.settings" title="设置" aria-label="设置">
+                                    <input type="checkbox" id="toolbar-show-settings" checked disabled data-i18n-title="settings.general.toolbarTools.settings" data-i18n-aria-label="settings.general.toolbarTools.settings" title="设置" aria-label="设置">
                                     <span class="drag-handle">☰</span>
                                     <span data-i18n="settings.general.toolbarTools.settings">设置</span>
                                 </div>
@@ -2345,7 +2345,7 @@
                                             <label for="timer-loop-interval" data-i18n="timer.loopInterval">循环间隔</label>
                                             <div class="interval-input-wrapper">
                                                 <input type="number" id="timer-loop-interval" min="0" max="60" value="1" class="loop-count-input">
-                                                <span data-i18n="timer.seconds">秒</span>
+                                                <span data-i18n="timer.secondsUnit">秒</span>
                                             </div>
                                         </div>
                                     </div>

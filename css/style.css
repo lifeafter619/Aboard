@@ -335,12 +335,33 @@ body.vector-preview-active #off-canvas-image-layer {
     grid-template-columns: repeat(2, 1fr);
 }
 
+/* Config panels stay compact; touch sizing for primary app controls must not leak into them. */
+#config-area button,
+#config-area [role="button"] {
+    min-width: 0;
+    min-height: 0;
+}
+
+#config-area .color-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+}
+
+#config-area .color-picker-icon-btn {
+    width: 40px;
+    height: 40px;
+}
+
 .config-close-btn {
     position: absolute;
     top: 5px;
     right: 10px;
     width: 28px;
     height: 28px;
+    min-width: 28px;
+    min-height: 28px;
     border: none;
     border-radius: 6px;
     background-color: #f0f0f0;
@@ -2816,28 +2837,7 @@ body.overlay-modal-open .timer-fullscreen-modal.show {
     }
 }
 
-/* Touch device specific improvements */
-@media (any-pointer: coarse) {
-    button,
-    .color-btn,
-    .pen-type-btn,
-    .icon-label-option-btn,
-    .shape-type-btn,
-    .select-mode-btn,
-    .feature-btn,
-    .config-close-btn,
-    .sound-preset-btn,
-    [role="button"] {
-        min-width: var(--touch-target-size);
-        min-height: var(--touch-target-size);
-    }
-
-    .color-btn {
-        width: var(--touch-target-size);
-        height: var(--touch-target-size);
-    }
-}
-
+/* Touch-first device improvements. Hybrid mouse/touch devices keep the compact desktop layout. */
 @media (hover: none) and (pointer: coarse) {
     /* Larger touch targets on touch devices */
     button, 

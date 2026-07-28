@@ -316,6 +316,7 @@ window.translations = {
         connectPointsEnabled: 'Point line enabled',
         connectPointsDisabled: 'Point line disabled',
         pointAdded: 'Coordinate point added',
+        pointAlreadyExists: 'A coordinate point already exists at this position',
         pointsCleared: 'Coordinate points cleared',
         plotAdded: 'Function plot added',
         plotUpdated: 'Function plot updated',
@@ -523,8 +524,6 @@ window.translations = {
             infiniteCanvas: 'Infinite Canvas',
             autoSave: 'Auto Save',
             autoSaveHint: 'Periodically save your drawing',
-            touchZoom: 'Touch Zoom',
-            touchZoomHint: 'Allow pinch gesture to zoom canvas'
         },
         canvas: {
             title: 'Canvas Settings',
@@ -869,7 +868,7 @@ window.translations = {
         loopPlayback: 'Loop Playback',
         loopCount: 'Loop Count',
         loopInterval: 'Loop Interval',
-        seconds: 'sec',
+        secondsUnit: 'sec',
         uploadCustomAudio: 'Upload Custom Audio',
         soundPresets: {
             classBell: 'Class Bell (10s)',
@@ -941,6 +940,7 @@ window.translations = {
         legacyCompatibilityDisabled: 'Legacy .aboard import compatibility is disabled. Enable it in Settings first.',
         zipLoaderUnavailable: 'ZIP library loader is not available.',
         zipLoadFailed: 'Failed to load the ZIP library.',
+        imageDimensionsTooLarge: 'The project contains an image whose dimensions or pixel count are too large.',
         legacyLoaderUnavailable: 'Legacy compatibility loader is not available.',
         legacyModuleLoadFailed: 'Failed to load the legacy project compatibility module.',
         base64DecoderUnavailable: 'Base64 decoder is not available.',
@@ -956,6 +956,9 @@ window.translations = {
         unsafePath: 'Unsafe project package path: {path}',
         tooManyPages: 'The project package contains too many pages.',
         assetTooLarge: 'The project package contains an asset that is too large: {path}',
+        entryTooLarge: 'The project package contains an entry that is too large: {path}',
+        packageTooLarge: 'The project package expands to too much data and cannot be imported.',
+        corruptPackage: 'This project package is damaged and cannot be imported.',
         assetsTooLarge: 'The project package contains too many embedded assets.',
         rasterFallbackUnavailable: 'Raster page data required to preserve the project is unavailable.'
     },

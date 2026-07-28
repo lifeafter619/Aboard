@@ -5,6 +5,15 @@ function getElement(id) {
     return document.getElementById(id);
 }
 
+function isControlCustomizationVisible(storageKey) {
+    try {
+        return localStorage.getItem(storageKey) !== 'false';
+    } catch (error) {
+        console.warn(`Failed to read control visibility key "${storageKey}":`, error);
+        return true;
+    }
+}
+
 function persistBoardViewState(board, options = {}) {
     if (typeof board?.drawingEngine?.persistViewState === 'function') {
         board.drawingEngine.persistViewState(options);
@@ -175,8 +184,10 @@ function updateZoomControlsVisibility() {
     const zoomInput = document.getElementById('zoom-input');
     const zoomInBtn = document.getElementById('zoom-in-btn');
 
-    const display = this.settingsManager.showZoomControls ? 'flex' : 'none';
-    const inputDisplay = this.settingsManager.showZoomControls ? 'block' : 'none';
+    const isVisible = this.settingsManager.showZoomControls
+        && isControlCustomizationVisible('controlShowZoom');
+    const display = isVisible ? 'flex' : 'none';
+    const inputDisplay = isVisible ? 'block' : 'none';
 
     if (zoomOutBtn) zoomOutBtn.style.display = display;
     if (zoomInput) zoomInput.style.display = inputDisplay;
@@ -188,10 +199,13 @@ function updateZoomControlsVisibility() {
 function updateImportExportBtnVisibility() {
     const importBtn = document.getElementById('import-project-btn');
     const exportBtn = document.getElementById('export-btn-top');
-    const display = this.settingsManager.showImportExportBtn ? 'flex' : 'none';
+    const showImport = this.settingsManager.showImportExportBtn
+        && isControlCustomizationVisible('controlShowImport');
+    const showExport = this.settingsManager.showImportExportBtn
+        && isControlCustomizationVisible('controlShowExport');
 
-    if (importBtn) importBtn.style.display = display;
-    if (exportBtn) exportBtn.style.display = display;
+    if (importBtn) importBtn.style.display = showImport ? 'flex' : 'none';
+    if (exportBtn) exportBtn.style.display = showExport ? 'flex' : 'none';
 
     this.updateHistoryControlsContainerVisibility();
 }
@@ -203,7 +217,8 @@ function updateFullscreenBtnVisibility() {
         return;
     }
 
-    if (this.settingsManager.showFullscreenBtn) {
+    if (this.settingsManager.showFullscreenBtn
+        && isControlCustomizationVisible('controlShowFullscreen')) {
         fullscreenBtn.style.display = 'flex';
     } else {
         fullscreenBtn.style.display = 'none';

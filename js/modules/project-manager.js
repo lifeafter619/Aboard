@@ -8,6 +8,10 @@ const PROJECT_IMPORT_MAX_BYTES = 100 * 1024 * 1024;
 const PROJECT_IMPORT_MAX_PAGES = 300;
 const PROJECT_IMPORT_MAX_ASSET_BYTES = 25 * 1024 * 1024;
 const PROJECT_IMPORT_MAX_TOTAL_ASSET_BYTES = 150 * 1024 * 1024;
+const PROJECT_IMPORT_MAX_ENTRY_BYTES = 64 * 1024 * 1024;
+const PROJECT_IMPORT_MAX_TOTAL_UNCOMPRESSED_BYTES = 300 * 1024 * 1024;
+const PROJECT_IMPORT_MAX_IMAGE_DIMENSION = 8192;
+const PROJECT_IMPORT_MAX_IMAGE_PIXELS = 32 * 1024 * 1024;
 const ZIP_LIBRARY_SCRIPT = 'js/libs/fflate.min.js';
 const LEGACY_PROJECT_COMPAT_SCRIPT = 'js/modules/project-legacy-compat.js';
 
@@ -93,7 +97,9 @@ function normalizeImportedBackgroundState(backgroundManager, backgroundData) {
         backgroundPattern: typeof nextBackground.backgroundPattern === 'string' ? nextBackground.backgroundPattern : 'blank',
         bgOpacity: Number.isFinite(nextBackground.bgOpacity) ? nextBackground.bgOpacity : 1,
         patternIntensity: Number.isFinite(nextBackground.patternIntensity) ? nextBackground.patternIntensity : 0.5,
-        patternDensity: Number.isFinite(nextBackground.patternDensity) ? nextBackground.patternDensity : 1,
+        patternDensity: Number.isFinite(nextBackground.patternDensity) && nextBackground.patternDensity > 0
+            ? Math.min(3, Math.max(0.2, nextBackground.patternDensity))
+            : 1,
         imageSize: Number.isFinite(nextBackground.imageSize) && nextBackground.imageSize > 0 ? nextBackground.imageSize : 1,
         backgroundImageData: typeof nextBackground.backgroundImageData === 'string' && nextBackground.backgroundImageData
             ? nextBackground.backgroundImageData
@@ -227,9 +233,26 @@ class ProjectManager {
         return new Promise((resolve, reject) => {
             const img = new Image();
             img.onload = () => {
+                const width = Number(img.naturalWidth || img.width);
+                const height = Number(img.naturalHeight || img.height);
+                const pixelCount = width * height;
+                if (!Number.isInteger(width)
+                    || !Number.isInteger(height)
+                    || width <= 0
+                    || height <= 0
+                    || width > PROJECT_IMPORT_MAX_IMAGE_DIMENSION
+                    || height > PROJECT_IMPORT_MAX_IMAGE_DIMENSION
+                    || !Number.isSafeInteger(pixelCount)
+                    || pixelCount > PROJECT_IMPORT_MAX_IMAGE_PIXELS) {
+                    reject(new Error(this.t(
+                        'projectPackage.imageDimensionsTooLarge',
+                        'The project contains an image whose dimensions or pixel count are too large.'
+                    )));
+                    return;
+                }
                 const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
+                canvas.width = width;
+                canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0);
                 resolve(ctx.getImageData(0, 0, canvas.width, canvas.height));
@@ -848,6 +871,35 @@ class ProjectManager {
         return 'application/octet-stream';
     }
 
+    createProjectPackageEntryFilter() {
+        let totalUncompressedBytes = 0;
+        return (entry) => {
+            const entryPath = String(entry?.name || '');
+            const declaredSize = Number(entry?.originalSize ?? 0);
+            if (!Number.isFinite(declaredSize) || declaredSize < 0) {
+                throw new Error(this.t('projectPackage.corruptPackage', 'This project package is damaged and cannot be imported.'));
+            }
+
+            const normalizedPath = entryPath.replace(/\\/g, '/').trim();
+            const isAsset = normalizedPath.startsWith('assets/');
+            const perEntryLimit = isAsset ? PROJECT_IMPORT_MAX_ASSET_BYTES : PROJECT_IMPORT_MAX_ENTRY_BYTES;
+            if (declaredSize > perEntryLimit) {
+                throw new Error(
+                    isAsset
+                        ? this.t('projectPackage.assetTooLarge', 'The project package contains an asset that is too large: {path}', { path: normalizedPath })
+                        : this.t('projectPackage.entryTooLarge', 'The project package contains an entry that is too large: {path}', { path: normalizedPath })
+                );
+            }
+
+            totalUncompressedBytes += declaredSize;
+            if (totalUncompressedBytes > PROJECT_IMPORT_MAX_TOTAL_UNCOMPRESSED_BYTES) {
+                throw new Error(this.t('projectPackage.packageTooLarge', 'The project package expands to too much data and cannot be imported.'));
+            }
+
+            return true;
+        };
+    }
+
     validateProjectFileSize(file) {
         const size = Number(file?.size || 0);
         if (Number.isFinite(size) && size > PROJECT_IMPORT_MAX_BYTES) {
@@ -947,7 +999,9 @@ class ProjectManager {
         }
 
         const bytes = new Uint8Array(await file.arrayBuffer());
-        const archive = zipLib.unzipSync(bytes);
+        const archive = zipLib.unzipSync(bytes, {
+            filter: this.createProjectPackageEntryFilter()
+        });
         const mimetype = archive.mimetype ? zipLib.strFromU8(archive.mimetype) : null;
         if (mimetype && mimetype !== PROJECT_PACKAGE_MIME) {
             throw new Error(this.t('projectPackage.unsupportedPackage', 'This is not a supported Aboard project package.'));
@@ -1152,11 +1206,14 @@ class ProjectManager {
         this.drawingBoard.pageRasterFallbackPages = importedRasterFallbackPages;
         this.drawingBoard.pageRasterFallbackBases = new Map();
         this.drawingBoard.pageRasterFallbackScaledBases = new Map();
-        importedRasterFallbackPages.forEach((pageNumber) => {
+        Array.from(importedRasterFallbackPages).forEach((pageNumber) => {
             const rasterBase = pagesImageData?.[pageNumber - 1] || null;
             if (rasterBase) {
                 this.drawingBoard.pageRasterFallbackBases.set(pageNumber, rasterBase);
+                return;
             }
+            console.warn(`[ProjectManager] Imported page ${pageNumber} declares a raster fallback but carries no base image; treating it as a normal page.`);
+            importedRasterFallbackPages.delete(pageNumber);
         });
         safeProjectStorageSetItem('pageBackgrounds', JSON.stringify(this.drawingBoard.pageBackgrounds));
         await this.applyGlobalBackground(globalBackground || null);

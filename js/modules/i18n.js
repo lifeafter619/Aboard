@@ -1268,7 +1268,9 @@ class I18n {
             if (span) {
                 span.textContent = this.t('features.timer');
             }
-            timerBtn.title = this.t('timer.title');
+            // Use the feature name for the tooltip: several locales define
+            // timer.title as a settings heading or an input label instead.
+            timerBtn.title = this.t('features.timer');
         }
         
         // Translate close button titles
@@ -1805,10 +1807,11 @@ class I18n {
         
         // Timer mode buttons - translations handled by data-i18n on span elements
         
-        // Timer title input
+        // Timer title input. The label's data-i18n key is timer.timerTitle;
+        // timer.title is the feature name in several locales, not this label.
         const timerTitleLabel = document.querySelector('label[for="timer-title-input"]');
         if (timerTitleLabel) {
-            timerTitleLabel.textContent = this.t('timer.title');
+            timerTitleLabel.textContent = this.t('timer.timerTitle');
         }
         
         const timerTitleInput = document.getElementById('timer-title-input');

@@ -649,9 +649,13 @@ function testLegacyBoardConstructionFallsBackForOptionalManagers() {
     }
   }
 
-  class ThrowingStrokeControls {
-    constructor() {
-      throw new Error('stroke controls unavailable');
+  class FakeSelectionManager {
+    setHistoryManager(manager) {
+      this.historyManager = manager;
+    }
+
+    setBackgroundManager(manager) {
+      this.backgroundManager = manager;
     }
   }
 
@@ -680,7 +684,7 @@ function testLegacyBoardConstructionFallsBackForOptionalManagers() {
       AboardHistoryManager: FakeHistoryManager,
       AboardBackgroundManager: FakeBackgroundManager,
       AboardImageControls: ThrowingImageControls,
-      AboardStrokeControls: ThrowingStrokeControls,
+      AboardSelectionManager: FakeSelectionManager,
       AboardTeachingToolsManager: ThrowingTeachingToolsManager,
       AboardShapeDrawingManager: ThrowingShapeDrawingManager,
       AboardTimeDisplayManager: ThrowingTimeDisplayManager
@@ -700,8 +704,11 @@ function testLegacyBoardConstructionFallsBackForOptionalManagers() {
   assert.ok(runtimeDeps.historyManager instanceof FakeHistoryManager, 'legacy history manager should still initialize');
   assert.ok(runtimeDeps.backgroundManager instanceof FakeBackgroundManager, 'legacy background manager should still initialize');
   assert.equal(runtimeDeps.imageControls, null, 'legacy image controls should degrade instead of aborting startup');
-  assert.equal(runtimeDeps.strokeControls, null, 'legacy stroke controls should degrade instead of aborting startup');
-  assert.equal(runtimeDeps.selectionManager, null, 'legacy selection manager should be skipped when prerequisites fail');
+  assert.equal(runtimeDeps.strokeControls, undefined, 'retired stroke controls should not be constructed');
+  assert.ok(runtimeDeps.selectionManager instanceof FakeSelectionManager,
+    'selection should initialize without the retired stroke editor dependency');
+  assert.equal(runtimeDeps.selectionManager.historyManager, runtimeDeps.historyManager);
+  assert.equal(runtimeDeps.selectionManager.backgroundManager, runtimeDeps.backgroundManager);
   assert.equal(runtimeDeps.teachingToolsManager, null, 'legacy teaching tools should degrade instead of aborting startup');
   assert.equal(runtimeDeps.shapeDrawingManager, null, 'legacy shape drawing should degrade instead of aborting startup');
   assert.equal(runtimeDeps.lineStyleModal, null, 'legacy line style modal should be skipped when shape drawing is unavailable');
@@ -713,7 +720,6 @@ function testLegacyBoardConstructionFallsBackForOptionalManagers() {
   assert.equal(timeDisplayDeps.timeDisplaySettingsModal, null, 'legacy time display settings modal should be skipped when the manager is unavailable');
   assert.ok(
     warnings.some((entry) => entry.includes('ImageControls'))
-      && warnings.some((entry) => entry.includes('StrokeControls'))
       && warnings.some((entry) => entry.includes('TeachingToolsManager'))
       && warnings.some((entry) => entry.includes('ShapeDrawingManager'))
       && warnings.some((entry) => entry.includes('TimeDisplayManager')),
@@ -1025,6 +1031,25 @@ function testVectorPreviewStaysOffForMarkerStrokes() {
     interactionRuntime.shouldUseVectorPreview(board),
     false,
     'stored marker strokes should remain on the raster canvas so their translucent overlap does not fade at high zoom'
+  );
+}
+
+function testCreateBoardDependenciesLeavesDeferredHelpUninitialized() {
+  class FakeSettingsManager {}
+
+  const createBoardDependencies = loadCreateBoardDependencies({
+    constructors: {
+      AboardSettingsManager: FakeSettingsManager
+    },
+    warnings: []
+  });
+
+  const deps = createBoardDependencies({});
+
+  assert.equal(
+    deps.helpSystem,
+    undefined,
+    'help must remain unset until the post-visible HelpSystem constructor is available'
   );
 }
 
@@ -1435,6 +1460,7 @@ function testHistoryManagerUsesSmallerDefaultMemoryCap() {
 (async function main() {
   await testCreateAppServicesSurvivesFailingOptionalPwaManager();
   await testCreateBoardDependenciesFallsBackForOptionalManagers();
+  testCreateBoardDependenciesLeavesDeferredHelpUninitialized();
   await testCreateBoardDependenciesFallsBackForTimeDisplayFailures();
   testLegacyBoardConstructionFallsBackForOptionalManagers();
   await testPageSceneRestoreSurvivesFailingLazyTextManager();

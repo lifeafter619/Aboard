@@ -50,7 +50,6 @@ export function createBoardRuntimeDependencies({ win = window, doc = document, b
   const HistoryManager = resolvePreferredConstructor(win, ['AboardHistoryManager', 'HistoryManager']);
   const BackgroundManager = resolvePreferredConstructor(win, ['AboardBackgroundManager', 'BackgroundManager']);
   const ImageControls = resolvePreferredConstructor(win, ['AboardImageControls', 'ImageControls']);
-  const StrokeControls = resolvePreferredConstructor(win, ['AboardStrokeControls', 'StrokeControls']);
   const SelectionManager = resolvePreferredConstructor(win, ['AboardSelectionManager', 'SelectionManager']);
   const TeachingToolsManager = resolvePreferredConstructor(win, ['AboardTeachingToolsManager', 'TeachingToolsManager']);
   const ShapeDrawingManager = resolvePreferredConstructor(win, ['AboardShapeDrawingManager', 'ShapeDrawingManager']);
@@ -63,11 +62,8 @@ export function createBoardRuntimeDependencies({ win = window, doc = document, b
   const imageControls = typeof ImageControls === 'function' && backgroundManager
     ? instantiateOptionalDependency('ImageControls', ImageControls, [backgroundManager])
     : undefined;
-  const strokeControls = typeof StrokeControls === 'function' && drawingEngine && historyManager
-    ? new StrokeControls(drawingEngine, canvas, ctx, historyManager)
-    : undefined;
-  const selectionManager = typeof SelectionManager === 'function' && drawingEngine && strokeControls
-    ? new SelectionManager(canvas, ctx, drawingEngine, strokeControls)
+  const selectionManager = typeof SelectionManager === 'function' && drawingEngine
+    ? new SelectionManager(canvas, ctx, drawingEngine)
     : undefined;
 
   selectionManager?.setHistoryManager?.(historyManager);
@@ -100,7 +96,6 @@ export function createBoardRuntimeDependencies({ win = window, doc = document, b
     historyManager,
     backgroundManager,
     imageControls,
-    strokeControls,
     selectionManager,
     teachingToolsManager,
     shapeDrawingManager,

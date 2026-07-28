@@ -634,6 +634,33 @@ async function runState(cdp, viewport, state) {
       }
     }
 
+    if (state.name === 'pen-config') {
+      const compactControls = [
+        { selector: '#config-close-btn', maxWidth: 36, maxHeight: 36 },
+        { selector: '#pen-config .color-btn', maxWidth: 48, maxHeight: 48 },
+        { selector: '#pen-config .pen-type-btn', maxHeight: 44 },
+        { selector: '#pen-line-style-settings-btn', maxHeight: 50 }
+      ];
+
+      compactControls.forEach(({ selector, maxWidth = Infinity, maxHeight = Infinity }) => {
+        const element = document.querySelector(selector);
+        if (!isVisible(element)) {
+          issues.push({ type: 'compact-pen-control-not-visible', selector });
+          return;
+        }
+        const rect = rectFor(element);
+        if (rect.width > maxWidth + tolerance || rect.height > maxHeight + tolerance) {
+          issues.push({
+            type: 'oversized-pen-config-control',
+            selector,
+            rect,
+            maxWidth,
+            maxHeight
+          });
+        }
+      });
+    }
+
     if (state.name.startsWith('background')) {
       ['#config-area', '#background-config', '#pattern-grid', '#background-coordinate-actions'].forEach((selector) => {
         const element = document.querySelector(selector);

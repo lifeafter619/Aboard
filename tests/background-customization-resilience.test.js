@@ -294,6 +294,11 @@ function testBackgroundManagerSurvivesBlockedLocalStorage() {
   assert.equal(manager.backgroundImageData, null, 'background manager should fall back to no background image');
   assert.doesNotThrow(() => manager.setBackgroundColor('#123456'), 'background color changes should degrade instead of throwing');
   assert.doesNotThrow(() => manager.setPatternDensity(1.5), 'pattern density changes should degrade instead of throwing');
+  manager.patternDensity = -1;
+  manager.setPatternDensity(0);
+  assert.equal(manager.patternDensity, 1, 'an invalid density and invalid fallback should recover to the default');
+  manager.setPatternDensity(5000);
+  assert.equal(manager.patternDensity, 3, 'pattern density should remain within the renderer-supported maximum');
   assert.doesNotThrow(() => manager.setCoordinateOverlayState({ points: [{ id: 'p1', x: 1, y: 2 }] }), 'overlay state changes should degrade instead of throwing');
   assert.doesNotThrow(() => manager.setCoordinateOrigin(12, 24), 'coordinate origin changes should degrade instead of throwing');
   assert.doesNotThrow(() => manager.clearBackgroundImage(), 'background image clearing should degrade instead of throwing');
@@ -397,6 +402,105 @@ function testStoppingGifRestoresWrappedImage() {
   assert.equal(imgElement.style.display, 'block');
   assert.equal(manager.gifInstance, null);
   assert.equal(manager.pendingGifSource, null);
+}
+
+async function testGifInitializationSurvivesLibgifDomReplacementAndAlwaysLoopsInternally() {
+  let imageInDom = true;
+  let pauseCalls = 0;
+  let receivedOptions = null;
+  const imgElement = createElementStub({ id: 'background-image-element', style: {} });
+  imgElement.getAttribute = (name) => name === 'src' ? 'data:image/gif;base64,test' : null;
+  const container = {
+    querySelector() { return null; },
+    appendChild() {}
+  };
+  class ReplacingSuperGif {
+    constructor(options) {
+      receivedOptions = options;
+    }
+    load(callback) {
+      imageInDom = false;
+      callback?.();
+    }
+    pause() { pauseCalls += 1; }
+    get_canvas() { return createElementStub({ style: {} }); }
+  }
+  const BackgroundManager = loadBackgroundManager({
+    localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
+    windowOverrides: { SuperGif: ReplacingSuperGif },
+    globalOverrides: { SuperGif: ReplacingSuperGif },
+    documentOverrides: {
+      getElementById(id) {
+        if (id === 'background-image-container') return container;
+        if (id === 'background-image-element') return imageInDom ? imgElement : null;
+        return null;
+      }
+    }
+  });
+  const manager = new BackgroundManager(
+    { width: 1280, height: 720, clientWidth: 1280, clientHeight: 720, style: {} },
+    { clearRect() {}, fillRect() {}, save() {}, restore() {} }
+  );
+  manager.backgroundImageData = 'data:image/gif;base64,test';
+  manager.backgroundPattern = 'image';
+  manager.gifLoopCount = 3;
+
+  await manager.initGif(imgElement);
+
+  assert.equal(pauseCalls, 0,
+    'libgif replacing the source image in the DOM must not invalidate the current initialization');
+  assert.equal(receivedOptions.loop_mode, true,
+    'libgif must keep looping internally so the outer loop counter can stop at the configured count');
+}
+
+async function testChangingBackgroundImageResetsOldAspectRatioAndSliderSyncsControls() {
+  class LoadedImage {
+    constructor() {
+      this.width = 300;
+      this.height = 400;
+      this.naturalWidth = 300;
+      this.naturalHeight = 400;
+    }
+    set src(value) {
+      this._src = value;
+      this.onload?.();
+    }
+  }
+  let syncCalls = 0;
+  const BackgroundManager = loadBackgroundManager({
+    localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
+    globalOverrides: { Image: LoadedImage },
+    windowOverrides: {
+      drawingBoard: {
+        imageControls: {
+          syncFromBackgroundTransform() { syncCalls += 1; }
+        }
+      }
+    }
+  });
+  const manager = new BackgroundManager(
+    { width: 1280, height: 720, clientWidth: 1280, clientHeight: 720, style: {} },
+    { clearRect() {}, fillRect() {}, save() {}, restore() {} }
+  );
+  manager.drawBackground = () => {};
+  manager.emitBackgroundUiState = () => {};
+  manager.backgroundImageData = 'data:image/png;base64,old';
+  manager.imageTransform = {
+    x: 10, y: 20, width: 160, height: 90, rotation: 0,
+    scale: 1, flipHorizontal: false, flipVertical: false
+  };
+
+  await manager.setBackgroundImage('data:image/png;base64,new');
+  assert.equal(manager.imageTransform.width, 0,
+    'a different background image must not inherit the previous image width');
+  assert.equal(manager.imageTransform.height, 0,
+    'a different background image must not inherit the previous image height');
+
+  manager.imageTransform.width = 100;
+  manager.imageTransform.height = 200;
+  manager.setImageSize(1.5);
+  assert.equal(syncCalls, 1,
+    'the image-size slider must refresh an open image control box');
 }
 
 function testCollapsibleManagerSurvivesBlockedLocalStorage() {
@@ -517,12 +621,57 @@ function testCustomizationRuntimeSurvivesBlockedLocalStorage() {
   );
 }
 
+function testControlCustomizationRespectsDisplaySettings() {
+  const values = new Map([
+    ['controlShowZoom', 'true'],
+    ['controlShowFullscreen', 'true'],
+    ['controlShowImport', 'true'],
+    ['controlShowExport', 'true']
+  ]);
+  const storage = {
+    getItem(key) { return values.get(key) ?? null; },
+    setItem(key, value) { values.set(key, String(value)); }
+  };
+  const elements = Object.fromEntries([
+    'zoom-out-btn', 'zoom-input', 'zoom-in-btn', 'fullscreen-btn',
+    'import-project-btn', 'export-btn-top'
+  ].map(id => [id, createElementStub({ id, style: {} })]));
+  const runtime = loadCustomizationRuntime({
+    localStorage: storage,
+    document: { getElementById(id) { return elements[id] || null; } }
+  });
+  const board = {
+    settingsManager: {
+      showZoomControls: false,
+      showFullscreenBtn: false,
+      showImportExportBtn: false
+    }
+  };
+
+  runtime.applyControlButtonVisibility(board, {
+    zoom: true,
+    pagination: true,
+    time: true,
+    fullscreen: true,
+    import: true,
+    export: true
+  });
+
+  for (const element of Object.values(elements)) {
+    assert.equal(element.style.display, 'none',
+      'control customization must not override a disabled display setting (KNOWN_ISSUES C7)');
+  }
+}
+
 (async function main() {
   testBackgroundManagerSurvivesBlockedLocalStorage();
   await testBackgroundGifInitSurvivesMissingContainer();
   testStoppingGifRestoresWrappedImage();
+  await testGifInitializationSurvivesLibgifDomReplacementAndAlwaysLoopsInternally();
+  await testChangingBackgroundImageResetsOldAspectRatioAndSliderSyncsControls();
   testCollapsibleManagerSurvivesBlockedLocalStorage();
   testCustomizationRuntimeSurvivesBlockedLocalStorage();
+  testControlCustomizationRespectsDisplaySettings();
   console.log('background-customization-resilience.test: all assertions passed');
 })().catch((error) => {
   console.error(error);
