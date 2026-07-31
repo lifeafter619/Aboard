@@ -785,7 +785,12 @@ async function testPageSceneRestoreNormalizesImportedSceneNumbers() {
         ],
         size: '12',
         rotation: 'bad',
-        layerOrder: '7'
+        layerOrder: '7',
+        shapeDashDensity: 1e9,
+        shapeWaveDensity: 1e-300,
+        shapeMultiLineCount: 1e9,
+        shapeMultiLineSpacing: -1e9,
+        arrowSize: 1e9
       }],
       stampedImages: [{
         imageSrc: 'data:image/png;base64,aW1hZ2U=',
@@ -812,6 +817,11 @@ async function testPageSceneRestoreNormalizesImportedSceneNumbers() {
   assert.equal(scene.strokes[0].size, 12, 'numeric stroke sizes should be normalized from import payloads');
   assert.equal(scene.strokes[0].rotation, 0, 'invalid stroke rotation should fall back to a finite number');
   assert.equal(scene.strokes[0].layerOrder, 7, 'numeric layer order should be normalized from import payloads');
+  assert.equal(scene.strokes[0].shapeDashDensity, 100, 'shape dash density should stay within the renderer setting range');
+  assert.equal(scene.strokes[0].shapeWaveDensity, 5, 'shape wave density must not create an unbounded render loop');
+  assert.equal(scene.strokes[0].shapeMultiLineCount, 10, 'shape line count must not create an unbounded render loop');
+  assert.equal(scene.strokes[0].shapeMultiLineSpacing, 5, 'shape line spacing should stay within the renderer setting range');
+  assert.equal(scene.strokes[0].arrowSize, 100, 'shape arrow size should stay within the renderer setting range');
 
   assert.equal(scene.stampedImages.length, 1, 'valid imported images should be retained');
   assert.equal(scene.stampedImages[0].x, 0, 'invalid image x coordinate should fall back to a finite number');
@@ -1376,6 +1386,98 @@ function testSettingsManagerApplySettingsSurvivesBlockedLocalStorage() {
   );
 }
 
+function testSettingsManagerRejectsMalformedImportedSettings() {
+  const SettingsManager = loadSettingsManager({
+    localStorage: {
+      getItem() { return null; },
+      setItem() {},
+      removeItem() {}
+    }
+  });
+  const manager = new SettingsManager();
+
+  assert.throws(
+    () => manager.validateImportedSettings(null),
+    /configuration/i,
+    'configuration imports must use a plain object root'
+  );
+  assert.throws(
+    () => manager.validateImportedSettings({ toolbarSize: 1000 }),
+    /toolbarSize/,
+    'toolbar size imports must stay within the supported UI range'
+  );
+  assert.throws(
+    () => manager.validateImportedSettings({ configScale: Infinity }),
+    /configScale/,
+    'config scale imports must be finite and within the supported UI range'
+  );
+  assert.throws(
+    () => manager.validateImportedSettings({ customFonts: [null] }),
+    /customFonts/,
+    'custom font imports must contain valid font records'
+  );
+  assert.throws(
+    () => manager.validateImportedSettings({ edgeSnapEnabled: 'false' }),
+    /edgeSnapEnabled/,
+    'boolean settings must not accept truthy strings'
+  );
+  assert.throws(
+    () => manager.validateImportedSettings({ patternPreferences: { grid: 'yes' } }),
+    /patternPreferences/,
+    'pattern preferences must contain booleans'
+  );
+  assert.throws(
+    () => manager.validateImportedSettings({ toolbarOrder: '{"pen":1}' }),
+    /toolbarOrder/,
+    'toolbar order must decode to an array'
+  );
+  let deeplyNestedPreferences = {};
+  for (let depth = 0; depth < 25; depth += 1) {
+    deeplyNestedPreferences = { child: deeplyNestedPreferences };
+  }
+  assert.throws(
+    () => manager.validateImportedSettings({ fontPreferences: deeplyNestedPreferences }),
+    /complexity/i,
+    'configuration imports must reject structures deep enough to overflow recursive diffing'
+  );
+  assert.throws(
+    () => manager.validateImportedSettings({
+      customFonts: Array.from({ length: 101 }, (_, index) => ({
+        name: `Font ${index}`,
+        data: 'data:font/woff2;base64,dGVzdA=='
+      }))
+    }),
+    /customFonts/,
+    'configuration imports must cap custom font collections before loading every font'
+  );
+  assert.throws(
+    () => manager.validateImportedSettings({
+      toolbarOrder: JSON.stringify(Array.from({ length: 1001 }, () => 'pen'))
+    }),
+    /toolbarOrder/,
+    'configuration imports must cap serialized ordering collections'
+  );
+  assert.doesNotThrow(
+    () => manager.validateImportedSettings({
+      toolbarSize: 65,
+      configScale: 1.1,
+      edgeSnapEnabled: false,
+      patternPreferences: { grid: true },
+      toolbarOrder: '["pen","eraser"]',
+      customFonts: [{ name: 'Teacher Font', data: 'data:font/woff2;base64,dGVzdA==' }]
+    })
+  );
+  assert.doesNotThrow(
+    () => manager.validateImportedSettings(manager.getCurrentSettingsState()),
+    'the application must accept its own complete exported settings format'
+  );
+  assert.throws(
+    () => manager.applySettings({ toolbarSize: 1000 }),
+    /toolbarSize/,
+    'the final settings write boundary must revalidate edited import values'
+  );
+}
+
 function testSettingsManagerLayoutUpdatesSurviveMissingUiElements() {
   const SettingsManager = loadSettingsManager({
     localStorage: {
@@ -1480,6 +1582,7 @@ function testHistoryManagerUsesSmallerDefaultMemoryCap() {
   testSettingsManagerUsesDefaultsWhenLocalStorageUnavailable();
   testSettingsManagerStateExportSurvivesBlockedLocalStorage();
   testSettingsManagerApplySettingsSurvivesBlockedLocalStorage();
+  testSettingsManagerRejectsMalformedImportedSettings();
   testSettingsManagerLayoutUpdatesSurviveMissingUiElements();
   testSettingsManagerLoadSettingsSurvivesMissingUiElements();
   testHistoryManagerUsesSmallerDefaultMemoryCap();

@@ -239,7 +239,8 @@ async function navigationNetworkFirst(
 ) {
   const cache = await caches.open(CORE_CACHE_NAME);
   const networkPromise = fetch(request).then(async (response) => {
-    if (canStoreResponse(response)) {
+    if (canStoreResponse(response)
+      && /^text\/html(?:;|$)/i.test(response.headers.get('content-type') || '')) {
       try {
         await cache.put('./index.html', response.clone());
       } catch (error) {

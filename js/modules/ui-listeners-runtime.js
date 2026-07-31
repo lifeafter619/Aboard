@@ -1084,9 +1084,12 @@ function setupSettingsListeners() {
         // Global font upload
         const globalFontUpload = document.getElementById('global-font-upload');
         if (globalFontUpload) {
-            globalFontUpload.addEventListener('change', (e) => {
+            globalFontUpload.addEventListener('change', async (e) => {
                 if (e.target.files && e.target.files[0]) {
-                    this.settingsManager.handleFontUpload(e.target.files[0]);
+                    await this.settingsManager.handleFontUpload(e.target.files[0]);
+                    if (this.insertTextManager) {
+                        this.insertTextManager.customFonts = this.settingsManager.customFonts;
+                    }
                     this.insertTextManager?.populateFonts?.();
                     this.renderFontManagementList?.();
                 }
@@ -1293,10 +1296,11 @@ function setupSettingsListeners() {
             openAttachedFilePicker({
                 accept: '.json',
                 onFilesSelected: async (files) => {
-                    const file = files[0];
-                    const text = await file.text();
                     try {
-                        const newSettings = JSON.parse(text);
+                        const file = files[0];
+                        window.AboardFileValidation?.validateConfigFile?.(file);
+                        const text = await file.text();
+                        const newSettings = this.settingsManager.validateImportedSettings(JSON.parse(text));
                         const diff = this.settingsManager.getSettingsDiff(newSettings);
                         this.showConfigDiffModal(diff, newSettings);
                     } catch (err) {

@@ -73,6 +73,20 @@ function testRejectsUnsupportedSpreadsheetTypes() {
   );
 }
 
+function testRejectsOversizedConfigFiles() {
+  const validation = loadFileValidation();
+
+  assert.throws(
+    () => validation.validateConfigFile({
+      name: 'huge-config.json',
+      type: 'application/json',
+      size: 11 * 1024 * 1024
+    }),
+    /too large/i,
+    'configuration validation should reject oversized files before reading them'
+  );
+}
+
 function testShowsValidationErrorsThroughToast() {
   const validation = loadFileValidation();
   const calls = [];
@@ -92,6 +106,7 @@ function main() {
   testRejectsOversizedImages();
   testAllowsExtensionFallbackWhenMimeTypeIsMissing();
   testRejectsUnsupportedSpreadsheetTypes();
+  testRejectsOversizedConfigFiles();
   testShowsValidationErrorsThroughToast();
   console.log('file-validation-utility.test: all assertions passed');
 }

@@ -12,6 +12,10 @@ const PROJECT_IMPORT_MAX_ENTRY_BYTES = 64 * 1024 * 1024;
 const PROJECT_IMPORT_MAX_TOTAL_UNCOMPRESSED_BYTES = 300 * 1024 * 1024;
 const PROJECT_IMPORT_MAX_IMAGE_DIMENSION = 8192;
 const PROJECT_IMPORT_MAX_IMAGE_PIXELS = 32 * 1024 * 1024;
+const PROJECT_IMPORT_MAX_RENDERABLE_OBJECTS = 50000;
+const PROJECT_IMPORT_MAX_SCENE_POINTS = 250000;
+const PROJECT_IMPORT_MAX_GROUP_MEMBERS = 250000;
+const PROJECT_IMPORT_MAX_STAMPED_IMAGES = 5000;
 const ZIP_LIBRARY_SCRIPT = 'js/libs/fflate.min.js';
 const LEGACY_PROJECT_COMPAT_SCRIPT = 'js/modules/project-legacy-compat.js';
 
@@ -604,7 +608,7 @@ class ProjectManager {
             return null;
         }
 
-        const inflated = this.cloneSerializable(backgroundData);
+        const inflated = { ...backgroundData };
         if (inflated.backgroundImageAsset) {
             inflated.backgroundImageData = resolveAssetDataUrl(inflated.backgroundImageAsset);
             delete inflated.backgroundImageAsset;
@@ -671,7 +675,7 @@ class ProjectManager {
             return null;
         }
 
-        const inflated = this.cloneSerializable(scene);
+        const inflated = { ...scene };
         const stampedImages = Array.isArray(inflated.stampedImages) ? inflated.stampedImages : [];
         inflated.stampedImages = stampedImages.map((image) => {
             const nextImage = this.cloneSerializable(image);
@@ -962,6 +966,68 @@ class ProjectManager {
         }
     }
 
+    validateImportedProjectComplexity({
+        uploadedImages = [],
+        globalBackground = null,
+        pageBackgrounds = {},
+        pageScenes = {}
+    } = {}) {
+        let renderableObjects = Array.isArray(uploadedImages) ? uploadedImages.length : 0;
+        let scenePoints = 0;
+        let groupMembers = 0;
+        let stampedImages = 0;
+        const rejectIfExceeded = () => {
+            if (renderableObjects > PROJECT_IMPORT_MAX_RENDERABLE_OBJECTS
+                || scenePoints > PROJECT_IMPORT_MAX_SCENE_POINTS
+                || groupMembers > PROJECT_IMPORT_MAX_GROUP_MEMBERS
+                || stampedImages > PROJECT_IMPORT_MAX_STAMPED_IMAGES) {
+                throw new Error(this.t(
+                    'projectPackage.tooComplex',
+                    'Project complexity exceeds the safe import limit.'
+                ));
+            }
+        };
+
+        Object.values(pageScenes || {}).forEach((scene) => {
+            const strokes = Array.isArray(scene?.strokes) ? scene.strokes : [];
+            const images = Array.isArray(scene?.stampedImages) ? scene.stampedImages : [];
+            const groups = Array.isArray(scene?.objectGroups) ? scene.objectGroups : [];
+            renderableObjects += strokes.length
+                + images.length
+                + groups.length
+                + (Array.isArray(scene?.textObjects) ? scene.textObjects.length : 0);
+            stampedImages += images.length;
+            rejectIfExceeded();
+
+            strokes.forEach((stroke) => {
+                scenePoints += Array.isArray(stroke?.points) ? stroke.points.length : 0;
+                rejectIfExceeded();
+            });
+            groups.forEach((group) => {
+                groupMembers += Array.isArray(group?.memberIds) ? group.memberIds.length : 0;
+                rejectIfExceeded();
+            });
+        });
+
+        [globalBackground, ...Object.values(pageBackgrounds || {})].forEach((background) => {
+            const overlay = background?.coordinateOverlayState;
+            if (!overlay || typeof overlay !== 'object') return;
+            const points = Array.isArray(overlay.points) ? overlay.points : [];
+            const plots = Array.isArray(overlay.plots) ? overlay.plots : [];
+            const groups = Array.isArray(overlay.groups) ? overlay.groups : [];
+            renderableObjects += points.length + plots.length + groups.length;
+            scenePoints += points.length;
+            rejectIfExceeded();
+            groups.forEach((group) => {
+                groupMembers += Array.isArray(group?.pointIds) ? group.pointIds.length : 0;
+            });
+            plots.forEach((plot) => {
+                groupMembers += Array.isArray(plot?.segments) ? plot.segments.length : 0;
+            });
+            rejectIfExceeded();
+        });
+    }
+
     async importProject(file) {
         if (!file) return;
 
@@ -1128,6 +1194,12 @@ class ProjectManager {
         currentPage = 1,
         pageCount = 1
     } = {}) {
+        const hasSettingsPayload = settings !== null && typeof settings !== 'undefined'
+            && (typeof settings !== 'object' || Array.isArray(settings) || Object.keys(settings).length > 0);
+        if (hasSettingsPayload) {
+            this.drawingBoard.settingsManager.validateImportedSettings?.(settings);
+        }
+        settings = settings && typeof settings === 'object' && !Array.isArray(settings) ? settings : {};
         const normalizedCurrentPage = this.normalizeImportedPageNumber(currentPage, 1);
         const normalizedExplicitPageCount = this.normalizeImportedPageNumber(pageCount, 1);
         const pageBackgroundNumbers = this.normalizeImportedPageKeys(pageBackgrounds);
@@ -1143,6 +1215,12 @@ class ProjectManager {
             ...pageSceneNumbers,
             normalizedCurrentPage
         );
+        this.validateImportedProjectComplexity({
+            uploadedImages,
+            globalBackground,
+            pageBackgrounds,
+            pageScenes
+        });
 
         // 1. Restore settings
         if (settings.canvasWidth && settings.canvasHeight) {
@@ -1159,9 +1237,13 @@ class ProjectManager {
         }
 
         if (typeof settings.unlimitedZoom !== 'undefined') {
-            this.drawingBoard.settingsManager.unlimitedZoom = settings.unlimitedZoom;
+            if (typeof this.drawingBoard.settingsManager.setUnlimitedZoom === 'function') {
+                this.drawingBoard.settingsManager.setUnlimitedZoom(settings.unlimitedZoom);
+            } else {
+                this.drawingBoard.settingsManager.unlimitedZoom = settings.unlimitedZoom;
+            }
             const zoomCheck = document.getElementById('unlimited-zoom-checkbox');
-            if (zoomCheck) zoomCheck.checked = settings.unlimitedZoom;
+            if (zoomCheck) zoomCheck.checked = this.drawingBoard.settingsManager.unlimitedZoom;
             this.drawingBoard.updateMaxCanvasScale?.();
         }
 

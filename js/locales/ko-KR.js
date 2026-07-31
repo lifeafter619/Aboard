@@ -926,6 +926,7 @@ window.translations = {
         fileTooLarge: '프로젝트 파일이 너무 큽니다. 100 MB 이하의 파일을 가져와 주세요.',
         unsafePath: '안전하지 않은 프로젝트 패키지 경로입니다: {path}',
         tooManyPages: '프로젝트 패키지에 포함된 페이지가 너무 많습니다.',
+        tooComplex: '프로젝트 내용이 너무 복잡하여 안전 가져오기 한도를 초과했습니다.',
         assetTooLarge: '프로젝트 패키지에 너무 큰 자산이 포함되어 있습니다: {path}',
         entryTooLarge: '프로젝트 패키지에 너무 큰 파일이 포함되어 있습니다: {path}',
         packageTooLarge: '프로젝트 패키지의 압축 해제 크기가 너무 커서 가져올 수 없습니다.',

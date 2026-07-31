@@ -203,9 +203,16 @@ function loadProjectImportRuntime(localStorage = createLocalStorageStub()) {
   );
   vm.runInContext(managerSource, context, { filename: 'project-manager.js' });
 
+  const legacySource = fs.readFileSync(
+    path.join(__dirname, '..', 'js', 'modules', 'project-legacy-compat.js'),
+    'utf8'
+  );
+  vm.runInContext(legacySource, context, { filename: 'project-legacy-compat.js' });
+
   return {
     ProjectManager: context.window.ProjectManager,
     paginationRuntime: context.window.AboardPaginationRuntime,
+    legacyCompat: context.window.AboardLegacyProjectCompat,
     localStorage,
     window
   };
@@ -225,9 +232,18 @@ function createBoard(paginationRuntime) {
       canvasHeight: 720,
       canvasPreset: 'custom',
       unlimitedZoom: false,
+      validateImportedSettings(settings) {
+        if (settings.unlimitedZoom !== undefined && typeof settings.unlimitedZoom !== 'boolean') {
+          throw new TypeError('Invalid configuration field: unlimitedZoom');
+        }
+        return settings;
+      },
       setCanvasSize(width, height) {
         this.canvasWidth = width;
         this.canvasHeight = height;
+      },
+      setUnlimitedZoom(value) {
+        this.unlimitedZoom = value;
       }
     },
     drawingEngine: {
@@ -780,6 +796,86 @@ async function testProjectPackageHelpersIgnoreMalformedCollections() {
   );
 }
 
+async function testProjectImportValidatesSettingsAtFinalWriteBoundary() {
+  const { ProjectManager, paginationRuntime } = loadProjectImportRuntime();
+  const board = createBoard(paginationRuntime);
+  const manager = new ProjectManager(board);
+
+  await assert.rejects(
+    () => manager.applyImportedProjectState({
+      settings: { unlimitedZoom: 'false' },
+      pageCount: 1
+    }),
+    /unlimitedZoom/,
+    'project imports must reject truthy string booleans before mutating settings'
+  );
+  assert.equal(board.settingsManager.unlimitedZoom, false);
+}
+
+async function testLegacyProjectRejectsExcessivePagesBeforeBitmapDecoding() {
+  const { ProjectManager, paginationRuntime, legacyCompat } = loadProjectImportRuntime();
+  const board = createBoard(paginationRuntime);
+  const manager = new ProjectManager(board);
+  let decodedPages = 0;
+
+  manager.confirmImportOverwrite = async () => true;
+  manager.base64ToImageData = async () => {
+    decodedPages += 1;
+    return null;
+  };
+
+  await assert.rejects(
+    () => legacyCompat.importLegacyProject(manager, {
+      async text() {
+        return JSON.stringify({
+          pages: Array.from({ length: 301 }, (_, index) => ({ index: index + 1, data: null }))
+        });
+      }
+    }),
+    /too many pages/i,
+    'legacy imports must enforce the shared page limit before allocating page bitmaps'
+  );
+  assert.equal(decodedPages, 0, 'legacy page bitmaps must not be decoded after the page limit is exceeded');
+}
+
+async function testProjectImportRejectsExcessiveRenderableComplexity() {
+  const { ProjectManager, paginationRuntime } = loadProjectImportRuntime();
+  const board = createBoard(paginationRuntime);
+  const manager = new ProjectManager(board);
+
+  await assert.rejects(
+    () => manager.applyImportedProjectState({
+      pageScenes: {
+        1: { strokes: [{ points: Array(125001) }] },
+        2: { strokes: [{ points: Array(125000) }] }
+      },
+      pageCount: 2
+    }),
+    /complex/i,
+    'project imports must cap stroke points cumulatively across pages'
+  );
+
+  await assert.rejects(
+    () => manager.applyImportedProjectState({
+      globalBackground: {
+        coordinateOverlayState: { points: Array(250001), plots: [], groups: [] }
+      },
+      pageCount: 1
+    }),
+    /complex/i,
+    'project imports must include coordinate overlay points in the complexity budget'
+  );
+
+  await assert.rejects(
+    () => manager.applyImportedProjectState({
+      pageScenes: { 1: { stampedImages: Array(5001) } },
+      pageCount: 1
+    }),
+    /complex/i,
+    'project imports must cap stamped image counts before hydration'
+  );
+}
+
 (async function main() {
   await testPageBackgroundImportResetsStaleEnhancedState();
   await testGlobalBackgroundImportResetsStaleEnhancedState();
@@ -795,6 +891,9 @@ async function testProjectPackageHelpersIgnoreMalformedCollections() {
   testProjectPackagePageLimitRejectsUnboundedImports();
   await testProjectPackageRejectsOutOfRangePageIndexes();
   await testProjectPackageHelpersIgnoreMalformedCollections();
+  await testProjectImportValidatesSettingsAtFinalWriteBoundary();
+  await testLegacyProjectRejectsExcessivePagesBeforeBitmapDecoding();
+  await testProjectImportRejectsExcessiveRenderableComplexity();
   console.log('project-import-background-reset.test: all assertions passed');
 })().catch((error) => {
   console.error(error);

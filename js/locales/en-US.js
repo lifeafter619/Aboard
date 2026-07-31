@@ -955,6 +955,7 @@ window.translations = {
         fileTooLarge: 'Project file is too large. Please import a file under 100 MB.',
         unsafePath: 'Unsafe project package path: {path}',
         tooManyPages: 'The project package contains too many pages.',
+        tooComplex: 'Project complexity exceeds the safe import limit.',
         assetTooLarge: 'The project package contains an asset that is too large: {path}',
         entryTooLarge: 'The project package contains an entry that is too large: {path}',
         packageTooLarge: 'The project package expands to too much data and cannot be imported.',

@@ -955,6 +955,7 @@ window.translations = {
         fileTooLarge: '项目文件过大，请导入 100 MB 以内的文件。',
         unsafePath: '项目包路径不安全：{path}',
         tooManyPages: '项目包包含的页面数量过多。',
+        tooComplex: '项目内容过于复杂，超出安全导入限制。',
         assetTooLarge: '项目包包含过大的资源文件：{path}',
         entryTooLarge: '项目包包含过大的文件：{path}',
         packageTooLarge: '项目包解压后体积过大，无法导入。',

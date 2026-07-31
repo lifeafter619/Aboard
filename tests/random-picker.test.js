@@ -171,10 +171,27 @@ function testTitleOnlyUpdatePreservesNoRepeatProgress() {
   assert.equal(instance.remainingNumberCount, 3);
 }
 
+function testUnsafeNumberRangeFallsBackToFiniteDefaults() {
+  const document = createDocumentStub();
+  const RandomPickerInstance = loadRandomPickerInstance(document);
+  const instance = new RandomPickerInstance(1, { showSettings() {}, remove() {} }, {
+    mode: 'number',
+    min: Number.MIN_SAFE_INTEGER,
+    max: Number.MAX_SAFE_INTEGER,
+    allowRepeats: false
+  });
+
+  assert.equal(instance.config.min, 1);
+  assert.equal(instance.config.max, 50);
+  assert.equal(instance.remainingNumberCount, 50);
+  assert.equal(Number.isFinite(instance.remainingNumberCount), true);
+}
+
 function main() {
   testInitialTitleIsInsertedAsText();
   testLargeNoRepeatNumberRangeStillPicksRandomResult();
   testTitleOnlyUpdatePreservesNoRepeatProgress();
+  testUnsafeNumberRangeFallsBackToFiniteDefaults();
   console.log('random-picker.test: all assertions passed');
 }
 

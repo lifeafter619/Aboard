@@ -150,6 +150,7 @@ function createBoard() {
     setUpdatePreference() {},
     setLegacyProjectImportEnabled() {},
     setGlobalFont() {},
+    populateGlobalFontSelect() {},
     setCanvasSize() {},
     setShowToolbarText() {},
     setThemeColor() {},
@@ -217,6 +218,51 @@ function createBoard() {
   };
 }
 
+async function testGlobalFontUploadWaitsForImportBeforeRefreshingFontLists() {
+  const { document, window } = createDomEnvironment();
+  const runtime = loadRuntime({
+    document,
+    window,
+    localStorage: createThrowingStorageRecorder()
+  });
+  const { board } = createBoard();
+  const events = [];
+  let finishUpload;
+
+  board.settingsManager.customFonts = [];
+  board.settingsManager.handleFontUpload = () => new Promise((resolve) => {
+    finishUpload = () => {
+      board.settingsManager.customFonts.push({ name: 'Imported Font', data: 'data:font/woff2;base64,dGVzdA==' });
+      resolve('Imported Font');
+    };
+  });
+  board.insertTextManager = {
+    customFonts: [],
+    populateFonts() {
+      events.push('populate');
+    }
+  };
+  board.renderFontManagementList = () => {
+    events.push('render');
+  };
+
+  runtime.setupSettingsListeners(board);
+  const input = document.getElementById('global-font-upload');
+  input.files = [{ name: 'Imported Font.woff2', size: 4 }];
+  const pendingUpload = input.listeners.get('change')({ target: input });
+
+  assert.deepEqual(events, [], 'font lists must not refresh before the asynchronous upload finishes');
+  finishUpload();
+  await pendingUpload;
+
+  assert.equal(
+    board.insertTextManager.customFonts,
+    board.settingsManager.customFonts,
+    'the text tool must use the settings manager custom font collection after upload'
+  );
+  assert.deepEqual(events, ['populate', 'render'], 'font lists should refresh once after the upload finishes');
+}
+
 function testSettingsTogglesSurviveBlockedStorage() {
   const { document, window } = createDomEnvironment();
   const runtime = loadRuntime({
@@ -259,7 +305,11 @@ function testSettingsTogglesSurviveBlockedStorage() {
   assert.equal(calls.updateFullscreenBtnVisibility, 1);
 }
 
-(function main() {
+(async function main() {
   testSettingsTogglesSurviveBlockedStorage();
+  await testGlobalFontUploadWaitsForImportBeforeRefreshingFontLists();
   console.log('ui-settings-storage-resilience.test: all assertions passed');
-})();
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

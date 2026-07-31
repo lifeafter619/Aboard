@@ -308,6 +308,41 @@ function testBackgroundManagerSurvivesBlockedLocalStorage() {
   );
 }
 
+function testBackgroundManagerRejectsMalformedSavedImageTransform() {
+  const values = new Map([
+    ['backgroundPattern', 'image'],
+    ['backgroundImageData', 'data:image/png;base64,test'],
+    ['imageTransform', 'null']
+  ]);
+  const BackgroundManager = loadBackgroundManager({
+    localStorage: {
+      getItem(key) { return values.get(key) ?? null; },
+      setItem() {},
+      removeItem() {}
+    }
+  });
+  const manager = new BackgroundManager(
+    { width: 1280, height: 720, clientWidth: 1280, clientHeight: 720, style: {} },
+    { clearRect() {}, fillRect() {}, save() {}, restore() {} }
+  );
+
+  assert.deepEqual(
+    { ...manager.imageTransform },
+    {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      rotation: 0,
+      scale: 1,
+      flipHorizontal: false,
+      flipVertical: false
+    }
+  );
+  assert.doesNotThrow(() => manager.hasBackgroundImage());
+  assert.equal(manager.hasBackgroundImage(), false);
+}
+
 async function testBackgroundGifInitSurvivesMissingContainer() {
   class FakeSuperGif {
     load(callback) {
@@ -665,6 +700,7 @@ function testControlCustomizationRespectsDisplaySettings() {
 
 (async function main() {
   testBackgroundManagerSurvivesBlockedLocalStorage();
+  testBackgroundManagerRejectsMalformedSavedImageTransform();
   await testBackgroundGifInitSurvivesMissingContainer();
   testStoppingGifRestoresWrappedImage();
   await testGifInitializationSurvivesLibgifDomReplacementAndAlwaysLoopsInternally();

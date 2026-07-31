@@ -8,6 +8,11 @@ const minCanvasDimension = 300;
 const maxCanvasDimension = 4000;
 const defaultThemeColor = '#007AFF';
 const minimumThemeContrastRatio = 4.5;
+const importedConfigMaxDepth = 20;
+const importedConfigMaxCollectionEntries = 1000;
+const importedConfigMaxTotalEntries = 10000;
+const importedConfigMaxCustomFonts = 100;
+const importedConfigUnsafeKeys = new Set(['__proto__', 'constructor', 'prototype']);
 
 function parseThemeHexColor(value) {
     const match = String(value || '').trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
@@ -132,6 +137,10 @@ function updateElementById(elementId, updater) {
 
     updater(element);
     return element;
+}
+
+function isPlainObject(value) {
+    return value !== null && Object.prototype.toString.call(value) === '[object Object]';
 }
 
 class SettingsManager {
@@ -1444,6 +1453,149 @@ class SettingsManager {
         };
     }
 
+    validateImportedSettings(settings) {
+        const invalid = (key) => {
+            throw new TypeError(key
+                ? `Invalid configuration field: ${key}`
+                : 'Invalid configuration: expected a non-empty object');
+        };
+
+        if (!isPlainObject(settings) || Object.keys(settings).length === 0) {
+            invalid();
+        }
+
+        const pendingValues = [{ value: settings, depth: 0 }];
+        const seenValues = new Set();
+        let totalEntries = 0;
+        while (pendingValues.length > 0) {
+            const { value, depth } = pendingValues.pop();
+            if (!value || typeof value !== 'object') continue;
+            if (seenValues.has(value)
+                || depth > importedConfigMaxDepth
+                || (Array.isArray(value) && value.length > importedConfigMaxCollectionEntries)) {
+                invalid('complexity');
+            }
+            seenValues.add(value);
+
+            const keys = Object.keys(value);
+            totalEntries += keys.length;
+            if (totalEntries > importedConfigMaxTotalEntries
+                || keys.some((key) => importedConfigUnsafeKeys.has(key))) {
+                invalid('complexity');
+            }
+            keys.forEach((key) => {
+                const child = value[key];
+                if (child && typeof child === 'object') {
+                    pendingValues.push({ value: child, depth: depth + 1 });
+                }
+            });
+        }
+
+        const numberRanges = {
+            toolbarSize: [30, 100],
+            configScale: [0.5, 1.5],
+            canvasWidth: [minCanvasDimension, maxCanvasDimension],
+            canvasHeight: [minCanvasDimension, maxCanvasDimension]
+        };
+        Object.entries(numberRanges).forEach(([key, [minimum, maximum]]) => {
+            if (settings[key] !== undefined && (
+                typeof settings[key] !== 'number' ||
+                !Number.isFinite(settings[key]) ||
+                settings[key] < minimum ||
+                settings[key] > maximum
+            )) {
+                invalid(key);
+            }
+        });
+
+        [
+            'edgeSnapEnabled', 'touchZoomEnabled', 'legacyProjectImportEnabled',
+            'unlimitedZoom', 'showZoomControls', 'showImportExportBtn',
+            'showFullscreenBtn', 'showToolbarText', 'keepMorePanelOpen'
+        ].forEach((key) => {
+            if (settings[key] !== undefined && typeof settings[key] !== 'boolean') {
+                invalid(key);
+            }
+        });
+
+        if (settings.controlPosition !== undefined && ![
+            'top-left', 'top-right', 'bottom-left', 'bottom-right'
+        ].includes(settings.controlPosition)) {
+            invalid('controlPosition');
+        }
+        if (settings.updatePreference !== undefined && !['prompt', 'auto'].includes(settings.updatePreference)) {
+            invalid('updatePreference');
+        }
+        if (settings.themeColor !== undefined && !parseThemeHexColor(settings.themeColor)) {
+            invalid('themeColor');
+        }
+        ['canvasPreset', 'globalFont'].forEach((key) => {
+            if (settings[key] !== undefined && typeof settings[key] !== 'string') {
+                invalid(key);
+            }
+        });
+
+        if (settings.patternPreferences !== undefined && (
+            !isPlainObject(settings.patternPreferences) ||
+            Object.values(settings.patternPreferences).some((value) => typeof value !== 'boolean')
+        )) {
+            invalid('patternPreferences');
+        }
+
+        if (settings.customFonts !== undefined && (
+            !Array.isArray(settings.customFonts) ||
+            settings.customFonts.length > importedConfigMaxCustomFonts ||
+            settings.customFonts.some((font) => !isPlainObject(font) ||
+                typeof font.name !== 'string' || !font.name.trim() ||
+                typeof font.data !== 'string' || !font.data.trim() ||
+                font.data.length > 3 * 1024 * 1024)
+        )) {
+            invalid('customFonts');
+        }
+
+        [
+            'fontPreferences', 'fontPreviewSettings', 'modalSizePreferences',
+            'modalCenterPreferences', 'controlSettings', 'localeSettings'
+        ].forEach((key) => {
+            if (settings[key] !== undefined && !isPlainObject(settings[key])) {
+                invalid(key);
+            }
+        });
+
+        if (settings.controlSettings) {
+            ['zoom', 'pagination', 'time', 'fullscreen', 'import', 'export'].forEach((key) => {
+                if (settings.controlSettings[key] !== undefined && typeof settings.controlSettings[key] !== 'boolean') {
+                    invalid(`controlSettings.${key}`);
+                }
+            });
+        }
+
+        const validateJsonSetting = (key, expectedType) => {
+            if (settings[key] === undefined || settings[key] === null) {
+                return;
+            }
+            if (typeof settings[key] !== 'string') {
+                invalid(key);
+            }
+            try {
+                const parsed = JSON.parse(settings[key]);
+                const valid = expectedType === 'array'
+                    ? Array.isArray(parsed)
+                        && parsed.length <= importedConfigMaxCollectionEntries
+                        && parsed.every((value) => typeof value === 'string')
+                    : isPlainObject(parsed) && Object.values(parsed).every((value) => typeof value === 'boolean');
+                if (!valid) invalid(key);
+            } catch (error) {
+                invalid(key);
+            }
+        };
+        validateJsonSetting('toolbarOrder', 'array');
+        validateJsonSetting('toolbarVisibility', 'object');
+        validateJsonSetting('controlButtonOrder', 'array');
+
+        return settings;
+    }
+
     exportSettings() {
         const settings = this.getCurrentSettingsState();
 
@@ -1646,6 +1798,7 @@ class SettingsManager {
     }
 
     applySettings(newSettings) {
+        this.validateImportedSettings(newSettings);
         const keys = [
             'toolbarSize', 'configScale', 'controlPosition', 'edgeSnapEnabled',
             'touchZoomEnabled', 'updatePreference', 'legacyProjectImportEnabled', 'unlimitedZoom', 'showZoomControls', 'showImportExportBtn', 'showFullscreenBtn', 'keepMorePanelOpen',

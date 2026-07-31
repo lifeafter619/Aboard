@@ -9,6 +9,7 @@
         gif: 10 * MB,
         audio: 5 * MB,
         spreadsheet: 5 * MB,
+        config: 10 * MB,
         project: 100 * MB
     });
 
@@ -143,6 +144,16 @@
                 extensions: ['csv', 'xls', 'xlsx'],
                 tooLargeKey: 'errors.spreadsheetTooLarge',
                 unsupportedKey: 'errors.unsupportedSpreadsheetType'
+            });
+        },
+        validateConfigFile(file) {
+            return validateFile(file, {
+                label: 'configuration file',
+                maxBytes: LIMITS.config,
+                mimeTypes: ['application/json', 'text/json'],
+                extensions: ['json'],
+                tooLargeKey: 'settings.importFileTooLarge',
+                unsupportedKey: 'settings.importUnsupportedType'
             });
         },
         validateProjectFile(file) {

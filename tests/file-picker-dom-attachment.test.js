@@ -260,6 +260,7 @@ async function testProjectImportFilePickerAttachesToDom() {
 
 async function testSettingsImportFilePickerAttachesToDom() {
   const { document, window } = createDomEnvironment();
+  const importErrors = [];
   const runtime = loadRuntime(
     path.join('js', 'modules', 'ui-listeners-runtime.js'),
     'AboardUiListenersRuntime',
@@ -270,9 +271,17 @@ async function testSettingsImportFilePickerAttachesToDom() {
   let importedDiff = null;
   const board = {
     settingsManager: {
+      toastManager: {
+        show(message, type) {
+          importErrors.push({ message, type });
+        }
+      },
       getSettingsDiff(nextSettings) {
         importedDiff = { changedKeys: Object.keys(nextSettings) };
         return importedDiff;
+      },
+      validateImportedSettings(nextSettings) {
+        return nextSettings;
       }
     },
     showConfigDiffModal(diff, nextSettings) {
@@ -323,6 +332,22 @@ async function testSettingsImportFilePickerAttachesToDom() {
   assert.equal(importedSettings?.nextSettings?.language, 'en-US');
   assert.equal(input.removed, true, 'settings import should remove the temporary file input after use');
   assert.equal(document.body.children.length, 0);
+
+  await clickHandler();
+  const unreadableInput = document.body.children[0];
+  unreadableInput.files = [{
+    async text() {
+      throw new Error('read failed');
+    }
+  }];
+
+  await assert.doesNotReject(
+    () => unreadableInput.listeners.get('change')({ target: unreadableInput }),
+    'configuration read failures should be handled by the import flow'
+  );
+  assert.deepEqual(importErrors, [{ message: 'Invalid configuration file', type: 'error' }]);
+  assert.equal(unreadableInput.removed, true,
+    'failed configuration imports should still clean up the temporary file input');
 }
 
 async function run() {

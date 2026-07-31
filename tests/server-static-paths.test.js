@@ -288,6 +288,33 @@ async function testEncodingQPreferenceSelectsBestSupportedEncoding() {
   assert.equal(zlib.gunzipSync(res.rawBody).toString('utf8'), originalBody.toString('utf8'));
 }
 
+async function testUnsupportedHttpMethodsAreRejectedBeforeReadingFiles() {
+  const harness = loadServerHarness();
+  let readFileCalled = false;
+  harness.setReadFileImpl((_filePath, callback) => {
+    readFileCalled = true;
+    callback(null, Buffer.from('version'));
+  });
+
+  const res = createResponseRecorder();
+  harness.requestHandler(
+    {
+      method: 'POST',
+      url: '/version.txt',
+      headers: { host: 'localhost:8080' }
+    },
+    res
+  );
+
+  await res.ended;
+
+  assert.equal(res.statusCode, 405);
+  assert.equal(res.headers?.Allow, 'GET, HEAD');
+  assertSecurityHeaders(res.headers);
+  assert.equal(res.body, JSON.stringify({ error: 'Method Not Allowed' }));
+  assert.equal(readFileCalled, false, 'unsupported methods must not read static files');
+}
+
 function testVercelConfigDefinesMatchingSecurityHeaders() {
   const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'vercel.json'), 'utf8'));
   const globalHeaders = config.headers?.find((entry) => entry.source === '/(.*)')?.headers || [];
@@ -306,6 +333,7 @@ async function run() {
   await testTextStaticResponseUsesGzipWhenAccepted();
   await testEncodingQZeroIsRespected();
   await testEncodingQPreferenceSelectsBestSupportedEncoding();
+  await testUnsupportedHttpMethodsAreRejectedBeforeReadingFiles();
   testVercelConfigDefinesMatchingSecurityHeaders();
   console.log('server-static-paths.test: all assertions passed');
 }

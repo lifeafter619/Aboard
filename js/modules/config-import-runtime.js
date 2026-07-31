@@ -141,28 +141,27 @@ function showConfigDiffModal(diff, newSettings) {
                     input.value = item.new;
                     input.style.width = '80px';
                     inputContainer.appendChild(input);
+                } else if (item.new !== null && typeof item.new === 'object') {
+                    const structuredValue = document.createElement('code');
+                    structuredValue.textContent = JSON.stringify(item.new);
+                    structuredValue.style.overflowWrap = 'anywhere';
+                    inputContainer.appendChild(structuredValue);
                 } else {
-                    // String or other
                     input = document.createElement('input');
                     input.type = 'text';
-                    // Handle null/undefined values to prevent "undefined" string
                     const safeValue = (item.new === null || item.new === undefined) ? '' : String(item.new);
                     input.value = safeValue;
                     input.style.width = '120px';
-                    // Disable editing for complex JSON strings if displayed raw
-                    if (item.key === 'toolbarOrder' || item.key === 'toolbarVisibility') {
-                        // These are usually handled by sub-keys in diff if parsed,
-                        // but if deepCompare returned the string itself (unlikely if parsed), disable it.
-                        // deepCompare parses strings, so we likely get 'toolbarOrder.0'.
-                    }
                     inputContainer.appendChild(input);
                 }
 
-                input.dataset.key = item.key;
-                input.dataset.type = typeof item.new;
-                input.dataset.fallbackValue = typeof item.new === 'number'
-                    ? String(item.new)
-                    : '';
+                if (input) {
+                    input.dataset.key = item.key;
+                    input.dataset.type = typeof item.new;
+                    input.dataset.fallbackValue = typeof item.new === 'number'
+                        ? String(item.new)
+                        : '';
+                }
 
                 list.appendChild(div);
             });
@@ -221,7 +220,18 @@ function showConfigDiffModal(diff, newSettings) {
                     }
                 });
 
-                await this.settingsManager.applySettings(pendingSettings);
+                try {
+                    await this.settingsManager.applySettings(pendingSettings);
+                } catch (error) {
+                    console.warn('Failed to apply imported configuration:', error);
+                    const errorMsg = window.i18n?.t('settings.importError') || 'Invalid configuration file';
+                    if (this.settingsManager.toastManager) {
+                        this.settingsManager.toastManager.show(errorMsg, 'error');
+                    } else {
+                        window.appDialog?.showAlert(errorMsg, 'error');
+                    }
+                    return;
+                }
                 // Also update UI that depends on settings immediately
                 this.recalculateAndRecenterCanvas();
                 // false: the config-area scale was just applied from the

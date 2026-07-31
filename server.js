@@ -187,10 +187,11 @@ function sendStaticData(req, res, ext, mimeType, data, cacheHeaders = {}) {
     });
 }
 
-function sendJson(res, statusCode, payload) {
+function sendJson(res, statusCode, payload, headers = {}) {
     res.writeHead(statusCode, withSecurityHeaders({
         'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': 'no-store'
+        'Cache-Control': 'no-store',
+        ...headers
     }));
     res.end(JSON.stringify(payload));
 }
@@ -320,6 +321,12 @@ function parseRequestUrl(req) {
 }
 
 const server = http.createServer((req, res) => {
+    const method = String(req?.method || 'GET').toUpperCase();
+    if (method !== 'GET' && method !== 'HEAD') {
+        sendJson(res, 405, { error: 'Method Not Allowed' }, { Allow: 'GET, HEAD' });
+        return;
+    }
+
     const url = parseRequestUrl(req);
     if (!url) {
         sendJson(res, 400, { error: 'Bad Request' });

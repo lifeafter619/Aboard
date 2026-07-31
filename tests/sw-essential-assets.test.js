@@ -270,7 +270,10 @@ async function testNavigationTimeoutFallsBackAndRefreshesInBackground() {
     'a stalled navigation should quickly return the cached app shell');
   assert.ok(backgroundRefresh, 'the late network request should keep running as service-worker background work');
 
-  resolveNetwork(new Response('<html>fresh</html>', { status: 200 }));
+  resolveNetwork(new Response('<html>fresh</html>', {
+    status: 200,
+    headers: { 'content-type': 'text/html' }
+  }));
   await backgroundRefresh;
   assert.deepEqual(cacheWrites, [{ key: './index.html', body: '<html>fresh</html>' }],
     'a late successful navigation should refresh the cached app shell');
@@ -311,6 +314,54 @@ async function testFailedNavigationResponseFallsBackToCachedShell() {
   );
   assert.equal(await response.text(), '<html>cached</html>',
     'a 5xx navigation should use the cached app shell instead of showing a server error page');
+}
+
+async function testNonHtmlNavigationDoesNotReplaceCachedShell() {
+  const source = `${readText('sw.js')}\n;globalThis.__swTestExports = { navigationNetworkFirst };`;
+  const cacheWrites = [];
+  const cache = {
+    async match() {
+      return null;
+    },
+    async put(key, response) {
+      cacheWrites.push({
+        key,
+        contentType: response.headers.get('content-type'),
+        body: await response.text()
+      });
+    }
+  };
+  const sandbox = {
+    console: { warn() {} },
+    self: { location: { origin: 'https://example.test' }, addEventListener() {} },
+    caches: { async open() { return cache; } },
+    async fetch() {
+      return new Response('<svg>icon</svg>', {
+        status: 200,
+        headers: { 'content-type': 'image/svg+xml' }
+      });
+    },
+    Headers,
+    Request,
+    Response,
+    Promise,
+    Set,
+    URL,
+    setTimeout,
+    clearTimeout
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox, { filename: 'sw.js' });
+
+  const response = await sandbox.__swTestExports.navigationNetworkFirst(
+    { url: 'https://example.test/img/icon.svg', mode: 'navigate' },
+    { timeoutMs: 50 }
+  );
+
+  assert.equal(await response.text(), '<svg>icon</svg>');
+  assert.deepEqual(cacheWrites, [],
+    'a non-HTML navigation response must not replace the cached app shell');
 }
 
 async function testRangeAudioUsesAFullResponseCache() {
@@ -481,6 +532,7 @@ async function run() {
   testRuntimeCacheCoversLazyTimerAudioAssets();
   await testNavigationTimeoutFallsBackAndRefreshesInBackground();
   await testFailedNavigationResponseFallsBackToCachedShell();
+  await testNonHtmlNavigationDoesNotReplaceCachedShell();
   await testRangeAudioUsesAFullResponseCache();
   testCorePrecacheCoversIndexClassicScripts();
   testCorePrecacheCoversIndexStylesheets();

@@ -40,6 +40,11 @@ function toFiniteOptionalNumber(value, fallback = null) {
     return toFiniteNumber(value, fallback);
 }
 
+function clampOptionalNumber(value, minimum, maximum, fallback = null) {
+    const normalized = toFiniteOptionalNumber(value, fallback);
+    return normalized === null ? fallback : Math.min(maximum, Math.max(minimum, normalized));
+}
+
 function normalizePoint(point) {
     if (!point || typeof point !== 'object') {
         return null;
@@ -160,11 +165,11 @@ function normalizeStroke(stroke) {
             : [],
         shapeStart: normalizeOptionalPoint(stroke.shapeStart),
         shapeEnd: normalizeOptionalPoint(stroke.shapeEnd),
-        shapeDashDensity: toFiniteOptionalNumber(stroke.shapeDashDensity, null),
-        shapeWaveDensity: toFiniteOptionalNumber(stroke.shapeWaveDensity, null),
-        shapeMultiLineCount: toFiniteOptionalNumber(stroke.shapeMultiLineCount, null),
-        shapeMultiLineSpacing: toFiniteOptionalNumber(stroke.shapeMultiLineSpacing, null),
-        arrowSize: toFiniteOptionalNumber(stroke.arrowSize, null),
+        shapeDashDensity: clampOptionalNumber(stroke.shapeDashDensity, 1, 100),
+        shapeWaveDensity: clampOptionalNumber(stroke.shapeWaveDensity, 5, 30),
+        shapeMultiLineCount: clampOptionalNumber(stroke.shapeMultiLineCount, 2, 10),
+        shapeMultiLineSpacing: clampOptionalNumber(stroke.shapeMultiLineSpacing, 5, 50),
+        arrowSize: clampOptionalNumber(stroke.arrowSize, 5, 100),
         rotation: toFiniteNumber(stroke.rotation, 0),
         layerOrder: toFiniteNumber(stroke.layerOrder, 0),
         groupId: stroke.groupId || null

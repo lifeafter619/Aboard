@@ -30,6 +30,7 @@ async function importLegacyProject(manager, file) {
     if (!data.pages || !Array.isArray(data.pages) || data.pages.length === 0) {
         throw new Error(getProjectPackageText(manager, 'projectPackage.legacyMissingPages', 'The legacy project file does not contain page data.'));
     }
+    manager.normalizeImportedPageNumber(data.pages.length);
 
     const confirmed = await manager.confirmImportOverwrite();
     if (!confirmed) {

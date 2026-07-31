@@ -995,6 +995,7 @@ window.translations = {
         fileTooLarge: '專案檔案過大，請匯入 100 MB 以內的檔案。',
         unsafePath: '專案包路徑不安全：{path}',
         tooManyPages: '專案包包含的頁面數量過多。',
+        tooComplex: '專案內容過於複雜，超出安全匯入限制。',
         assetTooLarge: '專案包包含過大的資源檔案：{path}',
         entryTooLarge: '專案包包含過大的檔案：{path}',
         packageTooLarge: '專案包解壓後體積過大，無法匯入。',

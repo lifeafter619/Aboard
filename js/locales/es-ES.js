@@ -905,6 +905,7 @@ Consejos de uso:
         fileTooLarge: 'El archivo de proyecto es demasiado grande. Importa un archivo de menos de 100 MB.',
         unsafePath: 'Ruta no segura en el paquete de proyecto: {path}',
         tooManyPages: 'El paquete de proyecto contiene demasiadas páginas.',
+        tooComplex: 'La complejidad del proyecto supera el límite de importación seguro.',
         assetTooLarge: 'El paquete de proyecto contiene un recurso demasiado grande: {path}',
         entryTooLarge: 'El paquete de proyecto contiene un archivo demasiado grande: {path}',
         packageTooLarge: 'El paquete de proyecto es demasiado grande al descomprimirse y no se puede importar.',

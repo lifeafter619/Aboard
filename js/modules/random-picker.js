@@ -16,14 +16,17 @@ function normalizeRandomPickerNumberRange(minValue, maxValue) {
     let min = parseInt(minValue, 10);
     let max = parseInt(maxValue, 10);
 
-    if (Number.isNaN(min)) {
+    if (!Number.isSafeInteger(min)) {
         min = 1;
     }
-    if (Number.isNaN(max)) {
+    if (!Number.isSafeInteger(max)) {
         max = 50;
     }
     if (min > max) {
         [min, max] = [max, min];
+    }
+    if (!Number.isSafeInteger(max - min + 1)) {
+        return { min: 1, max: 50 };
     }
 
     return { min, max };

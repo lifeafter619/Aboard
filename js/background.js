@@ -93,20 +93,29 @@ class BackgroundManager {
         const savedTransform = safeBackgroundStorageGetItem('imageTransform');
         if (savedTransform) {
             try {
-            this.imageTransform = JSON.parse(savedTransform);
-            if (this.imageTransform.scale &&
-                this.imageTransform.scale !== 1 &&
-                this.imageTransform.width > 0 &&
-                this.imageTransform.height > 0) {
-                const factor = Math.abs(this.imageTransform.scale);
-                const newWidth = this.imageTransform.width * factor;
-                const newHeight = this.imageTransform.height * factor;
-                this.imageTransform.x -= (newWidth - this.imageTransform.width) / 2;
-                this.imageTransform.y -= (newHeight - this.imageTransform.height) / 2;
-                this.imageTransform.width = newWidth;
-                this.imageTransform.height = newHeight;
-                this.imageTransform.scale = 1;
-            }
+                const parsedTransform = JSON.parse(savedTransform);
+                const numericKeys = ['x', 'y', 'width', 'height', 'rotation', 'scale'];
+                const booleanKeys = ['flipHorizontal', 'flipVertical'];
+                if (!parsedTransform || typeof parsedTransform !== 'object' || Array.isArray(parsedTransform) ||
+                    numericKeys.some((key) => parsedTransform[key] !== undefined &&
+                        (typeof parsedTransform[key] !== 'number' || !Number.isFinite(parsedTransform[key]))) ||
+                    booleanKeys.some((key) => parsedTransform[key] !== undefined && typeof parsedTransform[key] !== 'boolean')) {
+                    throw new TypeError('Invalid saved imageTransform');
+                }
+                this.imageTransform = { ...this.imageTransform, ...parsedTransform };
+                if (this.imageTransform.scale &&
+                    this.imageTransform.scale !== 1 &&
+                    this.imageTransform.width > 0 &&
+                    this.imageTransform.height > 0) {
+                    const factor = Math.abs(this.imageTransform.scale);
+                    const newWidth = this.imageTransform.width * factor;
+                    const newHeight = this.imageTransform.height * factor;
+                    this.imageTransform.x -= (newWidth - this.imageTransform.width) / 2;
+                    this.imageTransform.y -= (newHeight - this.imageTransform.height) / 2;
+                    this.imageTransform.width = newWidth;
+                    this.imageTransform.height = newHeight;
+                    this.imageTransform.scale = 1;
+                }
             } catch (e) {
                 console.warn('Failed to parse saved imageTransform, using defaults:', e);
             }
