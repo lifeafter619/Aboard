@@ -30,7 +30,10 @@ class CollapsibleManager {
         const saved = safeCollapsibleStorageGetItem('collapsedSections');
         if (saved) {
             try {
-                return JSON.parse(saved);
+                const parsed = JSON.parse(saved);
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    return parsed;
+                }
             } catch (e) {
                 console.warn('Failed to load collapsed state:', e);
             }

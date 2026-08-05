@@ -344,6 +344,33 @@ function testUploadedImagesRuntimeSurvivesBlockedStorage() {
   );
 }
 
+function testUploadedImagesRuntimeIgnoresMalformedStoredCollections() {
+  let storedValue = JSON.stringify({ unexpected: true });
+  const runtime = loadUploadedImagesRuntime({
+    localStorage: {
+      getItem() { return storedValue; },
+      setItem(_key, value) { storedValue = value; },
+      removeItem() { storedValue = null; }
+    }
+  });
+  const board = {
+    uploadedImages: runtime.loadUploadedImages({}),
+    settingsManager: { toastManager: null },
+    updateUploadedImagesButtons() {}
+  };
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(board.uploadedImages)),
+    [],
+    'non-array uploaded image storage should fall back to an empty library'
+  );
+  assert.doesNotThrow(
+    () => runtime.saveUploadedImage(board, 'data:image/png;base64,abc'),
+    'a malformed stored image library should not break the next upload'
+  );
+  assert.equal(board.uploadedImages.length, 1);
+}
+
 function testShapeDrawingSurvivesBlockedStorage() {
   const warnings = [];
   const ShapeDrawingManager = loadShapeDrawingManager({
@@ -405,11 +432,42 @@ function testInsertTextManagerSurvivesBlockedStorage() {
   );
 }
 
+function testInsertTextManagerIgnoresMalformedStoredFonts() {
+  const InsertTextManager = loadInsertTextManager({
+    localStorage: {
+      getItem() {
+        return JSON.stringify([
+          null,
+          { name: '', data: 'data:font/woff2;base64,bad' },
+          { name: 'Teacher Font', data: 'data:font/woff2;base64,dGVzdA==' }
+        ]);
+      },
+      setItem() {},
+      removeItem() {}
+    }
+  });
+
+  InsertTextManager.prototype.createControls = function createControlsStub() {};
+  InsertTextManager.prototype.setupEventListeners = function setupEventListenersStub() {};
+  InsertTextManager.prototype.loadCustomFontsToDocument = function loadCustomFontsToDocumentStub() {
+    return Promise.resolve([]);
+  };
+
+  const manager = new InsertTextManager({}, {}, {}, {});
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(manager.customFonts)),
+    [{ name: 'Teacher Font', data: 'data:font/woff2;base64,dGVzdA==' }],
+    'malformed stored font entries should not break the text tool startup'
+  );
+}
+
 (async function main() {
   await testSessionRecoveryStillWorksWhenLocalStorageIsBlocked();
   testUploadedImagesRuntimeSurvivesBlockedStorage();
+  testUploadedImagesRuntimeIgnoresMalformedStoredCollections();
   testShapeDrawingSurvivesBlockedStorage();
   testInsertTextManagerSurvivesBlockedStorage();
+  testInsertTextManagerIgnoresMalformedStoredFonts();
   console.log('startup-storage-resilience.test: all assertions passed');
 })().catch((error) => {
   console.error(error);

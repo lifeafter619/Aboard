@@ -136,6 +136,12 @@ function testMorePanelExposesAndManagesExpandedState() {
     'closing More should expose collapsed state');
   assert.match(eventRuntime, /featureArea[\s\S]*event\.key\s*===\s*'Escape'/,
     'Escape should close the More panel and return to the trigger');
+  assert.match(eventRuntime, /feature-close-btn[\s\S]*this\.closeFeaturePanel\(\)/,
+    'the More panel close button should use the shared close path');
+  assert.match(toolRuntime, /if \(isFeatureAreaVisible\) \{\s*this\.closeFeaturePanel\(\)/,
+    'clicking the expanded More trigger should use the shared close path');
+  assert.match(readText('js/main.js'), /closeFeaturePanel\(\)\s*\{\s*return overlayUiRuntime\.closeFeaturePanel\?\.\(this\)/,
+    'the board close method should pass its tool state to the shared close path');
 }
 
 function testAutomaticMorePanelCloseRestoresFocus() {
@@ -175,7 +181,14 @@ function testAutomaticMorePanelCloseRestoresFocus() {
   vm.runInContext(readText('js/modules/overlay-ui-runtime.js'), sandbox, {
     filename: 'overlay-ui-runtime.js'
   });
-  sandbox.window.AboardOverlayUiRuntime.closeFeaturePanel();
+  const toolChanges = [];
+  const board = {
+    drawingEngine: { currentTool: 'more' },
+    setTool(tool, showConfig) {
+      toolChanges.push([tool, showConfig]);
+    }
+  };
+  sandbox.window.AboardOverlayUiRuntime.closeFeaturePanel(board);
 
   assert.equal(featureArea.classList.contains('show'), false,
     'automatic More panel close should hide the panel');
@@ -183,6 +196,8 @@ function testAutomaticMorePanelCloseRestoresFocus() {
     'automatic More panel close should hide the panel from assistive technology');
   assert.equal(attributes.get('more:aria-expanded'), 'false',
     'automatic More panel close should collapse the trigger state');
+  assert.deepEqual(toolChanges, [['pan', false]],
+    'closing More without selecting a feature should restore a usable canvas tool');
   assert.equal(focusOptions?.preventScroll, true,
     'automatic More panel close should return focus to the More trigger');
 }

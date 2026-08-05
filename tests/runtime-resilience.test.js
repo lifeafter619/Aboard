@@ -1386,6 +1386,37 @@ function testSettingsManagerApplySettingsSurvivesBlockedLocalStorage() {
   );
 }
 
+function testSettingsManagerNormalizesMalformedStoredSettings() {
+  const storedValues = {
+    toolbarSize: 'NaN',
+    configScale: '99',
+    controlPosition: 'center',
+    customFonts: JSON.stringify([
+      null,
+      { name: '', data: 'data:font/woff2;base64,bad' },
+      { name: 'Teacher Font', data: 'data:font/woff2;base64,dGVzdA==' }
+    ])
+  };
+  const SettingsManager = loadSettingsManager({
+    localStorage: {
+      getItem(key) { return storedValues[key] ?? null; },
+      setItem() {},
+      removeItem() {}
+    }
+  });
+
+  const manager = new SettingsManager();
+
+  assert.equal(manager.toolbarSize, 60, 'invalid stored toolbar sizes should use the display default');
+  assert.equal(manager.configScale, 1, 'out-of-range stored config scales should use the display default');
+  assert.equal(manager.controlPosition, 'top-right', 'invalid stored control positions should use the default');
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(manager.customFonts)),
+    [{ name: 'Teacher Font', data: 'data:font/woff2;base64,dGVzdA==' }],
+    'malformed stored custom font entries should not prevent settings startup'
+  );
+}
+
 function testSettingsManagerRejectsMalformedImportedSettings() {
   const SettingsManager = loadSettingsManager({
     localStorage: {
@@ -1580,6 +1611,7 @@ function testHistoryManagerUsesSmallerDefaultMemoryCap() {
   await testStorageManagerFallsBackWhenCanvasToBlobIsUnavailable();
   await testStorageManagerFallsBackWhenCreateImageBitmapIsUnavailable();
   testSettingsManagerUsesDefaultsWhenLocalStorageUnavailable();
+  testSettingsManagerNormalizesMalformedStoredSettings();
   testSettingsManagerStateExportSurvivesBlockedLocalStorage();
   testSettingsManagerApplySettingsSurvivesBlockedLocalStorage();
   testSettingsManagerRejectsMalformedImportedSettings();

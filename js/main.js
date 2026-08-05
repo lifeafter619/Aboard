@@ -258,7 +258,10 @@ class DrawingBoard {
         const savedPageBackgrounds = safeMainStorageGetItem('pageBackgrounds');
         if (savedPageBackgrounds) {
             try {
-                this.pageBackgrounds = JSON.parse(savedPageBackgrounds);
+                const parsedPageBackgrounds = JSON.parse(savedPageBackgrounds);
+                if (parsedPageBackgrounds && typeof parsedPageBackgrounds === 'object' && !Array.isArray(parsedPageBackgrounds)) {
+                    this.pageBackgrounds = parsedPageBackgrounds;
+                }
             } catch (e) {
                 console.warn('Failed to load page backgrounds:', e);
             }
@@ -861,7 +864,7 @@ class DrawingBoard {
         return overlayUiRuntime.closeConfigPanel?.(this);
     }
     closeFeaturePanel() {
-        return overlayUiRuntime.closeFeaturePanel?.();
+        return overlayUiRuntime.closeFeaturePanel?.(this);
     }
     bringElementToFront(element) {
         return layoutRuntime.bringElementToFront?.(this, element);

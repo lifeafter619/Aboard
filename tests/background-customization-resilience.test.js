@@ -343,6 +343,36 @@ function testBackgroundManagerRejectsMalformedSavedImageTransform() {
   assert.equal(manager.hasBackgroundImage(), false);
 }
 
+function testBackgroundManagerRejectsNonFiniteSavedNumbers() {
+  const BackgroundManager = loadBackgroundManager({
+    localStorage: {
+      getItem(key) {
+        return ['bgOpacity', 'patternIntensity', 'imageSize', 'coordinateOriginX', 'coordinateOriginY'].includes(key)
+          ? 'Infinity'
+          : null;
+      },
+      setItem() {},
+      removeItem() {}
+    }
+  });
+  const manager = new BackgroundManager(
+    { width: 1280, height: 720, clientWidth: 1280, clientHeight: 720, style: {} },
+    { clearRect() {}, fillRect() {}, save() {}, restore() {} }
+  );
+
+  assert.deepEqual(
+    {
+      opacity: manager.bgOpacity,
+      intensity: manager.patternIntensity,
+      imageSize: manager.imageSize,
+      originX: manager.coordinateOriginX,
+      originY: manager.coordinateOriginY
+    },
+    { opacity: 1, intensity: 0.5, imageSize: 1, originX: 0, originY: 0 },
+    'background manager should reject non-finite saved numeric settings'
+  );
+}
+
 async function testBackgroundGifInitSurvivesMissingContainer() {
   class FakeSuperGif {
     load(callback) {
@@ -556,6 +586,24 @@ function testCollapsibleManagerSurvivesBlockedLocalStorage() {
   );
 }
 
+function testCollapsibleManagerRejectsInvalidSavedStateType() {
+  const CollapsibleManager = loadCollapsibleManager({
+    localStorage: {
+      getItem(key) {
+        return key === 'collapsedSections' ? 'null' : null;
+      },
+      setItem() {}
+    }
+  });
+  const manager = new CollapsibleManager();
+
+  assert.deepEqual(
+    { ...manager.collapsedState },
+    { default: true },
+    'collapsible manager should reject saved state that is not an object'
+  );
+}
+
 function testCustomizationRuntimeSurvivesBlockedLocalStorage() {
   const warnings = [];
   const storage = createThrowingStorageRecorder();
@@ -656,6 +704,23 @@ function testCustomizationRuntimeSurvivesBlockedLocalStorage() {
   );
 }
 
+function testToolbarVisibilityRejectsInvalidSavedStateType() {
+  const runtime = loadCustomizationRuntime({
+    localStorage: {
+      getItem(key) {
+        return key === 'toolbarVisibility' ? 'null' : null;
+      },
+      setItem() {}
+    },
+    document: { getElementById() { return null; } }
+  });
+
+  assert.doesNotThrow(
+    () => runtime.applyToolbarVisibility({ getToolToButtonIdMap() { return {}; } }),
+    'toolbar visibility should ignore saved state that is not an object'
+  );
+}
+
 function testControlCustomizationRespectsDisplaySettings() {
   const values = new Map([
     ['controlShowZoom', 'true'],
@@ -701,12 +766,15 @@ function testControlCustomizationRespectsDisplaySettings() {
 (async function main() {
   testBackgroundManagerSurvivesBlockedLocalStorage();
   testBackgroundManagerRejectsMalformedSavedImageTransform();
+  testBackgroundManagerRejectsNonFiniteSavedNumbers();
   await testBackgroundGifInitSurvivesMissingContainer();
   testStoppingGifRestoresWrappedImage();
   await testGifInitializationSurvivesLibgifDomReplacementAndAlwaysLoopsInternally();
   await testChangingBackgroundImageResetsOldAspectRatioAndSliderSyncsControls();
   testCollapsibleManagerSurvivesBlockedLocalStorage();
+  testCollapsibleManagerRejectsInvalidSavedStateType();
   testCustomizationRuntimeSurvivesBlockedLocalStorage();
+  testToolbarVisibilityRejectsInvalidSavedStateType();
   testControlCustomizationRespectsDisplaySettings();
   console.log('background-customization-resilience.test: all assertions passed');
 })().catch((error) => {

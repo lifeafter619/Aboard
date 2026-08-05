@@ -6,7 +6,7 @@ function closeConfigPanel(board) {
     board.exitShapeMode();
 }
 
-function closeFeaturePanel() {
+function closeFeaturePanel(board) {
     const featureArea = document.getElementById('feature-area');
     const moreButton = document.getElementById('more-btn');
     const shouldRestoreFocus = Boolean(featureArea?.contains?.(document.activeElement));
@@ -16,6 +16,9 @@ function closeFeaturePanel() {
     }
     if (moreButton) {
         moreButton.setAttribute('aria-expanded', 'false');
+    }
+    if (board?.drawingEngine?.currentTool === 'more') {
+        board.setTool?.('pan', false);
     }
     if (shouldRestoreFocus && typeof moreButton?.focus === 'function') {
         try {
@@ -28,7 +31,7 @@ function closeFeaturePanel() {
 
 function handleMoreFeaturePanelAfterAction(board) {
     if (!board.settingsManager.keepMorePanelOpen) {
-        closeFeaturePanel();
+        closeFeaturePanel(board);
     }
 }
 

@@ -107,7 +107,12 @@ class InsertTextManager {
         const saved = safeInsertTextStorageGetItem('customFonts');
         if (saved) {
             try {
-                return JSON.parse(saved);
+                const fonts = JSON.parse(saved);
+                return Array.isArray(fonts)
+                    ? fonts.filter((font) => font
+                        && typeof font.name === 'string' && Boolean(font.name.trim())
+                        && typeof font.data === 'string' && Boolean(font.data.trim()))
+                    : [];
             } catch (e) {
                 console.warn('Failed to load custom fonts:', e);
             }

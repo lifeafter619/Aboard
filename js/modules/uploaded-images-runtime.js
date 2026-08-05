@@ -34,7 +34,15 @@ function loadUploadedImages() {
         const saved = safeUploadedImagesStorageGetItem('uploadedImages');
         if (saved) {
             try {
-                return JSON.parse(saved);
+                const images = JSON.parse(saved);
+                if (!Array.isArray(images)) {
+                    safeUploadedImagesStorageRemoveItem('uploadedImages');
+                    return [];
+                }
+                return images.filter((image) => image
+                    && typeof image.id === 'string'
+                    && typeof image.data === 'string' && Boolean(image.data)
+                    && typeof image.name === 'string');
             } catch (e) {
                 console.warn('Failed to load uploaded images from localStorage:', e);
                 safeUploadedImagesStorageRemoveItem('uploadedImages');

@@ -145,7 +145,7 @@ function setTool(tool, showConfig = true) {
         this.ensureMoreFeatureToolConfigListenersInitialized();
         const isFeatureAreaVisible = featureArea?.classList?.contains('show') || false;
         if (isFeatureAreaVisible) {
-            collapseFeatureArea(featureArea);
+            this.closeFeaturePanel();
             removeClassIfPresent(configArea, 'show');
         } else {
             expandFeatureArea(featureArea);

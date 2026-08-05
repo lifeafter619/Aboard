@@ -34,8 +34,11 @@ const STATES = [
       if (board?.pages?.length < 2 && typeof board.addPage === 'function') board.addPage();
       board?.setTool?.('pen', false);
     }`,
-    selectors: ['#toolbar', '#history-controls', '#pagination-controls'],
-    nonOverlap: [['#history-controls', '#pagination-controls']]
+    selectors: ['#toolbar', '#history-controls', '#pagination-controls', '#time-display'],
+    nonOverlap: [
+      ['#history-controls', '#pagination-controls'],
+      ['#pagination-controls', '#time-display']
+    ]
   },
   {
     name: 'pen-config',

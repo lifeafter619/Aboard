@@ -435,6 +435,28 @@ function testDrawingEngineStartupSurvivesBlockedLocalStorage() {
   );
 }
 
+function testDrawingEngineRejectsInvalidSavedViewState() {
+  for (const invalidScale of ['Infinity', '-1']) {
+    const storage = {
+      getItem(key) {
+        if (key === 'canvasScale') return invalidScale;
+        if (key === 'panOffsetX') return 'Infinity';
+        if (key === 'panOffsetY') return '-Infinity';
+        return null;
+      },
+      setItem() {}
+    };
+    const { engine } = createEngine(storage);
+
+    assert.equal(engine.canvasScale, 1, 'drawing engine should reject non-finite and non-positive saved scales');
+    assert.deepEqual(
+      { ...engine.panOffset },
+      { x: 0, y: 0 },
+      'drawing engine should reject non-finite saved pan offsets'
+    );
+  }
+}
+
 function testWheelZoomUsesDrawingEnginePersistenceHook() {
   const { zoomRuntime, getWheelHandler } = loadZoomRuntime();
   let persistCalls = 0;
@@ -757,6 +779,7 @@ function testInitializeCanvasViewPreservesSavedPanOffset() {
   testStopPanningFlushesPendingViewStatePersistence();
   testViewStatePersistenceSurvivesBlockedLocalStorage();
   testDrawingEngineStartupSurvivesBlockedLocalStorage();
+  testDrawingEngineRejectsInvalidSavedViewState();
   testWheelZoomUsesDrawingEnginePersistenceHook();
   testViewControlsUseDrawingEnginePersistenceHook();
   testInteractionRuntimeUsesDrawingEnginePersistenceHook();

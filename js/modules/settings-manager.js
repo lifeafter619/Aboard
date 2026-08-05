@@ -13,6 +13,7 @@ const importedConfigMaxCollectionEntries = 1000;
 const importedConfigMaxTotalEntries = 10000;
 const importedConfigMaxCustomFonts = 100;
 const importedConfigUnsafeKeys = new Set(['__proto__', 'constructor', 'prototype']);
+const validControlPositions = new Set(['top-left', 'top-right', 'bottom-left', 'bottom-right']);
 
 function parseThemeHexColor(value) {
     const match = String(value || '').trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
@@ -139,8 +140,22 @@ function updateElementById(elementId, updater) {
     return element;
 }
 
+function normalizeStoredNumber(value, fallbackValue, minimum, maximum) {
+    const parsedValue = Number(value);
+    return Number.isFinite(parsedValue) && parsedValue >= minimum && parsedValue <= maximum
+        ? parsedValue
+        : fallbackValue;
+}
+
 function isPlainObject(value) {
     return value !== null && Object.prototype.toString.call(value) === '[object Object]';
+}
+
+function isValidCustomFont(font) {
+    return isPlainObject(font)
+        && typeof font.name === 'string' && Boolean(font.name.trim())
+        && typeof font.data === 'string' && Boolean(font.data.trim())
+        && font.data.length <= 3 * 1024 * 1024;
 }
 
 class SettingsManager {
@@ -150,9 +165,10 @@ class SettingsManager {
         const isLargeScreen = window.innerWidth >= largeScreenWidth;
         const isHighDpi = (window.devicePixelRatio || 1) >= highDpiRatio;
         const isHighResDisplay = isLargeScreen || isHighDpi;
-        this.toolbarSize = storedToolbarSize ? parseInt(storedToolbarSize, 10) : (isHighResDisplay ? 65 : 60);
-        this.configScale = storedConfigScale ? parseFloat(storedConfigScale) : (isHighResDisplay ? 1.1 : 1.0);
-        this.controlPosition = safeLocalStorageGetItem('controlPosition') || 'top-right';
+        this.toolbarSize = normalizeStoredNumber(storedToolbarSize, isHighResDisplay ? 65 : 60, 30, 100);
+        this.configScale = normalizeStoredNumber(storedConfigScale, isHighResDisplay ? 1.1 : 1.0, 0.5, 1.5);
+        const storedControlPosition = safeLocalStorageGetItem('controlPosition');
+        this.controlPosition = validControlPositions.has(storedControlPosition) ? storedControlPosition : 'top-right';
         this.edgeSnapEnabled = safeLocalStorageGetItem('edgeSnapEnabled') !== 'false';
         this.touchZoomEnabled = safeLocalStorageGetItem('touchZoomEnabled') !== 'false';
         this.updatePreference = this.normalizeUpdatePreference(safeLocalStorageGetItem('updatePreference'));
@@ -190,7 +206,8 @@ class SettingsManager {
         const saved = safeLocalStorageGetItem('customFonts');
         if (saved) {
             try {
-                return JSON.parse(saved);
+                const fonts = JSON.parse(saved);
+                return Array.isArray(fonts) ? fonts.filter(isValidCustomFont) : [];
             } catch (e) {
                 console.warn('Failed to load custom fonts:', e);
             }
@@ -1518,9 +1535,7 @@ class SettingsManager {
             }
         });
 
-        if (settings.controlPosition !== undefined && ![
-            'top-left', 'top-right', 'bottom-left', 'bottom-right'
-        ].includes(settings.controlPosition)) {
+        if (settings.controlPosition !== undefined && !validControlPositions.has(settings.controlPosition)) {
             invalid('controlPosition');
         }
         if (settings.updatePreference !== undefined && !['prompt', 'auto'].includes(settings.updatePreference)) {
@@ -1545,10 +1560,7 @@ class SettingsManager {
         if (settings.customFonts !== undefined && (
             !Array.isArray(settings.customFonts) ||
             settings.customFonts.length > importedConfigMaxCustomFonts ||
-            settings.customFonts.some((font) => !isPlainObject(font) ||
-                typeof font.name !== 'string' || !font.name.trim() ||
-                typeof font.data !== 'string' || !font.data.trim() ||
-                font.data.length > 3 * 1024 * 1024)
+            settings.customFonts.some((font) => !isValidCustomFont(font))
         )) {
             invalid('customFonts');
         }

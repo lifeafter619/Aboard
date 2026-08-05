@@ -93,10 +93,13 @@ class DrawingEngine {
         this.vectorSceneMaskCounter = 0;
         
         // Canvas scaling and panning
-        this.canvasScale = parseFloat(safeDrawingStorageGetItem('canvasScale')) || 1.0;
+        const savedCanvasScale = parseFloat(safeDrawingStorageGetItem('canvasScale'));
+        const savedPanOffsetX = parseFloat(safeDrawingStorageGetItem('panOffsetX'));
+        const savedPanOffsetY = parseFloat(safeDrawingStorageGetItem('panOffsetY'));
+        this.canvasScale = Number.isFinite(savedCanvasScale) && savedCanvasScale > 0 ? savedCanvasScale : 1.0;
         this.panOffset = { 
-            x: parseFloat(safeDrawingStorageGetItem('panOffsetX')) || 0, 
-            y: parseFloat(safeDrawingStorageGetItem('panOffsetY')) || 0 
+            x: Number.isFinite(savedPanOffsetX) ? savedPanOffsetX : 0,
+            y: Number.isFinite(savedPanOffsetY) ? savedPanOffsetY : 0
         };
         this.isPanning = false;
         this.lastPanPoint = null;

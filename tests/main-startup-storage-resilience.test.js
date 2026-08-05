@@ -107,7 +107,6 @@ function createThrowingStorageRecorder() {
 }
 
 function testLegacyDrawingBoardSurvivesBlockedPageBackgroundStorage() {
-  const DrawingBoard = loadDrawingBoard(createThrowingStorageRecorder());
   const canvas = {
     width: 32,
     height: 24,
@@ -125,44 +124,52 @@ function testLegacyDrawingBoardSurvivesBlockedPageBackgroundStorage() {
     }
   };
 
-  let board = null;
-  assert.doesNotThrow(() => {
-    board = new DrawingBoard({
-      canvas,
-      bgCanvas,
-      eraserCursor: { style: {} },
-      settingsManager: {
-        unlimitedZoom: false,
-        loadSettings() {}
-      },
-      drawingEngine: {
-        setShapeDrawingManager() {},
-        setEdgeDrawingManager() {}
-      },
-      historyManager: {
-        saveState() {}
-      },
-      backgroundManager: {
-        drawBackground() {}
-      },
-      imageControls: {},
-      strokeControls: {},
-      selectionManager: {},
-      teachingToolsManager: {},
-      shapeDrawingManager: {},
-      lineStyleModal: {},
-      edgeDrawingManager: {},
-      collapsibleManager: {},
-      announcementManager: {},
-      storageManager: {}
-    });
-  }, 'DrawingBoard should still construct when page background storage is unavailable');
+  const storageCases = [
+    createThrowingStorageRecorder(),
+    { getItem(key) { return key === 'pageBackgrounds' ? 'null' : null; }, setItem() {}, removeItem() {} }
+  ];
 
-  assert.deepEqual(
-    JSON.parse(JSON.stringify(board.pageBackgrounds)),
-    {},
-    'page backgrounds should fall back to an empty object when storage is unavailable'
-  );
+  for (const storage of storageCases) {
+    const DrawingBoard = loadDrawingBoard(storage);
+    let board = null;
+    assert.doesNotThrow(() => {
+      board = new DrawingBoard({
+        canvas,
+        bgCanvas,
+        eraserCursor: { style: {} },
+        settingsManager: {
+          unlimitedZoom: false,
+          loadSettings() {}
+        },
+        drawingEngine: {
+          setShapeDrawingManager() {},
+          setEdgeDrawingManager() {}
+        },
+        historyManager: {
+          saveState() {}
+        },
+        backgroundManager: {
+          drawBackground() {}
+        },
+        imageControls: {},
+        strokeControls: {},
+        selectionManager: {},
+        teachingToolsManager: {},
+        shapeDrawingManager: {},
+        lineStyleModal: {},
+        edgeDrawingManager: {},
+        collapsibleManager: {},
+        announcementManager: {},
+        storageManager: {}
+      });
+    }, 'DrawingBoard should still construct with unavailable or invalid page background storage');
+
+    assert.deepEqual(
+      JSON.parse(JSON.stringify(board.pageBackgrounds)),
+      {},
+      'page backgrounds should fall back to an empty object when storage is unavailable or invalid'
+    );
+  }
 }
 
 function testLegacyDrawingBoardSurvivesFailingOptionalManagers() {

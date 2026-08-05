@@ -59,8 +59,8 @@ class BackgroundManager {
         const savedImageSize = parseFloat(safeBackgroundStorageGetItem('imageSize'));
         const savedCoordinateOriginX = parseFloat(safeBackgroundStorageGetItem('coordinateOriginX'));
         const savedCoordinateOriginY = parseFloat(safeBackgroundStorageGetItem('coordinateOriginY'));
-        this.bgOpacity = Number.isNaN(savedBgOpacity) ? 1.0 : savedBgOpacity;
-        this.patternIntensity = Number.isNaN(savedPatternIntensity) ? 0.5 : savedPatternIntensity;
+        this.bgOpacity = Number.isFinite(savedBgOpacity) ? savedBgOpacity : 1.0;
+        this.patternIntensity = Number.isFinite(savedPatternIntensity) ? savedPatternIntensity : 0.5;
         this.patternDensity = sanitizePatternDensity(savedPatternDensity);
         this.backgroundImage = null;
         this.backgroundImageData = safeBackgroundStorageGetItem('backgroundImageData') || null;
@@ -68,13 +68,13 @@ class BackgroundManager {
         this.gifInitToken = 0;
         this.pendingGifSource = null;
         this.gifInstance = null;
-        this.imageSize = Number.isNaN(savedImageSize) ? 1.0 : savedImageSize;
+        this.imageSize = Number.isFinite(savedImageSize) ? savedImageSize : 1.0;
         this.isImagePaused = false; // State for GIF playback control
         this.imageStaticData = null; // Store static frame for paused GIF
         
         // Coordinate system origin offset
-        this.coordinateOriginX = Number.isNaN(savedCoordinateOriginX) ? 0 : savedCoordinateOriginX;
-        this.coordinateOriginY = Number.isNaN(savedCoordinateOriginY) ? 0 : savedCoordinateOriginY;
+        this.coordinateOriginX = Number.isFinite(savedCoordinateOriginX) ? savedCoordinateOriginX : 0;
+        this.coordinateOriginY = Number.isFinite(savedCoordinateOriginY) ? savedCoordinateOriginY : 0;
         
         this.imageTransform = {
             x: 0,

@@ -403,6 +403,11 @@
 
 /* Time Display Responsive Styles */
 @media (max-width: 480px) {
+    #time-display.top-right,
+    #time-display.top-left {
+        top: 176px;
+    }
+
     #time-display-widget {
         min-width: auto;
         width: auto;

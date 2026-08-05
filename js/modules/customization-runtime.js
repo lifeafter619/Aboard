@@ -204,6 +204,7 @@ function applyToolbarVisibility(visibility) {
                 return;
             }
         }
+        if (!visibility || typeof visibility !== 'object' || Array.isArray(visibility)) return;
         
         const toolToButtonId = this.getToolToButtonIdMap();
         ALWAYS_VISIBLE_TOOLS.forEach(tool => { visibility[tool] = true; });
