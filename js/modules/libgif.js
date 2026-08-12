@@ -460,6 +460,7 @@
             options.auto_play = (!gif.getAttribute('rel:auto_play') || gif.getAttribute('rel:auto_play') == '1');
 
         var onEndListener = (options.hasOwnProperty('on_end') ? options.on_end : null);
+        var onErrorListener = (options.hasOwnProperty('on_error') ? options.on_error : null);
         var loopDelay = (options.hasOwnProperty('loop_delay') ? options.loop_delay : 0);
         var overrideLoopMode = (options.hasOwnProperty('loop_mode') ? options.loop_mode : 'auto');
         var drawWhileLoading = (options.hasOwnProperty('draw_while_loading') ? options.draw_while_loading : true);
@@ -583,6 +584,7 @@
             }; // Fake header.
             frames = [];
             drawError();
+            if (onErrorListener) onErrorListener(originOfError);
         };
 
         var doHdr = function (_hdr) {

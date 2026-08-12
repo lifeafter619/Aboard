@@ -108,30 +108,29 @@ export class GifManager {
     img.style.display = 'block';
 
     let src = '';
+    img.onload = () => {
+      if (!this.gifs.has(id)) return;
+      const data = this.gifs.get(id);
+      data.src = img.src;
+      if (!options.skipSave) this.saveState();
+      void this._initSuperGif(img, container, id, options);
+    };
+    img.onerror = () => {
+      this._handleLoadFailure(id, new Error('Failed to decode GIF image.'));
+    };
+
     if (isFileInput) {
       const reader = new FileReader();
       reader.onload = (event) => {
         img.src = event.target.result;
-        if (this.gifs.has(id)) {
-          this.gifs.get(id).src = event.target.result;
-          if (!options.skipSave) this.saveState();
-        }
-        this._initSuperGif(img, container, id, options);
       };
       reader.onerror = () => {
-        console.warn('Failed to read GIF file:', reader.error);
-        const win = this.win || window;
-        const msg = win.i18n?.t?.('errors.fileReadFailed') || 'Failed to read the selected file.';
-        const toast = win.drawingBoard?.settingsManager?.toastManager || win.toastManager;
-        toast?.show?.(msg, 'error');
+        this._handleLoadFailure(id, reader.error || new Error('Failed to read GIF file.'));
       };
       reader.readAsDataURL(fileOrUrl);
     } else {
       img.src = fileOrUrl;
       src = fileOrUrl;
-      img.onload = () => {
-        this._initSuperGif(img, container, id, options);
-      };
     }
 
     const controls = this._addControls(container, id);
@@ -155,57 +154,78 @@ export class GifManager {
     return id;
   }
 
+  _handleLoadFailure(id, error) {
+    if (!this.gifs.has(id)) return;
+    console.warn('Failed to load GIF:', error);
+    this.removeGif(id);
+
+    const msg = this.win.i18n?.t?.('errors.fileReadFailed') || 'Failed to read the selected file.';
+    const toast = this.win.drawingBoard?.settingsManager?.toastManager || this.win.toastManager;
+    if (toast?.show) {
+      toast.show(msg, 'error');
+    } else {
+      this.win.appDialog?.showAlert?.(msg, 'error');
+    }
+  }
+
   async _initSuperGif(imgElement, container, id, options) {
     if (!this.win.SuperGif) {
       try {
         if (this.win.ScriptLoader?.load) {
           await this.win.ScriptLoader.load('js/modules/libgif.js');
         } else {
-          console.error('ScriptLoader not found');
+          this._handleLoadFailure(id, new Error('ScriptLoader not found.'));
           return;
         }
       } catch (error) {
-        console.error('Failed to load libgif.js', error);
+        this._handleLoadFailure(id, error);
         return;
       }
     }
+
+    if (!this.gifs.has(id)) return;
 
     container.appendChild(imgElement);
 
     const autoPlay = options.autoPlay !== undefined ? options.autoPlay : this.defaultAutoPlay;
     const loopCount = options.loopCount !== undefined ? options.loopCount : this.defaultLoopCount;
 
-    const gif = new this.win.SuperGif({
-      gif: imgElement,
-      auto_play: autoPlay,
-      loop_mode: loopCount === 0,
-      vp_t: 0,
-      vp_l: 0,
-      on_end: () => {
-        this._handleGifLoop(id);
-      }
-    });
+    try {
+      const gif = new this.win.SuperGif({
+        gif: imgElement,
+        auto_play: autoPlay,
+        loop_mode: loopCount === 0,
+        vp_t: 0,
+        vp_l: 0,
+        on_end: () => {
+          this._handleGifLoop(id);
+        },
+        on_error: (origin) => {
+          this._handleLoadFailure(id, new Error(`GIF decoder failed: ${origin}`));
+        }
+      });
 
-    if (this.gifs.has(id)) {
       const data = this.gifs.get(id);
       data.instance = gif;
       data.loopCount = loopCount;
       data.currentLoop = 0;
       data.isPlaying = autoPlay;
-    }
 
-    gif.load(() => {
-      const canvas = gif.get_canvas();
-      if (canvas) {
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
+      gif.load(() => {
+        const canvas = gif.get_canvas();
+        if (canvas) {
+          canvas.style.width = '100%';
+          canvas.style.height = '100%';
 
-        if (!options.width && !options.height) {
-          container.style.width = `${canvas.width}px`;
-          container.style.height = `${canvas.height}px`;
+          if (!options.width && !options.height) {
+            container.style.width = `${canvas.width}px`;
+            container.style.height = `${canvas.height}px`;
+          }
         }
-      }
-    });
+      });
+    } catch (error) {
+      this._handleLoadFailure(id, error);
+    }
   }
 
   _handleGifLoop(id) {

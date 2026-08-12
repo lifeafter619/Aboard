@@ -164,6 +164,13 @@ function sendStaticData(req, res, ext, mimeType, data, cacheHeaders = {}) {
         headers.Vary = 'Accept-Encoding';
     }
 
+    if (String(req?.method || 'GET').toUpperCase() === 'HEAD') {
+        headers['Content-Length'] = String(data.length);
+        res.writeHead(200, withSecurityHeaders(headers));
+        res.end();
+        return;
+    }
+
     const encoding = selectCompressionEncoding(req, ext, data);
     if (!encoding) {
         res.writeHead(200, withSecurityHeaders(headers));
@@ -187,13 +194,15 @@ function sendStaticData(req, res, ext, mimeType, data, cacheHeaders = {}) {
     });
 }
 
-function sendJson(res, statusCode, payload, headers = {}) {
+function sendJson(req, res, statusCode, payload, headers = {}) {
+    const body = JSON.stringify(payload);
     res.writeHead(statusCode, withSecurityHeaders({
         'Content-Type': 'application/json; charset=utf-8',
         'Cache-Control': 'no-store',
+        'Content-Length': String(Buffer.byteLength(body)),
         ...headers
     }));
-    res.end(JSON.stringify(payload));
+    res.end(String(req?.method || 'GET').toUpperCase() === 'HEAD' ? undefined : body);
 }
 
 function isPathInsideRoot(filePath) {
@@ -247,7 +256,7 @@ function containsEncodedTraversal(pathname) {
 function serveStatic(req, reqPath, res) {
     const normalizedReqPath = (reqPath || '').replace(/\\/g, '/');
     if (hasDotSegment(normalizedReqPath) || containsEncodedTraversal(normalizedReqPath)) {
-        sendJson(res, 403, { error: 'Forbidden' });
+        sendJson(req, res, 403, { error: 'Forbidden' });
         return;
     }
 
@@ -257,13 +266,13 @@ function serveStatic(req, reqPath, res) {
     }
 
     if (!isPublicAssetPath(safePath)) {
-        sendJson(res, 403, { error: 'Forbidden' });
+        sendJson(req, res, 403, { error: 'Forbidden' });
         return;
     }
 
     const filePath = path.normalize(path.join(ROOT_DIR, safePath));
     if (!isPathInsideRoot(filePath) && filePath !== path.join(ROOT_DIR, 'index.html')) {
-        sendJson(res, 403, { error: 'Forbidden' });
+        sendJson(req, res, 403, { error: 'Forbidden' });
         return;
     }
 
@@ -293,10 +302,10 @@ function serveStatic(req, reqPath, res) {
         fs.readFile(filePath, (err, data) => {
             if (err) {
                 if (err.code === 'ENOENT' || err.code === 'EISDIR') {
-                    sendJson(res, 404, { error: 'Not Found' });
+                    sendJson(req, res, 404, { error: 'Not Found' });
                     return;
                 }
-                sendJson(res, 500, { error: 'Internal Server Error' });
+                sendJson(req, res, 500, { error: 'Internal Server Error' });
                 return;
             }
 
@@ -323,23 +332,23 @@ function parseRequestUrl(req) {
 const server = http.createServer((req, res) => {
     const method = String(req?.method || 'GET').toUpperCase();
     if (method !== 'GET' && method !== 'HEAD') {
-        sendJson(res, 405, { error: 'Method Not Allowed' }, { Allow: 'GET, HEAD' });
+        sendJson(req, res, 405, { error: 'Method Not Allowed' }, { Allow: 'GET, HEAD' });
         return;
     }
 
     const url = parseRequestUrl(req);
     if (!url) {
-        sendJson(res, 400, { error: 'Bad Request' });
+        sendJson(req, res, 400, { error: 'Bad Request' });
         return;
     }
 
     if (url.pathname === '/api/version') {
         fs.readFile(VERSION_FILE, 'utf8', (err, versionText) => {
             if (err) {
-                sendJson(res, 500, { error: 'Failed to read version file' });
+                sendJson(req, res, 500, { error: 'Failed to read version file' });
                 return;
             }
-            sendJson(res, 200, { version: versionText.trim() });
+            sendJson(req, res, 200, { version: versionText.trim() });
         });
         return;
     }

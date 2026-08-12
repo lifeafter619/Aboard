@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const zlib = require('node:zlib');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const ENTRY_FILES = [
@@ -87,6 +88,75 @@ function readPngDimensions(relPath) {
     width: png.readUInt32BE(16),
     height: png.readUInt32BE(20)
   };
+}
+
+function readPngContentBounds(relPath) {
+  const png = fs.readFileSync(path.join(REPO_ROOT, relPath));
+  const width = png.readUInt32BE(16);
+  const height = png.readUInt32BE(20);
+  assert.equal(png[24], 8, `${relPath} should use 8-bit PNG channels`);
+  assert.equal(png[25], 2, `${relPath} should use RGB PNG color data`);
+  assert.equal(png[28], 0, `${relPath} should not use PNG interlacing`);
+
+  const idatChunks = [];
+  for (let offset = 8; offset < png.length;) {
+    const length = png.readUInt32BE(offset);
+    const type = png.toString('ascii', offset + 4, offset + 8);
+    if (type === 'IDAT') {
+      idatChunks.push(png.subarray(offset + 8, offset + 8 + length));
+    }
+    offset += length + 12;
+  }
+
+  const encoded = zlib.inflateSync(Buffer.concat(idatChunks));
+  const bytesPerPixel = 3;
+  const rowLength = width * bytesPerPixel;
+  const previous = Buffer.alloc(rowLength);
+  const current = Buffer.alloc(rowLength);
+  const bounds = { left: width, top: height, right: -1, bottom: -1 };
+  let sourceOffset = 0;
+
+  const paeth = (left, above, upperLeft) => {
+    const estimate = left + above - upperLeft;
+    const leftDistance = Math.abs(estimate - left);
+    const aboveDistance = Math.abs(estimate - above);
+    const upperLeftDistance = Math.abs(estimate - upperLeft);
+    if (leftDistance <= aboveDistance && leftDistance <= upperLeftDistance) return left;
+    return aboveDistance <= upperLeftDistance ? above : upperLeft;
+  };
+
+  for (let y = 0; y < height; y += 1) {
+    const filter = encoded[sourceOffset++];
+    for (let index = 0; index < rowLength; index += 1) {
+      const raw = encoded[sourceOffset++];
+      const left = index >= bytesPerPixel ? current[index - bytesPerPixel] : 0;
+      const above = previous[index];
+      const upperLeft = index >= bytesPerPixel ? previous[index - bytesPerPixel] : 0;
+      const predictor = filter === 1 ? left
+        : filter === 2 ? above
+          : filter === 3 ? Math.floor((left + above) / 2)
+            : filter === 4 ? paeth(left, above, upperLeft)
+              : 0;
+      current[index] = (raw + predictor) & 0xff;
+    }
+
+    for (let x = 0; x < width; x += 1) {
+      const pixelOffset = x * bytesPerPixel;
+      const isWhite = current[pixelOffset] >= 250
+        && current[pixelOffset + 1] >= 250
+        && current[pixelOffset + 2] >= 250;
+      if (!isWhite) {
+        bounds.left = Math.min(bounds.left, x);
+        bounds.top = Math.min(bounds.top, y);
+        bounds.right = Math.max(bounds.right, x);
+        bounds.bottom = Math.max(bounds.bottom, y);
+      }
+    }
+
+    current.copy(previous);
+  }
+
+  return bounds;
 }
 
 function readLegacyManifestArray(arrayName) {
@@ -432,27 +502,30 @@ function testInstallablePwaIconsExistAndArePrecached() {
   const manifest = JSON.parse(readText('manifest.json'));
   const coreAssets = readCoreAssets();
   const requiredIcons = [
-    { src: 'img/icon-192.png', size: 192 },
-    { src: 'img/icon-512.png', size: 512 }
+    { path: 'img/icon-192.png', size: 192 },
+    { path: 'img/icon-512.png', size: 512 }
   ];
 
-  for (const { src, size } of requiredIcons) {
-    const icon = manifest.icons?.find((entry) => entry.src === src);
-    assert.ok(icon, `manifest.json should include ${src}`);
-    assert.equal(icon.type, 'image/png', `${src} should declare image/png`);
-    assert.equal(icon.sizes, `${size}x${size}`, `${src} should declare its exact dimensions`);
+  for (const { path: iconPath, size } of requiredIcons) {
+    const icon = manifest.icons?.find((entry) => entry.src?.split('?')[0] === iconPath);
+    assert.ok(icon, `manifest.json should include ${iconPath}`);
+    assert.equal(icon.type, 'image/png', `${iconPath} should declare image/png`);
+    assert.equal(icon.sizes, `${size}x${size}`, `${iconPath} should declare its exact dimensions`);
     assert.deepEqual(
-      readPngDimensions(src),
+      readPngDimensions(iconPath),
       { width: size, height: size },
-      `${src} should contain a ${size}x${size} PNG`
+      `${iconPath} should contain a ${size}x${size} PNG`
     );
-    assert.ok(coreAssets.has(src), `${src} should be available in the offline core cache`);
+    const bounds = readPngContentBounds(iconPath);
+    assert.ok(bounds.left <= size * 0.05, `${iconPath} artwork should reach the left side of the canvas`);
+    assert.ok(bounds.right >= size * 0.95, `${iconPath} artwork should reach the right side of the canvas`);
+    assert.ok(coreAssets.has(icon.src), `${icon.src} should be available in the offline core cache`);
   }
 
   const maskableIcon = manifest.icons?.find((entry) => (
     String(entry.purpose || '').split(/\s+/).includes('maskable')
   ));
-  assert.equal(maskableIcon?.src, 'img/icon-512.png',
+  assert.equal(maskableIcon?.src?.split('?')[0], 'img/icon-512.png',
     'manifest.json should expose the 512px PNG as a maskable icon');
 }
 

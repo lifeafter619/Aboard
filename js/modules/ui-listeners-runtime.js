@@ -1095,15 +1095,6 @@ function setupSettingsListeners() {
                 }
             });
 
-            const globalFontUploadTrigger = globalFontUpload.closest('label.font-upload-btn');
-            if (globalFontUploadTrigger) {
-                globalFontUploadTrigger.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        globalFontUpload.click();
-                    }
-                });
-            }
         }
         
         // Populate custom fonts on load

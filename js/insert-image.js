@@ -302,6 +302,14 @@ class InsertImageManager {
             };
             img.onerror = () => {
                 console.warn('Failed to load inserted image');
+                const msg = window.i18n?.t?.('errors.fileReadFailed') || 'Failed to decode the selected image.';
+                if (validation?.showValidationError) {
+                    validation.showValidationError(new Error(msg), { toast, dialog: window.appDialog });
+                } else if (toast?.show) {
+                    toast.show(msg, 'error');
+                } else {
+                    window.appDialog?.showAlert?.(msg, 'error');
+                }
             };
             img.src = event.target.result;
         };

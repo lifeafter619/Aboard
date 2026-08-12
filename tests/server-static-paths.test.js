@@ -53,6 +53,7 @@ function loadServerHarness() {
 
   const context = {
     require: requireStub,
+    Buffer,
     console: {
       log() {}
     },
@@ -288,6 +289,63 @@ async function testEncodingQPreferenceSelectsBestSupportedEncoding() {
   assert.equal(zlib.gunzipSync(res.rawBody).toString('utf8'), originalBody.toString('utf8'));
 }
 
+async function testHeadStaticResponseDoesNotSendAResponseBody() {
+  const harness = loadServerHarness();
+  const originalBody = Buffer.from('const payload = "Aboard";\n'.repeat(160));
+  harness.setReadFileImpl((filePath, callback) => {
+    assert.match(filePath, /[\\/]js[\\/]drawing\.js$/);
+    callback(null, originalBody);
+  });
+
+  const res = createResponseRecorder();
+  harness.requestHandler(
+    {
+      method: 'HEAD',
+      url: '/js/drawing.js',
+      headers: {
+        host: 'localhost:8080',
+        'accept-encoding': 'gzip'
+      }
+    },
+    res
+  );
+
+  await res.ended;
+
+  assert.equal(res.statusCode, 200);
+  assertSecurityHeaders(res.headers);
+  assert.equal(res.headers?.['Content-Type'], 'application/javascript; charset=utf-8');
+  assert.equal(res.rawBody.length, 0, 'HEAD responses must not send the static file body');
+}
+
+async function testHeadVersionResponseDoesNotSendAResponseBody() {
+  const harness = loadServerHarness();
+  harness.setReadFileImpl((filePath, encoding, callback) => {
+    assert.match(filePath, /[\\/]version\.txt$/);
+    assert.equal(encoding, 'utf8');
+    callback(null, '2.5.1\n');
+  });
+
+  const res = createResponseRecorder();
+  harness.requestHandler(
+    {
+      method: 'HEAD',
+      url: '/api/version',
+      headers: { host: 'localhost:8080' }
+    },
+    res
+  );
+
+  await res.ended;
+
+  const expectedBody = JSON.stringify({ version: '2.5.1' });
+  assert.equal(res.statusCode, 200);
+  assertSecurityHeaders(res.headers);
+  assert.equal(res.headers?.['Content-Type'], 'application/json; charset=utf-8');
+  assert.equal(res.headers?.['Content-Length'], String(Buffer.byteLength(expectedBody)));
+  assert.equal(res.rawBody.length, 0, 'HEAD API responses must not send a JSON body');
+}
+
 async function testUnsupportedHttpMethodsAreRejectedBeforeReadingFiles() {
   const harness = loadServerHarness();
   let readFileCalled = false;
@@ -333,6 +391,8 @@ async function run() {
   await testTextStaticResponseUsesGzipWhenAccepted();
   await testEncodingQZeroIsRespected();
   await testEncodingQPreferenceSelectsBestSupportedEncoding();
+  await testHeadStaticResponseDoesNotSendAResponseBody();
+  await testHeadVersionResponseDoesNotSendAResponseBody();
   await testUnsupportedHttpMethodsAreRejectedBeforeReadingFiles();
   testVercelConfigDefinesMatchingSecurityHeaders();
   console.log('server-static-paths.test: all assertions passed');

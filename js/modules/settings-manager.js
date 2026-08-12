@@ -403,14 +403,19 @@ class SettingsManager {
             return Promise.resolve(null);
         }
 
-        const fontFace = new FontFace(name, `url(${data})`);
-        return fontFace.load().then(loadedFace => {
-            fontSet.add(loadedFace);
-            return loadedFace;
-        }).catch(err => {
+        try {
+            const fontFace = new FontFace(name, `url(${data})`);
+            return fontFace.load().then(loadedFace => {
+                fontSet.add(loadedFace);
+                return loadedFace;
+            }).catch(err => {
+                console.warn(`Failed to load custom font ${name}:`, err);
+                return null;
+            });
+        } catch (err) {
             console.warn(`Failed to load custom font ${name}:`, err);
-            return null;
-        });
+            return Promise.resolve(null);
+        }
     }
     
     // Handle font file upload. Returns a Promise resolving with the font
@@ -442,50 +447,58 @@ class SettingsManager {
 
         return new Promise((resolve) => {
             const reader = new FileReader();
-            reader.onload = (e) => {
-            const fontData = e.target.result;
-            const lastDotIndex = file.name.lastIndexOf('.');
-            const fontName = lastDotIndex > 0 ? file.name.substring(0, lastDotIndex) : file.name;
+            reader.onload = async (e) => {
+                const fontData = e.target.result;
+                const lastDotIndex = file.name.lastIndexOf('.');
+                const fontName = lastDotIndex > 0 ? file.name.substring(0, lastDotIndex) : file.name;
 
-            const exists = this.customFonts.find(f => f.name === fontName);
-            if (!exists) {
-                const newFont = { name: fontName, data: fontData };
-                this.customFonts.push(newFont);
-                if (!this.saveCustomFonts()) {
-                    const fontIndex = this.customFonts.indexOf(newFont);
-                    if (fontIndex >= 0) {
-                        this.customFonts.splice(fontIndex, 1);
+                const exists = this.customFonts.find(f => f.name === fontName);
+                if (!exists) {
+                    const loadedFace = await this.addFontToDocument(fontName, fontData);
+                    if (!loadedFace) {
+                        const msg = window.i18n?.t?.('errors.fileReadFailed') || 'Failed to load the selected font. Please verify the file is not corrupted.';
+                        this.toastManager?.show?.(msg, 'error');
+                        resolve(null);
+                        return;
                     }
-                    resolve(null);
-                    return;
-                }
-                this.addFontToDocument(fontName, fontData);
-                this.ensureFontPreferencesIntegrity();
-                this.fontPreferences.visibility[fontName] = true;
-                if (!this.fontPreferences.aliases[fontName]) {
-                    this.fontPreferences.aliases[fontName] = fontName;
-                }
-                this.saveFontPreferences();
-                this.populateGlobalFontSelect();
 
-                // Select the newly uploaded font
-                const select = document.getElementById('global-font-select');
-                if (select) {
-                    select.value = fontName;
-                    this.setGlobalFont(fontName);
-                }
+                    const newFont = { name: fontName, data: fontData };
+                    this.customFonts.push(newFont);
+                    if (!this.saveCustomFonts()) {
+                        const fontIndex = this.customFonts.indexOf(newFont);
+                        if (fontIndex >= 0) {
+                            this.customFonts.splice(fontIndex, 1);
+                        }
+                        document.fonts?.delete?.(loadedFace);
+                        resolve(null);
+                        return;
+                    }
+                    this.ensureFontPreferencesIntegrity();
+                    this.fontPreferences.visibility[fontName] = true;
+                    if (!this.fontPreferences.aliases[fontName]) {
+                        this.fontPreferences.aliases[fontName] = fontName;
+                    }
+                    this.saveFontPreferences();
+                    this.populateGlobalFontSelect();
 
-                const msg = window.i18n ? window.i18n.t('tools.text.fontUploadSuccess') : 'Font uploaded successfully!';
-                if (this.toastManager) {
-                    this.toastManager.show(msg, 'success');
+                    // Select the newly uploaded font
+                    const select = document.getElementById('global-font-select');
+                    if (select) {
+                        select.value = fontName;
+                        this.setGlobalFont(fontName);
+                    }
+
+                    const msg = window.i18n ? window.i18n.t('tools.text.fontUploadSuccess') : 'Font uploaded successfully!';
+                    if (this.toastManager) {
+                        this.toastManager.show(msg, 'success');
+                    }
+                } else {
+                    const msg = window.i18n ? window.i18n.t('tools.text.fontExists') : 'This font already exists.';
+                    if (this.toastManager) {
+                        this.toastManager.show(msg, 'warning');
+                    }
                 }
-            } else {
-                const msg = window.i18n ? window.i18n.t('tools.text.fontExists') : 'This font already exists.';
-                if (this.toastManager) {
-                    this.toastManager.show(msg, 'warning');
-                }
-            }
-            resolve(fontName);
+                resolve(fontName);
             };
             reader.onerror = () => {
                 console.warn('Failed to read font file:', reader.error);

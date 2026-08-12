@@ -44,6 +44,22 @@ function testServiceWorkerCacheVersionUsesVersionTxt() {
   assert.equal(match[1], version, 'Service Worker cache version should match version.txt');
 }
 
+function testManifestLinkUsesVersionTxt() {
+  const version = readVersion();
+  const html = readText('index.html');
+  const manifest = readJson('manifest.json');
+  const match = html.match(/<link\s+rel=["']manifest["']\s+href=["']manifest\.json\?v=([^"']+)["']/i);
+
+  assert.ok(match, 'index.html should version the web app manifest URL');
+  assert.equal(match[1], version, 'web app manifest URL version should match version.txt');
+  manifest.icons
+    .filter(icon => icon.type === 'image/png')
+    .forEach(icon => {
+      const iconVersion = new URL(icon.src, 'https://aboard.test/').searchParams.get('v');
+      assert.equal(iconVersion, version, `${icon.src} version should match version.txt`);
+    });
+}
+
 function testBuildPipelineEmbedsVersionTxtInBootstrap() {
   const bootstrap = readText('js/app/bootstrap.js');
   const buildScript = readText('scripts/build-static.js');
@@ -66,6 +82,7 @@ function run() {
   testPackageMetadataUsesVersionTxt();
   testReadmeBadgeUsesVersionTxt();
   testServiceWorkerCacheVersionUsesVersionTxt();
+  testManifestLinkUsesVersionTxt();
   testBuildPipelineEmbedsVersionTxtInBootstrap();
   console.log('version-source-of-truth.test: all assertions passed');
 }

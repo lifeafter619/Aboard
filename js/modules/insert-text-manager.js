@@ -153,14 +153,19 @@ class InsertTextManager {
             return Promise.resolve(null);
         }
 
-        const fontFace = new FontFace(name, `url(${data})`);
-        return fontFace.load().then(loadedFace => {
-            fontSet.add(loadedFace);
-            return loadedFace;
-        }).catch(err => {
+        try {
+            const fontFace = new FontFace(name, `url(${data})`);
+            return fontFace.load().then(loadedFace => {
+                fontSet.add(loadedFace);
+                return loadedFace;
+            }).catch(err => {
+                console.warn(`Failed to load custom font ${name}:`, err);
+                return null;
+            });
+        } catch (err) {
             console.warn(`Failed to load custom font ${name}:`, err);
-            return null;
-        });
+            return Promise.resolve(null);
+        }
     }
 
     // Handle font file upload
@@ -193,7 +198,7 @@ class InsertTextManager {
         }
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             const fontData = e.target.result;
             // Extract font name by removing the extension (handle multiple dots in filename)
             const lastDotIndex = file.name.lastIndexOf('.');
@@ -202,9 +207,19 @@ class InsertTextManager {
             // Check if font already exists
             const exists = this.customFonts.find(f => f.name === fontName);
             if (!exists) {
+                const loadedFace = await this.addFontToDocument(fontName, fontData);
+                if (!loadedFace) {
+                    const msg = window.i18n?.t?.('errors.fileReadFailed') || 'Failed to load the selected font. Please verify the file is not corrupted.';
+                    if (window.toastManager) {
+                        window.toastManager.show(msg, 'error');
+                    } else {
+                        window.appDialog?.showAlert?.(msg, 'error');
+                    }
+                    return;
+                }
+
                 this.customFonts.push({ name: fontName, data: fontData });
                 this.saveCustomFonts();
-                this.addFontToDocument(fontName, fontData);
                 this.populateFonts();
                 
                 // Select the newly uploaded font
@@ -638,15 +653,6 @@ class InsertTextManager {
                 }
             });
 
-            const fontUploadTrigger = fontUpload.closest('label.font-upload-btn');
-            if (fontUploadTrigger) {
-                fontUploadTrigger.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        fontUpload.click();
-                    }
-                });
-            }
         }
 
         // Bold Button

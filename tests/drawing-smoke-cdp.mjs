@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { access, mkdir, readdir, rm } from 'node:fs/promises';
+import { access, mkdir, readFile, readdir, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
 const PORT = process.env.PORT || '18080';
@@ -10,6 +10,7 @@ const STATIC_ROOT = process.env.STATIC_ROOT || '';
 const CHROME_PATH = process.env.CHROME_PATH || '';
 const EDGE_PATH = process.env.EDGE_PATH || '';
 const PLAYWRIGHT_BROWSERS_PATH = process.env.PLAYWRIGHT_BROWSERS_PATH || '';
+const APP_VERSION = (await readFile(resolve('version.txt'), 'utf8')).trim();
 const WINDOWS_BROWSER_CANDIDATES = [
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
@@ -619,6 +620,15 @@ async function main() {
     await cdp.send('Page.navigate', { url: BASE_URL });
 
     await waitUntil(() => evaluate(cdp, `location.href.startsWith(${JSON.stringify(BASE_URL)}) && document.readyState === "complete"`), { timeoutMs: 15000 });
+    const appManifest = await cdp.send('Page.getAppManifest');
+    if (appManifest.errors?.length) {
+      throw new Error(`Chromium rejected the web app manifest: ${JSON.stringify(appManifest.errors)}`);
+    }
+    const parsedManifest = JSON.parse(appManifest.data);
+    const installIcon = parsedManifest.icons?.find(icon => icon.sizes === '192x192');
+    if (installIcon?.src !== `img/icon-192.png?v=${APP_VERSION}`) {
+      throw new Error(`Chromium did not receive the versioned install icon: ${JSON.stringify(installIcon)}`);
+    }
     await waitUntil(() => evaluate(cdp, '!!window.drawingBoard?.drawingEngine'), { timeoutMs: 15000 });
     await wait(500);
     await dismissBlockingModals(cdp);

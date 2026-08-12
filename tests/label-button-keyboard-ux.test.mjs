@@ -6,6 +6,14 @@ const source = fs.readFileSync(
   path.join(process.cwd(), 'js', 'infra', 'label-button-keyboard.js'),
   'utf8'
 );
+const uiListenersSource = fs.readFileSync(
+  path.join(process.cwd(), 'js', 'modules', 'ui-listeners-runtime.js'),
+  'utf8'
+);
+const insertTextSource = fs.readFileSync(
+  path.join(process.cwd(), 'js', 'modules', 'insert-text-manager.js'),
+  'utf8'
+);
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(source, 'utf8').toString('base64')}`;
 const { bindLabelButtonKeyboardSupport } = await import(moduleUrl);
 
@@ -133,10 +141,16 @@ function testBindingIsIdempotentAndRespectsDisabledOrRepeatedEvents() {
   assert.equal(fileInput.clickCount, 0, 'disabled controls and repeated keydowns should not reopen system pickers');
 }
 
+function testFontUploadsUseOnlyTheDelegatedKeyboardBinding() {
+  assert.doesNotMatch(uiListenersSource, /globalFontUploadTrigger\.addEventListener\(['"]keydown['"]/);
+  assert.doesNotMatch(insertTextSource, /fontUploadTrigger\.addEventListener\(['"]keydown['"]/);
+}
+
 function run() {
   testEnterAndSpaceActivateAssociatedControl();
   testExistingPreventDefaultOrUnsupportedTargetsDoNotDoubleTrigger();
   testBindingIsIdempotentAndRespectsDisabledOrRepeatedEvents();
+  testFontUploadsUseOnlyTheDelegatedKeyboardBinding();
   console.log('label-button-keyboard-ux.test: all assertions passed');
 }
 
