@@ -25,6 +25,12 @@ function discardCurrentStroke() {
     this.drawingEngine.isDrawing = false;
     this.drawingEngine.points = [];
     this.drawingEngine.lastPoint = null;
+    // Clear the same break-state that startDrawing/stopDrawing reset: a
+    // discarded stroke may have populated strokeBreakIndices while teaching
+    // tools blocked segments, and stale indices here would otherwise survive
+    // until the next pen-down.
+    this.drawingEngine.strokeBreakIndices = [];
+    this.drawingEngine.pendingStrokeBreak = false;
     // Also clear the fixed-position live preview layer — the half-drawn
     // stroke it shows would otherwise stay floating above the canvas until
     // the next pen-down.
