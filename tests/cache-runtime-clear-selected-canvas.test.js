@@ -74,7 +74,7 @@ function createBlockedStorageStub(initialEntries = {}, blockedMethods = []) {
   };
 }
 
-function loadCacheRuntime(localStorage, sessionStorage) {
+function loadCacheRuntime(localStorage, sessionStorage, { caches = null, navigator = {} } = {}) {
   const window = {
     setTimeout,
     clearTimeout
@@ -86,8 +86,8 @@ function loadCacheRuntime(localStorage, sessionStorage) {
         return null;
       }
     },
-    navigator: {},
-    caches: {
+    navigator,
+    caches: caches || {
       async keys() {
         return [];
       }
@@ -115,6 +115,8 @@ function loadCacheRuntime(localStorage, sessionStorage) {
   context.globalThis = context;
   context.self = context;
   context.window.localStorage = localStorage;
+  context.window.caches = context.caches;
+  context.window.navigator = context.navigator;
   context.window.sessionStorage = sessionStorage;
 
   vm.createContext(context);
@@ -419,6 +421,59 @@ async function testCacheSizeSummarySurvivesBlockedStorageEnumeration() {
   });
 }
 
+async function testCacheStorageClearOnlyDeletesAboardCachesAndRequestsRebuild() {
+  const localStorage = createStorageStub();
+  const sessionStorage = createStorageStub();
+  const remainingCaches = new Set(['aboard-core-1.0.0', 'aboard-runtime-1.0.0', 'other-app-cache']);
+  const postedMessages = [];
+  const cachesStub = {
+    async keys() {
+      return [...remainingCaches];
+    },
+    async delete(name) {
+      return remainingCaches.delete(name);
+    }
+  };
+  const navigatorStub = {
+    serviceWorker: {
+      controller: {
+        postMessage(message) {
+          postedMessages.push(message);
+        }
+      }
+    }
+  };
+  const runtime = loadCacheRuntime(localStorage, sessionStorage, {
+    caches: cachesStub,
+    navigator: navigatorStub
+  });
+
+  const board = {
+    getCacheKeyGroups() {
+      return runtime.getCacheKeyGroups(this);
+    },
+    setCacheStorageSizeSnapshot() {}
+  };
+
+  const cleared = await runtime.clearSelectedCache(board, {
+    canvas: false,
+    settings: false,
+    other: true
+  });
+
+  assert.equal(cleared, true);
+  assert.deepEqual(
+    [...remainingCaches],
+    ['other-app-cache'],
+    'cache cleanup must only delete aboard-* caches, never other apps on the same origin'
+  );
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(postedMessages)),
+    [{ type: 'REBUILD_PRECACHE' }],
+    'cache cleanup must ask the active service worker to rebuild its core precache'
+  );
+}
+
 (async function main() {
   await testCanvasClearRemovesExtendedBoardStateKeys();
   await testCanvasClearSurvivesBlockedLocalStorageRemoval();
@@ -426,6 +481,7 @@ async function testCacheSizeSummarySurvivesBlockedStorageEnumeration() {
   await testClearAllLocalDataRestoresSessionWriteEpoch();
   await testOtherCacheCleanupPreservesSessionWriteEpoch();
   await testCacheSizeSummarySurvivesBlockedStorageEnumeration();
+  await testCacheStorageClearOnlyDeletesAboardCachesAndRequestsRebuild();
   console.log('cache-runtime-clear-selected-canvas.test: all assertions passed');
 })().catch((error) => {
   console.error(error);

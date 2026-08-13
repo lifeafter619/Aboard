@@ -363,6 +363,11 @@ class DrawingEngine {
 
         this.applyLineStyle();
 
+        // Teaching tools split live strokes: strokeBreakIndices marks points
+        // whose incoming segment was blocked. The preview must honor the same
+        // breaks or it draws a line through the tool body until pen-up.
+        const previewBreakIndices = new Set(this.strokeBreakIndices);
+
         const complexBrushes = ['pencil', 'brush', 'fountain', 'ballpoint', 'marker'];
         const isComplex = complexBrushes.includes(this.penType) || this.penLineStyle === 'multi';
 
@@ -371,6 +376,10 @@ class DrawingEngine {
             this.ctx.moveTo(firstPoint.x, firstPoint.y);
 
             for (let i = 1; i < this.points.length; i++) {
+                if (previewBreakIndices.has(i)) {
+                    this.ctx.moveTo(this.points[i].x, this.points[i].y);
+                    continue;
+                }
                 this.ctx.lineTo(this.points[i].x, this.points[i].y);
             }
 
@@ -379,6 +388,9 @@ class DrawingEngine {
         }
 
         for (let i = 1; i < this.points.length; i++) {
+            if (previewBreakIndices.has(i)) {
+                continue;
+            }
             const prevPoint = this.points[i - 1];
             const currPoint = this.points[i];
             const dx = currPoint.x - prevPoint.x;

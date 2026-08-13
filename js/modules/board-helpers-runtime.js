@@ -42,6 +42,16 @@ function setupKeyboardShortcuts() {
 
         if (e.ctrlKey || e.metaKey) {
             const key = e.key.toLowerCase();
+            // Undo/redo while a stroke is mid-draw would repaint an older
+            // bitmap under the live ink and then commit the full stroke into
+            // the restored scene on pointer-up, resurrecting the "undone"
+            // segments. Cancel the in-progress stroke instead — same rule the
+            // touch pinch path applies via discardCurrentStroke.
+            if (!isEditableTarget && (key === 'z' || key === 'y') && this.drawingEngine.isDrawing) {
+                e.preventDefault();
+                this.discardCurrentStroke();
+                return;
+            }
             if (!isEditableTarget && key === 'z' && !e.shiftKey) {
                 e.preventDefault();
                 if (this.historyManager.undo()) {

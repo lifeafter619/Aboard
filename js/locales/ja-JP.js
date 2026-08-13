@@ -943,6 +943,7 @@ window.translations = {
         settingsTitle: 'GIF設定',
         loopCountLabel: '再生回数（0 は無限ループ）',
         loopCountPrompt: 'ループ回数を設定してください（0で無限）：',
-        loopCountInvalid: '0 以上の整数を入力してください。'
+        loopCountInvalid: '0 以上の整数を入力してください。',
+        saveQuotaExceeded: 'ストレージ容量が不足しているため、GIF を保存できません。再読み込み後に消えます。'
     }
 };

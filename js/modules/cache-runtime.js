@@ -3,6 +3,24 @@
 
 const CACHE_SESSION_WRITE_EPOCH_KEY = 'aboardSessionWriteEpoch';
 
+// Deleting Cache Storage must stay scoped to our own versioned caches: the
+// origin may host other apps, and the SW activate handler applies the same
+// "aboard-" ownership rule. The active service worker only re-runs install
+// (and therefore its core precache) on a version change, so after wiping we
+// ask it to rebuild the core cache — otherwise offline launches stay broken
+// until the next release ships.
+async function clearAboardCacheStorage() {
+        const cacheKeys = await caches.keys();
+        const aboardKeys = cacheKeys.filter((key) => key.startsWith('aboard-'));
+        const cacheResults = await Promise.all(aboardKeys.map((key) => caches.delete(key)));
+        try {
+            navigator.serviceWorker?.controller?.postMessage({ type: 'REBUILD_PRECACHE' });
+        } catch (error) {
+            console.warn('Failed to request Service Worker precache rebuild:', error);
+        }
+        return cacheResults.every(Boolean);
+}
+
 function safeCacheStorageRemoveItem(storage, key, storageLabel = 'storage') {
         try {
             storage?.removeItem?.(key);
@@ -495,9 +513,7 @@ async function clearSelectedCache(options) {
 
             if ('caches' in window) {
                 try {
-                    const cacheKeys = await caches.keys();
-                    const cacheResults = await Promise.all(cacheKeys.map(key => caches.delete(key)));
-                    cleanupSucceeded = cacheResults.every(Boolean) && cleanupSucceeded;
+                    cleanupSucceeded = await clearAboardCacheStorage() && cleanupSucceeded;
                 } catch (error) {
                     console.warn('Failed to clear Cache Storage:', error);
                     cleanupSucceeded = false;
@@ -566,9 +582,7 @@ async function clearAllLocalData() {
             let cacheStorageCleared = true;
             if ('caches' in window) {
                 try {
-                    const cacheKeys = await caches.keys();
-                    const cacheResults = await Promise.all(cacheKeys.map(key => caches.delete(key)));
-                    cacheStorageCleared = cacheResults.every(Boolean);
+                    cacheStorageCleared = await clearAboardCacheStorage();
                 } catch (error) {
                     console.warn('Failed to clear Cache Storage:', error);
                     cacheStorageCleared = false;

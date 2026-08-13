@@ -471,11 +471,16 @@ class TimeDisplaySettingsModal {
     syncSettings() {
         if (!this.timeDisplayManager) return;
         
-        // Sync display type
-        const displayType = this.timeDisplayManager.showTime && this.timeDisplayManager.showDate ? 'both' :
-                           this.timeDisplayManager.showDate ? 'date-only' : 'time-only';
+        // Sync display type. Both-off (both area checkboxes unticked) has no
+        // matching 3-state button — highlight none so applySettings leaves the
+        // flags alone instead of force-re-enabling a display the user hid.
+        const showTime = !!this.timeDisplayManager.showTime;
+        const showDate = !!this.timeDisplayManager.showDate;
+        const displayType = showTime && showDate ? 'both' :
+                           showDate ? 'date-only' :
+                           showTime ? 'time-only' : null;
         document.querySelectorAll('.display-option-btn[data-td-display-type]').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.tdDisplayType === displayType);
+            btn.classList.toggle('active', displayType !== null && btn.dataset.tdDisplayType === displayType);
         });
         
         // Sync timezone
@@ -637,11 +642,15 @@ class TimeDisplaySettingsModal {
     applySettings() {
         if (!this.timeDisplayManager) return;
         
-        // Get display type
+        // Get display type. No active button means the current state has no
+        // 3-state representation (both hidden) — leave the flags untouched so
+        // unrelated setting changes don't resurrect a hidden display.
         const activeDisplayBtn = document.querySelector('.display-option-btn[data-td-display-type].active');
-        const displayType = activeDisplayBtn ? activeDisplayBtn.dataset.tdDisplayType : 'both';
-        this.timeDisplayManager.setShowDate(displayType === 'both' || displayType === 'date-only');
-        this.timeDisplayManager.setShowTime(displayType === 'both' || displayType === 'time-only');
+        if (activeDisplayBtn) {
+            const displayType = activeDisplayBtn.dataset.tdDisplayType;
+            this.timeDisplayManager.setShowDate(displayType === 'both' || displayType === 'date-only');
+            this.timeDisplayManager.setShowTime(displayType === 'both' || displayType === 'time-only');
+        }
         
         // Get timezone
         const tzSelect = document.getElementById('td-timezone-select');

@@ -965,6 +965,117 @@ async function testStartupVersionResolutionUsesTheUpdateTimeout() {
   assert.equal(state.currentVersion, null, 'a timed-out version read should degrade to the known version fallback');
 }
 
+function testStrokeRotationStateStaysConsistentAcrossDragFlipResize() {
+  const SelectionManager = loadSelectionManagerClass();
+  const nearlyEqual = (actual, expected, label) => {
+    assert.ok(Math.abs(actual - expected) < 1e-6, `${label}: expected ${expected}, got ${actual}`);
+  };
+
+  const createSelection = (stroke) => {
+    const selection = Object.create(SelectionManager.prototype);
+    Object.assign(selection, {
+      selectionType: 'stroke',
+      selectedIndex: 0,
+      selectedStrokes: [],
+      selectedImages: [],
+      selectedTexts: [],
+      isDragging: false,
+      isResizing: false,
+      isRotating: false,
+      hasDragMoved: false,
+      hasResizeChanged: false,
+      activePointerId: null,
+      hasUnsavedChanges: false,
+      DRAG_MOVE_THRESHOLD: 0,
+      MIN_SIZE: 1,
+      controlBox: { style: {} },
+      canvas: {
+        getBoundingClientRect() {
+          return { left: 0, top: 0, width: 800, height: 600 };
+        },
+        offsetWidth: 800,
+        offsetHeight: 600
+      },
+      textManager: null,
+      drawingEngine: {
+        strokes: [stroke],
+        stampedImages: [],
+        getStrokeBounds(target) {
+          return SelectionManager.prototype.getBoundsFromPoints.call(selection, target.points);
+        }
+      },
+      getClientPos(event) {
+        return { x: event.clientX, y: event.clientY };
+      },
+      updateControlBox() {},
+      redrawCanvas() {}
+    });
+    return selection;
+  };
+
+  // A 100-wide horizontal line rotated 90° around (50, 0): baked points sit
+  // vertically at x=50 while rotation/rotationCenter describe the transform.
+  const draggedStroke = {
+    points: [{ x: 50, y: -50 }, { x: 50, y: 50 }],
+    rotation: 90,
+    rotationCenter: { x: 50, y: 0 },
+    size: 2
+  };
+  const dragSelection = createSelection(draggedStroke);
+  SelectionManager.prototype.startDrag.call(dragSelection, { clientX: 0, clientY: 0, preventDefault() {} });
+  SelectionManager.prototype.drag.call(dragSelection, { clientX: 100, clientY: 0 });
+  SelectionManager.prototype.stopDrag.call(dragSelection);
+
+  nearlyEqual(draggedStroke.rotationCenter.x, 150, 'drag must translate the persisted rotation center');
+  nearlyEqual(draggedStroke.rotationCenter.y, 0, 'drag must keep the rotation center y aligned');
+  const draggedBounds = SelectionManager.prototype.getStrokeSelectionBounds.call(dragSelection, draggedStroke);
+  nearlyEqual(draggedBounds.x + draggedBounds.width / 2, 150,
+    'selection frame must stay centered on the dragged ink');
+  nearlyEqual(draggedBounds.y + draggedBounds.height / 2, 0,
+    'selection frame must not drift perpendicular to the drag');
+
+  // A 100-wide line rotated 45°: flipping horizontally must conjugate the
+  // rotation (θ → -θ) so the unrotated frame still matches the ink.
+  const s = Math.SQRT1_2 * 50;
+  const flippedStroke = {
+    points: [{ x: 50 - s, y: -s }, { x: 50 + s, y: s }],
+    rotation: 45,
+    rotationCenter: { x: 50, y: 0 },
+    size: 2
+  };
+  const flipSelection = createSelection(flippedStroke);
+  SelectionManager.prototype.flipHorizontal.call(flipSelection);
+
+  nearlyEqual(flippedStroke.rotation, 315, 'horizontal flip must negate the stored rotation (normalized -45)');
+  const flippedBounds = SelectionManager.prototype.getStrokeSelectionBounds.call(flipSelection, flippedStroke);
+  nearlyEqual(flippedBounds.width, 100 + 4 * 2, 'flipped selection frame must match the ink length');
+  nearlyEqual(flippedBounds.height, 0 + 4 * 2, 'flipped selection frame must stay flat in its local frame');
+
+  // A 100x60 L-shaped stroke rotated 90° around (50, 30). Resizing the local
+  // right edge must scale in the local frame (no shear) and re-anchor the
+  // rotation center on the new local bounds center.
+  const resizeStroke = {
+    points: [{ x: 80, y: -20 }, { x: 80, y: 80 }, { x: 20, y: 80 }],
+    rotation: 90,
+    rotationCenter: { x: 50, y: 30 },
+    size: 2
+  };
+  const resizeSelection = createSelection(resizeStroke);
+  SelectionManager.prototype.startResize.call(resizeSelection, { clientX: 0, clientY: 0, preventDefault() {} }, 'right');
+  // Screen drag straight down = +50 along the rotated local x axis.
+  SelectionManager.prototype.resize.call(resizeSelection, { clientX: 0, clientY: 50 });
+  SelectionManager.prototype.stopResize.call(resizeSelection);
+
+  const worldBounds = SelectionManager.prototype.getBoundsFromPoints.call(resizeSelection, resizeStroke.points);
+  nearlyEqual(worldBounds.width, 60, 'a 90°-rotated stroke resized along its local width must keep world width = local height');
+  nearlyEqual(worldBounds.height, 150, 'the local width extension must appear as world height for a 90°-rotated stroke');
+  nearlyEqual(resizeStroke.rotationCenter.x, 75, 'resize must re-anchor the rotation center to the new local center x');
+  nearlyEqual(resizeStroke.rotationCenter.y, 30, 'resize must keep the rotation center local y');
+  const resizedBounds = SelectionManager.prototype.getStrokeSelectionBounds.call(resizeSelection, resizeStroke);
+  nearlyEqual(resizedBounds.width, 150 + 4 * 2, 'the unrotated selection frame must report the scaled local width');
+  nearlyEqual(resizedBounds.height, 60 + 4 * 2, 'the unrotated selection frame must keep the local height');
+}
+
 async function main() {
   testHistoryRestoresMismatchedImageDataWithoutDirectPut();
   testOversizeHistoryEntriesPreserveUndoWithSceneStateOnly();
@@ -980,6 +1091,7 @@ async function main() {
   testRotatedStrokeBoundsUseOriginalRotationCenterAndPadding();
   testRotatedSelectionResizeUsesLocalPointerDelta();
   testRotatedBackgroundImageResizeUsesLocalPointerDelta();
+  testStrokeRotationStateStaysConsistentAcrossDragFlipResize();
   await testImmediatePwaUpdateWaitsForInstallingWorkerToBecomeWaiting();
   await testPreparedPwaUpdateTimeoutShowsUserFeedback();
   await testStartupVersionResolutionUsesTheUpdateTimeout();

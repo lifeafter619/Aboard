@@ -943,6 +943,7 @@ Viel Spaß bei Ihrer kreativen Arbeit!`,
         settingsTitle: 'GIF-Einstellungen',
         loopCountLabel: 'Wiedergabeanzahl (0 = Endlosschleife)',
         loopCountPrompt: 'Anzahl der Wiederholungen festlegen (0 für unendlich):',
-        loopCountInvalid: 'Bitte geben Sie eine ganze Zahl größer oder gleich 0 ein.'
+        loopCountInvalid: 'Bitte geben Sie eine ganze Zahl größer oder gleich 0 ein.',
+        saveQuotaExceeded: 'Speicherplatz überschritten. Das GIF kann nicht gespeichert werden und verschwindet nach dem Neuladen.'
     }
 };

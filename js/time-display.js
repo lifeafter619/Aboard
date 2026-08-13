@@ -474,14 +474,25 @@ class TimeDisplayManager {
     setShowDate(show) {
         this.showDate = show;
         safeTimeDisplayStorageSetItem('timeDisplayShowDate', show);
+        // All entry points (area checkbox, settings modal) route through here;
+        // keep the area checkbox mirroring the state so the two UIs never
+        // disagree about what is shown.
+        const areaCheckbox = document.getElementById('show-date-checkbox-area');
+        if (areaCheckbox) {
+            areaCheckbox.checked = !!show;
+        }
         if (this.enabled) {
             this.updateDisplay();
         }
     }
-    
+
     setShowTime(show) {
         this.showTime = show;
         safeTimeDisplayStorageSetItem('timeDisplayShowTime', show);
+        const areaCheckbox = document.getElementById('show-time-checkbox-area');
+        if (areaCheckbox) {
+            areaCheckbox.checked = !!show;
+        }
         if (this.enabled) {
             this.updateDisplay();
         }

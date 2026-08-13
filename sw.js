@@ -233,6 +233,17 @@ async function cacheFirst(request) {
   return response;
 }
 
+function isAppShellNavigation(request) {
+  // Only the scope root (and its explicit index.html) may refresh the cached
+  // shell. Without this, any same-scope 200 text/html navigation (e.g. Jekyll
+  // rendering committed markdown on GitHub Pages) would overwrite the offline
+  // app shell. Redirected responses are also rejected: browsers refuse to
+  // replay them for navigations served from cache.
+  const scopePath = new URL(self.registration.scope).pathname;
+  const requestPath = new URL(request.url).pathname;
+  return requestPath === scopePath || requestPath === `${scopePath}index.html`;
+}
+
 async function navigationNetworkFirst(
   request,
   { timeoutMs = NAVIGATION_NETWORK_TIMEOUT_MS, event = null } = {}
@@ -240,6 +251,8 @@ async function navigationNetworkFirst(
   const cache = await caches.open(CORE_CACHE_NAME);
   const networkPromise = fetch(request).then(async (response) => {
     if (canStoreResponse(response)
+      && !response.redirected
+      && isAppShellNavigation(request)
       && /^text\/html(?:;|$)/i.test(response.headers.get('content-type') || '')) {
       try {
         await cache.put('./index.html', response.clone());
@@ -522,6 +535,18 @@ self.addEventListener('install', event => {
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  }
+  // The page's "clear cache" action deletes our versioned caches, but install
+  // (the only precache trigger) never re-fires for the same SW version — so
+  // the page asks us to rebuild the core cache explicitly.
+  if (event.data && event.data.type === 'REBUILD_PRECACHE') {
+    event.waitUntil(
+      caches.open(CORE_CACHE_NAME)
+        .then((cache) => precacheCoreAssets(cache))
+        .catch((error) => {
+          console.warn('Failed to rebuild core precache:', error);
+        })
+    );
   }
 });
 

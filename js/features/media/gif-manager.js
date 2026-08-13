@@ -44,8 +44,42 @@ export class GifManager {
 
     try {
       localStorage.setItem('floatingGifs', JSON.stringify(state));
+      this.saveFailureNotified = false;
     } catch (error) {
       console.warn('Failed to save GIFs to localStorage', error);
+      this.notifySaveFailure(error);
+    }
+  }
+
+  // Every drag/resize/play-toggle re-runs saveState, so a persistent failure
+  // (typically quota — a 10 MB GIF becomes a ~13 MB data URL) would spam
+  // toasts; notify once until a save succeeds again.
+  notifySaveFailure(error) {
+    if (this.saveFailureNotified) {
+      return;
+    }
+    this.saveFailureNotified = true;
+
+    const isQuota = Boolean(error) && (
+      error.name === 'QuotaExceededError'
+      || error.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+      || error.code === 22
+      || error.code === 1014
+    );
+    const message = isQuota
+      ? this.getText('gif.saveQuotaExceeded',
+        'Storage quota exceeded. The GIF cannot be saved and will disappear after a reload.')
+      : this.getText('errors.storageWriteFailed',
+        'Saving failed. Please check browser storage permissions and try again.');
+    const toast = this.win.drawingBoard?.settingsManager?.toastManager || this.win.toastManager;
+    try {
+      if (toast?.show) {
+        toast.show(message, 'error');
+      } else {
+        this.win.appDialog?.showAlert?.(message, 'error');
+      }
+    } catch (toastError) {
+      console.warn('Failed to display GIF storage-error notice:', toastError);
     }
   }
 

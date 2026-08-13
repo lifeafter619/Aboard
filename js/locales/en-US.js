@@ -968,7 +968,8 @@ window.translations = {
         settingsTitle: 'GIF Settings',
         loopCountLabel: 'Playback count (0 for infinite loop)',
         loopCountPrompt: 'Set loop count (0 for infinite):',
-        loopCountInvalid: 'Please enter an integer that is 0 or greater.'
+        loopCountInvalid: 'Please enter an integer that is 0 or greater.',
+        saveQuotaExceeded: 'Storage quota exceeded. The GIF cannot be saved and will disappear after a reload.'
     },
 
     // Timezone names

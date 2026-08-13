@@ -968,7 +968,8 @@ window.translations = {
         settingsTitle: 'GIF设置',
         loopCountLabel: '播放次数（0 为无限循环）',
         loopCountPrompt: '设置循环次数（0 为无限循环）：',
-        loopCountInvalid: '请输入大于或等于 0 的整数。'
+        loopCountInvalid: '请输入大于或等于 0 的整数。',
+        saveQuotaExceeded: '存储空间不足，GIF 无法保存，刷新后将消失。'
     },
 
     // Timezone names

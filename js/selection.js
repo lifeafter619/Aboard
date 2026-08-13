@@ -1947,6 +1947,7 @@ class SelectionManager {
                 return;
             }
             this.dragStartObjectPos = { x: bounds.x, y: bounds.y };
+            this.dragStartRotationCenter = this.getStrokeRotationCenterSnapshot(stroke);
             // Store original positions
             for (let point of stroke.points) {
                 point.originalX = point.x;
@@ -1985,9 +1986,19 @@ class SelectionManager {
             }
         } else if (this.isCompoundSelection()) {
             this.multiDragStartPositions = [];
+            this.multiStrokeDragStartCenters = [];
+            this.multiDragStartRotationCenter = (this.multiRotationCenter
+                && Number.isFinite(this.multiRotationCenter.x)
+                && Number.isFinite(this.multiRotationCenter.y))
+                ? { x: this.multiRotationCenter.x, y: this.multiRotationCenter.y }
+                : null;
             for (const idx of this.selectedStrokes) {
                 const stroke = this.drawingEngine.strokes[idx];
                 if (stroke) {
+                    const center = this.getStrokeRotationCenterSnapshot(stroke);
+                    if (center) {
+                        this.multiStrokeDragStartCenters.push({ idx, ...center });
+                    }
                     for (let point of stroke.points) {
                         point.originalX = point.x;
                         point.originalY = point.y;
@@ -2045,6 +2056,15 @@ class SelectionManager {
                     point.y = point.originalY + deltaY;
                 }
             }
+            // Keep the persisted rotation center attached to the ink it
+            // describes; a stale center makes the selection frame drift and
+            // corrupts the next rotate gesture.
+            if (this.dragStartRotationCenter) {
+                stroke.rotationCenter = {
+                    x: this.dragStartRotationCenter.x + deltaX,
+                    y: this.dragStartRotationCenter.y + deltaY
+                };
+            }
         } else if (this.selectionType === 'text' && this.textManager) {
             const textObj = this.textManager.textObjects[this.selectedIndex];
             if (!textObj) return;
@@ -2086,6 +2106,21 @@ class SelectionManager {
                         }
                     }
                 }
+            }
+            for (const startCenter of (this.multiStrokeDragStartCenters || [])) {
+                const stroke = this.drawingEngine.strokes[startCenter.idx];
+                if (stroke) {
+                    stroke.rotationCenter = {
+                        x: startCenter.x + deltaX,
+                        y: startCenter.y + deltaY
+                    };
+                }
+            }
+            if (this.multiDragStartRotationCenter) {
+                this.multiRotationCenter = {
+                    x: this.multiDragStartRotationCenter.x + deltaX,
+                    y: this.multiDragStartRotationCenter.y + deltaY
+                };
             }
             for (const startPos of this.multiImageDragStartPositions) {
                 const img = this.drawingEngine.stampedImages[startPos.idx];
@@ -2129,6 +2164,7 @@ class SelectionManager {
                         delete point.originalY;
                     }
                 }
+                this.dragStartRotationCenter = null;
             } else if (this.isCoordinateSelection()) {
                 this.coordinateDragStartPositions = [];
                 if (didMove) {
@@ -2146,6 +2182,8 @@ class SelectionManager {
                 }
                 this.multiImageDragStartPositions = [];
                 this.multiTextDragStartPositions = [];
+                this.multiStrokeDragStartCenters = [];
+                this.multiDragStartRotationCenter = null;
             }
         }
     }
@@ -2160,7 +2198,28 @@ class SelectionManager {
         if (this.selectionType === 'stroke') {
             const stroke = this.drawingEngine.strokes[this.selectedIndex];
             if (!stroke) return;
-            resizeStartBounds = this.drawingEngine.getStrokeBounds(stroke);
+            this.resizeStartRotation = stroke.rotation || 0;
+            this.resizeStartRotationCenter = null;
+            if (this.resizeStartRotation) {
+                // Rotated strokes must be scaled in their local (unrotated)
+                // frame: the handles and pointer delta live there, while the
+                // baked points live in world space. Capture the local frame
+                // and the pivot used to bake the rotation.
+                const worldBounds = this.drawingEngine.getStrokeBounds(stroke);
+                if (!worldBounds) return;
+                const center = this.getStrokeRotationCenterSnapshot(stroke) || {
+                    x: worldBounds.x + worldBounds.width / 2,
+                    y: worldBounds.y + worldBounds.height / 2
+                };
+                const localPoints = stroke.points.map(point =>
+                    this.rotatePoint(point.x, point.y, center.x, center.y, -this.resizeStartRotation)
+                );
+                resizeStartBounds = this.getBoundsFromPoints(localPoints);
+                this.resizeStartRotationCenter = center;
+            } else {
+                resizeStartBounds = this.drawingEngine.getStrokeBounds(stroke);
+            }
+            if (!resizeStartBounds) return;
             for (let point of stroke.points) {
                 point.originalX = point.x;
                 point.originalY = point.y;
@@ -2307,12 +2366,41 @@ class SelectionManager {
         
         if (this.selectionType === 'stroke') {
             const stroke = this.drawingEngine.strokes[this.selectedIndex];
-            for (let point of stroke.points) {
-                if (point.originalX !== undefined && point.originalY !== undefined) {
-                    const relX = (point.originalX - startBounds.x) / startBounds.width;
-                    const relY = (point.originalY - startBounds.y) / startBounds.height;
-                    point.x = newBounds.x + relX * newBounds.width;
-                    point.y = newBounds.y + relY * newBounds.height;
+            const rotation = this.resizeStartRotation || 0;
+            const pivot = this.resizeStartRotationCenter;
+            if (rotation && pivot) {
+                // Map each baked world point into the local frame captured at
+                // resize start, scale it there, then re-bake around the new
+                // local center so getStrokeSelectionBounds stays consistent.
+                const newCenter = {
+                    x: newBounds.x + newBounds.width / 2,
+                    y: newBounds.y + newBounds.height / 2
+                };
+                for (let point of stroke.points) {
+                    if (point.originalX !== undefined && point.originalY !== undefined) {
+                        const local = this.rotatePoint(
+                            point.originalX, point.originalY, pivot.x, pivot.y, -rotation
+                        );
+                        const relX = (local.x - startBounds.x) / startBounds.width;
+                        const relY = (local.y - startBounds.y) / startBounds.height;
+                        const world = this.rotatePoint(
+                            newBounds.x + relX * newBounds.width,
+                            newBounds.y + relY * newBounds.height,
+                            newCenter.x, newCenter.y, rotation
+                        );
+                        point.x = world.x;
+                        point.y = world.y;
+                    }
+                }
+                stroke.rotationCenter = newCenter;
+            } else {
+                for (let point of stroke.points) {
+                    if (point.originalX !== undefined && point.originalY !== undefined) {
+                        const relX = (point.originalX - startBounds.x) / startBounds.width;
+                        const relY = (point.originalY - startBounds.y) / startBounds.height;
+                        point.x = newBounds.x + relX * newBounds.width;
+                        point.y = newBounds.y + relY * newBounds.height;
+                    }
                 }
             }
         } else if (this.selectionType === 'text' && this.textManager) {
@@ -2402,6 +2490,8 @@ class SelectionManager {
             }
             this.resizeHandle = null;
             this.resizeStartBounds = null;
+            this.resizeStartRotation = 0;
+            this.resizeStartRotationCenter = null;
             if (didResize && this.selectionType === 'background') {
                 this.backgroundManager?.flushPendingPersistence?.();
             }
@@ -3527,6 +3617,7 @@ class SelectionManager {
             for (let point of stroke.points) {
                 point.x = 2 * cx - point.x;
             }
+            this.mirrorStrokeRotationState(stroke, 'x', cx);
         } else if (this.selectionType === 'image') {
             const img = this.drawingEngine.stampedImages[this.selectedIndex];
             if (!img) return;
@@ -3548,6 +3639,7 @@ class SelectionManager {
                     for (let point of stroke.points) {
                         point.x = 2 * cx - point.x;
                     }
+                    this.mirrorStrokeRotationState(stroke, 'x', cx);
                 }
             }
             for (const idx of this.selectedImages) {
@@ -3572,13 +3664,19 @@ class SelectionManager {
                     }
                 }
             }
+            if (this.multiRotation) {
+                this.multiRotation = this.normalizeAngle(-this.multiRotation);
+            }
+            if (this.multiRotationCenter && Number.isFinite(this.multiRotationCenter.x)) {
+                this.multiRotationCenter.x = 2 * cx - this.multiRotationCenter.x;
+            }
         }
-        
+
         this.hasUnsavedChanges = true;
         this.updateControlBox();
         this.redrawCanvas();
     }
-    
+
     flipVertical() {
         if (!this.hasSelection()) return;
         
@@ -3591,6 +3689,7 @@ class SelectionManager {
             for (let point of stroke.points) {
                 point.y = 2 * cy - point.y;
             }
+            this.mirrorStrokeRotationState(stroke, 'y', cy);
         } else if (this.selectionType === 'image') {
             const img = this.drawingEngine.stampedImages[this.selectedIndex];
             if (!img) return;
@@ -3612,6 +3711,7 @@ class SelectionManager {
                     for (let point of stroke.points) {
                         point.y = 2 * cy - point.y;
                     }
+                    this.mirrorStrokeRotationState(stroke, 'y', cy);
                 }
             }
             for (const idx of this.selectedImages) {
@@ -3635,6 +3735,12 @@ class SelectionManager {
                         textObj.y = 2 * cy - txtCY - textBounds.height / 2;
                     }
                 }
+            }
+            if (this.multiRotation) {
+                this.multiRotation = this.normalizeAngle(-this.multiRotation);
+            }
+            if (this.multiRotationCenter && Number.isFinite(this.multiRotationCenter.y)) {
+                this.multiRotationCenter.y = 2 * cy - this.multiRotationCenter.y;
             }
         }
         
@@ -4053,6 +4159,32 @@ class SelectionManager {
             x: deltaX * cos - deltaY * sin,
             y: deltaX * sin + deltaY * cos
         };
+    }
+
+    // Mirroring baked points across an axis conjugates the stored rotation
+    // (θ → -θ) and reflects the rotation center; without this the unrotated
+    // selection frame derived in getStrokeSelectionBounds no longer matches
+    // the ink and the next rotate gesture pivots around a wrong center.
+    mirrorStrokeRotationState(stroke, axis, axisValue) {
+        if (!stroke) return;
+        if (stroke.rotation) {
+            stroke.rotation = this.normalizeAngle(-stroke.rotation);
+        }
+        const center = stroke.rotationCenter;
+        if (center && Number.isFinite(center.x) && Number.isFinite(center.y)) {
+            if (axis === 'x') {
+                center.x = 2 * axisValue - center.x;
+            } else {
+                center.y = 2 * axisValue - center.y;
+            }
+        }
+    }
+
+    getStrokeRotationCenterSnapshot(stroke) {
+        const center = stroke?.rotationCenter;
+        return center && Number.isFinite(center.x) && Number.isFinite(center.y)
+            ? { x: center.x, y: center.y }
+            : null;
     }
 
     getActiveSelectionRotation() {

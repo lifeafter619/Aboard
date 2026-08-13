@@ -1386,52 +1386,11 @@ function setupSettingsListeners() {
             }
         });
         
-        // Confirm modal
-        const confirmModal = document.getElementById('confirm-modal');
-        const scheduleUiModalFrame = typeof window.requestAnimationFrame === 'function'
-            ? window.requestAnimationFrame.bind(window)
-            : (callback) => callback();
-        const closeConfirmModal = () => {
-            if (!confirmModal) {
-                return;
-            }
-            confirmModal.classList.remove('show');
-            const restoreFocusTarget = this.confirmModalPreviouslyFocusedElement;
-            this.confirmModalPreviouslyFocusedElement = null;
-            scheduleUiModalFrame(() => {
-                restoreFocusTarget?.focus?.();
-            });
-        };
-        if (confirmModal) {
-            confirmModal.setAttribute('role', 'dialog');
-            confirmModal.setAttribute('aria-modal', 'true');
-            confirmModal.setAttribute('aria-labelledby', 'confirm-modal-title');
-            confirmModal.setAttribute('aria-describedby', 'confirm-modal-message');
-            confirmModal.tabIndex = -1;
-            if (confirmModal.dataset.keyboardBindingsInitialized !== 'true') {
-                confirmModal.dataset.keyboardBindingsInitialized = 'true';
-                confirmModal.addEventListener('keydown', (event) => {
-                    if (event.key === 'Escape') {
-                        event.preventDefault();
-                        closeConfirmModal();
-                    }
-                });
-            }
-        }
-        bindIfPresent(document.getElementById('confirm-cancel-btn'), 'click', () => {
-            closeConfirmModal();
-        });
-        
-        bindIfPresent(document.getElementById('confirm-ok-btn'), 'click', () => {
-            closeConfirmModal();
-            this.clearCanvas(true);
-        });
-        
-        bindIfPresent(confirmModal, 'click', (e) => {
-            if (e.target.id === 'confirm-modal') {
-                closeConfirmModal();
-            }
-        });
+        // Confirm modal bindings live in the always-loaded drawing-actions
+        // runtime: the Clear toolbar button can open this modal long before
+        // the deferred settings listeners initialize, and an unbound modal
+        // plus the modal interaction lock would freeze the whole app.
+        window.AboardDrawingActionsRuntime?.ensureConfirmModalBindings?.(this);
 
         const bringFloatingPanelToFront = (e) => {
             if (!(e.target instanceof Element)) return;

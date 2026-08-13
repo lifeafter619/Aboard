@@ -43,6 +43,42 @@ function scheduleDrawingActionFrame(callback) {
     callback();
 }
 
+function ensureConfirmModalBindings(board) {
+    const modal = document.getElementById('confirm-modal');
+    if (!modal || modal.dataset.confirmBindingsInitialized === 'true') {
+        return;
+    }
+    modal.dataset.confirmBindingsInitialized = 'true';
+
+    const closeConfirmModal = () => {
+        modal.classList.remove('show');
+        const restoreFocusTarget = board.confirmModalPreviouslyFocusedElement;
+        board.confirmModalPreviouslyFocusedElement = null;
+        scheduleDrawingActionFrame(() => {
+            restoreFocusTarget?.focus?.();
+        });
+    };
+
+    modal.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            closeConfirmModal();
+        }
+    });
+    modal.addEventListener('click', (event) => {
+        if (event.target.id === 'confirm-modal') {
+            closeConfirmModal();
+        }
+    });
+    document.getElementById('confirm-cancel-btn')?.addEventListener('click', () => {
+        closeConfirmModal();
+    });
+    document.getElementById('confirm-ok-btn')?.addEventListener('click', () => {
+        closeConfirmModal();
+        board.clearCanvas(true);
+    });
+}
+
 function confirmClear() {
     const modal = document.getElementById('confirm-modal');
     const cancelBtn = document.getElementById('confirm-cancel-btn');
@@ -51,6 +87,11 @@ function confirmClear() {
     if (!modal) {
         return;
     }
+
+    // The Clear toolbar button is armed at board construction, long before
+    // the deferred settings listeners run — bind the modal's own handlers
+    // here so it can never open as an unresponsive dialog that locks the app.
+    ensureConfirmModalBindings(this);
 
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
@@ -87,6 +128,9 @@ window.AboardDrawingActionsRuntime = {
     },
     discardCurrentStroke(board) {
         return discardCurrentStroke.call(board);
+    },
+    ensureConfirmModalBindings(board) {
+        return ensureConfirmModalBindings(board);
     },
     confirmClear(board) {
         return confirmClear.call(board);

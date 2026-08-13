@@ -922,6 +922,7 @@ Profitez de votre travail créatif !`,
         settingsTitle: 'Paramètres GIF',
         loopCountLabel: 'Nombre de lectures (0 = boucle infinie)',
         loopCountPrompt: 'Définissez le nombre de boucles (0 pour infini) :',
-        loopCountInvalid: 'Veuillez saisir un entier supérieur ou égal à 0.'
+        loopCountInvalid: 'Veuillez saisir un entier supérieur ou égal à 0.',
+        saveQuotaExceeded: 'Espace de stockage insuffisant. Le GIF ne peut pas être enregistré et disparaîtra après un rechargement.'
     }
 };

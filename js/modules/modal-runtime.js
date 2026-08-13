@@ -431,6 +431,10 @@ function startModalResize(board, event, content, handleName) {
         return;
     }
 
+    if (typeof event.button === 'number' && event.button !== 0) {
+        return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
 
@@ -440,6 +444,7 @@ function startModalResize(board, event, content, handleName) {
     board.modalResizeState = {
         content,
         handleName,
+        pointerId: typeof event.pointerId === 'number' ? event.pointerId : null,
         startX: event.clientX,
         startY: event.clientY,
         startRect: content.getBoundingClientRect(),
@@ -460,6 +465,18 @@ function startModalResize(board, event, content, handleName) {
 function handleModalResize(board, event) {
     const state = board.modalResizeState;
     if (!state?.content) {
+        return;
+    }
+
+    if (state.pointerId !== null && event.pointerId !== state.pointerId) {
+        return;
+    }
+
+    // Self-heal a missed pointerup (released outside the window): without
+    // this the modal keeps resizing with no button held and the garbled size
+    // is then persisted. Mirrors the drag handler's guard.
+    if (event.pointerType === 'mouse' && event.buttons === 0) {
+        finishModalResize(board);
         return;
     }
 

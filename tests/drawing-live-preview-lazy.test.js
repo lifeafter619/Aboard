@@ -142,5 +142,56 @@ function testLivePreviewCanvasIsCreatedOnlyWhenHighZoomPreviewIsUsed() {
   );
 }
 
+function testStrokePreviewHonorsBreakIndices() {
+  const calls = [];
+  const createdCanvases = [];
+  const { DrawingEngine } = loadDrawingEngine({ calls, createdCanvases });
+
+  const drawn = [];
+  const ctx = {
+    fillStyle: '',
+    beginPath() { drawn.push(['beginPath']); },
+    moveTo(x, y) { drawn.push(['moveTo', x, y]); },
+    lineTo(x, y) { drawn.push(['lineTo', x, y]); },
+    stroke() { drawn.push(['stroke']); },
+    arc() {},
+    fill() {},
+    setLineDash() {}
+  };
+  const engine = Object.create(DrawingEngine.prototype);
+  engine.ctx = ctx;
+  engine.points = [
+    { x: 0, y: 0 },
+    { x: 10, y: 0 },
+    { x: 60, y: 0 },
+    { x: 70, y: 0 }
+  ];
+  // Segment into index 2 was blocked by a teaching tool.
+  engine.strokeBreakIndices = [2];
+  engine.penLineStyle = 'solid';
+  engine.penType = 'pen';
+  engine.currentColor = '#000';
+  engine.penSize = 4;
+  engine.applyLineStyle = () => {};
+
+  engine.drawStrokePathPreview();
+
+  const lineTargets = drawn.filter(([name]) => name === 'lineTo').map(([, x]) => x);
+  assert.ok(
+    !lineTargets.includes(60),
+    'the preview must not connect across a stroke break (no line into the blocked point)'
+  );
+  const moveTargets = drawn.filter(([name]) => name === 'moveTo').map(([, x]) => x);
+  assert.ok(
+    moveTargets.includes(60),
+    'the preview must restart the path at the point after the break'
+  );
+  assert.ok(
+    lineTargets.includes(70),
+    'the preview must keep drawing the segment after the break'
+  );
+}
+
 testLivePreviewCanvasIsCreatedOnlyWhenHighZoomPreviewIsUsed();
+testStrokePreviewHonorsBreakIndices();
 console.log('drawing-live-preview-lazy.test: all assertions passed');

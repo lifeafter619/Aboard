@@ -308,6 +308,7 @@ async function testNavigationTimeoutFallsBackAndRefreshesInBackground() {
     console: { warn() {} },
     self: {
       location: { origin: 'https://example.test' },
+      registration: { scope: 'https://example.test/' },
       addEventListener() {}
     },
     caches: { async open() { return cache; } },
@@ -332,7 +333,7 @@ async function testNavigationTimeoutFallsBackAndRefreshesInBackground() {
     }
   };
   const response = await sandbox.__swTestExports.navigationNetworkFirst(
-    { url: 'https://example.test/board', mode: 'navigate' },
+    { url: 'https://example.test/', mode: 'navigate' },
     { timeoutMs: 1, event }
   );
 
@@ -362,7 +363,11 @@ async function testFailedNavigationResponseFallsBackToCachedShell() {
   };
   const sandbox = {
     console: { warn() {} },
-    self: { location: { origin: 'https://example.test' }, addEventListener() {} },
+    self: {
+      location: { origin: 'https://example.test' },
+      registration: { scope: 'https://example.test/' },
+      addEventListener() {}
+    },
     caches: { async open() { return cache; } },
     async fetch() { return new Response('gateway error', { status: 502 }); },
     Headers,
@@ -403,7 +408,11 @@ async function testNonHtmlNavigationDoesNotReplaceCachedShell() {
   };
   const sandbox = {
     console: { warn() {} },
-    self: { location: { origin: 'https://example.test' }, addEventListener() {} },
+    self: {
+      location: { origin: 'https://example.test' },
+      registration: { scope: 'https://example.test/' },
+      addEventListener() {}
+    },
     caches: { async open() { return cache; } },
     async fetch() {
       return new Response('<svg>icon</svg>', {
@@ -432,6 +441,54 @@ async function testNonHtmlNavigationDoesNotReplaceCachedShell() {
   assert.equal(await response.text(), '<svg>icon</svg>');
   assert.deepEqual(cacheWrites, [],
     'a non-HTML navigation response must not replace the cached app shell');
+}
+
+async function testNonRootHtmlNavigationDoesNotReplaceCachedShell() {
+  const source = `${readText('sw.js')}\n;globalThis.__swTestExports = { navigationNetworkFirst };`;
+  const cacheWrites = [];
+  const cache = {
+    async match() {
+      return null;
+    },
+    async put(key, response) {
+      cacheWrites.push({ key, body: await response.text() });
+    }
+  };
+  const sandbox = {
+    console: { warn() {} },
+    self: {
+      location: { origin: 'https://example.test' },
+      registration: { scope: 'https://example.test/' },
+      addEventListener() {}
+    },
+    caches: { async open() { return cache; } },
+    async fetch() {
+      return new Response('<html>rendered readme</html>', {
+        status: 200,
+        headers: { 'content-type': 'text/html' }
+      });
+    },
+    Headers,
+    Request,
+    Response,
+    Promise,
+    Set,
+    URL,
+    setTimeout,
+    clearTimeout
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox, { filename: 'sw.js' });
+
+  const response = await sandbox.__swTestExports.navigationNetworkFirst(
+    { url: 'https://example.test/README.html', mode: 'navigate' },
+    { timeoutMs: 50 }
+  );
+
+  assert.equal(await response.text(), '<html>rendered readme</html>');
+  assert.deepEqual(cacheWrites, [],
+    'an HTML navigation outside the scope root must not overwrite the cached app shell');
 }
 
 async function testRangeAudioUsesAFullResponseCache() {
@@ -606,6 +663,7 @@ async function run() {
   await testNavigationTimeoutFallsBackAndRefreshesInBackground();
   await testFailedNavigationResponseFallsBackToCachedShell();
   await testNonHtmlNavigationDoesNotReplaceCachedShell();
+  await testNonRootHtmlNavigationDoesNotReplaceCachedShell();
   await testRangeAudioUsesAFullResponseCache();
   testCorePrecacheCoversIndexClassicScripts();
   testCorePrecacheCoversIndexStylesheets();

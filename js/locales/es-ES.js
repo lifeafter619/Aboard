@@ -922,6 +922,7 @@ Consejos de uso:
         settingsTitle: 'Configuración GIF',
         loopCountLabel: 'Número de reproducciones (0 = bucle infinito)',
         loopCountPrompt: 'Define el número de repeticiones (0 para infinito):',
-        loopCountInvalid: 'Introduce un número entero mayor o igual que 0.'
+        loopCountInvalid: 'Introduce un número entero mayor o igual que 0.',
+        saveQuotaExceeded: 'Se superó la cuota de almacenamiento. El GIF no se puede guardar y desaparecerá al recargar.'
     }
 };

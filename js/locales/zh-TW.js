@@ -1008,7 +1008,8 @@ window.translations = {
         settingsTitle: 'GIF設定',
         loopCountLabel: '播放次數（0 為無限循環）',
         loopCountPrompt: '設定循環次數（0 代表無限）：',
-        loopCountInvalid: '請輸入大於或等於 0 的整數。'
+        loopCountInvalid: '請輸入大於或等於 0 的整數。',
+        saveQuotaExceeded: '儲存空間不足，GIF 無法保存，重新整理後將消失。'
     },
 
     // Color names
