@@ -164,14 +164,38 @@ function sendStaticData(req, res, ext, mimeType, data, cacheHeaders = {}) {
         headers.Vary = 'Accept-Encoding';
     }
 
+    const encoding = selectCompressionEncoding(req, ext, data);
+
     if (String(req?.method || 'GET').toUpperCase() === 'HEAD') {
-        headers['Content-Length'] = String(data.length);
-        res.writeHead(200, withSecurityHeaders(headers));
-        res.end();
+        // HEAD must advertise the same representation as GET. Reporting the
+        // uncompressed length while selecting gzip/Brotli makes clients read
+        // the next response boundary at the wrong offset.
+        if (!encoding) {
+            headers['Content-Length'] = String(data.length);
+            res.writeHead(200, withSecurityHeaders(headers));
+            res.end();
+            return;
+        }
+
+        compressData(data, encoding, (error, compressedData) => {
+            if (error) {
+                console.warn(`Failed to ${encoding}-compress static HEAD response:`, error);
+                headers['Content-Length'] = String(data.length);
+                res.writeHead(200, withSecurityHeaders(headers));
+                res.end();
+                return;
+            }
+
+            res.writeHead(200, withSecurityHeaders({
+                ...headers,
+                'Content-Encoding': encoding,
+                'Content-Length': String(compressedData.length)
+            }));
+            res.end();
+        });
         return;
     }
 
-    const encoding = selectCompressionEncoding(req, ext, data);
     if (!encoding) {
         res.writeHead(200, withSecurityHeaders(headers));
         res.end(data);

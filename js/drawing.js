@@ -2125,6 +2125,18 @@ class DrawingEngine {
     }
     
     clearCanvas() {
+        // Clearing the bitmap must also terminate any in-progress interaction.
+        // Otherwise the next pointer move continues the discarded stroke and
+        // stopDrawing() can save it back onto the freshly cleared canvas.
+        this.isDrawing = false;
+        this.points = [];
+        this.lastPoint = null;
+        this.strokeBreakIndices = [];
+        this.pendingStrokeBreak = false;
+        this.isSnappedToEdge = false;
+        this.edgeDrawingManager?.resetSnapping?.();
+        this.hideActiveToolPreview();
+
         // Reset the transform so the physical-size clear covers the full
         // buffer even when the context is DPR-scaled (matches the
         // setTransform + clearRect pattern used for the live preview canvas).

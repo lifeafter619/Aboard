@@ -120,8 +120,22 @@ function clearCanvas(saveToHistory = true) {
     // about to disappear, and a lingering control box over an empty canvas
     // is a dead ghost overlay.
     this.selectionManager?.clearSelection?.({ skipRedraw: true });
+    this.insertTextManager?.cancelOverlay?.();
+    this.insertTextManager?.clearTextObjects?.();
+    this.activeDrawingPointerId = null;
+    this.activePointers?.clear?.();
     this.drawingEngine.clearCanvas();
     this.pageRasterFallbackPages?.delete?.(this.currentPage);
+    this.pageRasterFallbackBases?.delete?.(this.currentPage);
+    this.pageRasterFallbackScaledBases?.delete?.(this.currentPage);
+    if (this.pageScenes && typeof this.pageScenes === 'object') {
+        delete this.pageScenes[String(this.currentPage)];
+    }
+    if (Array.isArray(this.pages) && this.currentPage > 0 && this.currentPage <= this.pages.length) {
+        // The current bitmap is now known to be blank; discard the old page
+        // snapshot instead of allowing a stale raster to reappear on reload.
+        this.pages[this.currentPage - 1] = null;
+    }
     if (saveToHistory) {
         this.historyManager.saveState();
     }
