@@ -149,4 +149,4 @@ graph LR
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=lifeafter619/Aboard&type=date&legend=top-left)](https://www.star-history.com/#lifeafter619/Aboard&type=date&legend=top-left)
+[![Star History Chart](https://star-history.dera.page/svg?repos=lifeafter619/Aboard&type=date&legend=top-left)](https://star-history.dera.page/#lifeafter619/Aboard&type=date&legend=top-left)
