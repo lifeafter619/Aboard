@@ -498,7 +498,8 @@ class RandomPickerInstance {
         const previousConfig = this.config;
         const nextConfig = normalizeRandomPickerConfig({ ...previousConfig, ...newConfig });
         const namesChanged = nextConfig.mode !== previousConfig.mode
-            || JSON.stringify(nextConfig.names) !== JSON.stringify(previousConfig.names);
+            || JSON.stringify(nextConfig.names) !== JSON.stringify(previousConfig.names)
+            || (nextConfig.mode === 'name' && nextConfig.allowRepeats !== previousConfig.allowRepeats);
         const numberPoolChanged = nextConfig.mode === 'number' && (
             previousConfig.mode !== 'number'
             || nextConfig.min !== previousConfig.min

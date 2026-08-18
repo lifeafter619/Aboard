@@ -171,6 +171,25 @@ function testTitleOnlyUpdatePreservesNoRepeatProgress() {
   assert.equal(instance.remainingNumberCount, 3);
 }
 
+function testRepeatModeChangeResetsNamePool() {
+  const document = createDocumentStub();
+  const RandomPickerInstance = loadRandomPickerInstance(document);
+  const instance = new RandomPickerInstance(1, { showSettings() {}, remove() {} }, {
+    mode: 'name',
+    names: ['Ada', 'Grace', 'Linus'],
+    allowRepeats: false
+  });
+  instance.remainingNames = ['Linus'];
+
+  instance.updateConfig({ allowRepeats: true });
+
+  assert.deepEqual(
+    Array.from(instance.remainingNames),
+    ['Ada', 'Grace', 'Linus'],
+    'changing repeat mode should start a fresh no-repeat name cycle'
+  );
+}
+
 function testUnsafeNumberRangeFallsBackToFiniteDefaults() {
   const document = createDocumentStub();
   const RandomPickerInstance = loadRandomPickerInstance(document);
@@ -191,6 +210,7 @@ function main() {
   testInitialTitleIsInsertedAsText();
   testLargeNoRepeatNumberRangeStillPicksRandomResult();
   testTitleOnlyUpdatePreservesNoRepeatProgress();
+  testRepeatModeChangeResetsNamePool();
   testUnsafeNumberRangeFallsBackToFiniteDefaults();
   console.log('random-picker.test: all assertions passed');
 }

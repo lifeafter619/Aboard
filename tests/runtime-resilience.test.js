@@ -1386,6 +1386,47 @@ function testSettingsManagerApplySettingsSurvivesBlockedLocalStorage() {
   );
 }
 
+async function testStorageManagerRecoversAfterBlockedOpenSucceeds() {
+  let openRequest;
+  const sessionCountRequest = {};
+  const db = {
+    transaction() {
+      return {
+        objectStore() {
+          return {
+            count() {
+              queueMicrotask(() => {
+                sessionCountRequest.result = 1;
+                sessionCountRequest.onsuccess?.();
+              });
+              return sessionCountRequest;
+            }
+          };
+        }
+      };
+    }
+  };
+  const StorageManager = loadStorageManager({
+    indexedDB: {
+      open() {
+        openRequest = {};
+        return openRequest;
+      }
+    }
+  });
+  const manager = new StorageManager();
+
+  openRequest.onblocked();
+  await manager.initPromise;
+  openRequest.onsuccess({ target: { result: db } });
+
+  assert.equal(
+    await manager.hasSession(),
+    true,
+    'a database connection that succeeds after being blocked should restore persistence'
+  );
+}
+
 function testSettingsManagerNormalizesMalformedStoredSettings() {
   const storedValues = {
     toolbarSize: 'NaN',
@@ -1608,6 +1649,7 @@ function testHistoryManagerUsesSmallerDefaultMemoryCap() {
   testCustomizationReorderingHandlesSelectorSpecialChars();
   testFontAliasLookupHandlesSelectorSpecialCharsWithoutCssEscape();
   await testStorageManagerGracefullyHandlesMissingIndexedDb();
+  await testStorageManagerRecoversAfterBlockedOpenSucceeds();
   await testStorageManagerFallsBackWhenCanvasToBlobIsUnavailable();
   await testStorageManagerFallsBackWhenCreateImageBitmapIsUnavailable();
   testSettingsManagerUsesDefaultsWhenLocalStorageUnavailable();

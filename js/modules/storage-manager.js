@@ -36,6 +36,7 @@ class StorageManager {
 
             request.onsuccess = (event) => {
                 this.db = event.target.result;
+                this.initPromise = Promise.resolve(this.db);
                 resolve(this.db);
             };
 
