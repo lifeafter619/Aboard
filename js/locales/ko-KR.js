@@ -31,7 +31,9 @@ window.translations = {
     },
 
     errors: {
-        lazyLoadFailed: '{feature} 기능을 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.'
+        lazyLoadFailed: '{feature} 기능을 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.',
+        fileRequired: '파일을 선택하세요.',
+        invalidFile: '선택한 파일이 올바르지 않습니다.'
     },
 
     prompts: {
@@ -46,7 +48,8 @@ window.translations = {
         continueAnyway: '계속 진행',
         features: {
             canvas: 'Canvas API',
-            es6: '최신 JavaScript(ES6)'
+            es6: '최신 JavaScript(ES6)',
+            modernSyntax: '최신 JavaScript 문법'
         }
     },
     // Recovery dialog

@@ -8,12 +8,8 @@ const scriptLoaderSource = fs.readFileSync(
   'utf8'
 );
 const scriptLoaderModuleUrl = `data:text/javascript;base64,${Buffer.from(scriptLoaderSource, 'utf8').toString('base64')}`;
-const legacyGlobalScriptLoaderSource = fs.readFileSync(
-  path.join(process.cwd(), 'js', 'modules', 'script-loader.js'),
-  'utf8'
-);
 
-const { ScriptLoader } = await import(scriptLoaderModuleUrl);
+const { ScriptLoader, registerScriptLoaderGlobal } = await import(scriptLoaderModuleUrl);
 
 function createScriptElement(src = '') {
   const listeners = new Map();
@@ -92,14 +88,9 @@ function createLoader(doc) {
 
 function createLegacyGlobalLoader(doc) {
   const win = {};
-  const loaderFactory = new Function(
-    'window',
-    'document',
-    `${legacyGlobalScriptLoaderSource}; return window.ScriptLoader;`
-  );
-  const Loader = loaderFactory(win, doc);
-  Loader.pendingLoads = new Map();
-  return Loader;
+  registerScriptLoaderGlobal(win, doc);
+  win.ScriptLoader.pendingLoads = new Map();
+  return win.ScriptLoader;
 }
 
 async function raceWithTimeout(promise, timeoutMs = 50) {

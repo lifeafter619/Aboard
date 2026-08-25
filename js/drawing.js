@@ -1294,10 +1294,19 @@ class DrawingEngine {
         const lines = String(textObj.text).split('\n');
         const lineHeight = fontSize * 1.2;
         const color = this.escapeSvgAttribute(textObj.color || '#000000');
-        const fontFamily = this.escapeSvgAttribute(textObj.fontFamily || 'sans-serif');
+        const rawFontFamily = textObj.fontFamily || 'sans-serif';
+        const fontFamily = this.escapeSvgAttribute(rawFontFamily);
+        const insertTextManager = window.drawingBoard?.insertTextManager || null;
+        const canvasFontFamily = insertTextManager?.normalizeFontFamilyForCanvas
+            ? insertTextManager.normalizeFontFamilyForCanvas(rawFontFamily)
+            : rawFontFamily;
 
         this.ctx.save();
-        this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
+        // Measure with the canvas-normalized family, never the SVG-escaped one: an
+        // escaped name (&quot;) makes the CSS font shorthand unparseable, so the
+        // assignment is silently ignored and every width is measured with the
+        // previous font.
+        this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${canvasFontFamily}`;
         let maxWidth = 0;
         const measuredLines = lines.map((line) => {
             const width = this.ctx.measureText(line).width;

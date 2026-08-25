@@ -31,7 +31,9 @@ window.translations = {
     },
 
     errors: {
-        lazyLoadFailed: 'No se pudo cargar {feature}. Recarga la página e inténtalo de nuevo.'
+        lazyLoadFailed: 'No se pudo cargar {feature}. Recarga la página e inténtalo de nuevo.',
+        fileRequired: 'Elige un archivo.',
+        invalidFile: 'El archivo seleccionado no es válido.'
     },
 
     prompts: {
@@ -46,7 +48,8 @@ window.translations = {
         continueAnyway: 'Continuar de todos modos',
         features: {
             canvas: 'API Canvas',
-            es6: 'JavaScript moderno (ES6)'
+            es6: 'JavaScript moderno (ES6)',
+            modernSyntax: 'Sintaxis de JavaScript moderna'
         }
     },
     // Recovery dialog

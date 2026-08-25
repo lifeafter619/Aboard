@@ -31,7 +31,9 @@ window.translations = {
     },
 
     errors: {
-        lazyLoadFailed: '{feature}の読み込みに失敗しました。ページを再読み込みしてもう一度お試しください。'
+        lazyLoadFailed: '{feature}の読み込みに失敗しました。ページを再読み込みしてもう一度お試しください。',
+        fileRequired: 'ファイルを選択してください。',
+        invalidFile: '選択したファイルは無効です。'
     },
 
     prompts: {
@@ -46,7 +48,8 @@ window.translations = {
         continueAnyway: 'このまま続行',
         features: {
             canvas: 'Canvas API',
-            es6: 'モダン JavaScript（ES6）'
+            es6: 'モダン JavaScript（ES6）',
+            modernSyntax: 'モダン JavaScript 構文'
         }
     },
     // Recovery dialog

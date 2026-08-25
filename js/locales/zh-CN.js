@@ -38,6 +38,8 @@ window.translations = {
 
     errors: {
         lazyLoadFailed: '加载{feature}失败，请刷新页面后重试。',
+        fileRequired: '请先选择一个文件。',
+        invalidFile: '所选文件无效。',
         fileReadFailed: '无法读取所选文件，请检查文件是否损坏后重试。',
         storageWriteFailed: '保存失败，请检查浏览器存储权限后重试。',
         sessionSaveFailed: '板书自动保存失败，当前内容可能无法恢复。请尽快导出备份，或在设置中清理存储空间。',
@@ -59,7 +61,8 @@ window.translations = {
         continueAnyway: '仍然继续',
         features: {
             canvas: 'Canvas API 画布支持',
-            es6: '现代 JavaScript（ES6）支持'
+            es6: '现代 JavaScript（ES6）支持',
+            modernSyntax: '现代 JavaScript 语法支持'
         }
     },
     // Recovery dialog

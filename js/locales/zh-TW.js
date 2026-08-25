@@ -38,6 +38,8 @@ window.translations = {
 
     errors: {
         lazyLoadFailed: '載入{feature}失敗，請重新整理頁面後再試。',
+        fileRequired: '請先選擇一個檔案。',
+        invalidFile: '所選檔案無效。',
         sessionWriteConflict: '另一個 Aboard 分頁正在使用自動儲存；目前分頁的變更暫時不會自動儲存。請關閉另一個分頁後繼續。',
         sessionDataClearedElsewhere: '另一個分頁已清除儲存的白板資料。請先匯出仍需保留的內容，再重新載入目前分頁。',
         fileReadFailed: '無法讀取所選檔案，請檢查檔案是否損毀後重試。',
@@ -59,7 +61,8 @@ window.translations = {
         continueAnyway: '仍要繼續',
         features: {
             canvas: 'Canvas API 畫布支援',
-            es6: '現代 JavaScript（ES6）支援'
+            es6: '現代 JavaScript（ES6）支援',
+            modernSyntax: '現代 JavaScript 語法支援'
         }
     },
     // Recovery dialog

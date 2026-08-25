@@ -38,6 +38,8 @@ window.translations = {
 
     errors: {
         lazyLoadFailed: 'Failed to load {feature}. Please refresh and try again.',
+        fileRequired: 'Please choose a file.',
+        invalidFile: 'The selected file is invalid.',
         fileReadFailed: 'Failed to read the selected file. Please verify the file is not corrupted.',
         storageWriteFailed: 'Failed to save your changes. Please check browser storage permissions and try again.',
         sessionSaveFailed: 'Autosave failed — your board may not be recoverable. Export a backup soon, or free up storage in Settings.',
@@ -59,7 +61,8 @@ window.translations = {
         continueAnyway: 'Continue anyway',
         features: {
             canvas: 'Canvas API',
-            es6: 'Modern JavaScript (ES6)'
+            es6: 'Modern JavaScript (ES6)',
+            modernSyntax: 'Modern JavaScript syntax'
         }
     },
     // Recovery dialog
