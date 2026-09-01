@@ -3,7 +3,7 @@
 // resources from older releases could survive a core-cache rotation and
 // serve stale JS/CSS alongside new code. Keeping a single SW_VERSION
 // guarantees activate() clears both via the existing whitelist check.
-const SW_VERSION = '2.5.2';
+const SW_VERSION = '2.5.3';
 const CORE_CACHE_NAME = `aboard-core-${SW_VERSION}`;
 const RUNTIME_CACHE_NAME = `aboard-runtime-${SW_VERSION}`;
 const MEDIA_CACHE_NAME = `aboard-media-${SW_VERSION}`;
@@ -37,8 +37,8 @@ const CORE_ASSETS = [
   './index.html',
   './manifest.json',
   './img/icon.svg',
-  './img/icon-192.png?v=2.5.2',
-  './img/icon-512.png?v=2.5.2',
+  './img/icon-192.png?v=2.5.3',
+  './img/icon-512.png?v=2.5.3',
   './css/style.css?v=20260727-compact-panel',
   './css/modules/time-display.css',
   './css/modules/feature-area.css',

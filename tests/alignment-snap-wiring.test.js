@@ -293,6 +293,29 @@ function testClearResetsTheCasingToo() {
     'a stale casing must not survive into the next gesture on another page');
 }
 
+// clearAlignmentGuides is not the only entry into a gesture: beginAlignmentSnapping
+// resets the snap state itself and can return early (setting off, or a selection
+// with no alignment bounds such as the background image). Those early returns
+// must drop a casing resolved by the previous gesture too, or a later guide
+// could be stroked against a background the current gesture never sampled.
+function testBeginSnappingResetsStaleCasingOnEarlyReturn() {
+  const SelectionManager = loadSelectionManagerClass();
+  const images = [
+    { x: 100, y: 100, width: 50, height: 50 },
+    { x: 300, y: 100, width: 50, height: 50 }
+  ];
+  const selection = makeSelection(SelectionManager, { images, backgroundColor: '#2d5016' });
+  selection.beginAlignmentSnapping();
+  assert.equal(selection.alignmentGuideCasing, '#ffffff', 'casing present first');
+
+  // Next gesture drags the background image, which has no alignment bounds:
+  // beginAlignmentSnapping early-returns after the reset block.
+  selection.selectionType = 'background';
+  selection.beginAlignmentSnapping();
+  assert.equal(selection.alignmentGuideCasing, null,
+    'a casing from the previous gesture must not survive an early-returning begin');
+}
+
 // Sampling the painted pixels rather than the configured colour is what makes
 // background *images* work; assert the read path and its guards.
 function testBackgroundIsSampledFromPaintedPixels() {
@@ -407,6 +430,7 @@ function main() {
   testOverlayBoxSyncIgnoresAnUnmeasuredCanvas();
   testCasingIsResolvedForLowContrastBoards();
   testClearResetsTheCasingToo();
+  testBeginSnappingResetsStaleCasingOnEarlyReturn();
   testBackgroundIsSampledFromPaintedPixels();
   testTransparentBackgroundFallsBackToConfiguredColour();
   testTaintedCanvasDoesNotBreakDragging();

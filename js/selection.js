@@ -4333,6 +4333,7 @@ class SelectionManager {
         this.alignmentGuides = [];
         this.alignmentSnapBounds = null;
         this.alignmentSnapTargets = null;
+        this.alignmentGuideCasing = null;
 
         if (!this.isAlignmentSnappingEnabled() || !window.AboardAlignmentGuides) {
             return;
