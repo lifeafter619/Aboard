@@ -1076,6 +1076,16 @@ function setupSettingsListeners() {
             this.updateMaxCanvasScale();
         });
 
+        bindIfPresent(document.getElementById('alignment-guides-checkbox'), 'change', (e) => {
+            this.settingsManager.setAlignmentGuidesEnabled
+                ? this.settingsManager.setAlignmentGuidesEnabled(e.target.checked)
+                : (this.settingsManager.alignmentGuidesEnabled = e.target.checked);
+            if (!e.target.checked) {
+                // Drop any line still on screen from the gesture before this.
+                this.selectionManager?.clearAlignmentGuides?.();
+            }
+        });
+
         // Global font selector
         bindIfPresent(document.getElementById('global-font-select'), 'change', (e) => {
             this.settingsManager.setGlobalFont(e.target.value);

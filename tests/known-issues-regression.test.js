@@ -723,6 +723,12 @@ function testTapSelectionBoxDoesNotDirtyHistory() {
     activePointerId: null,
     hasUnsavedChanges: false,
     controlBox: { style: {} },
+    // Alignment snapping has its own coverage in alignment-snap-wiring.test.js;
+    // stub it out here so a snap cannot shift these history fixtures.
+    beginAlignmentSnapping() {},
+    applyAlignmentSnap(deltaX, deltaY) { return { deltaX, deltaY }; },
+    renderAlignmentGuides() {},
+    clearAlignmentGuides() {},
     textManager: { textObjects: [{ x: 10, y: 20 }] },
     isCompoundSelection() { return false; },
     isCoordinateSelection() { return false; },
@@ -760,6 +766,12 @@ function testDraggingPastThresholdStillMovesSelection() {
         return { width: 200, height: 100 };
       }
     },
+    // Alignment snapping has its own coverage in alignment-snap-wiring.test.js;
+    // stub it out here so a snap cannot shift these history fixtures.
+    beginAlignmentSnapping() {},
+    applyAlignmentSnap(deltaX, deltaY) { return { deltaX, deltaY }; },
+    renderAlignmentGuides() {},
+    clearAlignmentGuides() {},
     textManager: { textObjects: [{ x: 10, y: 20 }] },
     isCompoundSelection() { return false; },
     isCoordinateSelection() { return false; },
@@ -1143,6 +1155,12 @@ function testStrokeRotationStateStaysConsistentAcrossDragFlipResize() {
       getClientPos(event) {
         return { x: event.clientX, y: event.clientY };
       },
+      // Alignment snapping has its own coverage in alignment-snap-wiring.test.js;
+      // stub it out here so a snap cannot shift these history fixtures.
+      beginAlignmentSnapping() {},
+      applyAlignmentSnap(deltaX, deltaY) { return { deltaX, deltaY }; },
+      renderAlignmentGuides() {},
+      clearAlignmentGuides() {},
       updateControlBox() {},
       redrawCanvas() {}
     });

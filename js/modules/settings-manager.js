@@ -174,6 +174,9 @@ class SettingsManager {
         this.updatePreference = this.normalizeUpdatePreference(safeLocalStorageGetItem('updatePreference'));
         this.legacyProjectImportEnabled = safeLocalStorageGetItem('legacyProjectImportEnabled') === 'true';
         this.unlimitedZoom = safeLocalStorageGetItem('unlimitedZoom') === 'true';
+        // Default on: snapping helps far more often than it gets in the way, and
+        // a touch-only board has no modifier key to suppress it per gesture.
+        this.alignmentGuidesEnabled = safeLocalStorageGetItem('alignmentGuidesEnabled') !== 'false';
         this.infiniteCanvas = false; // Always use pagination mode
         this.showZoomControls = safeLocalStorageGetItem('showZoomControls') !== 'false';
         this.showImportExportBtn = safeLocalStorageGetItem('showImportExportBtn') !== 'false';
@@ -1067,6 +1070,12 @@ class SettingsManager {
         return this.unlimitedZoom;
     }
 
+    setAlignmentGuidesEnabled(enabled) {
+        this.alignmentGuidesEnabled = enabled === true;
+        safeLocalStorageSetItem('alignmentGuidesEnabled', this.alignmentGuidesEnabled ? 'true' : 'false');
+        return this.alignmentGuidesEnabled;
+    }
+
     setShowZoomControls(enabled) {
         this.showZoomControls = enabled === true;
         safeLocalStorageSetItem('showZoomControls', this.showZoomControls ? 'true' : 'false');
@@ -1128,6 +1137,9 @@ class SettingsManager {
         });
         updateElementById('unlimited-zoom-checkbox', element => {
             element.checked = this.unlimitedZoom;
+        });
+        updateElementById('alignment-guides-checkbox', element => {
+            element.checked = this.alignmentGuidesEnabled;
         });
         updateElementById('show-zoom-controls-checkbox', element => {
             element.checked = this.showZoomControls;

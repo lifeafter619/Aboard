@@ -53,6 +53,12 @@ class SelectionManager {
         this.ROTATION_HANDLE_DISTANCE = 30;
         this.HANDLE_THRESHOLD = 10;
         this.DRAG_MOVE_THRESHOLD = 3;
+        this.ALIGNMENT_SNAP_THRESHOLD = 6;
+        this.ALIGNMENT_GUIDE_COLOR = '#f43f5e';
+        this.alignmentGuides = [];
+        this.alignmentSnapBounds = null;
+        this.alignmentSnapTargets = null;
+        this.alignmentGuideOverlay = null;
         this.MIN_SIZE = 10;
         this.TEXT_LINE_HEIGHT = 1.2; // Aligns with insert-text line height calculation.
         this.TEXT_BOUNDS_PADDING = 4;
@@ -1938,6 +1944,7 @@ class SelectionManager {
         }
         this.dragStartPos = this.getClientPos(e);
         this.hasDragMoved = false;
+        this.beginAlignmentSnapping();
 
         if (this.selectionType === 'stroke') {
             const stroke = this.drawingEngine.strokes[this.selectedIndex];
@@ -2034,8 +2041,8 @@ class SelectionManager {
         // Convert screen delta to canvas coordinate delta
         const scaleX = this.canvas.offsetWidth / rect.width;
         const scaleY = this.canvas.offsetHeight / rect.height;
-        const deltaX = (pos.x - this.dragStartPos.x) * scaleX;
-        const deltaY = (pos.y - this.dragStartPos.y) * scaleY;
+        let deltaX = (pos.x - this.dragStartPos.x) * scaleX;
+        let deltaY = (pos.y - this.dragStartPos.y) * scaleY;
 
         if (!this.hasDragMoved) {
             const screenDeltaX = pos.x - this.dragStartPos.x;
@@ -2046,7 +2053,12 @@ class SelectionManager {
             }
             this.hasDragMoved = true;
         }
-        
+
+        // Snap only after the move threshold, so a tap still cannot shift an
+        // object, and always from the raw delta rather than an already-snapped
+        // one — otherwise the pull compounds and the object sticks.
+        ({ deltaX, deltaY } = this.applyAlignmentSnap(deltaX, deltaY, scaleX));
+
         if (this.selectionType === 'stroke') {
             const stroke = this.drawingEngine.strokes[this.selectedIndex];
             if (!stroke) return;
@@ -2140,13 +2152,17 @@ class SelectionManager {
         
         this.updateControlBox();
         this.redrawCanvas();
+        this.renderAlignmentGuides();
     }
-    
+
     stopDrag() {
         if (this.isDragging) {
             const didMove = !!this.hasDragMoved;
             this.isDragging = false;
             this.hasDragMoved = false;
+            // Before any history save below, so a guide can never be captured
+            // into a snapshot or an export.
+            this.clearAlignmentGuides();
             if (didMove) {
                 this.hasUnsavedChanges = true;
             }
@@ -3804,6 +3820,9 @@ class SelectionManager {
         this.selectedGroupId = null;
         this.hasUnsavedChanges = false;
         this.hasDragMoved = false;
+        // Covers pointercancel and page switches as well as an ordinary
+        // deselect: a cancelled gesture never reaches stopDrag().
+        this.clearAlignmentGuides();
         this.hideLayerMenu();
         this.drawingEngine.deselectStroke();
         this.drawingEngine.deselectImage();
@@ -4212,6 +4231,241 @@ class SelectionManager {
      * @param {number} fontSize - Font size in pixels.
      * @returns {string} CSS font string, e.g. "italic bold 16px Arial".
      */
+    // --- Smart alignment guides -------------------------------------------
+    // Snap threshold in screen pixels; divided by the live zoom so the pull
+    // feels identical at 100% and at 400%.
+    getAlignmentSnapThreshold(scaleX = 1) {
+        const base = this.ALIGNMENT_SNAP_THRESHOLD || 6;
+        const scale = Number.isFinite(scaleX) && scaleX > 0 ? scaleX : 1;
+        return base * scale;
+    }
+
+    isAlignmentSnappingEnabled() {
+        const settings = window.drawingBoard?.settingsManager;
+        if (settings && typeof settings.alignmentGuidesEnabled !== 'undefined') {
+            return settings.alignmentGuidesEnabled === true;
+        }
+        return true;
+    }
+
+    // Axis-aligned bounds of whatever is currently selected, or null when the
+    // selection has no meaningful rectangle to align.
+    getAlignmentBoundsForSelection() {
+        if (this.selectionType === 'stroke') {
+            const stroke = this.drawingEngine.strokes[this.selectedIndex];
+            if (!stroke || stroke.rotation) return null;
+            return this.getStrokeSelectionBounds(stroke);
+        }
+        if (this.selectionType === 'text' && this.textManager) {
+            const textObj = this.textManager.textObjects[this.selectedIndex];
+            if (!textObj || textObj.rotation) return null;
+            return this.getTextObjectBounds(this.selectedIndex);
+        }
+        if (this.selectionType === 'image') {
+            const img = this.drawingEngine.stampedImages[this.selectedIndex];
+            if (!img || img.rotation) return null;
+            return this.drawingEngine.getImageBounds(img);
+        }
+        if (this.isCompoundSelection()) {
+            if (this.multiRotation) return null;
+            return this.getMultiSelectionBounds();
+        }
+        // Background images and coordinate points align to their own systems;
+        // leave them out rather than guess.
+        return null;
+    }
+
+    // Bounds of every object that is not part of the current selection, plus the
+    // canvas itself. Rotated objects are excluded: their axis-aligned box does
+    // not match what the user sees, so a guide on it would point at nothing.
+    collectAlignmentTargets() {
+        const targets = [];
+        const selectedStrokeSet = new Set(
+            this.isCompoundSelection() ? this.selectedStrokes : [this.selectedIndex]
+        );
+        const selectedImageSet = new Set(
+            this.isCompoundSelection() ? this.selectedImages : [this.selectedIndex]
+        );
+        const selectedTextSet = new Set(
+            this.isCompoundSelection() ? this.selectedTexts : [this.selectedIndex]
+        );
+
+        const strokes = this.drawingEngine?.strokes || [];
+        strokes.forEach((stroke, idx) => {
+            if (this.selectionType === 'stroke' && selectedStrokeSet.has(idx)) return;
+            if (this.isCompoundSelection() && selectedStrokeSet.has(idx)) return;
+            if (!stroke || stroke.rotation) return;
+            const bounds = this.getStrokeSelectionBounds(stroke);
+            if (bounds) targets.push({ bounds });
+        });
+
+        const images = this.drawingEngine?.stampedImages || [];
+        images.forEach((img, idx) => {
+            if (this.selectionType === 'image' && selectedImageSet.has(idx)) return;
+            if (this.isCompoundSelection() && selectedImageSet.has(idx)) return;
+            if (!img || img.rotation) return;
+            const bounds = this.drawingEngine.getImageBounds(img);
+            if (bounds) targets.push({ bounds });
+        });
+
+        const textObjects = this.textManager?.textObjects || [];
+        textObjects.forEach((textObj, idx) => {
+            if (this.selectionType === 'text' && selectedTextSet.has(idx)) return;
+            if (this.isCompoundSelection() && selectedTextSet.has(idx)) return;
+            if (!textObj || textObj.rotation) return;
+            const bounds = this.getTextObjectBounds(idx);
+            if (bounds) targets.push({ bounds });
+        });
+
+        const width = this.canvas?.offsetWidth || this.canvas?.width || 0;
+        const height = this.canvas?.offsetHeight || this.canvas?.height || 0;
+        if (width > 0 && height > 0) {
+            targets.push({ bounds: { x: 0, y: 0, width, height }, spansCanvas: true });
+        }
+
+        return targets;
+    }
+
+    // Sample the target set once per gesture: measuring every text object on
+    // each pointermove would re-run canvas text metrics dozens of times a second.
+    beginAlignmentSnapping() {
+        this.alignmentGuides = [];
+        this.alignmentSnapBounds = null;
+        this.alignmentSnapTargets = null;
+
+        if (!this.isAlignmentSnappingEnabled() || !window.AboardAlignmentGuides) {
+            return;
+        }
+
+        const bounds = this.getAlignmentBoundsForSelection();
+        if (!bounds) {
+            return;
+        }
+
+        this.alignmentSnapBounds = { ...bounds };
+        this.alignmentSnapTargets = this.collectAlignmentTargets();
+    }
+
+    applyAlignmentSnap(deltaX, deltaY, scaleX = 1) {
+        const unchanged = { deltaX, deltaY };
+        const compute = window.AboardAlignmentGuides?.computeAlignment;
+        if (!compute || !this.alignmentSnapBounds || !this.alignmentSnapTargets?.length) {
+            return unchanged;
+        }
+
+        const moving = {
+            x: this.alignmentSnapBounds.x + deltaX,
+            y: this.alignmentSnapBounds.y + deltaY,
+            width: this.alignmentSnapBounds.width,
+            height: this.alignmentSnapBounds.height
+        };
+
+        const { dx, dy, guides } = compute(moving, this.alignmentSnapTargets, {
+            threshold: this.getAlignmentSnapThreshold(scaleX)
+        });
+
+        this.alignmentGuides = guides;
+        return { deltaX: deltaX + dx, deltaY: deltaY + dy };
+    }
+
+    clearAlignmentGuides() {
+        this.alignmentGuides = [];
+        this.alignmentSnapBounds = null;
+        this.alignmentSnapTargets = null;
+        const overlay = this.alignmentGuideOverlay;
+        if (overlay) {
+            overlay.style.display = 'none';
+            const ctx = overlay.getContext?.('2d');
+            ctx?.clearRect?.(0, 0, overlay.width, overlay.height);
+        }
+    }
+
+    // Guides live on their own canvas inside #transform-layer, so they inherit
+    // zoom/pan for free and can never be baked into the drawing bitmap that
+    // history snapshots and exports read back.
+    ensureAlignmentGuideOverlay() {
+        if (typeof document === 'undefined') return null;
+        if (this.alignmentGuideOverlay?.isConnected) {
+            return this.alignmentGuideOverlay;
+        }
+
+        let overlay = document.getElementById('alignment-guide-overlay');
+        if (!overlay) {
+            overlay = document.createElement('canvas');
+            overlay.id = 'alignment-guide-overlay';
+            overlay.setAttribute('aria-hidden', 'true');
+            overlay.style.position = 'absolute';
+            overlay.style.inset = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.pointerEvents = 'none';
+            // Above the drawing canvas (z-index 2), below the control box UI.
+            overlay.style.zIndex = '3';
+            const layer = this.canvas?.parentElement
+                || document.getElementById('transform-layer');
+            if (!layer) return null;
+            layer.appendChild(overlay);
+        }
+
+        this.alignmentGuideOverlay = overlay;
+        return overlay;
+    }
+
+    renderAlignmentGuides() {
+        const guides = this.alignmentGuides;
+        if (!Array.isArray(guides) || guides.length === 0) {
+            const existing = this.alignmentGuideOverlay;
+            if (existing) {
+                existing.style.display = 'none';
+                const existingCtx = existing.getContext?.('2d');
+                existingCtx?.clearRect?.(0, 0, existing.width, existing.height);
+            }
+            return;
+        }
+
+        const overlay = this.ensureAlignmentGuideOverlay();
+        const ctx = overlay?.getContext?.('2d');
+        if (!ctx) return;
+
+        if (overlay.width !== this.canvas.width || overlay.height !== this.canvas.height) {
+            overlay.width = this.canvas.width;
+            overlay.height = this.canvas.height;
+        }
+
+        // Match the drawing canvas's DPR scaling so guide coordinates are in the
+        // same units as the object bounds they came from.
+        const ratio = this.canvas.offsetWidth > 0
+            ? this.canvas.width / this.canvas.offsetWidth
+            : 1;
+
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+        ctx.scale(ratio, ratio);
+        ctx.strokeStyle = this.ALIGNMENT_GUIDE_COLOR || '#f43f5e';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 4]);
+
+        for (const guide of guides) {
+            ctx.beginPath();
+            if (guide.axis === 'x') {
+                // Half-pixel offset keeps a 1px line crisp instead of blurred
+                // across two device pixels.
+                const x = Math.round(guide.position) + 0.5;
+                ctx.moveTo(x, guide.start);
+                ctx.lineTo(x, guide.end);
+            } else {
+                const y = Math.round(guide.position) + 0.5;
+                ctx.moveTo(guide.start, y);
+                ctx.lineTo(guide.end, y);
+            }
+            ctx.stroke();
+        }
+
+        ctx.restore();
+        overlay.style.display = 'block';
+    }
+
     buildTextFontString(textObj, fontSize) {
         const fontStyle = textObj.italic ? 'italic' : 'normal';
         const fontWeight = textObj.bold ? 'bold' : 'normal';

@@ -39,6 +39,7 @@ You can quickly try this project through the **Demo link** below, or visit **my 
 - Complete classroom helper functions: time display, timer, random picker, scoreboard, teaching tools, and more.
 - The experience is oriented toward real teaching scenarios: paginated canvas, automatic save and restore, PWA, multilingual support, and configuration import/export.
 - At higher zoom levels, Aboard automatically switches to an SVG vector preview so text, images, strokes, and shapes stay sharper while magnified.
+- Dragging an object shows smart alignment guides that snap to the edges and centre lines of other objects and of the canvas; it can be turned off in canvas settings.
 - The default zoom ceiling has been raised to `1000%`, and the unlimited zoom option can still extend beyond that.
 - Responsive layout and touch interaction have been specially optimized.
 

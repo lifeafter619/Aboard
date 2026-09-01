@@ -536,6 +536,8 @@ window.translations = {
             sizeHint: '选择预设尺寸或自定义画布比例和大小',
             unlimitedZoom: '允许无限放大',
             unlimitedZoomHint: '默认最多可放大到 1000%，勾选后可继续放大（最高 500 倍）',
+            alignmentGuides: '智能对齐参考线',
+            alignmentGuidesHint: '拖动对象时自动吸附到其他对象和画布的边缘与中线，并显示参考线',
             infiniteCanvas: '无限画布',
             pagination: '分页模式',
             presets: {

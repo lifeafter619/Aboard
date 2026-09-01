@@ -532,6 +532,8 @@ window.translations = {
             sizeHint: '選擇預設尺寸或自定義畫布比例和大小',
             unlimitedZoom: '允許無限放大',
             unlimitedZoomHint: '預設最多可放大到 1000%，勾選後可繼續放大（最高 500 倍）',
+            alignmentGuides: '智慧對齊參考線',
+            alignmentGuidesHint: '拖動物件時自動吸附到其他物件和畫布的邊緣與中線，並顯示參考線',
             infiniteCanvas: '無限畫布',
             pagination: '分頁模式',
             presets: {

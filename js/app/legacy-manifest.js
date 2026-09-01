@@ -25,6 +25,7 @@ export const VISIBLE_CORE_STARTUP_SCRIPTS = [
   'js/history.js',
   'js/background.js',
   'js/image-controls.js',
+  'js/modules/alignment-guides.js',
   'js/selection.js',
   'js/modules/edge-drawing.js',
   'js/modules/teaching-tools.js',

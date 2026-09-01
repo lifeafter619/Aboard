@@ -536,6 +536,8 @@ window.translations = {
             sizeHint: 'Choose preset size or custom size/ratio',
             unlimitedZoom: 'Unlimited Zoom',
             unlimitedZoomHint: 'Default zoom now reaches 1000%; enable this to continue zooming up to 500x',
+            alignmentGuides: 'Smart alignment guides',
+            alignmentGuidesHint: 'Snap to the edges and centre lines of other objects and the canvas while dragging, and show guides',
             infiniteCanvas: 'Infinite Canvas',
             pagination: 'Pagination Mode',
             presets: {

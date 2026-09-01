@@ -230,6 +230,8 @@ window.locale_translation_overrides = (() => {
                 },
                 canvas: {
                     unlimitedZoom: '無制限ズームを許可',
+                    alignmentGuides: 'スマート整列ガイド',
+                    alignmentGuidesHint: 'ドラッグ中に他のオブジェクトやキャンバスの端と中心線に吸着し、ガイドを表示します',
                     unlimitedZoomHint: '標準では最大1000%まで拡大でき、有効にするとさらに最大500倍まで拡大できます'
                 },
                 time: {
@@ -377,6 +379,8 @@ window.locale_translation_overrides = (() => {
                 },
                 canvas: {
                     unlimitedZoom: '무제한 확대 허용',
+                    alignmentGuides: '스마트 정렬 안내선',
+                    alignmentGuidesHint: '드래그할 때 다른 개체와 캔버스의 가장자리 및 중심선에 맞춰지고 안내선을 표시합니다',
                     unlimitedZoomHint: '기본 확대 한도는 1000%이며, 활성화하면 최대 500배까지 계속 확대할 수 있습니다'
                 },
                 time: {
@@ -524,6 +528,8 @@ window.locale_translation_overrides = (() => {
                 },
                 canvas: {
                     unlimitedZoom: 'Autoriser le zoom illimite',
+                    alignmentGuides: 'Guides d\'alignement intelligents',
+                    alignmentGuidesHint: 'Aligne sur les bords et les axes centraux des autres objets et du canevas pendant le deplacement, et affiche des guides',
                     unlimitedZoomHint: 'Le zoom par defaut monte desormais a 1000 % ; activez cette option pour continuer jusqu\'a 500x'
                 },
                 time: {
@@ -678,6 +684,8 @@ window.locale_translation_overrides = (() => {
                 },
                 canvas: {
                     unlimitedZoom: 'Permitir zoom ilimitado',
+                    alignmentGuides: 'Guias de alineacion inteligentes',
+                    alignmentGuidesHint: 'Ajusta a los bordes y ejes centrales de otros objetos y del lienzo al arrastrar, y muestra guias',
                     unlimitedZoomHint: 'El zoom predeterminado ahora llega al 1000 %; activalo para seguir ampliando hasta 500x'
                 },
                 time: {
@@ -832,6 +840,8 @@ window.locale_translation_overrides = (() => {
                 },
                 canvas: {
                     unlimitedZoom: 'Unbegrenztes Zoomen erlauben',
+                    alignmentGuides: 'Intelligente Ausrichtungslinien',
+                    alignmentGuidesHint: 'Rastet beim Ziehen an Kanten und Mittellinien anderer Objekte und der Leinwand ein und zeigt Hilfslinien',
                     unlimitedZoomHint: 'Standardmassig ist jetzt ein Zoom bis 1000 % moglich; aktiviert lasst sich weiter bis 500x vergrosern'
                 },
                 time: {
