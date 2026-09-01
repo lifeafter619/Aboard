@@ -4215,7 +4215,16 @@ class SelectionManager {
     buildTextFontString(textObj, fontSize) {
         const fontStyle = textObj.italic ? 'italic' : 'normal';
         const fontWeight = textObj.bold ? 'bold' : 'normal';
-        const fontFamily = textObj.fontFamily || 'Arial, sans-serif';
+        const rawFontFamily = textObj.fontFamily || 'Arial, sans-serif';
+        // Custom font names come straight from the uploaded filename, so they can
+        // start with a digit or contain a comma. Unquoted, those make the CSS font
+        // shorthand unparseable: the ctx.font assignment is silently ignored and
+        // every line gets measured with whatever font was active before, so the
+        // selection frame no longer matches the rendered text. The render path
+        // quotes them via normalizeFontFamilyForCanvas — measure the same way.
+        const fontFamily = this.textManager?.normalizeFontFamilyForCanvas
+            ? this.textManager.normalizeFontFamilyForCanvas(rawFontFamily)
+            : rawFontFamily;
         return `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
     }
 

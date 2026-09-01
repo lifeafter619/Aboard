@@ -10,6 +10,9 @@ class HistoryManager {
         this.maxHistory = 50;
         this.memoryLimitBytes = 128 * 1024 * 1024; // 128 MB cap for history
         this.singleBitmapMemoryLimitBytes = 32 * 1024 * 1024; // keep huge frames scene-only
+        // Undo budget kept for older entries when the newest frame alone already
+        // exceeds memoryLimitBytes and the cap is therefore unreachable.
+        this.OVERSIZE_TAIL_RESERVE_BYTES = 16 * 1024 * 1024;
         this.onStateChanged = null;
         this.captureSceneState = null;
         this.restoreSceneState = null;
@@ -29,7 +32,48 @@ class HistoryManager {
     }
 
     getEntryByteLength(entry) {
+        if (typeof entry?.byteCost === 'number') {
+            return entry.byteCost;
+        }
         return this.getEntryImageData(entry)?.data?.byteLength || 0;
+    }
+
+    // Rough in-memory cost of a captured scene. Scene states carry stamped
+    // image data URLs and stroke point arrays, so once an oversize bitmap is
+    // dropped they become the dominant consumer — counting them as zero let
+    // history grow without bound behind a cap that thought it was empty.
+    // ponytail: shallow estimate by object counts, not a deep byte walk.
+    estimateSceneStateByteLength(sceneState) {
+        if (!sceneState || typeof sceneState !== 'object') {
+            return 0;
+        }
+
+        let bytes = 0;
+        const strokes = Array.isArray(sceneState.strokes) ? sceneState.strokes : [];
+        for (const stroke of strokes) {
+            const points = Array.isArray(stroke?.points) ? stroke.points.length : 0;
+            bytes += 64 + points * 32;
+        }
+
+        const texts = Array.isArray(sceneState.textObjects) ? sceneState.textObjects : [];
+        for (const textObj of texts) {
+            bytes += 128 + (typeof textObj?.text === 'string' ? textObj.text.length * 2 : 0);
+        }
+
+        const images = Array.isArray(sceneState.stampedImages) ? sceneState.stampedImages : [];
+        for (const image of images) {
+            const source = typeof image?.dataUrl === 'string'
+                ? image.dataUrl
+                : (typeof image?.src === 'string' ? image.src : '');
+            // Data URLs are base64 text held in memory; the decoded bitmap the
+            // browser keeps alongside it is larger still, so count both.
+            bytes += 256 + source.length * 2 + (source.startsWith('data:') ? source.length : 0);
+        }
+
+        const groups = Array.isArray(sceneState.objectGroups) ? sceneState.objectGroups : [];
+        bytes += groups.length * 64;
+
+        return bytes;
     }
 
     isImageDataCompatible(imageData) {
@@ -92,7 +136,10 @@ class HistoryManager {
         return {
             imageData,
             sceneState,
-            hasSceneState
+            hasSceneState,
+            // Cached once at capture time so the trim loop never rescans scenes.
+            byteCost: (imageData?.data?.byteLength || 0)
+                + this.estimateSceneStateByteLength(sceneState)
         };
     }
 
@@ -132,10 +179,25 @@ class HistoryManager {
         for (let i = 0; i < this.history.length; i++) {
             totalBytes += this.getEntryByteLength(this.history[i]);
         }
-        while (totalBytes > this.memoryLimitBytes && this.history.length > 1) {
+        // The newest frame alone can exceed the whole cap: a raster-fallback page
+        // whose session base failed to decode must keep its full composite
+        // bitmap. The cap is then unreachable no matter how much we evict, and
+        // evicting to a single entry — what this loop used to do — destroys the
+        // undo stack while saving nothing. In that case fall back to bounding
+        // only the *older* entries, so undo survives and memory stays capped.
+        const newestBytes = this.history.length
+            ? this.getEntryByteLength(this.history[this.history.length - 1])
+            : 0;
+        const budget = newestBytes > this.memoryLimitBytes
+            ? newestBytes + this.OVERSIZE_TAIL_RESERVE_BYTES
+            : this.memoryLimitBytes;
+
+        while (totalBytes > budget && this.history.length > 1) {
             totalBytes -= this.getEntryByteLength(this.history[0]);
             this.history.shift();
-            this.historyStep--;
+            if (this.historyStep > 0) {
+                this.historyStep--;
+            }
         }
     }
     

@@ -349,6 +349,142 @@ function testOversizeHistoryEntriesPreserveUndoWithSceneStateOnly() {
   assert.equal(history.history.every((entry) => entry.hasSceneState && !entry.imageData), true, 'oversize entries should drop full bitmap data');
 }
 
+function testIrreducibleOversizeFramePreservesCheapUndoHistory() {
+  const HistoryManager = loadHistoryManagerClass();
+  const canvas = { width: 100, height: 100 };
+  let bitmapBytes = 4 * 100 * 100;
+  const ctx = {
+    getImageData() {
+      return { width: canvas.width, height: canvas.height, data: { byteLength: bitmapBytes } };
+    },
+    putImageData() {}
+  };
+
+  const history = new HistoryManager(canvas, ctx);
+  history.setSceneStateHandlers({
+    capture: () => ({ strokes: [], stampedImages: [] }),
+    restore() {}
+  });
+
+  for (let i = 0; i < 10; i += 1) {
+    history.saveState();
+  }
+  assert.equal(history.history.length, 10, 'small states should all be retained');
+
+  // A raster-fallback page must keep a composite bitmap larger than the whole
+  // memory cap. Evicting the cheap older entries cannot get under budget, so
+  // it must not happen at all.
+  history.setSceneStateHandlers({
+    capture: () => ({ strokes: [], stampedImages: [], requiresHistoryBitmap: true }),
+    restore() {}
+  });
+  bitmapBytes = 200 * 1024 * 1024;
+  history.saveState();
+
+  assert.equal(history.history.length, 11, 'an irreducible oversize frame must not wipe cheap undo history');
+  assert.equal(history.canUndo(), true, 'undo must survive a single oversize frame');
+  assert.equal(history.historyStep >= 0, true, 'historyStep must never go negative');
+
+  // Genuine pressure still trims: repeated oversize frames are each large
+  // enough that evicting the oldest meaningfully reduces the overage.
+  for (let i = 0; i < 3; i += 1) {
+    history.saveState();
+  }
+  assert.equal(history.history.length < 11, true, 'repeated oversize frames must still evict older entries');
+}
+
+function testTextSelectionBoundsMeasureWithQuotedCustomFontFamily() {
+  const SelectionManager = loadSelectionManagerClass();
+
+  // A custom font uploaded as "2024新字体.ttf" keeps that raw family name. Left
+  // unquoted it makes the CSS font shorthand invalid, so a real canvas silently
+  // ignores the assignment and measures with the previously active font.
+  const normalizeFontFamilyForCanvas = (family) => `"${family}"`;
+
+  const assignedFonts = [];
+  const selection = {
+    ctx: {
+      set font(value) {
+        assignedFonts.push(value);
+      },
+      get font() {
+        return assignedFonts[assignedFonts.length - 1] || '';
+      },
+      measureText: (line) => ({ width: line.length * 10 })
+    },
+    textManager: {
+      normalizeFontFamilyForCanvas,
+      textObjects: [{
+        text: 'abc',
+        x: 0,
+        y: 0,
+        fontSize: 24,
+        scale: 1,
+        fontFamily: '2024新字体'
+      }]
+    },
+    TEXT_LINE_HEIGHT: 1.2,
+    TEXT_BOUNDS_PADDING: 4,
+    buildTextFontString: SelectionManager.prototype.buildTextFontString
+  };
+
+  const bounds = SelectionManager.prototype.getTextObjectBounds.call(selection, 0);
+
+  assert.ok(bounds, 'text bounds should be produced');
+  assert.equal(
+    assignedFonts.some((font) => font.includes('"2024新字体"')),
+    true,
+    'selection bounds must measure with the quoted family the render path uses'
+  );
+  assert.equal(
+    assignedFonts.some((font) => /\d+px 2024新字体$/.test(font)),
+    false,
+    'selection bounds must never measure with an unquoted custom family'
+  );
+}
+
+function testSceneStateBytesCountTowardHistoryMemoryCap() {
+  const HistoryManager = loadHistoryManagerClass();
+  const canvas = { width: 1, height: 1 };
+  const ctx = {
+    getImageData() {
+      // Oversize bitmap with scene state present, so createHistoryEntry drops
+      // the bitmap and the scene becomes the only memory the entry holds.
+      return { width: 8192, height: 4096, data: { byteLength: 8192 * 4096 * 4 } };
+    },
+    putImageData() {}
+  };
+
+  const history = new HistoryManager(canvas, ctx);
+  const heavyDataUrl = `data:image/png;base64,${'A'.repeat(4 * 1024 * 1024)}`;
+  history.setSceneStateHandlers({
+    capture: () => ({
+      strokes: [],
+      textObjects: [],
+      stampedImages: [{ dataUrl: heavyDataUrl }]
+    }),
+    restore() {}
+  });
+
+  history.saveState();
+  const entry = history.history[0];
+  assert.equal(entry.imageData, null, 'oversize bitmap should still be dropped');
+  assert.equal(
+    history.getEntryByteLength(entry) > 4 * 1024 * 1024,
+    true,
+    'scene-only entries must report the memory their stamped images hold, not zero'
+  );
+
+  for (let i = 0; i < 40; i += 1) {
+    history.saveState();
+  }
+  assert.equal(
+    history.history.length < 40,
+    true,
+    'scene-heavy history must be trimmed by the memory cap instead of growing to maxHistory'
+  );
+}
+
 function testRenderQualityCancelsStaleTimerAndDefersDuringDrawing() {
   const timers = [];
   let cleared = 0;
@@ -1079,6 +1215,9 @@ function testStrokeRotationStateStaysConsistentAcrossDragFlipResize() {
 async function main() {
   testHistoryRestoresMismatchedImageDataWithoutDirectPut();
   testOversizeHistoryEntriesPreserveUndoWithSceneStateOnly();
+  testIrreducibleOversizeFramePreservesCheapUndoHistory();
+  testSceneStateBytesCountTowardHistoryMemoryCap();
+  testTextSelectionBoundsMeasureWithQuotedCustomFontFamily();
   testRenderQualityCancelsStaleTimerAndDefersDuringDrawing();
   testSyncSnapshotOmitsLargeLocalStorageFields();
   testPastingSelectionSwitchesToSelectTool();
