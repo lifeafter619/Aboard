@@ -197,7 +197,81 @@
         return { dx, dy, guides };
     }
 
-    const api = { computeAlignment, COINCIDENCE_EPSILON };
+    // WCAG 2.2 SC 1.4.11 non-text contrast. A guide the teacher cannot see on
+    // a chalkboard background is the same as no guide at all.
+    const MIN_GUIDE_CONTRAST = 3;
+    const CASING_LIGHT = '#ffffff';
+    const CASING_DARK = '#111827';
+
+    function relativeLuminance(rgb) {
+        const toLinear = (component) => {
+            const channel = Math.max(0, Math.min(255, component)) / 255;
+            return channel <= 0.04045
+                ? channel / 12.92
+                : ((channel + 0.055) / 1.055) ** 2.4;
+        };
+        return 0.2126 * toLinear(rgb[0])
+            + 0.7152 * toLinear(rgb[1])
+            + 0.0722 * toLinear(rgb[2]);
+    }
+
+    function parseColor(value) {
+        if (Array.isArray(value)) {
+            return value.length >= 3 && value.slice(0, 3).every(isFiniteNumber)
+                ? [value[0], value[1], value[2]]
+                : null;
+        }
+        if (typeof value !== 'string') return null;
+        const hex = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value.trim());
+        if (hex) {
+            const digits = hex[1].length === 3
+                ? hex[1].split('').map((c) => c + c).join('')
+                : hex[1];
+            return [
+                parseInt(digits.slice(0, 2), 16),
+                parseInt(digits.slice(2, 4), 16),
+                parseInt(digits.slice(4, 6), 16)
+            ];
+        }
+        const rgb = /rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i.exec(value);
+        return rgb ? [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])] : null;
+    }
+
+    function contrastRatio(colorA, colorB) {
+        const a = parseColor(colorA);
+        const b = parseColor(colorB);
+        if (!a || !b) return 1;
+        const la = relativeLuminance(a);
+        const lb = relativeLuminance(b);
+        return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+    }
+
+    /**
+     * Casing colour to stroke *under* the guide so it stays visible on any
+     * background. Returns null when the guide colour already clears
+     * MIN_GUIDE_CONTRAST on its own, so light and dark boards keep the plain
+     * single-pixel line they have today.
+     */
+    function pickGuideCasing(guideColor, backgroundColor) {
+        const background = parseColor(backgroundColor);
+        if (!background) return null;
+        if (contrastRatio(guideColor, background) >= MIN_GUIDE_CONTRAST) {
+            return null;
+        }
+        const light = contrastRatio(CASING_LIGHT, background);
+        const dark = contrastRatio(CASING_DARK, background);
+        return light >= dark ? CASING_LIGHT : CASING_DARK;
+    }
+
+    const api = {
+        computeAlignment,
+        pickGuideCasing,
+        contrastRatio,
+        relativeLuminance,
+        parseColor,
+        MIN_GUIDE_CONTRAST,
+        COINCIDENCE_EPSILON
+    };
 
     if (globalScope) {
         globalScope.AboardAlignmentGuides = api;

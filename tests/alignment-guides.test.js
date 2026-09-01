@@ -1,7 +1,12 @@
 const assert = require('node:assert/strict');
 const path = require('node:path');
 
-const { computeAlignment } = require(path.join(__dirname, '..', 'js', 'modules', 'alignment-guides.js'));
+const {
+  computeAlignment,
+  pickGuideCasing,
+  contrastRatio,
+  parseColor
+} = require(path.join(__dirname, '..', 'js', 'modules', 'alignment-guides.js'));
 
 function testNoTargetsMeansNoSnap() {
   const result = computeAlignment({ x: 0, y: 0, width: 10, height: 10 }, []);
@@ -168,7 +173,99 @@ function testGuidesAreDeduplicated() {
   assert.equal(new Set(keys).size, keys.length, 'identical guides must be collapsed');
 }
 
+// --- guide contrast against the board it is drawn on ---
+
+const GUIDE = '#f43f5e';
+
+// The four dark presets in index.html the guide colour cannot carry alone.
+function testFailingBackgroundsGetACasing() {
+  for (const bg of ['#2d5016', '#4a7c59', '#654321', '#8B4513']) {
+    const casing = pickGuideCasing(GUIDE, bg);
+    assert.ok(casing, `${bg} must get a casing (guide alone is under 3:1)`);
+    assert.ok(
+      contrastRatio(casing, bg) >= 3,
+      `casing on ${bg} must itself clear 3:1, got ${contrastRatio(casing, bg).toFixed(2)}`
+    );
+  }
+}
+
+// No casing where the plain line already passes, so light and dark boards keep
+// exactly the look they ship with today.
+function testPassingBackgroundsStayPlain() {
+  for (const bg of ['#ffffff', '#f5f5f5', '#fffef0', '#000000']) {
+    assert.equal(pickGuideCasing(GUIDE, bg), null, `${bg} needs no casing`);
+    assert.ok(contrastRatio(GUIDE, bg) >= 3, `${bg} should already pass`);
+  }
+}
+
+// Every preset ends up perceivable one way or the other.
+function testEveryPresetEndsUpVisible() {
+  const presets = ['#ffffff', '#f5f5f5', '#fffef0', '#000000',
+    '#2d5016', '#4a7c59', '#654321', '#8B4513'];
+  for (const bg of presets) {
+    const casing = pickGuideCasing(GUIDE, bg);
+    const best = Math.max(
+      contrastRatio(GUIDE, bg),
+      casing ? contrastRatio(casing, bg) : 0
+    );
+    assert.ok(best >= 3, `${bg} guide is invisible at ${best.toFixed(2)}:1`);
+  }
+}
+
+function testCasingPicksTheBetterOfLightAndDark() {
+  // A mid-tone the guide fails, where dark wins over light.
+  const midPink = '#e8909f';
+  const casing = pickGuideCasing(GUIDE, midPink);
+  assert.ok(casing, 'a guide-coloured background must get a casing');
+  assert.ok(
+    contrastRatio(casing, midPink) >= contrastRatio(
+      casing === '#ffffff' ? '#111827' : '#ffffff', midPink),
+    'must pick whichever of light/dark contrasts more'
+  );
+}
+
+// Sampled pixels arrive as an [r,g,b] array, not a hex string.
+function testSampledRgbArrayIsAccepted() {
+  assert.equal(pickGuideCasing(GUIDE, [74, 124, 89]), '#ffffff',
+    'an [r,g,b] sample of the green board must resolve a casing');
+  assert.equal(pickGuideCasing(GUIDE, [255, 255, 255]), null,
+    'an [r,g,b] white sample needs no casing');
+}
+
+function testColorParsingAcceptsCssForms() {
+  assert.deepEqual(parseColor('#2d5016'), [45, 80, 22], '6-digit hex');
+  assert.deepEqual(parseColor('#fff'), [255, 255, 255], '3-digit hex expands');
+  assert.deepEqual(parseColor('rgb(45, 80, 22)'), [45, 80, 22], 'rgb()');
+  assert.deepEqual(parseColor('rgba(45, 80, 22, 0.5)'), [45, 80, 22], 'rgba()');
+}
+
+// A colour we cannot read must not silently produce a wrong casing; falling
+// back to no casing keeps today's behaviour instead of guessing.
+function testUnparseableBackgroundYieldsNoCasing() {
+  for (const bad of ['not-a-color', '', null, undefined, {}, [1, 2]]) {
+    assert.equal(pickGuideCasing(GUIDE, bad), null,
+      `unreadable background ${JSON.stringify(bad)} must yield no casing`);
+  }
+}
+
+function testContrastRatioMatchesWcagAnchors() {
+  assert.ok(Math.abs(contrastRatio('#000000', '#ffffff') - 21) < 0.01,
+    'black on white is 21:1');
+  assert.ok(Math.abs(contrastRatio('#ffffff', '#ffffff') - 1) < 0.001,
+    'a colour against itself is 1:1');
+  assert.ok(Math.abs(contrastRatio('#000000', '#ffffff')
+    - contrastRatio('#ffffff', '#000000')) < 0.001, 'ratio is symmetric');
+}
+
 function main() {
+  testFailingBackgroundsGetACasing();
+  testPassingBackgroundsStayPlain();
+  testEveryPresetEndsUpVisible();
+  testCasingPicksTheBetterOfLightAndDark();
+  testSampledRgbArrayIsAccepted();
+  testColorParsingAcceptsCssForms();
+  testUnparseableBackgroundYieldsNoCasing();
+  testContrastRatioMatchesWcagAnchors();
   testNoTargetsMeansNoSnap();
   testLeftEdgeSnapsToLeftEdge();
   testCenterSnapsToCenter();

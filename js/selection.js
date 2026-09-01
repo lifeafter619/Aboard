@@ -59,6 +59,7 @@ class SelectionManager {
         this.alignmentSnapBounds = null;
         this.alignmentSnapTargets = null;
         this.alignmentGuideOverlay = null;
+        this.alignmentGuideCasing = null;
         this.MIN_SIZE = 10;
         this.TEXT_LINE_HEIGHT = 1.2; // Aligns with insert-text line height calculation.
         this.TEXT_BOUNDS_PADDING = 4;
@@ -4344,6 +4345,63 @@ class SelectionManager {
 
         this.alignmentSnapBounds = { ...bounds };
         this.alignmentSnapTargets = this.collectAlignmentTargets();
+        this.alignmentGuideCasing = this.resolveAlignmentGuideCasing();
+    }
+
+    // The guide colour is fixed, but the board behind it is not: on the green
+    // and brown chalkboard presets #f43f5e measures ~1.3:1 to ~2.5:1, well under
+    // the 3:1 non-text minimum, so the guide was effectively invisible exactly
+    // where teachers use it. Sample the painted background once per gesture and
+    // pick a casing to stroke underneath when the guide cannot carry itself.
+    // Sampling pixels (not the configured colour) means background *images*
+    // are covered too.
+    // ponytail: 9-point grid average, not a per-guide local sample. A photo
+    // background with extreme light and dark regions gets one casing for the
+    // whole canvas; revisit only if that shows up in practice.
+    resolveAlignmentGuideCasing() {
+        const helper = window.AboardAlignmentGuides?.pickGuideCasing;
+        if (!helper) return null;
+        const guideColor = this.ALIGNMENT_GUIDE_COLOR || '#f43f5e';
+        return helper(guideColor, this.sampleBackgroundColor());
+    }
+
+    sampleBackgroundColor() {
+        const bgCanvas = this.drawingBoard?.bgCanvas
+            || (typeof document !== 'undefined'
+                ? document.getElementById?.('background-canvas')
+                : null);
+        const width = bgCanvas?.width || 0;
+        const height = bgCanvas?.height || 0;
+        if (width > 0 && height > 0) {
+            try {
+                const ctx = bgCanvas.getContext('2d');
+                let r = 0, g = 0, b = 0, counted = 0;
+                for (const fx of [0.15, 0.5, 0.85]) {
+                    for (const fy of [0.15, 0.5, 0.85]) {
+                        const px = ctx.getImageData(
+                            Math.min(width - 1, Math.floor(width * fx)),
+                            Math.min(height - 1, Math.floor(height * fy)),
+                            1, 1
+                        ).data;
+                        // Skip transparent samples: an unpainted background
+                        // canvas shows the page behind it, not black.
+                        if (px[3] < 8) continue;
+                        r += px[0]; g += px[1]; b += px[2];
+                        counted++;
+                    }
+                }
+                if (counted > 0) {
+                    return [
+                        Math.round(r / counted),
+                        Math.round(g / counted),
+                        Math.round(b / counted)
+                    ];
+                }
+            } catch (error) {
+                // Tainted canvas: fall through to the configured colour.
+            }
+        }
+        return this.drawingBoard?.backgroundManager?.backgroundColor || '#ffffff';
     }
 
     applyAlignmentSnap(deltaX, deltaY, scaleX = 1) {
@@ -4372,6 +4430,7 @@ class SelectionManager {
         this.alignmentGuides = [];
         this.alignmentSnapBounds = null;
         this.alignmentSnapTargets = null;
+        this.alignmentGuideCasing = null;
         const overlay = this.alignmentGuideOverlay;
         if (overlay) {
             overlay.style.display = 'none';
@@ -4395,9 +4454,6 @@ class SelectionManager {
             overlay.id = 'alignment-guide-overlay';
             overlay.setAttribute('aria-hidden', 'true');
             overlay.style.position = 'absolute';
-            overlay.style.inset = '0';
-            overlay.style.width = '100%';
-            overlay.style.height = '100%';
             overlay.style.pointerEvents = 'none';
             // Above the drawing canvas (z-index 2), below the control box UI.
             overlay.style.zIndex = '3';
@@ -4408,7 +4464,27 @@ class SelectionManager {
         }
 
         this.alignmentGuideOverlay = overlay;
+        this.syncAlignmentOverlayBox(overlay);
         return overlay;
+    }
+
+    // The overlay shares #transform-layer with the drawing canvas, but the layer
+    // is viewport-sized while the canvas is the board's own size (1920 vs 1280
+    // CSS px at a typical 1080p window). Sizing the overlay to the *layer* with
+    // inset:0/100% therefore stretched its 1280-wide coordinate space across a
+    // 1920-wide box, drawing every guide ~1.5x out from the edge it marks. Match
+    // the canvas's layout box instead, and re-sync on each render because the
+    // canvas resizes with the window, the zoom level and page changes.
+    syncAlignmentOverlayBox(overlay) {
+        const canvas = this.canvas;
+        if (!overlay || !canvas) return;
+        const width = canvas.offsetWidth;
+        const height = canvas.offsetHeight;
+        if (!(width > 0) || !(height > 0)) return;
+        overlay.style.left = `${canvas.offsetLeft}px`;
+        overlay.style.top = `${canvas.offsetTop}px`;
+        overlay.style.width = `${width}px`;
+        overlay.style.height = `${height}px`;
     }
 
     renderAlignmentGuides() {
@@ -4427,6 +4503,9 @@ class SelectionManager {
         const ctx = overlay?.getContext?.('2d');
         if (!ctx) return;
 
+        // Cheap, and the canvas box can change between gestures.
+        this.syncAlignmentOverlayBox(overlay);
+
         if (overlay.width !== this.canvas.width || overlay.height !== this.canvas.height) {
             overlay.width = this.canvas.width;
             overlay.height = this.canvas.height;
@@ -4442,25 +4521,37 @@ class SelectionManager {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, overlay.width, overlay.height);
         ctx.scale(ratio, ratio);
-        ctx.strokeStyle = this.ALIGNMENT_GUIDE_COLOR || '#f43f5e';
-        ctx.lineWidth = 1;
         ctx.setLineDash([5, 4]);
 
-        for (const guide of guides) {
-            ctx.beginPath();
-            if (guide.axis === 'x') {
-                // Half-pixel offset keeps a 1px line crisp instead of blurred
-                // across two device pixels.
-                const x = Math.round(guide.position) + 0.5;
-                ctx.moveTo(x, guide.start);
-                ctx.lineTo(x, guide.end);
-            } else {
-                const y = Math.round(guide.position) + 0.5;
-                ctx.moveTo(guide.start, y);
-                ctx.lineTo(guide.end, y);
+        const tracePaths = () => {
+            for (const guide of guides) {
+                ctx.beginPath();
+                if (guide.axis === 'x') {
+                    // Half-pixel offset keeps a 1px line crisp instead of
+                    // blurred across two device pixels.
+                    const x = Math.round(guide.position) + 0.5;
+                    ctx.moveTo(x, guide.start);
+                    ctx.lineTo(x, guide.end);
+                } else {
+                    const y = Math.round(guide.position) + 0.5;
+                    ctx.moveTo(guide.start, y);
+                    ctx.lineTo(guide.end, y);
+                }
+                ctx.stroke();
             }
-            ctx.stroke();
+        };
+
+        // Casing first, so the coloured core sits inside it. Only present when
+        // the guide colour alone fails contrast against this background.
+        if (this.alignmentGuideCasing) {
+            ctx.strokeStyle = this.alignmentGuideCasing;
+            ctx.lineWidth = 3;
+            tracePaths();
         }
+
+        ctx.strokeStyle = this.ALIGNMENT_GUIDE_COLOR || '#f43f5e';
+        ctx.lineWidth = 1;
+        tracePaths();
 
         ctx.restore();
         overlay.style.display = 'block';

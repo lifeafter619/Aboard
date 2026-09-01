@@ -35,9 +35,17 @@ function loadSelectionManagerClass({ alignmentGuidesEnabled = true } = {}) {
 }
 
 // Minimal stand-in with just the collaborators the snap path touches.
-function makeSelection(SelectionManager, { images = [], selectedIndex = 0 } = {}) {
+function makeSelection(
+  SelectionManager,
+  { images = [], selectedIndex = 0, backgroundColor = '#ffffff' } = {}
+) {
   const proto = SelectionManager.prototype;
   return {
+    drawingBoard: { bgCanvas: null, backgroundManager: { backgroundColor } },
+    ALIGNMENT_GUIDE_COLOR: '#f43f5e',
+    alignmentGuideCasing: null,
+    resolveAlignmentGuideCasing: proto.resolveAlignmentGuideCasing,
+    sampleBackgroundColor: proto.sampleBackgroundColor,
     canvas: { offsetWidth: 1000, offsetHeight: 600, width: 1000, height: 600 },
     selectionType: 'image',
     selectedIndex,
@@ -251,7 +259,158 @@ function testClearSelectionAlsoClearsGuides() {
     'clearSelection must clear guides so a cancelled gesture cannot leave one on screen');
 }
 
+// A guide that snaps correctly but cannot be seen is still a broken guide, so
+// the casing has to be resolved as part of starting the gesture.
+function testCasingIsResolvedForLowContrastBoards() {
+  const SelectionManager = loadSelectionManagerClass();
+  const images = [
+    { x: 100, y: 100, width: 50, height: 50 },
+    { x: 300, y: 100, width: 50, height: 50 }
+  ];
+
+  const onGreen = makeSelection(SelectionManager, { images, backgroundColor: '#2d5016' });
+  onGreen.beginAlignmentSnapping();
+  assert.equal(onGreen.alignmentGuideCasing, '#ffffff',
+    'the green chalkboard must resolve a light casing');
+
+  const onWhite = makeSelection(SelectionManager, { images, backgroundColor: '#ffffff' });
+  onWhite.beginAlignmentSnapping();
+  assert.equal(onWhite.alignmentGuideCasing, null,
+    'a white board must stay plain, with no casing');
+}
+
+function testClearResetsTheCasingToo() {
+  const SelectionManager = loadSelectionManagerClass();
+  const images = [
+    { x: 100, y: 100, width: 50, height: 50 },
+    { x: 300, y: 100, width: 50, height: 50 }
+  ];
+  const selection = makeSelection(SelectionManager, { images, backgroundColor: '#2d5016' });
+  selection.beginAlignmentSnapping();
+  assert.equal(selection.alignmentGuideCasing, '#ffffff', 'casing present first');
+  selection.clearAlignmentGuides();
+  assert.equal(selection.alignmentGuideCasing, null,
+    'a stale casing must not survive into the next gesture on another page');
+}
+
+// Sampling the painted pixels rather than the configured colour is what makes
+// background *images* work; assert the read path and its guards.
+function testBackgroundIsSampledFromPaintedPixels() {
+  const SelectionManager = loadSelectionManagerClass();
+  const selection = makeSelection(SelectionManager, { backgroundColor: '#ffffff' });
+  const reads = [];
+  selection.drawingBoard.bgCanvas = {
+    width: 100, height: 100,
+    getContext: () => ({
+      getImageData: (x, y) => {
+        reads.push([x, y]);
+        return { data: [45, 80, 22, 255] };
+      }
+    })
+  };
+  // Built inside the vm realm, so compare by value rather than deepEqual.
+  const sampled = selection.sampleBackgroundColor();
+  assert.equal(Array.from(sampled).join(','), '45,80,22',
+    'must average the sampled pixels, not read backgroundColor');
+  assert.equal(reads.length, 9, 'samples a 3x3 grid once, not per pointermove');
+  assert.ok(reads.every(([x, y]) => x < 100 && y < 100),
+    'samples must stay inside the canvas bounds');
+}
+
+function testTransparentBackgroundFallsBackToConfiguredColour() {
+  const SelectionManager = loadSelectionManagerClass();
+  const selection = makeSelection(SelectionManager, { backgroundColor: '#2d5016' });
+  selection.drawingBoard.bgCanvas = {
+    width: 100, height: 100,
+    getContext: () => ({ getImageData: () => ({ data: [0, 0, 0, 0] }) })
+  };
+  // An unpainted background canvas is transparent, not black; treating alpha 0
+  // as black would pick a casing for a board that is actually light.
+  assert.equal(selection.sampleBackgroundColor(), '#2d5016',
+    'transparent samples must fall back to the configured colour');
+}
+
+function testTaintedCanvasDoesNotBreakDragging() {
+  const SelectionManager = loadSelectionManagerClass();
+  const selection = makeSelection(SelectionManager, { backgroundColor: '#4a7c59' });
+  selection.drawingBoard.bgCanvas = {
+    width: 100, height: 100,
+    getContext: () => ({
+      getImageData: () => { throw new Error('SecurityError'); }
+    })
+  };
+  assert.equal(selection.sampleBackgroundColor(), '#4a7c59',
+    'a cross-origin background must not throw out of the drag path');
+}
+
+function testRenderStrokesCasingBeneathTheCore() {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'selection.js'), 'utf8');
+  const render = src.slice(src.indexOf('    renderAlignmentGuides() {'));
+  const body = render.slice(0, render.indexOf('\n    }\n'));
+  const casingIndex = body.indexOf('this.alignmentGuideCasing');
+  const coreIndex = body.indexOf('this.ALIGNMENT_GUIDE_COLOR');
+  assert.ok(casingIndex > -1, 'render must consider the casing');
+  assert.ok(coreIndex > -1, 'render must still stroke the core colour');
+  assert.ok(casingIndex < coreIndex,
+    'casing must be stroked before the core so the core sits inside it');
+  assert.match(body, /lineWidth = 3/,
+    'the casing must be wider than the core to show as an outline');
+}
+
+// The overlay draws in the canvas's coordinate space, so its CSS box has to be
+// the canvas's box. It shares #transform-layer with the canvas, and that layer
+// is viewport-sized: sizing the overlay to the layer (inset:0 / 100%) stretched
+// 1280 internal px across a 1920 px box and put every guide ~1.5x out from the
+// edge it marked. Guides were visually wrong on every board because of it.
+function testOverlayBoxTracksTheCanvasNotTheLayer() {
+  const SelectionManager = loadSelectionManagerClass();
+  const selection = makeSelection(SelectionManager);
+  // Canvas smaller than its parent layer, and offset inside it.
+  selection.canvas = {
+    offsetLeft: 12, offsetTop: 34, offsetWidth: 1280, offsetHeight: 720,
+    width: 1280, height: 720
+  };
+  const style = {};
+  SelectionManager.prototype.syncAlignmentOverlayBox.call(selection, { style });
+
+  assert.equal(style.width, '1280px', 'overlay width must match the canvas, not the layer');
+  assert.equal(style.height, '720px', 'overlay height must match the canvas');
+  assert.equal(style.left, '12px', 'overlay must sit at the canvas offset');
+  assert.equal(style.top, '34px', 'overlay must sit at the canvas offset');
+  assert.notEqual(style.width, '100%', 'percentage sizing resolves against the layer');
+}
+
+function testOverlayBoxIsResyncedOnEveryRender() {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'selection.js'), 'utf8');
+  const render = src.slice(src.indexOf('    renderAlignmentGuides() {'));
+  const body = render.slice(0, render.indexOf('\n    }\n'));
+  assert.match(body, /syncAlignmentOverlayBox\(/,
+    'render must re-sync the box; the canvas resizes with window, zoom and page changes');
+  // A stale percentage rule would silently reintroduce the stretch.
+  assert.ok(!/style\.width\s*=\s*'100%'/.test(src),
+    'the overlay must never be sized as a percentage of its parent layer');
+}
+
+function testOverlayBoxSyncIgnoresAnUnmeasuredCanvas() {
+  const SelectionManager = loadSelectionManagerClass();
+  const selection = makeSelection(SelectionManager);
+  selection.canvas = { offsetLeft: 0, offsetTop: 0, offsetWidth: 0, offsetHeight: 0 };
+  const style = {};
+  SelectionManager.prototype.syncAlignmentOverlayBox.call(selection, { style });
+  assert.deepEqual(Object.keys(style), [],
+    'a canvas with no layout box yet must not be written as 0px and freeze the overlay');
+}
+
 function main() {
+  testOverlayBoxTracksTheCanvasNotTheLayer();
+  testOverlayBoxIsResyncedOnEveryRender();
+  testOverlayBoxSyncIgnoresAnUnmeasuredCanvas();
+  testCasingIsResolvedForLowContrastBoards();
+  testClearResetsTheCasingToo();
+  testBackgroundIsSampledFromPaintedPixels();
+  testTransparentBackgroundFallsBackToConfiguredColour();
+  testTaintedCanvasDoesNotBreakDragging();
+  testRenderStrokesCasingBeneathTheCore();
   testSnapPullsDeltaOntoNeighbourEdge();
   testDraggedObjectIsNotItsOwnTarget();
   testDisabledSettingSkipsSnapEntirely();
