@@ -1,6 +1,6 @@
 # 已知问题与审查归档
 
-最后核验：2026-07-27
+最后核验：2026-09-01
 
 ## 当前状态
 
@@ -14,6 +14,25 @@
 - 公告内容目前由 `js/features/announcement/announcement-manager.js` 内的本地化资源管理，不存在独立的远程公告配置源。
 
 发现新问题时，应先添加最小复现测试，再在本文件的“当前状态”下记录适用环境、复现步骤和影响范围。
+
+## 2026-09-01 审计归档
+
+对撤销历史、选区测量与字体路径做了一轮定向审计，修复 3 项缺陷，提交于 `51e5f7a`。三项都先写失败测试再改实现，并逐个回退实现确认测试会红。
+
+| 范围 | 问题 | 回归测试 |
+| --- | --- | --- |
+| 撤销历史 | `trimToMemoryLimit` 从头无条件淘汰到只剩 1 条。当最新一帧自身超过 `memoryLimitBytes`（raster fallback 页面必须保留完整合成位图）时，上限无论怎么淘汰都追不上，于是整个撤销栈被清空且一个字节都没省下 | `known-issues-regression.test.js` |
+| 撤销历史 | `getEntryByteLength` 只数位图字节，而 `createHistoryEntry` 会主动丢弃超过 `singleBitmapMemoryLimitBytes` 的位图、只留场景；场景携带 `stampedImages` 的 data URL 与笔迹点数组，却按 0 字节记账，上限形同虚设 | `known-issues-regression.test.js` |
+| 文字选区 | `buildTextFontString` 把未加引号的自定义字体名拼进 CSS font shorthand。字体名直接取自上传文件名，`2024新字体` 这类不是合法 CSS 标识符，整条声明失效、`ctx.font` 赋值被静默忽略，于是用上一个字体测量，选框与实际渲染错位。渲染路径已走 `normalizeFontFamilyForCanvas`，测量改为复用同一函数。与 `b71c7b4` 同类，当时只修了 drawing.js 的 SVG 路径 | `known-issues-regression.test.js` |
+
+同轮新增智能对齐参考线，提交于 `7f10c96`（`js/modules/alignment-guides.js` + `js/selection.js` 接线）。几何为纯函数、不碰 DOM；参考线画在 `#transform-layer` 内的独立 overlay canvas 上，因此不会进入历史快照与导出位图，`stopDrag` 在任何保存前清除，`clearSelection` 也清除以覆盖 pointercancel 与翻页。
+
+已知边界：
+- 旋转过的对象在吸附中被双向排除——其轴对齐外接框与视觉边缘不一致，画出来的参考线会指向空处。
+- 背景图与坐标点不参与吸附，它们各自有自己的坐标系。
+- 参考线的视觉观感（虚线间距、深色背景下 `#f43f5e` 的对比度）只验证了坐标与图层正确，尚未在真实一体机上目视确认。
+
+本轮验证基线：core 53 项、full 100 项（含真实 Chromium 绘图冒烟与 8 视口 × 15 状态响应式检查）、静态发布构建、真实 Chromium 下的对齐吸附与 overlay 图层检查。
 
 ## 2026-07-27 桌面快照审计归档
 
