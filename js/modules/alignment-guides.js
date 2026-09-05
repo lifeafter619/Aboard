@@ -222,11 +222,16 @@
                 : null;
         }
         if (typeof value !== 'string') return null;
-        const hex = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value.trim());
+        // 3/4-digit shorthand expands; 6/8-digit reads the RGB pairs and ignores
+        // any alpha, so an #rrggbbaa background still gets a contrast check.
+        const hex = /^#?([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(value.trim());
         if (hex) {
-            const digits = hex[1].length === 3
-                ? hex[1].split('').map((c) => c + c).join('')
-                : hex[1];
+            let digits = hex[1];
+            if (digits.length <= 4) {
+                digits = digits.slice(0, 3).split('').map((c) => c + c).join('');
+            } else {
+                digits = digits.slice(0, 6);
+            }
             return [
                 parseInt(digits.slice(0, 2), 16),
                 parseInt(digits.slice(2, 4), 16),

@@ -94,7 +94,7 @@ function getCacheKeyGroups() {
         const settingsKeyPrefixes = ['scoreboard_data_'];
         const canvasKeys = new Set([
             'savedCanvasData', 'savedBgCanvasData', 'savedCanvasTimestamp',
-            'savedCurrentPage', 'pageBackgrounds', 'pageScenes',
+            'savedCurrentPage', 'pageBackgrounds', 'sharedPageBackgroundImages', 'pageScenes',
             'backgroundColor', 'backgroundPattern', 'bgOpacity',
             'patternIntensity', 'patternDensity',
             'backgroundImageData', 'backgroundImageConfirmed',

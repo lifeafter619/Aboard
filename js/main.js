@@ -266,6 +266,26 @@ class DrawingBoard {
                 console.warn('Failed to load page backgrounds:', e);
             }
         }
+
+        // Shared store backing the compact "shared:<fingerprint>" references
+        // that pageBackgrounds entries use for large image payloads (see
+        // pagination-runtime.js). Kept separate so N pages cost one payload.
+        this.sharedPageBackgroundImages = new Map();
+        const savedSharedBackgroundImages = safeMainStorageGetItem('sharedPageBackgroundImages');
+        if (savedSharedBackgroundImages) {
+            try {
+                const parsedSharedImages = JSON.parse(savedSharedBackgroundImages);
+                if (parsedSharedImages && typeof parsedSharedImages === 'object' && !Array.isArray(parsedSharedImages)) {
+                    Object.entries(parsedSharedImages).forEach(([signature, dataUrl]) => {
+                        if (typeof dataUrl === 'string' && dataUrl) {
+                            this.sharedPageBackgroundImages.set(signature, dataUrl);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn('Failed to load shared page background images:', e);
+            }
+        }
         
         // Pinch zoom and pan state
         this.isPinching = false;
@@ -496,6 +516,14 @@ class DrawingBoard {
                 void this.saveSession();
             }
             if (this.suppressBeforeUnloadPrompt) {
+                return undefined;
+            }
+            // An untouched board has nothing to lose; skip the confirmation so
+            // quick open/close cycles stay friction-free. Everything that can
+            // hold content (strokes, text, images, background or coordinate
+            // state, extra pages) keeps the prompt.
+            const boardHasContent = !(boardHelpersRuntime.isBoardContentEmpty?.(this) ?? true);
+            if (canPersistSession && !boardHasContent) {
                 return undefined;
             }
             // Show warning message when user tries to refresh or close the page

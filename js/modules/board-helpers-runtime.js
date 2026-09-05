@@ -182,6 +182,70 @@ function persistBoardViewState(board, options = {}) {
     }
 }
 
+// Conservative emptiness check used by the beforeunload prompt: an untouched
+// board has nothing to lose, so the "leave site?" confirmation would be pure
+// friction. Anything that can hold lesson content keeps the prompt — this must
+// stay permissive (err toward "not empty") because a false positive only costs
+// a dialog, while a false negative could wave through a real data loss.
+function isBoardContentEmpty(board) {
+    if (!board || typeof board !== 'object') {
+        return true;
+    }
+
+    const pages = Array.isArray(board.pages) ? board.pages : [];
+    if (pages.length > 1) {
+        return false;
+    }
+
+    const drawingEngine = board.drawingEngine;
+    const hasVectorContent = Boolean(
+        (Array.isArray(drawingEngine?.strokes) && drawingEngine.strokes.length > 0)
+        || (Array.isArray(drawingEngine?.stampedImages) && drawingEngine.stampedImages.length > 0)
+        || (Array.isArray(board.insertTextManager?.textObjects) && board.insertTextManager.textObjects.length > 0)
+    );
+    if (hasVectorContent) {
+        return false;
+    }
+
+    const sceneHasContent = Boolean(board.pageScenes && Object.values(board.pageScenes).some((scene) => (
+        scene
+        && ((Array.isArray(scene.strokes) && scene.strokes.length > 0)
+            || (Array.isArray(scene.textObjects) && scene.textObjects.length > 0)
+            || (Array.isArray(scene.stampedImages) && scene.stampedImages.length > 0)
+            || (Array.isArray(scene.objectGroups) && scene.objectGroups.length > 0))
+    )));
+    if (sceneHasContent) {
+        return false;
+    }
+
+    const backgroundManager = board.backgroundManager;
+    if (backgroundManager) {
+        if (typeof backgroundManager.hasBackgroundImage === 'function'
+            && backgroundManager.hasBackgroundImage()) {
+            return false;
+        }
+        if (typeof backgroundManager.hasCoordinateSelectableContent === 'function'
+            && backgroundManager.hasCoordinateSelectableContent()) {
+            return false;
+        }
+        const pattern = backgroundManager.backgroundPattern;
+        if (typeof pattern === 'string' && pattern !== 'blank') {
+            return false;
+        }
+        const color = typeof backgroundManager.backgroundColor === 'string'
+            ? backgroundManager.backgroundColor.trim().toLowerCase()
+            : '';
+        if (color && color !== '#ffffff' && color !== '#fff') {
+            return false;
+        }
+        if (backgroundManager.backgroundImageData) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 window.AboardBoardHelpersRuntime = {
     syncEraserSizeControls(board) {
         return syncEraserSizeControls.call(board);
@@ -203,5 +267,8 @@ window.AboardBoardHelpersRuntime = {
     },
     persistViewState(board, options) {
         return persistBoardViewState(board, options);
+    },
+    isBoardContentEmpty(board) {
+        return isBoardContentEmpty(board);
     }
 };

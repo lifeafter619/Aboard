@@ -323,7 +323,19 @@ class ProjectManager {
         }
 
         const pageBackground = this.drawingBoard.pageBackgrounds?.[pageNumber];
-        return pageBackground ? this.cloneSerializable(pageBackground) : null;
+        if (!pageBackground) return null;
+        const resolvedBackground = this.cloneSerializable(pageBackground);
+        // Page entries store compact "shared:<fingerprint>" references (see
+        // pagination-runtime.js); packages must carry the real payload so the
+        // asset store can dedupe it.
+        const resolveSharedBackgroundImage = window.AboardPaginationRuntime?.resolveSharedBackgroundImage;
+        if (typeof resolveSharedBackgroundImage === 'function') {
+            resolvedBackground.backgroundImageData = resolveSharedBackgroundImage(
+                this.drawingBoard,
+                resolvedBackground.backgroundImageData
+            );
+        }
+        return resolvedBackground;
     }
 
     buildExportDescriptor(scope, selectedPages = []) {

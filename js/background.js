@@ -46,6 +46,58 @@ function safeBackgroundStorageRemoveItem(key) {
 
 const BACKGROUND_STORAGE_REMOVE = 'remove';
 
+// Brightness decisions (pattern ink, adaptive colors) used to slice fixed hex
+// offsets, so any non-#rrggbb background ('#fff', 8-digit hex, rgb()/rgba(),
+// CSS keywords, corrupt imports) produced NaN and was misread as dark — white
+// pattern lines on a light board. Parse the formats backgroundColor can
+// realistically carry; unknown values fall back to null and the caller
+// defaults to light.
+const BACKGROUND_COLOR_KEYWORD_CHANNELS = new Map([
+    ['white', [255, 255, 255]],
+    ['black', [0, 0, 0]],
+    ['red', [255, 0, 0]],
+    ['green', [0, 128, 0]],
+    ['blue', [0, 0, 255]],
+    ['yellow', [255, 255, 0]],
+    ['orange', [255, 165, 0]],
+    ['purple', [128, 0, 128]],
+    ['pink', [255, 192, 203]],
+    ['gray', [128, 128, 128]],
+    ['grey', [128, 128, 128]],
+    ['brown', [165, 42, 42]],
+    ['cyan', [0, 255, 255]],
+    ['magenta', [255, 0, 255]],
+    // Transparent shows the page behind, which defaults to white; the theme
+    // color follows the same light default.
+    ['transparent', [255, 255, 255]],
+    ['currentcolor', [255, 255, 255]]
+]);
+
+function parseBackgroundColorChannels(value) {
+    const normalized = String(value ?? '').trim();
+    const hex = /^#?([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(normalized);
+    if (hex) {
+        let digits = hex[1];
+        if (digits.length <= 4) {
+            digits = digits.slice(0, 3).split('').map((character) => character + character).join('');
+        } else {
+            digits = digits.slice(0, 6);
+        }
+        return [
+            parseInt(digits.slice(0, 2), 16),
+            parseInt(digits.slice(2, 4), 16),
+            parseInt(digits.slice(4, 6), 16)
+        ];
+    }
+
+    const rgb = /rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i.exec(normalized);
+    if (rgb) {
+        return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
+    }
+
+    return BACKGROUND_COLOR_KEYWORD_CHANNELS.get(normalized.toLowerCase()) || null;
+}
+
 class BackgroundManager {
     constructor(bgCanvas, bgCtx) {
         this.bgCanvas = bgCanvas;
@@ -3122,9 +3174,14 @@ class BackgroundManager {
     }
     
     isLightBackground() {
-        const r = parseInt(this.backgroundColor.slice(1, 3), 16);
-        const g = parseInt(this.backgroundColor.slice(3, 5), 16);
-        const b = parseInt(this.backgroundColor.slice(5, 7), 16);
+        const channels = parseBackgroundColorChannels(this.backgroundColor);
+        if (!channels) {
+            // Unparseable values (corrupt imports, unknown formats) default to
+            // the light side: the page behind the transparent fill is white,
+            // so the default dark pattern ink stays readable.
+            return true;
+        }
+        const [r, g, b] = channels;
         const brightness = (r * 299 + g * 587 + b * 114) / 1000;
         return brightness > 128;
     }

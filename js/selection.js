@@ -2342,6 +2342,14 @@ class SelectionManager {
         
         const startBounds = this.resizeStartBounds;
         let newBounds = { ...startBounds };
+
+        // Text objects have no width/height of their own — they derive from
+        // fontSize. Scale by the axis the user is actually dragging: corners
+        // and left/right handles follow the width, top/bottom handles the
+        // height, otherwise a vertical drag would only translate the text.
+        const textScaleAxis = this.resizeHandle === 'top' || this.resizeHandle === 'bottom'
+            ? 'height'
+            : 'width';
         
         // Calculate new bounds based on handle
         switch (this.resizeHandle) {
@@ -2422,7 +2430,7 @@ class SelectionManager {
             }
         } else if (this.selectionType === 'text' && this.textManager) {
             const textObj = this.textManager.textObjects[this.selectedIndex];
-            const scaleRatio = newBounds.width / startBounds.width;
+            const scaleRatio = newBounds[textScaleAxis] / Math.max(startBounds[textScaleAxis], 1);
             const minFontSize = (this.textManager && this.textManager.MIN_FONT_SIZE) ? this.textManager.MIN_FONT_SIZE : 12;
             textObj.fontSize = Math.max(minFontSize, startBounds.fontSize * scaleRatio);
             textObj.scale = 1;
@@ -2482,7 +2490,7 @@ class SelectionManager {
                         const textObj = this.textManager.textObjects[start.idx];
                         const relX = (start.x - startBounds.x) / safeStartWidth;
                         const relY = (start.y - startBounds.y) / safeStartHeight;
-                        const scaleRatio = newBounds.width / safeStartWidth;
+                        const scaleRatio = newBounds[textScaleAxis] / Math.max(startBounds[textScaleAxis], 1);
                         const minFontSize = (this.textManager && this.textManager.MIN_FONT_SIZE) ? this.textManager.MIN_FONT_SIZE : 12;
                         textObj.x = newBounds.x + relX * newBounds.width;
                         textObj.y = newBounds.y + relY * newBounds.height;
@@ -4605,7 +4613,11 @@ class SelectionManager {
         );
         const unrotatedBounds = this.getBoundsFromPoints(unrotatedPoints);
         if (!unrotatedBounds) return null;
-        const padding = Number.isFinite(stroke.size) ? stroke.size * 2 : 0;
+        // Keep the padding identical to the unrotated branch (getStrokeBounds):
+        // stroke size on both sides plus the line-style outer extent, so a
+        // rotated multi-line stroke does not get a tighter frame than its ink.
+        const padding = (Number.isFinite(stroke.size) ? stroke.size * 2 : 0)
+            + (this.drawingEngine?.getStrokeStyleOuterExtent?.(stroke) || 0);
         return {
             x: unrotatedBounds.x - padding,
             y: unrotatedBounds.y - padding,

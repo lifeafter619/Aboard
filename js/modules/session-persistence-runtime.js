@@ -319,6 +319,16 @@ function cloneForPersistentSession(value) {
         }
 }
 
+// Page backgrounds keep compact "shared:<fingerprint>" references (see
+// pagination-runtime.js); the payloads travel once alongside them so restore
+// can rebuild the board's shared image pool.
+function snapshotSharedBackgroundImages(board, clone) {
+        if (!(board.sharedPageBackgroundImages instanceof Map) || board.sharedPageBackgroundImages.size === 0) {
+            return undefined;
+        }
+        return clone(Object.fromEntries(board.sharedPageBackgroundImages));
+}
+
 function isCurrentSaveRequest(board, saveRequestId) {
         return saveRequestId === board.sessionSaveRequestId
             && !board.isClearingLocalData
@@ -389,7 +399,8 @@ function buildSyncSnapshot() {
                         ? getSessionPersistenceInlineDataUrlSignature(backgroundImageData)
                         : null,
                     backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder
-                }
+                },
+                sharedPageBackgroundImages: snapshotSharedBackgroundImages(this, cloneForSyncSnapshot)
             };
         } catch (e) {
             console.warn('Failed to build sync session snapshot:', e);
@@ -516,7 +527,8 @@ async function saveSession() {
                 backgroundImageData: this.backgroundManager.backgroundImageData,
                 backgroundOutsideLayerOrder: this.backgroundManager.backgroundOutsideLayerOrder,
                 uploadedImages: cloneForPersistentSession(this.uploadedImages),
-                pageScenes: cloneForPersistentSession(this.getSerializedPageScenes?.() || {})
+                pageScenes: cloneForPersistentSession(this.getSerializedPageScenes?.() || {}),
+                sharedPageBackgroundImages: snapshotSharedBackgroundImages(this, cloneForPersistentSession)
             };
 
             // Convert page composites and essential raster bases through one

@@ -5,6 +5,66 @@
 const MAX_PAGES = 300;
 const PAGE_BITMAP_MEMORY_BUDGET_BYTES = 256 * 1024 * 1024;
 
+// Background image payloads are shared by every page that inherits them, but a
+// per-page map serializes one full copy per entry — a 2 MB photo on 30 pages
+// wrote ~60 MB on every page switch and blew the localStorage quota, silently
+// disabling pageBackgrounds persistence. Large payloads are therefore stored
+// once in a fingerprint-keyed pool (board.sharedPageBackgroundImages) and page
+// entries keep a compact "shared:<fingerprint>" reference. Small payloads stay
+// inline so legacy data and trivial cases keep their exact previous shape.
+const SHARED_IMAGE_PREFIX = 'shared:';
+const SHARED_IMAGE_INLINE_MIN_LENGTH = 2048;
+
+function getSharedImageSignature(value) {
+    return `${value.length}:${value.slice(0, 64)}:${value.slice(-64)}`;
+}
+
+function resolveSharedBackgroundImage(board, value) {
+    if (typeof value !== 'string' || !value.startsWith(SHARED_IMAGE_PREFIX)) {
+        return value;
+    }
+    const pool = board?.sharedPageBackgroundImages;
+    const resolved = pool instanceof Map ? pool.get(value.slice(SHARED_IMAGE_PREFIX.length)) : null;
+    if (typeof resolved !== 'string') {
+        console.warn('Shared background image is missing from the pool; clearing the reference.');
+        return null;
+    }
+    return resolved;
+}
+
+function shareBackgroundImagePayload(board, value) {
+    if (typeof value !== 'string'
+        || value.length <= SHARED_IMAGE_INLINE_MIN_LENGTH
+        || value.startsWith(SHARED_IMAGE_PREFIX)) {
+        return value;
+    }
+    const pool = board.sharedPageBackgroundImages instanceof Map
+        ? board.sharedPageBackgroundImages
+        : (board.sharedPageBackgroundImages = new Map());
+    const signature = getSharedImageSignature(value);
+    pool.set(signature, value);
+    return SHARED_IMAGE_PREFIX + signature;
+}
+
+function pruneSharedBackgroundImagePool(board) {
+    const pool = board?.sharedPageBackgroundImages;
+    if (!(pool instanceof Map)) {
+        return;
+    }
+    const referenced = new Set();
+    Object.values(board.pageBackgrounds || {}).forEach((background) => {
+        const value = background?.backgroundImageData;
+        if (typeof value === 'string' && value.startsWith(SHARED_IMAGE_PREFIX)) {
+            referenced.add(value.slice(SHARED_IMAGE_PREFIX.length));
+        }
+    });
+    Array.from(pool.keys()).forEach((signature) => {
+        if (!referenced.has(signature)) {
+            pool.delete(signature);
+        }
+    });
+}
+
 function normalizePageNumber(pageNumber, fallback = 1) {
         const normalizedPage = parseInt(pageNumber, 10);
         if (!Number.isInteger(normalizedPage) || normalizedPage <= 0) {
@@ -569,7 +629,7 @@ function recordPageBackground(pageNumber) {
             coordinateOriginX: this.backgroundManager.coordinateOriginX,
             coordinateOriginY: this.backgroundManager.coordinateOriginY,
             coordinateOverlayState: this.backgroundManager.getCoordinateOverlayState(),
-            backgroundImageData: this.backgroundManager.backgroundImageData,
+            backgroundImageData: shareBackgroundImagePayload(this, this.backgroundManager.backgroundImageData),
             imageSize: this.backgroundManager.imageSize,
             imageTransform: (window.safeDeepClone || ((v) => JSON.parse(JSON.stringify(v))))(this.backgroundManager.imageTransform),
             gifLoopCount: this.backgroundManager.gifLoopCount,
@@ -578,7 +638,14 @@ function recordPageBackground(pageNumber) {
 }
 
 function persistPageBackgrounds() {
+        pruneSharedBackgroundImagePool(this);
         try {
+            const pool = this.sharedPageBackgroundImages;
+            if (pool instanceof Map && pool.size > 0) {
+                localStorage.setItem('sharedPageBackgroundImages', JSON.stringify(Object.fromEntries(pool)));
+            } else {
+                localStorage.removeItem('sharedPageBackgroundImages');
+            }
             localStorage.setItem('pageBackgrounds', JSON.stringify(this.pageBackgrounds));
         } catch (e) {
             console.warn('Failed to save page backgrounds to localStorage (quota exceeded?):', e);
@@ -597,7 +664,13 @@ function restorePageBackground(pageNumber) {
         // Generation token: any newer restore invalidates pending async image loads.
         const loadToken = (this._backgroundLoadToken = (this._backgroundLoadToken || 0) + 1);
         if (this.pageBackgrounds[pageNumber]) {
-            const bg = normalizeBackgroundState(this.backgroundManager, this.pageBackgrounds[pageNumber]);
+            const storedBackground = this.pageBackgrounds[pageNumber];
+            // Resolve compact shared-image references before normalization so
+            // the background manager only ever sees real payloads.
+            const bg = normalizeBackgroundState(this.backgroundManager, {
+                ...storedBackground,
+                backgroundImageData: resolveSharedBackgroundImage(this, storedBackground.backgroundImageData)
+            });
             resetTransientBackgroundMediaState(this.backgroundManager);
             const mediaLoadToken = this.backgroundManager.backgroundImageLoadToken;
             this.backgroundManager.backgroundImage = null;
@@ -717,6 +790,8 @@ function updatePaginationUI() {
 
 window.AboardPaginationRuntime = {
     normalizePageNumber,
+    resolveSharedBackgroundImage,
+    getSharedImageSignature,
     addPage(board) {
         return addPage.call(board);
     },

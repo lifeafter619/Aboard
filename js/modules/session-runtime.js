@@ -187,6 +187,29 @@ function mergeRecoverySettings(persistedSettings, snapshotSettings) {
                 snapshot.pageBackgrounds
             );
         }
+        // Union the shared background image pools so page entries referencing
+        // either side resolve after restore. Sync snapshots may have dropped
+        // oversize payloads (null placeholders), so only real payloads win.
+        const persistedPool = persisted.sharedPageBackgroundImages;
+        const snapshotPool = snapshot.sharedPageBackgroundImages;
+        if (persistedPool || snapshotPool) {
+            const mergedPool = {};
+            if (persistedPool && typeof persistedPool === 'object') {
+                Object.entries(persistedPool).forEach(([signature, dataUrl]) => {
+                    if (typeof dataUrl === 'string' && dataUrl) {
+                        mergedPool[signature] = dataUrl;
+                    }
+                });
+            }
+            if (snapshotPool && typeof snapshotPool === 'object') {
+                Object.entries(snapshotPool).forEach(([signature, dataUrl]) => {
+                    if (typeof dataUrl === 'string' && dataUrl) {
+                        mergedPool[signature] = dataUrl;
+                    }
+                });
+            }
+            merged.sharedPageBackgroundImages = mergedPool;
+        }
         return merged;
 }
 
@@ -229,6 +252,7 @@ function getCanvasStateStorageKeys(board) {
             'savedCanvasTimestamp',
             'savedCurrentPage',
             'pageBackgrounds',
+            'sharedPageBackgroundImages',
             'pageScenes',
             'backgroundColor',
             'backgroundPattern',
@@ -274,6 +298,7 @@ function clearCanvasStateStorage(board) {
 
 function resetRuntimeCanvasState() {
         this.pageBackgrounds = {};
+        this.sharedPageBackgroundImages = new Map();
         this.pageRasterFallbackPages = new Set();
         this.pageRasterFallbackBases = new Map();
         this.pageRasterFallbackScaledBases = new Map();
@@ -595,6 +620,19 @@ async function restoreSession() {
 
                 // Restore Backgrounds
                 if (settings.pageBackgrounds) this.pageBackgrounds = (window.safeDeepClone || ((v) => JSON.parse(JSON.stringify(v))))(settings.pageBackgrounds);
+                // Rebuild the shared image pool backing compact page-background
+                // references before any page loads (see pagination-runtime.js).
+                if (settings.sharedPageBackgroundImages && typeof settings.sharedPageBackgroundImages === 'object') {
+                    const pool = this.sharedPageBackgroundImages instanceof Map
+                        ? this.sharedPageBackgroundImages
+                        : new Map();
+                    Object.entries(settings.sharedPageBackgroundImages).forEach(([signature, dataUrl]) => {
+                        if (typeof dataUrl === 'string' && dataUrl) {
+                            pool.set(signature, dataUrl);
+                        }
+                    });
+                    this.sharedPageBackgroundImages = pool;
+                }
                 if (settings.backgroundColor) this.backgroundManager.backgroundColor = settings.backgroundColor;
                 if (settings.backgroundPattern) this.backgroundManager.backgroundPattern = settings.backgroundPattern;
                 if (typeof settings.bgOpacity !== 'undefined') this.backgroundManager.bgOpacity = settings.bgOpacity;
