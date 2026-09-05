@@ -1,6 +1,6 @@
 # 已知问题与审查归档
 
-最后核验：2026-09-01
+最后核验：2026-09-05
 
 ## 当前状态
 
@@ -14,6 +14,25 @@
 - 公告内容目前由 `js/features/announcement/announcement-manager.js` 内的本地化资源管理，不存在独立的远程公告配置源。
 
 发现新问题时，应先添加最小复现测试，再在本文件的“当前状态”下记录适用环境、复现步骤和影响范围。
+
+## 2026-09-05 全量源码审计归档
+
+对约 5.5 万行 JS 做了一轮全量审计（全部模块通读或模式扫描兜底），先写失败测试再修复 4 项缺陷与 2 项健壮性缺口，全部逐个回退实现确认测试会红。修复集中在会话持久化体积、选区几何与离开确认。
+
+| 范围 | 问题 | 回归测试 |
+| --- | --- | --- |
+| 页面背景持久化 | `recordPageBackground` 把完整 `backgroundImageData` 逐页复制，`savePageBackground` 每次翻页对整个 map 做 `JSON.stringify` 写 localStorage。一张 2 MB 背景图配 30 页 = 每次翻页写 ~60 MB，超配额后静默失败，页面背景持久化从此失效；IndexedDB 会话同样被结构化克隆成 N 份。改为大于 2048 字符的载荷以指纹存入板级共享池（`sharedPageBackgroundImages`，localStorage 同名键 + IndexedDB 会话字段同步携带），页面条目只留 `shared:<指纹>` 紧凑引用；恢复/导出（项目包资产机制不变）与旧格式数据全部兼容，池在每次持久化时按引用裁剪 | `known-issues-2026-09-05-regression.test.js` |
+| 选区几何 | `getStrokeSelectionBounds` 旋转分支的 padding 只算 `size * 2`，漏掉 `getStrokeStyleOuterExtent`（双线/三线/多线外沿），旋转后的多线笔迹选框比墨迹外沿紧一圈（与未旋转分支不一致） | 同上 |
+| 文本缩放 | 文本对象用上下边缘手柄缩放时 `fontSize` 只按宽度比例计算：宽度不变 → 字号不变，只有 y 在移动，松手后选框跳回实际文本高度。改为按拖拽轴取比例（上下手柄用高度，其余用宽度），并给单文本路径补上复合选择路径已有的 `Math.max(startBounds[axis], 1)` 零宽保护，防止 0 宽起始 bounds 把 `fontSize` 污染成 Infinity | 同上 |
+| 离开确认 | `beforeunload` 无条件弹“确认离开”：空板打开就刷新也弹。新增 `boardHelpersRuntime.isBoardContentEmpty`（单页、无笔迹/文本/图片/背景图/坐标内容、默认背景色与空白图案才算空），空板且会话写入未被锁时跳过确认；写锁冲突与任何实际内容仍然提示 | 同上 |
+| 对齐参考线 | `parseColor` 不支持 8 位 hex 与 4 位简写（`#rrggbbaa` 背景会让对比度检查静默失效、不垫描边）。补齐两种格式（忽略 alpha 通道） | 同上 |
+| 图案颜色亮度判断 | `isLightBackground` 按 `#rrggbb` 固定偏移切片解析背景色，非 6 位 hex 输入（`#fff`、8 位 hex、`rgb()/rgba()`、CSS 关键字、损坏的导入数据）亮度算出 NaN、一律误判为深色，浅色板上图案线条用白色绘制而不可见。改为覆盖上述全部格式解析通道值，无法解析的值默认按浅色处理（页面底色为白，默认深色墨线保持可见） | `known-issues-2026-09-05-regression.test.js` |
+
+本轮验证基线：core 54 项、full 101 项（含真实 Chromium 绘图冒烟与 8 视口 × 15 状态响应式检查）、静态发布构建。修复期间曾出现一次 full 套件尾段失败，单独复跑两个冒烟测试与整条 full 套件均通过，判定为环境抖动而非回归。
+
+本轮审计明确撤销一个误报：`StorageManager.estimateSessionSize` 的 metadata 分支已把完整 `settings`（含 `pageScenes`、`uploadedImages` 的 data URL）计入 `JSON.stringify` 体积，设置页的会话大小估算没有低估问题。
+
+审计中记录、已在同轮补修的事项：`isLightBackground` 非 hex 背景色健壮性缺口见上表。仍留待后续决策：`beforeunload` 同步快照在超大盘上仍有主线程停顿的理论代价（已有 256 KB 截断，本轮未改动）。
 
 ## 2026-09-01 审计归档
 
