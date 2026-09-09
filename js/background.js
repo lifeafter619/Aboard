@@ -212,6 +212,7 @@ class BackgroundManager {
         this.coordinateOverlaySvg = null;
         this.backgroundPatternSvg = null;
         this.backgroundPatternMarkup = '';
+        this.coordinateOverlayMarkup = '';
         let savedCoordinateOverlayState = null;
         try {
             savedCoordinateOverlayState = JSON.parse(safeBackgroundStorageGetItem('coordinateOverlayState') || 'null');
@@ -2178,7 +2179,10 @@ class BackgroundManager {
         if (!this.coordinateOverlayState.showOrigin) return '';
         const screenOrigin = this.canvasLogicalToScreenPoint(origin.x, origin.y, metrics);
         const fill = this.getAdaptivePatternColor(0.9, 0.28);
-        const stroke = this.backgroundColor;
+        // backgroundColor can arrive from imported packages or damaged storage;
+        // every other color sink in this overlay sanitizes it, and the origin
+        // marker's stroke must not become the one raw interpolation left.
+        const stroke = this.sanitizeSvgColor(this.backgroundColor, '#ffffff');
         const radius = Math.max(4.5, Math.min(16, 5.5 * metrics.visualScale));
         const strokeWidth = Math.max(1.2, Math.min(5, 2 * metrics.visualScale));
         return `
@@ -3033,6 +3037,9 @@ class BackgroundManager {
             if (legacyCanvas) {
                 legacyCanvas.style.display = 'none';
             }
+            // null (not '') so a later re-enable with an all-options-off
+            // overlay still clears any previously rendered content.
+            this.coordinateOverlayMarkup = null;
             return;
         }
 
@@ -3041,10 +3048,19 @@ class BackgroundManager {
             legacyCanvas.style.display = 'none';
         }
 
-        svg.innerHTML = this.buildCoordinateOverlayMarkup(logicalWidth, logicalHeight, metrics, {
+        // Slider drags and unrelated background edits re-run drawBackground on
+        // every input event; only re-parse the SVG DOM when the markup actually
+        // changed (same approach as the backgroundPatternMarkup cache). A
+        // rebuilt svg node starts empty, so a node swap also forces a rewrite.
+        const markup = this.buildCoordinateOverlayMarkup(logicalWidth, logicalHeight, metrics, {
             clipToCanvas: true,
             clipId: 'coordinate-overlay-screen-clip'
         });
+        if (markup !== this.coordinateOverlayMarkup || svg !== this.coordinateOverlayRenderedSvg) {
+            svg.innerHTML = markup;
+            this.coordinateOverlayMarkup = markup;
+            this.coordinateOverlayRenderedSvg = svg;
+        }
     }
     
     drawCoordinatePattern(dpr, patternColor) {

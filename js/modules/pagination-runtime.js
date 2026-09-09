@@ -658,6 +658,26 @@ function savePageBackground(pageNumber) {
 
 }
 
+// Imported project packages carry one full backgroundImageData payload per
+// page (see ProjectManager.inflateBackgroundFromPackage). Routing them through
+// shareBackgroundImagePayload keeps the per-page map compact so a re-imported
+// project cannot reintroduce the N×payload localStorage blowup fixed on
+// 2026-09-05. Returns false when the board state is unusable so callers can
+// fall back to their own persistence.
+function sharePageBackgroundPayloads(board) {
+        const pageBackgrounds = board?.pageBackgrounds;
+        if (!pageBackgrounds || typeof pageBackgrounds !== 'object') {
+            return false;
+        }
+        Object.values(pageBackgrounds).forEach((background) => {
+            if (background && typeof background === 'object') {
+                background.backgroundImageData = shareBackgroundImagePayload(board, background.backgroundImageData);
+            }
+        });
+        persistPageBackgrounds.call(board);
+        return true;
+}
+
 function restorePageBackground(pageNumber) {
         // Restore background settings for this page.
         // Returns a Promise that resolves after async image backgrounds render.
@@ -792,6 +812,7 @@ window.AboardPaginationRuntime = {
     normalizePageNumber,
     resolveSharedBackgroundImage,
     getSharedImageSignature,
+    sharePageBackgroundPayloads,
     addPage(board) {
         return addPage.call(board);
     },

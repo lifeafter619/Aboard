@@ -1,6 +1,6 @@
 # 已知问题与审查归档
 
-最后核验：2026-09-05
+最后核验：2026-09-09
 
 ## 当前状态
 
@@ -14,6 +14,21 @@
 - 公告内容目前由 `js/features/announcement/announcement-manager.js` 内的本地化资源管理，不存在独立的远程公告配置源。
 
 发现新问题时，应先添加最小复现测试，再在本文件的“当前状态”下记录适用环境、复现步骤和影响范围。
+
+## 2026-09-09 审计归档（未覆盖模块专项）
+
+对 2026-09-05 轮未逐行覆盖的约 2 万行模块（export、project-manager、background、shape-drawing、teaching-tools、scoreboard、image-controls、insert-image、classroom-mode、settings-manager、i18n、pwa-manager、cache-runtime、panel/overlay、random-picker；timer.js 为定向扫描）做了一轮专项审计，先写失败测试再修复 4 项缺陷，全部逐个回退实现确认测试会红。本轮同场复核了 sw.js 预缓存清单（79 项 ESSENTIAL + 17 项 locale 全部在磁盘存在）、index.html 本地引用与 manifest 图标，无漂移。
+
+| 范围 | 问题 | 回归测试 |
+| --- | --- | --- |
+| 项目导入 | `applyImportedProjectState` 把导入包里逐页携带的完整 `backgroundImageData` 直接写入 `pageBackgrounds` 与 localStorage，没有走 2026-09-05 引入的共享池去重。导出→导入一个 30 页共享 2 MB 背景的项目即重现旧缺陷：导入瞬间写入 ~60 MB 超配额静默失败（且主线程有一次大字符串序列化停顿），内存与 IndexedDB 会话携带 N 份拷贝，只有逐页访问才慢慢衰减。现在导入时通过 `AboardPaginationRuntime.sharePageBackgroundPayloads` 逐页池化并持久化（池 + 页条目一起写），旧格式内联载荷同样被收纳 | `known-issues-2026-09-09-regression.test.js` |
+| 坐标叠加层 | `renderCoordinateOriginSvg` 把 `backgroundColor` 原样插值进 `stroke="..."` 属性，是整个 overlay 里唯一没过 `sanitizeSvgColor` 的颜色出口；导入包或损坏存储中的恶意颜色值可借此向 SVG 注入属性（其余渲染路径均已消毒，`background-coordinate-overlay-color-escaping.test.js` 只覆盖了 plots/points 路径）。改为同样消毒，无法解析时回退白色描边 | 同上 |
+| 坐标叠加层 | `renderCoordinateOverlay` 每次调用都重建整个 SVG `innerHTML`；拖不透明度/强度滑条时每个 input 事件触发一次全量 DOM 重解析。仿照 `backgroundPatternMarkup` 增加 markup 字符串缓存（含 SVG 节点重建时的强制重写与禁用态缓存置空，避免旧内容残留） | 同上 |
+| 图片导出 | 单页导出 `downloadCanvas` 用 `toDataURL` + `link.href` 下发 data: URL，Firefox 会拦截此类下载（多页 zip 路径早已走 `toBlob` + objectURL）。统一改为 Blob 对象 URL，并顺带给文件名做了与 zip 路径一致的非法字符清洗 | 同上 |
+
+同轮记录、未改动的事项：教学工具（直尺/三角板）为纯 DOM overlay，不进撤销历史、会话持久化、翻页与导出位图——按“临时教具”定位保留现状，若需跨页保留属功能增强；坐标 overlay 的函数图像求值在几何变化时仍会逐次重算（有界，未观察到实际卡顿）。
+
+本轮验证基线：core 55 项、full 102 项（含真实 Chromium 绘图冒烟与 8 视口 × 15 状态响应式检查）、静态发布构建、sw.js 预缓存与磁盘/index.html/manifest 一致性复核。版本 2.5.3 → 2.5.4（version.txt 同步至 package.json、package-lock.json、manifest.json 图标 URL、index.html manifest 链接、sw.js SW_VERSION 与 CORE_ASSETS 图标条目）。
 
 ## 2026-09-05 全量源码审计归档
 

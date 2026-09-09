@@ -1309,7 +1309,12 @@ class ProjectManager {
             console.warn(`[ProjectManager] Imported page ${pageNumber} declares a raster fallback but carries no base image; treating it as a normal page.`);
             importedRasterFallbackPages.delete(pageNumber);
         });
-        safeProjectStorageSetItem('pageBackgrounds', JSON.stringify(this.drawingBoard.pageBackgrounds));
+        // Imported packages carry the full payload on every page entry; route
+        // them through the shared pool first so a re-imported project cannot
+        // blow the localStorage quota with N duplicated copies (2026-09-05 fix).
+        if (!window.AboardPaginationRuntime?.sharePageBackgroundPayloads?.(this.drawingBoard)) {
+            safeProjectStorageSetItem('pageBackgrounds', JSON.stringify(this.drawingBoard.pageBackgrounds));
+        }
         await this.applyGlobalBackground(globalBackground || null);
         await this.drawingBoard.applySerializedPageScenes(pageScenes || {});
 

@@ -830,7 +830,7 @@ class ExportManager {
         }
     }
 
-    downloadCanvas(tempCanvas, filename, format, quality) {
+    async downloadCanvas(tempCanvas, filename, format, quality) {
         let outputCanvas = tempCanvas;
         if (format === 'jpeg') {
             // JPEG has no alpha channel: flatten onto an opaque base color first
@@ -845,14 +845,25 @@ class ExportManager {
             outputCanvas = opaqueCanvas;
         }
 
-        const dataURL = format === 'jpeg'
-            ? outputCanvas.toDataURL('image/jpeg', quality)
-            : outputCanvas.toDataURL('image/png');
+        // Blob object URL instead of a data: URL — Firefox refuses to download
+        // data:-URL links, and the multi-page zip path already works this way.
+        const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+        const blob = await new Promise((resolve, reject) => {
+            outputCanvas.toBlob(result => {
+                if (result) resolve(result);
+                else reject(new Error('Failed to encode exported page image.'));
+            }, mimeType, format === 'jpeg' ? quality : undefined);
+        });
 
+        const safeFilename = String(filename || 'aboard-export').replace(/[\\/:*?"<>|]/g, '-');
+        const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.download = `${filename}.${format}`;
-        link.href = dataURL;
+        link.download = `${safeFilename}.${format}`;
+        link.href = url;
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     }
 
     async captureCurrentPageImage(filename, format, quality) {
@@ -946,7 +957,7 @@ class ExportManager {
         const tempCtx = tempCanvas.getContext('2d');
 
         await this.renderCurrentPageToCanvas(tempCanvas, tempCtx);
-        this.downloadCanvas(tempCanvas, filename, format, quality);
+        await this.downloadCanvas(tempCanvas, filename, format, quality);
     }
 
     async goToExportPage(pageNum) {
