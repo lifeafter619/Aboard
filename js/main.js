@@ -414,6 +414,12 @@ class DrawingBoard {
         });
         
         // Connect edge drawing manager to drawing engine
+        // DrawingEngine is a hard dependency: every drawing path dereferences
+        // it. Fail construction with an actionable error instead of letting a
+        // bare TypeError surface from the first stroke.
+        if (!this.drawingEngine) {
+            throw new Error('DrawingBoard requires a DrawingEngine instance; check that js/drawing.js loaded.');
+        }
         this.drawingEngine.setEdgeDrawingManager(this.edgeDrawingManager);
         
         // Initialize StorageManager

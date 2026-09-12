@@ -10,6 +10,126 @@ function escapeTeachingToolsHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
+// Per-page teaching tool persistence: the tools were pure screen overlays
+// (lost on every reload), which made them useless for multi-page lessons.
+// Each page now owns a snapshot under 'pageTeachingTools' (same shape as
+// pageBackgrounds), carried by the session record so refreshes restore it.
+// The tools deliberately stay out of undo history and exported bitmaps: they
+// are aids for the person teaching, not board content.
+const TEACHING_TOOLS_STORAGE_KEY = 'pageTeachingTools';
+const TEACHING_TOOLS_MAX_PAGES = 300;
+const TEACHING_TOOLS_MAX_PER_PAGE = 40;
+const TEACHING_TOOL_IMAGE_SOURCES = {
+    ruler1: 'img/ruler_1.png',
+    ruler2: 'img/ruler_2.png',
+    setSquare60: 'img/set_square_1.png',
+    setSquare45: 'img/set_square_2.png'
+};
+
+function safeTeachingToolsStorageGetItem(key) {
+    try {
+        return localStorage.getItem(key);
+    } catch (error) {
+        return null;
+    }
+}
+
+function safeTeachingToolsStorageSetItem(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (error) {
+        console.warn(`Failed to write teaching tools storage key "${key}":`, error);
+        return false;
+    }
+}
+
+function safeTeachingToolsStorageRemoveItem(key) {
+    try {
+        localStorage.removeItem(key);
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
+function getTeachingToolVariantKey(type, variant) {
+    if (type === 'ruler') {
+        return variant === 2 ? 'ruler2' : 'ruler1';
+    }
+    if (type === 'setSquare') {
+        return variant === 45 ? 'setSquare45' : 'setSquare60';
+    }
+    return null;
+}
+
+function sanitizeTeachingToolEntry(entry) {
+    if (!entry || typeof entry !== 'object') {
+        return null;
+    }
+    const type = entry.type === 'setSquare' ? 'setSquare' : (entry.type === 'ruler' ? 'ruler' : null);
+    if (!type) {
+        return null;
+    }
+    const variant = type === 'ruler'
+        ? (entry.variant === 2 ? 2 : 1)
+        : (entry.variant === 45 ? 45 : 60);
+    // Corrupt or hostile state must be rejected outright — NaN positions from
+    // damaged storage would otherwise poison the restored overlay geometry.
+    const width = Math.round(Number(entry.width));
+    const height = Math.round(Number(entry.height));
+    const x = Math.round(Number(entry.x));
+    const y = Math.round(Number(entry.y));
+    const rotation = Math.round(Number(entry.rotation));
+    if (![width, height, x, y, rotation].every(Number.isFinite)) {
+        return null;
+    }
+    if (width <= 0 || height <= 0) {
+        return null;
+    }
+    const clamp = (value, limit) => Math.max(-limit, Math.min(limit, value));
+    return {
+        type,
+        variant,
+        x: clamp(x, 1000000),
+        y: clamp(y, 1000000),
+        width: Math.min(width, 100000),
+        height: Math.min(height, 100000),
+        rotation: clamp(rotation, 36000)
+    };
+}
+
+function sanitizePageToolStates(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+        return {};
+    }
+    const sanitized = {};
+    Object.entries(raw).forEach(([key, entries]) => {
+        const pageNumber = Number(key);
+        if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > TEACHING_TOOLS_MAX_PAGES) {
+            return;
+        }
+        sanitized[String(pageNumber)] = (Array.isArray(entries) ? entries : [])
+            .map(sanitizeTeachingToolEntry)
+            .filter(Boolean)
+            .slice(0, TEACHING_TOOLS_MAX_PER_PAGE);
+    });
+    return sanitized;
+}
+
+function loadPersistedTeachingToolStates() {
+    const raw = safeTeachingToolsStorageGetItem(TEACHING_TOOLS_STORAGE_KEY);
+    if (!raw) {
+        return {};
+    }
+    try {
+        return sanitizePageToolStates(JSON.parse(raw));
+    } catch (error) {
+        console.warn('Failed to load teaching tool page states:', error);
+        return {};
+    }
+}
+
 class TeachingToolsManager {
     constructor(canvas, ctx, historyManager) {
         this.canvas = canvas;
@@ -65,6 +185,10 @@ class TeachingToolsManager {
         this.controlOverlay = null;
         this.modal = null;
         this.modalPreviouslyFocusedElement = null;
+
+        // Per-page snapshots (see the constants block above). Loaded once so a
+        // reload puts every page's tools back where the lesson left them.
+        this.pageToolStates = loadPersistedTeachingToolStates();
 
         this.localeChangeHandler = () => {
             this.updateCounterButtonLabels();
@@ -1627,6 +1751,149 @@ class TeachingToolsManager {
         }
     }
     
+    getImageForVariantKey(variantKey) {
+        if (!variantKey) {
+            return null;
+        }
+        this.ensureImagesLoaded();
+        const preloaded = variantKey === 'ruler1' ? this.rulerImage1
+            : variantKey === 'ruler2' ? this.rulerImage2
+                : variantKey === 'setSquare60' ? this.setSquareImage1
+                    : variantKey === 'setSquare45' ? this.setSquareImage2
+                        : null;
+        if (preloaded && preloaded.src) {
+            return preloaded;
+        }
+        const src = TEACHING_TOOL_IMAGE_SOURCES[variantKey];
+        if (!src) {
+            return null;
+        }
+        // The overlay <img> only needs a src; a fresh element works even when
+        // the preload pass has not finished yet.
+        const fallbackImage = new Image();
+        fallbackImage.src = src;
+        return fallbackImage;
+    }
+
+    serializeTeachingTool(tool) {
+        const variantKey = getTeachingToolVariantKey(tool?.type, tool?.variant);
+        if (!variantKey) {
+            return null;
+        }
+        const numbers = [tool.x, tool.y, tool.width, tool.height, tool.rotation].map(Number);
+        if (!numbers.every(Number.isFinite)) {
+            return null;
+        }
+        return {
+            type: tool.type,
+            variant: tool.variant,
+            x: Math.round(tool.x),
+            y: Math.round(tool.y),
+            width: Math.round(tool.width),
+            height: Math.round(tool.height),
+            rotation: Math.round(tool.rotation)
+        };
+    }
+
+    serializeCurrentTools() {
+        return this.tools
+            .map((tool) => this.serializeTeachingTool(tool))
+            .filter(Boolean)
+            .slice(0, TEACHING_TOOLS_MAX_PER_PAGE);
+    }
+
+    exportPageToolStates() {
+        const exported = {};
+        Object.entries(this.pageToolStates || {}).forEach(([key, entries]) => {
+            exported[key] = Array.isArray(entries) ? entries.map((entry) => ({ ...entry })) : [];
+        });
+        return exported;
+    }
+
+    importPageToolStates(raw) {
+        this.pageToolStates = sanitizePageToolStates(raw);
+        this.persistPageToolStates();
+        return this.pageToolStates;
+    }
+
+    persistPageToolStates() {
+        const keys = Object.keys(this.pageToolStates || {});
+        if (keys.length === 0) {
+            safeTeachingToolsStorageRemoveItem(TEACHING_TOOLS_STORAGE_KEY);
+            return;
+        }
+        safeTeachingToolsStorageSetItem(TEACHING_TOOLS_STORAGE_KEY, JSON.stringify(this.pageToolStates));
+    }
+
+    saveCurrentPageState(pageNumber) {
+        const normalized = Number(pageNumber);
+        if (!Number.isInteger(normalized) || normalized < 1 || normalized > TEACHING_TOOLS_MAX_PAGES) {
+            return;
+        }
+        const key = String(normalized);
+        const snapshot = this.serializeCurrentTools();
+        if (JSON.stringify(this.pageToolStates[key] || []) === JSON.stringify(snapshot)) {
+            return;
+        }
+        this.pageToolStates[key] = snapshot;
+        this.persistPageToolStates();
+    }
+
+    clearAllTools() {
+        this.tools.forEach((tool) => {
+            tool.overlay?.remove();
+        });
+        this.tools = [];
+        this.selectedTool = null;
+        this._draggedTool = null;
+        this.isDragging = false;
+        this.isRotating = false;
+        this.isResizing = false;
+        this.isInteracting = false;
+        this.activeResizeHandle = null;
+    }
+
+    restorePageState(pageNumber) {
+        const normalized = Number(pageNumber);
+        if (!Number.isInteger(normalized) || normalized < 1 || normalized > TEACHING_TOOLS_MAX_PAGES) {
+            return;
+        }
+        this.clearAllTools();
+        const entries = this.pageToolStates[String(normalized)];
+        if (!Array.isArray(entries)) {
+            return;
+        }
+        entries.forEach((entry) => this.recreateTeachingTool(entry));
+    }
+
+    recreateTeachingTool(entry) {
+        const sanitized = sanitizeTeachingToolEntry(entry);
+        if (!sanitized) {
+            return;
+        }
+        const variantKey = getTeachingToolVariantKey(sanitized.type, sanitized.variant);
+        const image = this.getImageForVariantKey(variantKey);
+        if (!image) {
+            return;
+        }
+        this.addTool({
+            type: sanitized.type,
+            variant: sanitized.variant,
+            x: sanitized.x,
+            y: sanitized.y,
+            width: sanitized.width,
+            height: sanitized.height,
+            rotation: sanitized.rotation,
+            image
+        });
+    }
+
+    resetPageToolStates() {
+        this.clearAllTools();
+        this.pageToolStates = {};
+        this.persistPageToolStates();
+    }
+
     // Clean up when destroyed
     destroy() {
         // Remove event listeners

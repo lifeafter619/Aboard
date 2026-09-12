@@ -187,6 +187,15 @@ function mergeRecoverySettings(persistedSettings, snapshotSettings) {
                 snapshot.pageBackgrounds
             );
         }
+        // Teaching tool snapshots: the sync snapshot is the newer capture, so
+        // it wins per board; a board missing from one side keeps the other.
+        const persistedToolStates = persisted.pageTeachingTools;
+        const snapshotToolStates = snapshot.pageTeachingTools;
+        if (snapshotToolStates && typeof snapshotToolStates === 'object') {
+            merged.pageTeachingTools = { ...persistedToolStates, ...snapshotToolStates };
+        } else if (persistedToolStates && typeof persistedToolStates === 'object') {
+            merged.pageTeachingTools = persistedToolStates;
+        }
         // Union the shared background image pools so page entries referencing
         // either side resolve after restore. Sync snapshots may have dropped
         // oversize payloads (null placeholders), so only real payloads win.
@@ -252,6 +261,7 @@ function getCanvasStateStorageKeys(board) {
             'savedCanvasTimestamp',
             'savedCurrentPage',
             'pageBackgrounds',
+            'pageTeachingTools',
             'sharedPageBackgroundImages',
             'pageScenes',
             'backgroundColor',
@@ -298,6 +308,7 @@ function clearCanvasStateStorage(board) {
 
 function resetRuntimeCanvasState() {
         this.pageBackgrounds = {};
+        this.teachingToolsManager?.resetPageToolStates?.();
         this.sharedPageBackgroundImages = new Map();
         this.pageRasterFallbackPages = new Set();
         this.pageRasterFallbackBases = new Map();
@@ -620,6 +631,11 @@ async function restoreSession() {
 
                 // Restore Backgrounds
                 if (settings.pageBackgrounds) this.pageBackgrounds = (window.safeDeepClone || ((v) => JSON.parse(JSON.stringify(v))))(settings.pageBackgrounds);
+                // Per-page teaching tool snapshots back the overlay restoration
+                // that runs after the pages themselves are rebuilt below.
+                if (settings.pageTeachingTools && typeof settings.pageTeachingTools === 'object') {
+                    this.teachingToolsManager?.importPageToolStates?.(settings.pageTeachingTools);
+                }
                 // Rebuild the shared image pool backing compact page-background
                 // references before any page loads (see pagination-runtime.js).
                 if (settings.sharedPageBackgroundImages && typeof settings.sharedPageBackgroundImages === 'object') {
@@ -765,6 +781,8 @@ async function restoreSession() {
             if (this.insertTextManager) {
                 this.selectionManager?.setTextManager?.(this.insertTextManager);
             }
+            // Pages are rebuilt: put this page's teaching tools back on screen.
+            this.teachingToolsManager?.restorePageState?.(this.currentPage);
 
             const hasIndependentRasterFallbackBases = Array.isArray(rasterFallbackBases);
             if (hasIndependentRasterFallbackBases) {

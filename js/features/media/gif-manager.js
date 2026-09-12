@@ -1,3 +1,10 @@
+const GIF_DB_NAME = 'aboard-gif-storage';
+const GIF_DB_VERSION = 1;
+const GIF_STATE_STORE = 'gif-state';
+const GIF_STATE_KEY = 'floatingGifs';
+// Legacy pre-IndexedDB location; migrated once, then removed.
+const GIF_LEGACY_STORAGE_KEY = 'floatingGifs';
+
 export class GifManager {
   constructor(win = window, doc = document) {
     this.win = win;
@@ -7,23 +14,160 @@ export class GifManager {
     this.nextId = 1;
     this.defaultLoopCount = 0;
     this.defaultAutoPlay = true;
+    this.gifDatabase = null;
     this.handleLocaleChanged = () => this.refreshControlLabels();
     this.win.addEventListener?.('localeChanged', this.handleLocaleChanged);
-    this.loadState();
+    this.storageReadyPromise = this.initializePersistence();
   }
 
-  getText(key, fallback) {
-    const translated = this.win.i18n?.t?.(key);
-    return translated && translated !== key ? translated : fallback;
+  // Persistence: large GIF data URLs blew the ~5 MB localStorage quota, so
+  // state lives in IndexedDB (structured clone, no JSON string) with the old
+  // localStorage path kept as a fallback and a one-time migration source.
+  async initializePersistence() {
+    const opened = await this.openGifDatabase();
+    if (opened) {
+      try {
+        await this.migrateLegacyStateToIndexedDb();
+        await this.loadStateFromIndexedDb();
+        return;
+      } catch (error) {
+        console.warn('Failed to load GIFs from IndexedDB:', error);
+      }
+    }
+    this.loadStateFromLocalStorage();
   }
 
-  getPlayButtonLabel(isPlaying) {
-    return isPlaying
-      ? this.getText('common.stop', 'Stop')
-      : this.getText('common.start', 'Start');
+  openGifDatabase() {
+    this.gifDatabase = null;
+    const factory = this.win?.indexedDB;
+    if (!factory || typeof factory.open !== 'function') {
+      return Promise.resolve(false);
+    }
+
+    return new Promise((resolve) => {
+      let request;
+      try {
+        request = factory.open(GIF_DB_NAME, GIF_DB_VERSION);
+      } catch (error) {
+        console.warn('Failed to open GIF storage database:', error);
+        resolve(false);
+        return;
+      }
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (db && (!db.objectStoreNames || !db.objectStoreNames.contains(GIF_STATE_STORE))) {
+          db.createObjectStore(GIF_STATE_STORE);
+        }
+      };
+      request.onsuccess = () => {
+        this.gifDatabase = request.result || null;
+        resolve(Boolean(this.gifDatabase));
+      };
+      request.onerror = () => {
+        console.warn('Failed to open GIF storage database:', request.error);
+        resolve(false);
+      };
+      request.onblocked = () => resolve(false);
+    });
   }
 
-  saveState() {
+  withGifStateStore(mode, run) {
+    const db = this.gifDatabase;
+    if (!db || typeof db.transaction !== 'function') {
+      return Promise.reject(new Error('GIF storage database unavailable'));
+    }
+    return new Promise((resolve, reject) => {
+      let store;
+      try {
+        store = db.transaction(GIF_STATE_STORE, mode).objectStore(GIF_STATE_STORE);
+      } catch (error) {
+        reject(error);
+        return;
+      }
+      let request;
+      try {
+        request = run(store);
+      } catch (error) {
+        reject(error);
+        return;
+      }
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error('IndexedDB request failed'));
+    });
+  }
+
+  async migrateLegacyStateToIndexedDb() {
+    const storage = this.win?.localStorage;
+    if (!storage) return;
+    let legacyRaw = null;
+    try {
+      legacyRaw = storage.getItem(GIF_LEGACY_STORAGE_KEY);
+    } catch (error) {
+      return;
+    }
+    if (!legacyRaw) return;
+
+    let legacyState = null;
+    try {
+      legacyState = JSON.parse(legacyRaw);
+    } catch (error) {
+      legacyState = null;
+    }
+    try {
+      storage.removeItem(GIF_LEGACY_STORAGE_KEY);
+    } catch (error) {
+      // Removal is best-effort; the IndexedDB copy is authoritative now.
+    }
+    if (!Array.isArray(legacyState) || legacyState.length === 0) return;
+
+    const existing = await this.withGifStateStore(
+      'readonly',
+      (store) => store.get(GIF_STATE_KEY)
+    ).catch(() => undefined);
+    if (Array.isArray(existing) && existing.length > 0) return;
+
+    await this.withGifStateStore('readwrite', (store) => store.put(legacyState, GIF_STATE_KEY));
+  }
+
+  async loadStateFromIndexedDb() {
+    const state = await this.withGifStateStore('readonly', (store) => store.get(GIF_STATE_KEY));
+    if (Array.isArray(state)) {
+      state.forEach((gifData) => this.addGifFromState(gifData));
+    }
+  }
+
+  loadStateFromLocalStorage() {
+    const storage = this.win?.localStorage;
+    if (!storage) return;
+    try {
+      const saved = storage.getItem(GIF_LEGACY_STORAGE_KEY);
+      if (saved) {
+        const state = JSON.parse(saved);
+        if (Array.isArray(state)) {
+          state.forEach((gifData) => this.addGifFromState(gifData));
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load GIFs from localStorage', error);
+    }
+  }
+
+  addGifFromState(gifData) {
+    if (!gifData || typeof gifData !== 'object' || typeof gifData.src !== 'string' || !gifData.src) {
+      return;
+    }
+    this.addFloatingGif(gifData.src, {
+      x: gifData.x,
+      y: gifData.y,
+      width: gifData.width,
+      height: gifData.height,
+      loopCount: gifData.loopCount,
+      autoPlay: gifData.autoPlay,
+      skipSave: true
+    });
+  }
+
+  buildStateSnapshot() {
     const state = [];
     this.gifs.forEach((data) => {
       const left = parseInt(data.container.style.left, 10);
@@ -41,9 +185,33 @@ export class GifManager {
         autoPlay: data.isPlaying
       });
     });
+    return state;
+  }
 
+  saveState() {
+    // Read positions synchronously (the caller's gesture frame owns them),
+    // then write after storage initialization so early saves cannot race the
+    // initial load.
+    const snapshot = this.buildStateSnapshot();
+    Promise.resolve(this.storageReadyPromise)
+      .then(() => this.writeStateSnapshot(snapshot))
+      .catch((error) => {
+        console.warn('Failed to save GIFs', error);
+        this.notifySaveFailure(error);
+      });
+  }
+
+  async writeStateSnapshot(snapshot) {
+    if (this.gifDatabase) {
+      await this.withGifStateStore('readwrite', (store) => store.put(snapshot, GIF_STATE_KEY));
+      this.saveFailureNotified = false;
+      return;
+    }
+
+    const storage = this.win?.localStorage;
+    if (!storage) return;
     try {
-      localStorage.setItem('floatingGifs', JSON.stringify(state));
+      storage.setItem(GIF_LEGACY_STORAGE_KEY, JSON.stringify(snapshot));
       this.saveFailureNotified = false;
     } catch (error) {
       console.warn('Failed to save GIFs to localStorage', error);
@@ -51,9 +219,38 @@ export class GifManager {
     }
   }
 
+  getText(key, fallback) {
+    const translated = this.win.i18n?.t?.(key);
+    return translated && translated !== key ? translated : fallback;
+  }
+
+  getPlayButtonLabel(isPlaying) {
+    return isPlaying
+      ? this.getText('common.stop', 'Stop')
+      : this.getText('common.start', 'Start');
+  }
+
   // Every drag/resize/play-toggle re-runs saveState, so a persistent failure
   // (typically quota — a 10 MB GIF becomes a ~13 MB data URL) would spam
   // toasts; notify once until a save succeeds again.
+  // Wired into the cache-clearing flows so "清除本地数据" also drops the
+  // IndexedDB copy, matching how the legacy localStorage key was cleared.
+  async clearPersistedState() {
+    this.saveFailureNotified = false;
+    if (this.gifDatabase) {
+      try {
+        await this.withGifStateStore('readwrite', (store) => store.clear());
+      } catch (error) {
+        console.warn('Failed to clear stored GIF state:', error);
+      }
+    }
+    try {
+      this.win?.localStorage?.removeItem(GIF_LEGACY_STORAGE_KEY);
+    } catch (error) {
+      // Best-effort; nothing else to clean up.
+    }
+  }
+
   notifySaveFailure(error) {
     if (this.saveFailureNotified) {
       return;
@@ -80,28 +277,6 @@ export class GifManager {
       }
     } catch (toastError) {
       console.warn('Failed to display GIF storage-error notice:', toastError);
-    }
-  }
-
-  loadState() {
-    try {
-      const saved = localStorage.getItem('floatingGifs');
-      if (saved) {
-        const state = JSON.parse(saved);
-        state.forEach((gifData) => {
-          this.addFloatingGif(gifData.src, {
-            x: gifData.x,
-            y: gifData.y,
-            width: gifData.width,
-            height: gifData.height,
-            loopCount: gifData.loopCount,
-            autoPlay: gifData.autoPlay,
-            skipSave: true
-          });
-        });
-      }
-    } catch (error) {
-      console.warn('Failed to load GIFs from localStorage', error);
     }
   }
 
@@ -500,8 +675,13 @@ export class GifManager {
     this.saveState();
   }
 
+  // Pointer events only: the container and handle set touch-action: none, so
+  // touch gestures arrive as pointer events. The old triple binding
+  // (pointer + mouse + touch) made every move fire twice on hybrid devices,
+  // and the unguarded listeners let a second pointer hijack an active drag.
   setupDrag(element) {
     let isDragging = false;
+    let activePointerId = null;
     let startX;
     let startY;
     let startLeft;
@@ -513,58 +693,39 @@ export class GifManager {
         : () => null;
       if (closest('.gif-controls') || closest('.gif-resize-handle')) return;
       isDragging = true;
-      const primaryTouch = e.touches?.[0];
-      const clientX = primaryTouch ? primaryTouch.clientX : e.clientX;
-      const clientY = primaryTouch ? primaryTouch.clientY : e.clientY;
-      startX = clientX;
-      startY = clientY;
+      activePointerId = e.pointerId;
+      startX = e.clientX;
+      startY = e.clientY;
       startLeft = parseInt(element.style.left, 10) || 0;
       startTop = parseInt(element.style.top, 10) || 0;
       e.preventDefault();
     };
 
     const onMove = (e) => {
+      if (!isDragging || e.pointerId !== activePointerId) return;
+      element.style.left = `${startLeft + (e.clientX - startX)}px`;
+      element.style.top = `${startTop + (e.clientY - startY)}px`;
+    };
+
+    const onUp = (e) => {
       if (!isDragging) return;
-      if (e.type === 'touchmove') e.preventDefault();
-      const primaryTouch = e.touches?.[0];
-      const clientX = primaryTouch ? primaryTouch.clientX : e.clientX;
-      const clientY = primaryTouch ? primaryTouch.clientY : e.clientY;
-      element.style.left = `${startLeft + (clientX - startX)}px`;
-      element.style.top = `${startTop + (clientY - startY)}px`;
+      if (e && e.pointerId !== undefined && e.pointerId !== activePointerId) return;
+      isDragging = false;
+      activePointerId = null;
+      this.saveState();
+      this.doc.removeEventListener('pointermove', onMove);
+      this.doc.removeEventListener('pointerup', onUp);
+      this.doc.removeEventListener('pointercancel', onUp);
     };
 
-    const onUp = () => {
-      if (isDragging) {
-        isDragging = false;
-        this.saveState();
-        this.doc.removeEventListener('mousemove', onMove);
-        this.doc.removeEventListener('pointermove', onMove);
-        this.doc.removeEventListener('touchmove', onMove);
-        this.doc.removeEventListener('mouseup', onUp);
-        this.doc.removeEventListener('pointerup', onUp);
-        this.doc.removeEventListener('touchend', onUp);
-        this.doc.removeEventListener('pointercancel', onUp);
-        this.doc.removeEventListener('touchcancel', onUp);
-      }
-    };
-
-    const onDownWrapper = (e) => {
+    element.addEventListener('pointerdown', (e) => {
       onDown(e);
       if (isDragging) {
-        this.doc.addEventListener('mousemove', onMove);
         this.doc.addEventListener('pointermove', onMove);
-        this.doc.addEventListener('touchmove', onMove, { passive: false });
-        this.doc.addEventListener('mouseup', onUp);
         this.doc.addEventListener('pointerup', onUp);
-        this.doc.addEventListener('touchend', onUp);
         this.doc.addEventListener('pointercancel', onUp);
-        this.doc.addEventListener('touchcancel', onUp);
       }
-    };
-
-    element.addEventListener('mousedown', onDownWrapper);
-    element.addEventListener('pointerdown', onDownWrapper);
-    element.addEventListener('touchstart', onDownWrapper, { passive: false });
+    });
   }
 
   setupResize(element, id) {
@@ -572,6 +733,7 @@ export class GifManager {
     if (!handle) return;
 
     let isResizing = false;
+    let activePointerId = null;
     let startX;
     let startY;
     let startWidth;
@@ -580,24 +742,18 @@ export class GifManager {
     const onDown = (e) => {
       e.stopPropagation();
       isResizing = true;
-      const primaryTouch = e.touches?.[0];
-      const clientX = primaryTouch ? primaryTouch.clientX : e.clientX;
-      const clientY = primaryTouch ? primaryTouch.clientY : e.clientY;
-      startX = clientX;
-      startY = clientY;
+      activePointerId = e.pointerId;
+      startX = e.clientX;
+      startY = e.clientY;
       startWidth = element.offsetWidth;
       startHeight = element.offsetHeight;
       e.preventDefault();
     };
 
     const onMove = (e) => {
-      if (!isResizing) return;
-      if (e.type === 'touchmove') e.preventDefault();
-      const primaryTouch = e.touches?.[0];
-      const clientX = primaryTouch ? primaryTouch.clientX : e.clientX;
-      const clientY = primaryTouch ? primaryTouch.clientY : e.clientY;
-      const dx = clientX - startX;
-      const dy = clientY - startY;
+      if (!isResizing || e.pointerId !== activePointerId) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
       let newWidth = startWidth + dx;
       let newHeight = startHeight + dy;
 
@@ -614,38 +770,25 @@ export class GifManager {
       element.style.height = `${Math.max(50, newHeight)}px`;
     };
 
-    const onUp = () => {
-      if (isResizing) {
-        isResizing = false;
-        this.saveState();
-        this.doc.removeEventListener('mousemove', onMove);
-        this.doc.removeEventListener('pointermove', onMove);
-        this.doc.removeEventListener('touchmove', onMove);
-        this.doc.removeEventListener('mouseup', onUp);
-        this.doc.removeEventListener('pointerup', onUp);
-        this.doc.removeEventListener('touchend', onUp);
-        this.doc.removeEventListener('pointercancel', onUp);
-        this.doc.removeEventListener('touchcancel', onUp);
-      }
+    const onUp = (e) => {
+      if (!isResizing) return;
+      if (e && e.pointerId !== undefined && e.pointerId !== activePointerId) return;
+      isResizing = false;
+      activePointerId = null;
+      this.saveState();
+      this.doc.removeEventListener('pointermove', onMove);
+      this.doc.removeEventListener('pointerup', onUp);
+      this.doc.removeEventListener('pointercancel', onUp);
     };
 
-    const onDownWrapper = (e) => {
+    handle.addEventListener('pointerdown', (e) => {
       onDown(e);
       if (isResizing) {
-        this.doc.addEventListener('mousemove', onMove);
         this.doc.addEventListener('pointermove', onMove);
-        this.doc.addEventListener('touchmove', onMove, { passive: false });
-        this.doc.addEventListener('mouseup', onUp);
         this.doc.addEventListener('pointerup', onUp);
-        this.doc.addEventListener('touchend', onUp);
         this.doc.addEventListener('pointercancel', onUp);
-        this.doc.addEventListener('touchcancel', onUp);
       }
-    };
-
-    handle.addEventListener('mousedown', onDownWrapper);
-    handle.addEventListener('pointerdown', onDownWrapper);
-    handle.addEventListener('touchstart', onDownWrapper, { passive: false });
+    });
   }
 }
 

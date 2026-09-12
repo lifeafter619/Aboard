@@ -95,6 +95,7 @@ function getCacheKeyGroups() {
         const canvasKeys = new Set([
             'savedCanvasData', 'savedBgCanvasData', 'savedCanvasTimestamp',
             'savedCurrentPage', 'pageBackgrounds', 'sharedPageBackgroundImages', 'pageScenes',
+            'pageTeachingTools',
             'backgroundColor', 'backgroundPattern', 'bgOpacity',
             'patternIntensity', 'patternDensity',
             'backgroundImageData', 'backgroundImageConfirmed',
@@ -474,6 +475,12 @@ async function clearSelectedCache(options) {
             cleanupSucceeded = removeCacheKeyGroup(
                 sessionStorage, 'sessionStorage', canvasKeys, canvasKeyPrefixes
             ) && cleanupSucceeded;
+            // GIF state moved to IndexedDB; keep canvas-data clearing equivalent.
+            try {
+                await window.GifManager?.clearPersistedState?.();
+            } catch (error) {
+                console.warn('Failed to clear stored GIF state:', error);
+            }
         }
 
         if (options.settings) {
@@ -587,6 +594,11 @@ async function clearAllLocalData() {
                     console.warn('Failed to clear Cache Storage:', error);
                     cacheStorageCleared = false;
                 }
+            }
+            try {
+                await window.GifManager?.clearPersistedState?.();
+            } catch (error) {
+                console.warn('Failed to clear stored GIF state:', error);
             }
             if (!localStorageCleared
                 || !sessionStorageCleared

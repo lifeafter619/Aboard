@@ -1,6 +1,6 @@
 # 已知问题与审查归档
 
-最后核验：2026-09-09
+最后核验：2026-09-12
 
 ## 当前状态
 
@@ -14,6 +14,22 @@
 - 公告内容目前由 `js/features/announcement/announcement-manager.js` 内的本地化资源管理，不存在独立的远程公告配置源。
 
 发现新问题时，应先添加最小复现测试，再在本文件的“当前状态”下记录适用环境、复现步骤和影响范围。
+
+## 2026-09-12 审计归档（启动链/基础设施专项 + 跨页教具升级）
+
+对前五轮未逐行覆盖的约 9 千行（js/app/ 启动链、js/infra/、js/features/、main.js、history.js、sw.js、server.js、build-static.js）做了逐行审计，并对全部模块做模式扫描兜底；未发现高危或中危缺陷。先写失败测试再修复 4 项低级别缺陷，同时把 2026-09-09 轮遗留决策的教学工具升级为跨页保留对象，并将 GIF 悬浮层持久化迁移 IndexedDB。全部逐个回退实现确认测试会红。
+
+| 范围 | 问题/变更 | 回归测试 |
+| --- | --- | --- |
+| 确认弹窗 | `DialogManager.showConfirm` 复用同一 modal 且无并发守卫：两个确认框生命周期重叠时第二个覆盖第一个的按钮处理器，第一个 Promise 永不 resolve，await 方静默挂起（现实触发窗口：启动期语言建议确认撞上用户操作）。改为重叠时排队串行；无弹窗时保持同步装配，兼容既有同步读取 modal 的调用点 | `dialog-confirm-queue.test.js` |
+| 启动健壮性 | `DrawingBoard` 构造函数的 `drawingEngine.setEdgeDrawingManager` 无可选链（同函数其余可选依赖均走了降级路径）：DrawingEngine 脚本加载失败时启动以裸 TypeError 崩溃、无法定位。改为显式硬依赖检查并抛出含模块名的可读错误 | `main-drawing-engine-dependency.test.js` |
+| GIF 悬浮层 | 拖拽/缩放同时绑定 pointer+mouse+touch 三套事件，混合指针下每次移动触发两次且无 pointerId 归属；状态持久化走 localStorage，大于约 4 MB 的 GIF 必然超配额、只能弹一次提示后随刷新丢失。改为纯指针事件（touch-action:none 已就位），持久化迁移 IndexedDB（结构化克隆，无 JSON 字符串化），旧 localStorage 数据一次性迁移后删除，IndexedDB 不可用时回退原 localStorage 路径，“清除本地数据/清除画布数据”同步清理 IndexedDB 副本 | `gif-pointer-persistence.test.js` |
+| SW 版本探测 | fetch handler 用 `pathname === '/api/version'` 绝对路径相等判断，子路径部署（GitHub Pages 项目页）永不命中；`/version.txt` 分支一直兜底。改为 `endsWith` 匹配，与 pwa-manager 的探测 URL 处理一致 | `teaching-tools-wiring.test.js` |
+| 教学工具（功能升级） | 直尺/三角板从“刷新即失的临时教具”升级为跨页保留对象：每页快照存 `pageTeachingTools`（同 pageBackgrounds 模式，逐页 ≤40 件、最多 300 页，导入状态全部消毒），翻页经 `saveCurrentPageSnapshot`/`loadPage` 保存与恢复，会话记录与同步快照携带（恢复合并时快照侧优先），恢复会话后重放当前页工具，项目导入重置（项目包格式未扩展，旧包导入即清空），空板离开确认计入教具，缓存清理键补齐。仍不进撤销历史与导出位图：教具是授课辅助，不应被印进讲义或被撤销打翻 | `teaching-tools-page-state.test.js`、`teaching-tools-wiring.test.js` |
+
+仍按既往记录保留的事项：`beforeunload` 同步快照在超大盘上的主线程停顿理论代价（已有 256 KB 截断）；坐标 overlay 的函数图像求值在几何变化时逐次重算（有界）。
+
+本轮验证基线：core 60 项、full 107 项（含真实 Chromium 绘图冒烟与 8 视口响应式检查）、静态发布构建。版本 2.5.4 → 2.5.5（version.txt 同步至 package.json、package-lock.json、manifest.json 图标 URL、index.html manifest 链接、sw.js SW_VERSION 与 CORE_ASSETS 图标条目、README 徽章）。
 
 ## 2026-09-09 审计归档（未覆盖模块专项）
 

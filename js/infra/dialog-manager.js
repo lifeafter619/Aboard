@@ -178,6 +178,31 @@ export class DialogManager {
   }
 
   showConfirm(messageOrConfig, title = null) {
+    // The confirm modal is a single shared element. Two overlapping calls used
+    // to overwrite each other's button handlers, so the first promise never
+    // resolved and its awaiting flow hung silently. Serialize overlapping
+    // calls instead: each dialog is fully installed and resolved before the
+    // next one opens. The no-dialog fast path stays synchronous so existing
+    // callers that inspect the modal right after showConfirm keep working.
+    const result = this.confirmQueueTail
+      ? this.confirmQueueTail.then(
+        () => this.showConfirmOnModal(messageOrConfig, title),
+        () => this.showConfirmOnModal(messageOrConfig, title)
+      )
+      : this.showConfirmOnModal(messageOrConfig, title);
+    const tail = Promise.resolve(result).then(() => undefined, () => undefined);
+    this.confirmQueueTail = tail;
+    // Drop the tail once idle so the synchronous fast path stays available;
+    // a newer queued dialog has already replaced it by then.
+    tail.then(() => {
+      if (this.confirmQueueTail === tail) {
+        this.confirmQueueTail = null;
+      }
+    });
+    return result;
+  }
+
+  showConfirmOnModal(messageOrConfig, title = null) {
     const isConfigMode = typeof messageOrConfig === 'object' && messageOrConfig !== null;
     const config = isConfigMode ? messageOrConfig : { message: messageOrConfig, title };
     const localeTitle = config.title || (this.win.i18n ? this.win.i18n.t('common.confirm') : 'Confirm');

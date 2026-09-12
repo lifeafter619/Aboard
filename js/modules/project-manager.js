@@ -1312,6 +1312,9 @@ class ProjectManager {
         // Imported packages carry the full payload on every page entry; route
         // them through the shared pool first so a re-imported project cannot
         // blow the localStorage quota with N duplicated copies (2026-09-05 fix).
+        // Importing replaces the whole board, so per-page teaching tool
+        // snapshots (which packages do not carry) reset with it.
+        this.drawingBoard.teachingToolsManager?.resetPageToolStates?.();
         if (!window.AboardPaginationRuntime?.sharePageBackgroundPayloads?.(this.drawingBoard)) {
             safeProjectStorageSetItem('pageBackgrounds', JSON.stringify(this.drawingBoard.pageBackgrounds));
         }

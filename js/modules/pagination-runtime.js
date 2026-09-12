@@ -420,6 +420,7 @@ function saveCurrentPageSnapshot() {
             this.pages[this.currentPage - 1] = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         }
         this.savePageBackground?.(this.currentPage);
+        this.teachingToolsManager?.saveCurrentPageState?.(this.currentPage);
         this.saveCurrentPageScene?.(this.currentPage);
         touchPageSnapshot.call(this, this.currentPage);
         enforcePageBitmapMemoryBudget.call(this);
@@ -600,6 +601,9 @@ function loadPage(pageNumber) {
         
         // Restore page-specific background if exists; async callers can await it.
         const pendingBackgroundPromise = Promise.resolve(this.restorePageBackground(pageNumber));
+        // Swap the teaching tool overlays to the target page's snapshot
+        // (the outgoing page was captured in saveCurrentPageSnapshot).
+        this.teachingToolsManager?.restorePageState?.(pageNumber);
         this._pendingBackgroundPromise = pendingBackgroundPromise;
         this.drawingEngine.updateOffCanvasImageMirrors(this.insertTextManager?.textObjects || []);
         touchPageSnapshot.call(this, pageNumber);

@@ -383,6 +383,7 @@ function buildSyncSnapshot() {
                         ? Array.from(this.pageRasterFallbackPages)
                         : [],
                     pageBackgrounds: cloneForSyncSnapshot(this.pageBackgrounds),
+                    pageTeachingTools: cloneForSyncSnapshot(this.teachingToolsManager?.exportPageToolStates?.() || {}),
                     backgroundColor: this.backgroundManager.backgroundColor,
                     backgroundPattern: this.backgroundManager.backgroundPattern,
                     bgOpacity: this.backgroundManager.bgOpacity,
@@ -512,6 +513,7 @@ async function saveSession() {
                     ? Array.from(this.pageRasterFallbackPages)
                     : [],
                 pageBackgrounds: cloneForPersistentSession(this.pageBackgrounds),
+                pageTeachingTools: cloneForPersistentSession(this.teachingToolsManager?.exportPageToolStates?.() || {}),
                 // Global background settings
                 backgroundColor: this.backgroundManager.backgroundColor,
                 backgroundPattern: this.backgroundManager.backgroundPattern,

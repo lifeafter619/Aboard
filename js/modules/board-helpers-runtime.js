@@ -207,6 +207,12 @@ function isBoardContentEmpty(board) {
         return false;
     }
 
+    // Teaching tools are persistent per-page objects now; a placed ruler is
+    // lesson content and must keep the leave prompt.
+    if (Array.isArray(board.teachingToolsManager?.tools) && board.teachingToolsManager.tools.length > 0) {
+        return false;
+    }
+
     const sceneHasContent = Boolean(board.pageScenes && Object.values(board.pageScenes).some((scene) => (
         scene
         && ((Array.isArray(scene.strokes) && scene.strokes.length > 0)

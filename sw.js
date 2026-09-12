@@ -3,7 +3,7 @@
 // resources from older releases could survive a core-cache rotation and
 // serve stale JS/CSS alongside new code. Keeping a single SW_VERSION
 // guarantees activate() clears both via the existing whitelist check.
-const SW_VERSION = '2.5.4';
+const SW_VERSION = '2.5.5';
 const CORE_CACHE_NAME = `aboard-core-${SW_VERSION}`;
 const RUNTIME_CACHE_NAME = `aboard-runtime-${SW_VERSION}`;
 const MEDIA_CACHE_NAME = `aboard-media-${SW_VERSION}`;
@@ -37,8 +37,8 @@ const CORE_ASSETS = [
   './index.html',
   './manifest.json',
   './img/icon.svg',
-  './img/icon-192.png?v=2.5.4',
-  './img/icon-512.png?v=2.5.4',
+  './img/icon-192.png?v=2.5.5',
+  './img/icon-512.png?v=2.5.5',
   './css/style.css?v=20260727-compact-panel',
   './css/modules/time-display.css',
   './css/modules/feature-area.css',
@@ -590,7 +590,10 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if (url.pathname === '/api/version' || url.pathname.endsWith('/version.txt')) {
+  // endsWith so version probes keep working on sub-path deployments
+  // (GitHub Pages project sites); a bare pathname equality check only
+  // ever matched scope-root installs.
+  if (url.pathname.endsWith('/api/version') || url.pathname.endsWith('/version.txt')) {
     event.respondWith(networkFirst(request));
     return;
   }
